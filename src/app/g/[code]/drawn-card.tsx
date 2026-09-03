@@ -10,6 +10,7 @@ import { classOf, combatValueOf, numeralMeaning, numeralOf, roundsOf } from "@/l
 import { attackAsOne } from "@/lib/engine/combat";
 import { kindForCard } from "@/lib/engine/holdings";
 import { KolejkaStrip, worthShowing } from "./kolejka-strip";
+import { ActionButton } from "./action-button";
 import { scriptFor, describeDisposition } from "@/lib/engine/cardScript";
 import { itemProfile, previewOf, requirementOf, staysAs } from "@/lib/engine/abilityText";
 import { sentence } from "@/lib/engine/polish";
@@ -464,33 +465,32 @@ export function DrawnCard({
             things you may do about it are the two the rules give you. */}
         {canAct && foe && (
           <div className="flex flex-wrap gap-2">
-            <button
+            <ActionButton
+              role="harm"
+              weight="lead"
+              size="lg"
               disabled={busy}
               onClick={() => onFight([known.id])}
-              className="rounded border border-vermilion/60 bg-vermilion/10 px-4 py-2 text-sm text-ink transition hover:bg-vermilion/20 disabled:opacity-50"
             >
               Walcz ({foe.kind === "magical" ? "Magia" : "Miecz"} {foe.total}
               {/* Said, because a number that is your own is not a number you
                   read off the card — and next turn it will be different. */}
               {foe.mirrors ? " — tyle co ty" : ""})
-            </button>
+            </ActionButton>
             {together && (
-              <button
+              <ActionButton
+                role="harm"
+                size="lg"
                 disabled={busy}
                 onClick={() => onFight(together.map((c) => c.id))}
                 title={together.map((c) => c.name).join(" + ")}
-                className="rounded border border-vermilion/60 px-4 py-2 text-sm text-ink transition hover:bg-vermilion/20 disabled:opacity-50"
               >
                 Walcz ze wszystkimi naraz ({together.length}) — {asOne?.total}
-              </button>
+              </ActionButton>
             )}
-            <button
-              disabled={busy}
-              onClick={onEscape}
-              className="rounded border border-edge px-4 py-2 text-sm text-ink transition hover:border-ochre disabled:opacity-50"
-            >
+            <ActionButton weight="quiet" size="lg" disabled={busy} onClick={onEscape}>
               Spróbuj się wymknąć (19.1)
-            </button>
+            </ActionButton>
           </div>
         )}
 
@@ -498,20 +498,18 @@ export function DrawnCard({
             refuses for 5.3, 5.4 or 21.2 if it must. */}
         {canAct && !foe && keep && (
           <div className="flex flex-wrap gap-2">
-            <button
+            <ActionButton
+              role="gain"
+              weight="lead"
+              size="lg"
               disabled={busy}
               onClick={() => onTake(known.id)}
-              className="rounded border border-verdigris/60 bg-verdigris/10 px-4 py-2 text-sm text-ink transition hover:bg-verdigris/20 disabled:opacity-50"
             >
               {keep === "friend" ? "Weź Przyjaciela" : "Weź Przedmiot"}
-            </button>
-            <button
-              disabled={busy}
-              onClick={() => onLeave(known.id)}
-              className="rounded border border-edge px-4 py-2 text-sm text-muted transition hover:border-ochre disabled:opacity-50"
-            >
+            </ActionButton>
+            <ActionButton weight="decline" size="lg" disabled={busy} onClick={() => onLeave(known.id)}>
               Zostaw
-            </button>
+            </ActionButton>
           </div>
         )}
 
@@ -521,7 +519,7 @@ export function DrawnCard({
             <p className="mb-1 text-[11px] text-muted">Wybierz jedno:</p>
             <div className="flex flex-wrap gap-2">
               {asking.options.map((option, index) => (
-                <button
+                <ActionButton
                   key={option.label}
                   disabled={busy}
                   onClick={() => {
@@ -529,18 +527,13 @@ export function DrawnCard({
                     setChoices(next);
                     onResolve(known.id, { choices: next });
                   }}
-                  className="rounded border border-ochre/60 px-3 py-1.5 text-sm text-ochre transition hover:bg-edge disabled:opacity-50"
+                  // What it would leave you with. A choice between two rules is
+                  // not a choice until you know the numbers: „Miecz 6 → 2 ·
+                  // Magia 2 → 6" is the decision the label only describes.
+                  note={reader?.points ? previewOf(option.effect, reader.points) : undefined}
                 >
-                  <span className="block">{sentence(option.label)}</span>
-                  {/* What it would leave you with. A choice between two rules
-                      is not a choice until you know the numbers: „Miecz 6 → 2 ·
-                      Magia 2 → 6" is the decision the label only describes. */}
-                  {reader?.points && previewOf(option.effect, reader.points) && (
-                    <span className="mt-0.5 block text-[11px] text-muted">
-                      {previewOf(option.effect, reader.points)}
-                    </span>
-                  )}
-                </button>
+                  {sentence(option.label)}
+                </ActionButton>
               ))}
             </div>
           </div>
@@ -562,15 +555,12 @@ export function DrawnCard({
                 </option>
               ))}
             </select>
-            <button
+            <ActionButton
               disabled={busy || !going}
-              onClick={() =>
-                onResolve(known.id, { choices, destination: going as FieldId })
-              }
-              className="rounded border border-ochre/60 px-3 py-1.5 text-sm text-ochre transition hover:bg-edge disabled:opacity-50"
+              onClick={() => onResolve(known.id, { choices, destination: going as FieldId })}
             >
               Przenieś się
-            </button>
+            </ActionButton>
           </div>
         )}
 
@@ -594,13 +584,12 @@ export function DrawnCard({
                   </option>
                 ))}
             </select>
-            <button
+            <ActionButton
               disabled={busy || !going}
               onClick={() => onResolve(known.id, { choices, destination: going as FieldId })}
-              className="rounded border border-ochre/60 px-3 py-1.5 text-sm text-ochre transition hover:bg-edge disabled:opacity-50"
             >
               Połóż tutaj
-            </button>
+            </ActionButton>
           </div>
         )}
 
@@ -616,28 +605,29 @@ export function DrawnCard({
         {canAct && !foe && !keep && !asking && inert && (
           <div className="flex flex-col items-start gap-2">
             <p className="text-[11px] text-vermilion">Nie spełniasz warunków</p>
-            <button
+            <ActionButton
+              weight="lead"
+              size="lg"
               disabled={busy}
               onClick={() => onResolve(known.id, { choices })}
-              className="rounded border border-ochre/60 bg-ochre/10 px-4 py-2 text-sm text-ochre transition hover:bg-ochre/20 disabled:opacity-50"
             >
               {/* „Musisz", because it is the only thing there is to press. The
                   other „Pomiń" — a Miejsce whose own text asks first — is a
                   choice among others and says so by not saying this. */}
               Musisz pominąć
-            </button>
+            </ActionButton>
           </div>
         )}
 
         {/* Nothing left to ask: the app does it, and the notice says what it
             did. A card with no script has nothing to do but be read. */}
         {canAct && !foe && !keep && !asking && !inert && (
-          <button
+          <ActionButton
+            weight="lead"
+            size="lg"
+            className="self-start"
             disabled={busy}
-            onClick={() =>
-              script ? onResolve(known.id, { choices }) : onLeave(known.id)
-            }
-            className="self-start rounded border border-ochre/60 bg-ochre/10 px-4 py-2 text-sm text-ochre transition hover:bg-ochre/20 disabled:opacity-50"
+            onClick={() => (script ? onResolve(known.id, { choices }) : onLeave(known.id))}
           >
             {/* „Rozpatrz, co się da" is gone. It was the label for an effect
                 the browser could not fully predict, and it read as a shrug —
@@ -645,7 +635,7 @@ export function DrawnCard({
                 resolve the Karta; how much of it applies is the card's business
                 and the server's, and either way the player pressed one thing. */}
             {!script ? "Rozumiem" : script.effect.op === "rzut" ? "Rzuć i rozpatrz" : "Rozpatrz"}
-          </button>
+          </ActionButton>
         )}
 
         {/* Walking away, where the Karta itself allows it.
