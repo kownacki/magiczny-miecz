@@ -20,7 +20,6 @@ import type { TurnState } from "@/lib/engine/stack";
 import { fitsIn, isWearable, type Slot } from "@/lib/engine/slots";
 import { carriedCount, carryLimit } from "@/lib/engine/derive";
 import { announce, watch, type Announcement, type Watched } from "@/lib/engine/announcements";
-import { describeResult } from "@/lib/engine/noticeText";
 import { CARD_NAMES, asHoldings, asNature, type Seat } from "./table";
 import { forbiddenIn, forbiddenSaid } from "@/lib/engine/holdings";
 import { isStale, standingMoves, standingPicks, standingRules } from "./reconcile";
@@ -176,9 +175,6 @@ export interface Table {
   pendingCharacter: string | null;
   announcement: Announcement | null;
   setAnnouncement: (announcement: Announcement | null) => void;
-  /** What the app decided by itself and has to say out loud. */
-  notice: string | null;
-  setNotice: (notice: string | null) => void;
   /** The last thing that broke, as opposed to the last thing that was refused. */
   failure: string | null;
   setFailure: (failure: string | null) => void;
@@ -217,8 +213,6 @@ export function useTable(code: string): Table {
   /** What the Wyposażenie pile still holds (21.2), so a shop offers only what it has. */
   const [stock, setStock] = useState<Record<string, number>>({});
   const [spoken, setSpoken] = useState<Spoken | null>(null);
-  /** What the app just decided by itself, shown until the next action. */
-  const [notice, setNotice] = useState<string | null>(null);
   /** The last thing that broke, as opposed to the last thing that was refused. */
   const [failure, setFailure] = useState<string | null>(null);
   /** The character asked for and not yet heard back about (see `chooseCharacter`). */
@@ -632,13 +626,19 @@ async function saidWrong(response: Response): Promise<string> {
           const said = await response.json().catch(() => ({}));
           if (said.failure) setFailure(String(said.error ?? "Coś poszło nie tak."));
           else setError(said.error);
-        } else {
-          // Anything the app decided on the player's behalf has to be visible,
-          // or the table is being asked to take the referee's word for it. The
-          // Trzęsawiska roll is the first of these; the roll is journalled too,
-          // but the journal is not what someone is looking at mid-turn.
-          setNotice(describeResult(await response.json().catch(() => null)));
         }
+        /**
+         * Nothing is read off the answer any more.
+         *
+         * It used to be turned into a sentence for the person who pressed the
+         * button — „DOBRE BÓSTWO: nic się nie dzieje" — on the argument that
+         * what the app decides on a player's behalf has to be visible, or the
+         * table is taking the referee's word for it. The argument is right and
+         * the place was wrong: what a die did lands on the thing it did it to,
+         * and the record of it is the Dziennik, which is built for a running
+         * account and reads in the order things happened. See the note where
+         * the Obszar drawer used to draw this.
+         */
         await refresh();
       } finally {
         setBusy(false);
@@ -963,8 +963,6 @@ async function saidWrong(response: Response): Promise<string> {
     pendingCharacter,
     announcement,
     setAnnouncement,
-    notice,
-    setNotice,
     failure,
     setFailure,
     error,

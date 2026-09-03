@@ -165,7 +165,6 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
     pendingCharacter,
     announcement,
     setAnnouncement,
-    setNotice,
     failure,
     setFailure,
     error,
@@ -1323,7 +1322,6 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
             // there is and open nothing in its place.
             if (revealing) setDealSeen(dealKey);
             setInspecting(null);
-            setNotice(null);
           }}
         />
   );
