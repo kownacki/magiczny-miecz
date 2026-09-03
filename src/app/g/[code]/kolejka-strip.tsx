@@ -64,10 +64,14 @@ type Chip = {
 /**
  * Whether there is a row here at all — asked by the caller as well as by this.
  *
- * One Karta is not a row: the sheet this sits on is already showing it at full
- * size, so a strip naming it again is the same fact twice. That is the guard
- * the sentence it replaced also had, only ever saying "N Karty na tym Obszarze"
- * when N was more than one.
+ * One Karta is a row of one. It was held back on the argument that the sheet
+ * above is already showing that Karta at full size, so a strip naming it again
+ * says the same thing twice — which is true of the *picture* and false of
+ * everything else the row carries: „1 z 1", the numeral it was queued under,
+ * and that the Obszar holds nothing behind it. A player who has learned to read
+ * the row for what is coming should not have to notice that its absence is also
+ * information, and a strip that appears and disappears with the size of the
+ * deal reads as a fault.
  *
  * Exported because a component returning null is invisible to the thing that
  * wrapped it. `DrawSheet` puts its footer in a bordered box, and a box that
@@ -76,7 +80,7 @@ type Chip = {
  * sides of.
  */
 export function worthShowing(cards: readonly unknown[]): boolean {
-  return cards.length > 1;
+  return cards.length > 0;
 }
 
 export function KolejkaStrip({
