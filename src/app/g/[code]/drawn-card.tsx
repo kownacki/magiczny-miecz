@@ -15,7 +15,7 @@ import { ActionButton } from "./action-button";
 import { intentSaid, isIntentKind } from "@/lib/engine/intentText";
 import { scriptFor, describeDisposition } from "@/lib/engine/cardScript";
 import { itemProfile, previewOf, requirementOf, staysAs } from "@/lib/engine/abilityText";
-import { sentence } from "@/lib/engine/polish";
+import { plural, sentence } from "@/lib/engine/polish";
 import { mayWalkPast } from "@/lib/engine/kolejka";
 import { CardFacts, TheReader } from "./card-facts";
 import type { Confirmation } from "./confirm";
@@ -296,6 +296,34 @@ export function DrawnCard({
    * that has not been told which Postać it is.
    */
   const actor = reader?.name ?? who;
+
+  /**
+   * What going somewhere else costs, said before it is chosen.
+   *
+   * 16.8's own worked example is the warning: Obbol is carried off the
+   * Płaskowyż mid-deal and „nie zmierzy się już z Niedźwiedziem, ani nie
+   * weźmie 2 Sztuk Złota — pozostaną one w formie odkrytej… stanowiąc 2 z 3
+   * Kart dla następnej Postaci". Everything still standing on this Obszar is
+   * forfeited at once: the rest of the kolejka, whatever is lying there, and
+   * the Obszar's own desks.
+   *
+   * The count is the Karty this turn has not finished with, less the one being
+   * resolved — it is going either way, „bez względu na to, czy skorzystasz".
+   */
+  const leavingHere = (to: FieldId) => {
+    const settled = [...resolved, ...fought, ...(beaten ?? [])];
+    const left = cards.filter(
+      (entry) => entry.cardId !== known.id && !settled.includes(entry.cardId),
+    ).length;
+    const stays =
+      left > 0
+        ? `Zostawiasz tu ${left} ${plural(left, "Kartę", "Karty", "Kart")} i wszystko, co na tym Obszarze leży — poczekają na następną Postać (16.8).`
+        : "To, co na tym Obszarze leży, zostaje tu dla następnej Postaci (16.8).";
+    return (
+      `Obszar: ${FIELDS.get(to)?.name ?? to}. ${stays} ` +
+      "Tam zaczniesz tak, jakby twój ruch skończył się na nowym Obszarze."
+    );
+  };
 
   /**
    * Everything the app knows this Karta does, read once.
@@ -656,9 +684,7 @@ export function DrawnCard({
                       confirm={(proceed) =>
                         onAsk({
                           title: "Przenieść się?",
-                          body:
-                            `Obszar: ${FIELDS.get(going as FieldId)?.name ?? going}. ` +
-                            "Rozpatrzysz go tak, jakby twój ruch skończył się tam (16.8).",
+                          body: leavingHere(going as FieldId),
                           confirmLabel: "Przenieś się",
                           onConfirm: proceed,
                         })

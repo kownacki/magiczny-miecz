@@ -55,6 +55,7 @@ import events from "@/data/events.json";
 import spells from "@/data/spells.json";
 import type { EventCard, Spell } from "@/data/types";
 import { TheReader } from "./card-facts";
+import { useMovedNotice } from "./moved-notice";
 import type { OwnPoints, Reader } from "@/lib/engine/abilityText";
 import { characterName } from "@/lib/engine/polish";
 import { genderOf } from "@/lib/engine/characters";
@@ -558,6 +559,37 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
    * watcher gets the kolejka across the top and no window opening in their face.
    */
   const myField = seats.find((seat) => seat.seat_index === mySeatIndex)?.field_id ?? null;
+
+  /**
+   * Told when a Karta moves your figure — see `useMovedNotice`.
+   *
+   * The only outcome that happens *to* you and cannot be found out afterwards:
+   * the Karta is gone, the Obszar under the figure is somewhere else, and the
+   * next thing the app asks is about a square nobody chose to be on (16.8).
+   *
+   * Up here with the other top-level state rather than down beside the turn it
+   * is about, because `body()` is a plain function and a hook called inside one
+   * is a hook React cannot count.
+   */
+  const turnFrame = game ? top(game.turn_state) : null;
+  useMovedNotice(
+    turnFrame?.phase === "field" ? turnFrame.fieldId : null,
+    myTurn,
+    useCallback(
+      (moved: { from: FieldId; to: FieldId }) =>
+        setAsk({
+          title: "Przeniesiono twoją Postać",
+          body:
+            `Z Obszaru: ${FIELDS.get(moved.from)?.name ?? moved.from}. ` +
+            `Na Obszar: ${FIELDS.get(moved.to)?.name ?? moved.to}. ` +
+            "Rozpatrzysz go tak, jakby twój ruch skończył się tam (16.8).",
+          confirmLabel: "Rozumiem",
+          telling: true,
+          onConfirm: () => setAsk(null),
+        }),
+      [],
+    ),
+  );
   // Read here rather than from `turnState` below, which is past the early
   // returns a hook may not sit behind.
   const nowOnField = game ? top(game.turn_state) : null;
@@ -985,6 +1017,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
    * crosses, the way every other id in this codebase is.
    */
   const eqMode: EqMode = game?.eq_mode === "slots" ? "slots" : "classic";
+
 
   /**
    * The two Postacie a card can be read for, built once.

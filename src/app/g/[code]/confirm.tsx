@@ -28,6 +28,16 @@ export interface Confirmation {
   confirmLabel: string;
   /** Red for anything that takes something away from somebody. */
   tone?: "normal" | "grave";
+  /**
+   * Nothing to decide — it has already happened, and this is the telling.
+   *
+   * A Karta that relocates you is the case: „Anuluj" beside a thing already
+   * done is a button offering to undo what cannot be undone. So the dialog
+   * keeps its one button and the label says what it is („Rozumiem"), which is
+   * the only place in this app that word belongs — everywhere else the button
+   * says the verb.
+   */
+  telling?: true;
   onConfirm: () => void;
 }
 
@@ -68,6 +78,7 @@ export function ConfirmDialog({
           <WithRules text={ask.body} />
         </p>
         <div className="flex justify-end gap-2">
+          {!ask.telling && (
           <button
             onClick={onCancel}
             disabled={busy}
@@ -75,6 +86,7 @@ export function ConfirmDialog({
           >
             Anuluj
           </button>
+          )}
           <button
             ref={confirmRef}
             onClick={ask.onConfirm}
