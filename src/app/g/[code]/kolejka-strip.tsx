@@ -206,6 +206,11 @@ export function KolejkaStrip({
                   cardId: chip.card.cardId as CardId,
                   granted: chip.card.granted,
                 })}
+                /* The class, in the corner. This row *is* 15.2's order —
+                   lowest numeral first — so the numeral is what explains the
+                   sequence the reader is looking at, and it is the one row in
+                   the app where that is worth a corner. */
+                numeral
                 dimmed={chip.done}
                 /* Two kinds of done, and the row is the only place that can
                    tell them apart: dimmed is settled and still lying here,

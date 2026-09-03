@@ -19,6 +19,7 @@ import { CloseButton } from "./chrome";
 import type { EqMode, Slot } from "@/lib/engine/slots";
 import type { Nature } from "@/data/types";
 import { manualNote, coverageOf, NOT_HANDLED } from "@/lib/engine/coverage";
+import { numeralOf } from "@/lib/engine/cards";
 
 /**
  * One card, as a card.
@@ -93,6 +94,7 @@ export function CardTile({
   chosen = false,
   struck = false,
   badge,
+  numeral = false,
   onClick,
   onDoubleClick,
   draggable,
@@ -132,6 +134,22 @@ export function CardTile({
   struck?: boolean;
   /** A short flag drawn over the corner — a price, a count, "zakryte". */
   badge?: string;
+  /**
+   * Show the class numeral printed at the top of the Karta (15.2).
+   *
+   * Off everywhere by default, and on in the kolejka, because there it is the
+   * *reason for the order*: 15.2 works a square's Karty from the lowest numeral
+   * up, and a row that is in that order without saying what the order is asks
+   * the reader to take it on trust. Everywhere else the numeral is a fact about
+   * the card that the hover already carries, and a row of tiles each wearing a
+   * Roman numeral is a row that has learnt to shout.
+   *
+   * Not a value — the tile reads it off the card id. `numeralOf` answers null
+   * for anything that is not a Karta Zdarzeń, which is most of the box, so
+   * asking for one is safe on a tile that has none.
+   */
+  numeral?: boolean;
+
   onClick?: (event: React.MouseEvent) => void;
   /** Two clicks put it straight on, in the slotted variant. */
   onDoubleClick?: () => void;
@@ -275,6 +293,26 @@ export function CardTile({
         {card.slot && (
           <span className="absolute right-0 top-0 rounded-bl bg-night/85 px-1 py-0.5">
             <WornMark slot={card.slot} />
+          </span>
+        )}
+        {/* The class numeral, in the corner the card prints it across the top
+            of (15.2). Set in the display face, because it is a Roman numeral
+            and the box sets it as one — in the body font „II" and „III" read
+            as an abbreviation rather than as a number.
+
+            After the worn mark and behind the same guard, because both want
+            this corner and only one can have it. Nothing asks for both today:
+            a Karta in the kolejka is being resolved, not carried, and 5.6's
+            places are for Przedmioty already in a hand. If something ever does,
+            where it *is* beats what class it belongs to — the mark answers
+            „can I take this off", and the numeral only explains an order the
+            row it is missing from was not in anyway. */}
+        {numeral && !card.slot && numeralOf(card.cardId) && (
+          <span
+            aria-hidden
+            className="absolute right-0 top-0 rounded-bl bg-night/85 px-1 font-[family-name:var(--font-display)] text-[10px] leading-tight text-ochre/80"
+          >
+            {numeralOf(card.cardId)}
           </span>
         )}
         {/* Bottom edge, not the top: the top of every card in this game is its
