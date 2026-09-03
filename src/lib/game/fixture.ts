@@ -6,8 +6,9 @@ import { buildDeck, type DeckState } from "@/lib/engine/deck";
 import type { TurnPhase } from "@/lib/engine/turn";
 import { asTurnState, type TurnState } from "@/lib/engine/stack";
 import { scriptedRandom } from "@/lib/engine/ports";
-import { apply, type CommandPorts, type Outcome, type Snapshot } from "./change";
-import { requireTop } from "@/lib/engine/stack";
+import { apply, merge, type Changeset, type CommandPorts, type Outcome, type Snapshot } from "./change";
+import { continueTopScript } from "./commands/effects";
+import { requireTop, topIf } from "@/lib/engine/stack";
 import type { GameRow, HoldingRow, SeatRow, UserRow } from "./store";
 
 /**
@@ -239,6 +240,35 @@ export function at(start: Snapshot): Driver {
     },
   };
   return driver;
+}
+
+/**
+ * The other half of a throw: „Dalej", and what the row it landed on then did.
+ *
+ * A die does not carry itself out any more. It is thrown, journalled, written
+ * onto the Obszar's frame and left there, with the walk suspended over the row
+ * it chose, until the player says go on — see `heldAt`, which has the argument.
+ * So a test that wants the *outcome* of a table has to press the button a
+ * player presses, and this is that press: `continueTopScript`, the same call
+ * the button makes, with the two accounts of what happened joined.
+ *
+ * Silent for a Karta or an Obszar that never rolled: nothing is suspended, and
+ * what came back the first time is the whole of it.
+ */
+export async function pressDalej(
+  snapshot: Snapshot,
+  done: { writes: Changeset; result: { did: string[] } },
+  over: Partial<CommandPorts> = {},
+): Promise<{ writes: Changeset; did: string[] }> {
+  const after = apply(snapshot, done.writes);
+  if (!topIf(after.game.turn_state, "script")) {
+    return { writes: done.writes, did: done.result.did };
+  }
+  const more = await continueTopScript(after, { shuffle: (items) => [...items] }, ports(over));
+  return {
+    writes: merge(done.writes, more.writes),
+    did: [...done.result.did, ...more.result.did],
+  };
 }
 
 /** Dice for one `run`, in the order the command will ask for them. */

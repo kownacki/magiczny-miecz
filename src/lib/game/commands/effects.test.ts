@@ -13,7 +13,7 @@ import type { TurnPhase } from "@/lib/engine/turn";
  */
 const frameIn = (writes: { game?: { turn_state?: TurnState } }) =>
   top(writes.game!.turn_state!) as Extract<TurnPhase, { phase: "script" }>;
-import { aHolding, aSeat, aTable, aUser, ports } from "../fixture";
+import { aHolding, aSeat, aTable, aUser, ports, pressDalej } from "../fixture";
 import { apply } from "../change";
 import { listed } from "@/lib/engine/state";
 import { applyEffect } from "./effects";
@@ -953,16 +953,28 @@ describe("an Obszar's own table (15.1)", () => {
     ).rejects.toThrow(/po wejściu na Obszar/);
   });
 
-  it("rolls the table, says the face, and notes the offer as settled", async () => {
-    const { writes, result } = await resolveFieldOffer(
-      standing("karczma"),
-      { offerName: "Karczma", shuffle: asIs },
-      ports({ random: scriptedRandom([1]) }),
+  it("rolls the table, says the face, and waits on it", async () => {
+    const table = standing("karczma");
+    const dice = { random: scriptedRandom([1]) };
+    const out = await resolveFieldOffer(table, { offerName: "Karczma", shuffle: asIs }, ports(dice));
+    expect(out.result.offer).toBe("Karczma");
+    expect(out.result.face).toBe(1);
+    expect(out.writes.journal?.[0]).toMatchObject({
+      kind: "field-table",
+      payload: { face: 1 },
+    });
+
+    /* The throw is committed and the row is not: the Obszar carries the face
+       and a `script` frame stands over it until „Dalej" — see `heldAt`. */
+    const thrown = apply(table, out.writes).game.turn_state;
+    expect(top(thrown).phase).toBe("script");
+    expect(thrown.stack[0]).toMatchObject({ rolled: { cardId: "pole:Karczma", face: 1 } });
+    expect((thrown.stack[0] as { resolved?: string[] }).resolved ?? []).not.toContain(
+      "pole:Karczma",
     );
-    expect(result.offer).toBe("Karczma");
-    expect(result.face).toBe(1);
-    expect(writes.journal?.[0]).toMatchObject({ kind: "field-table", payload: { face: 1 } });
-    const state = top(writes.game!.turn_state!) as { resolved?: string[] };
+
+    const after = apply(table, (await pressDalej(table, out, dice)).writes);
+    const state = top(after.game.turn_state) as { resolved?: string[] };
     expect(state.resolved).toContain("pole:Karczma");
   });
 

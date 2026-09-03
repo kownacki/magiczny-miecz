@@ -1091,7 +1091,10 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
    * - **Nothing of that kind to lose**, which the server settles by itself.
    */
   const losing = (() => {
-    if (turnState.phase !== "script" || !turnState.cardId) return null;
+    /* Not while the frame is *held*: the cursor then points at a row the die
+       chose and nothing has run yet, so the question it will ask is not being
+       asked. „Dalej" is what turns one into the other — see `held`. */
+    if (turnState.phase !== "script" || turnState.held || !turnState.cardId) return null;
     const asking = nodeAt(turnState.effect, turnState.cursor);
     if (asking?.op !== "strata" || (asking.count ?? 1) !== 1) return null;
     const kind = reachableBy(asking.co);
@@ -1882,9 +1885,13 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
             error={error}
             /* The die on the frame, which is everybody's — see `shownRoll`. */
             rolled={shownRoll}
+            /* „Dalej" is what lets the face take effect: the throw suspended
+               the Karta over the row it landed in, and this resumes it — see
+               `heldAt`. The same door an answered question goes through,
+               because it is the same act with nothing to answer. */
             onRollRead={() => {
               setRolled(null);
-              void post("turn", { action: "rzut-przeczytany" });
+              void post("turn", { action: "answer" });
             }}
             /* The Karta's own question, asked in the Karta's own panel. */
             losing={losing}
@@ -1930,10 +1937,12 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
       {/* The card the turn is suspended on — a question left over after a
           mid-card fight, or a decision the resolve was sent without. Everybody
           sees it; the frame says whose answer it is (docs/STACK.md, law 5). */}
-      {/* …except the one the sheet takes itself: a loss is asked on the Karta,
+      {/* …except the ones the sheet takes itself. A loss is asked on the Karta,
           where the pack is (see `losing`), and a panel over it saying the same
-          thing would be the question twice with the answer in one of them. */}
-      {active && turnState.phase === "script" && !losing && (
+          thing would be the question twice with the answer in one of them —
+          and a *held* frame is not a question at all: it is a face waiting for
+          „Dalej", which is a button on the sheet and nowhere else. */}
+      {active && turnState.phase === "script" && !turnState.held && !losing && (
         <ScriptFramePanel
           frame={turnState}
           who={

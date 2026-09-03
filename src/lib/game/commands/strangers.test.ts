@@ -4,10 +4,11 @@ import { apply } from "../change";
 import { aSeat, aTable, ports } from "../fixture";
 import { scriptedRandom } from "@/lib/engine/ports";
 import { buildDeck } from "@/lib/engine/deck";
-import { readRoll, resolveDrawnCard } from "./resolving";
+import { resolveDrawnCard } from "./resolving";
+import { resume } from "./frames";
 import { attackSeat } from "./fight";
 import { storedStatuses } from "./turn";
-import { hasAttacked, movementCap } from "@/lib/engine/status";
+import { hasAttacked, movementCap, stillStone } from "@/lib/engine/status";
 import { asSeatCharacter } from "@/lib/engine/characters";
 import { SPELLS as SPELL_CARDS } from "../decks";
 import type { TurnPhase } from "@/lib/engine/turn";
@@ -68,12 +69,18 @@ const visit = async (
   choices: number[] = [],
   dice: number[] = [],
 ) => {
+  const port = ports({ random: scriptedRandom(dice) });
   const out = await resolveDrawnCard(
     table,
     { cardId: card, decided: { choices }, shuffle: asIs },
-    ports({ random: scriptedRandom(dice) }),
+    port,
   );
-  return { after: apply(table, out.writes), said: out.result.did.join("; ") };
+  /* A Karta with a die stops on the face and waits for „Dalej" (see `heldAt`),
+     so a visit is the throw and that press together — which is what a player
+     does and what the tests below are about. `resume` is the same call the
+     button makes, and it does nothing at all to a Karta that never suspended. */
+  const done = await resume(table, out, port);
+  return { after: apply(table, done.writes), said: out.result.did.join("; ") };
 };
 
 /**
@@ -301,29 +308,48 @@ describe("the die the rest of the table can see", () => {
       { cardId: "urocza-diablica", decided: {}, shuffle: asIs },
       ports({ random: scriptedRandom(dice) }),
     );
-    return apply(table, out.writes);
+    return { table, out, after: apply(table, out.writes) };
   };
 
-  it("stands on the Obszar until somebody reads it", async () => {
-    const after = await threw([2]);
-    expect(top(after.game.turn_state)).toMatchObject({
+  it("stands on the Obszar until the Karta finishes", async () => {
+    const { table, out, after } = await threw([2]);
+    // On the Obszar's own frame, under the one the throw pushed over it.
+    expect(after.game.turn_state.stack[0]).toMatchObject({
       rolled: { cardId: "urocza-diablica", face: 2 },
     });
 
-    const read = apply(after, readRoll(after).writes);
+    // „Dalej" — the same door an answer goes through, with nothing to answer.
+    const read = apply(table, (await resume(table, out, ports())).writes);
     expect(top(read.game.turn_state)).not.toHaveProperty("rolled");
+    expect(top(read.game.turn_state).phase).toBe("field");
   });
 
   /**
-   * And under whatever the throw put on top of it. A 4 costs a Przedmiot and
-   * 5.6 leaves the choice to the holder, so the card suspends — with the face
-   * still on the Obszar's frame beneath, which is the one the panel showing the
-   * question reads.
+   * And under whatever the face then asks. A 4 costs a Przedmiot and 5.6 leaves
+   * the choice to the holder, so „Dalej" runs the row and suspends again — with
+   * the face still on the Obszar's frame beneath, which is what the panel
+   * showing the question reads.
    */
-  it("survives the frame the throw pushed over it", async () => {
-    const after = await threw([4]);
+  it("survives the frame the row pushed over it", async () => {
+    const { table, out } = await threw([4]);
+    const after = apply(table, (await resume(table, out, ports())).writes);
     const stack = after.game.turn_state.stack;
     expect(stack[stack.length - 1].phase).toBe("script");
     expect(stack[0]).toMatchObject({ phase: "field", rolled: { face: 4 } });
+  });
+
+  /**
+   * The whole point of the wait: nothing has happened yet.
+   *
+   * A 6 turns you to stone (20.1), and it used to do so in the commit that
+   * threw the die — the player read „WYPADŁO 6" off a Postać that was already
+   * a rock. The throw is committed and the row is not.
+   */
+  it("does not carry the row out until then", async () => {
+    const { table, out, after } = await threw([6]);
+    expect(after.seats[0].stone_until_round).toBe(table.seats[0].stone_until_round);
+
+    const done = apply(table, (await resume(table, out, ports())).writes);
+    expect(stillStone(done.seats[0].stone_until_round, done.game.round)).toBe(true);
   });
 });

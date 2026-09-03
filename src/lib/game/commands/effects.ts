@@ -2,7 +2,7 @@
 
 import { FIELDS } from "@/lib/engine/board";
 import type { Shuffle } from "@/lib/engine/deck";
-import { isSettled } from "@/lib/engine/resolve";
+import { isSettled, nodeAt } from "@/lib/engine/resolve";
 import { cardName, fieldName } from "@/lib/engine/polish";
 import type { Effect } from "@/lib/engine/cardScript";
 import { startFight, type TurnPhase } from "@/lib/engine/turn";
@@ -96,6 +96,13 @@ export interface ApplyEffect {
    * every other one.
    */
   cardId?: string;
+  /**
+   * The cursor points at a node that has not run — see `held` on the frame.
+   *
+   * Only `continueTopScript` sets it, off the frame it is resuming, and only
+   * the `walka`/`zaklecie` rule at the stopping node reads it.
+   */
+  held?: boolean;
 }
 
 /**
@@ -119,6 +126,78 @@ export async function applyEffect(
   const done = await walk(snapshot, command, command.effect, command.reason, ports, [], null);
   if (!done.result.suspended) return done;
   return framed(snapshot, command, done);
+}
+
+/**
+ * Puts the die that was just thrown onto the Obszar's own frame, or takes the
+ * last one off it.
+ *
+ * The frame it belongs to is the `field` one, which is not always the top: a
+ * card that suspended mid-walk is sitting above it, and that card's die is
+ * exactly the one worth showing. So the stack is walked from the top down for
+ * the first `field` frame, the same way a `walka` step finds the Obszar its
+ * fight belongs to.
+ */
+export function markRolled(
+  snapshot: Snapshot,
+  face: { cardId: string; face: number } | null,
+): Changeset {
+  const stack = snapshot.game.turn_state.stack;
+  const at = stack.map((frame) => frame.phase).lastIndexOf("field");
+  if (at === -1) return {};
+  const field = stack[at];
+  if (field.phase !== "field") return {};
+  // Nothing to say when there was no die and none was standing.
+  if (!face && !field.rolled) return {};
+  const { rolled: _was, ...rest } = field;
+  return {
+    game: {
+      turn_state: {
+        stack: stack.map((frame, index) =>
+          index === at ? (face ? { ...rest, rolled: face } : rest) : frame,
+        ),
+      },
+    },
+  };
+}
+
+/**
+ * Stops a walk at a node the dice have already chosen, without running it.
+ *
+ * The one thing the app does entirely on a player's behalf is throw. Until now
+ * it threw *and* applied what came up in the same commit, so a player pressing
+ * „Rzuć kostką" was a player who had already been turned to stone — the „Dalej"
+ * under the face was a receipt, and the six rows above it were describing
+ * something that had happened before they could read them.
+ *
+ * So the throw stops here. The face is journalled and written onto the Obszar's
+ * frame, and the walk suspends over it with the cursor pointing at the row that
+ * came up — `[4]` is „tracisz Przedmiot" on the UROCZA DIABLICA — which is
+ * exactly the shape `continueTopScript` already resumes from: it reads a
+ * `rzut`'s face off the cursor rather than rolling again, and completing pays
+ * the Karta's debts the way a card that never suspended pays them.
+ *
+ * Nothing about the die is undone by this. It has been thrown, it is in the
+ * Dziennik, and „Dalej" cannot choose a different one — what waits is only what
+ * the face *does*, which is the part a player is owed a moment to read.
+ */
+export function heldAt(
+  snapshot: Snapshot,
+  command: ApplyEffect,
+  cursor: number[],
+): Outcome<Resolution> {
+  return framed(
+    snapshot,
+    { ...command, held: true },
+    {
+      writes: {},
+      result: {
+        did: [],
+        pending: nodeAt(command.effect, cursor) ?? command.effect,
+        suspended: { cursor },
+      },
+    },
+  );
 }
 
 /**
@@ -147,6 +226,7 @@ function framed(
     cursor: sus.cursor,
     ...(command.mark ? { mark: command.mark } : {}),
     ...(command.keep ? { keep: true } : {}),
+    ...(command.held ? { held: true } : {}),
   };
   const opened = openOver(
     push(after.game.turn_state, frame),
@@ -256,6 +336,9 @@ export async function continueTopScript(
     ...(frame.cardId ? { cardId: frame.cardId } : {}),
     ...(frame.mark ? { mark: frame.mark } : {}),
     ...(frame.keep ? { keep: true } : {}),
+    /* Whether the cursor names a node that has yet to run — see `held`. A
+       thrown face waiting for „Dalej" is the only stop that means that. */
+    ...(frame.held ? { held: true } : {}),
   };
   const done = await walk(snapshot, carried, frame.effect, frame.reason, ports, [], frame.cursor);
 
@@ -264,8 +347,11 @@ export async function continueTopScript(
     // Still not finished: the frame stays, with the new cursor — and a second
     // `walka` opens its fight above it, the same way the first did.
     const after = apply(snapshot, done.writes);
+    /* `held` does not survive the walk it was holding: whatever stops it next
+       is an ordinary stop, at a node that has been reached and asked. */
+    const { held: _wasHeld, ...carriedOn } = frame;
     const opened = openOver(
-      replaceTop(after.game.turn_state, { ...frame, cursor: sus.cursor }),
+      replaceTop(after.game.turn_state, { ...carriedOn, cursor: sus.cursor }),
       after,
       { seatId: frame.seatId, shuffle: command.shuffle },
       sus.opens,
@@ -276,12 +362,25 @@ export async function continueTopScript(
     };
   }
 
-  // Complete: the frame comes off, and the card's debts are paid on what is
-  // revealed beneath.
-  const popped = pop(apply(snapshot, done.writes).game.turn_state);
-  const settled = merge(done.writes, { game: { turn_state: popped } });
+  /**
+   * Complete: the frame comes off, and the card's debts are paid on what is
+   * revealed beneath — unless the row took the stack with it.
+   *
+   * 16.1's „musi ona powstrzymać się od podejmowania jakichkolwiek dalszych
+   * działań" is written as `only(endTurn())`: a face that costs the turn
+   * replaces the whole stack, so there is no frame of ours left to pop and
+   * nothing beneath to strike a Karta off. That row was unreachable from in
+   * here while a die table was carried out in the commit that threw it; it is
+   * the Kurhan's 4 now, and popping a one-frame stack is an exception rather
+   * than a turn ending.
+   */
+  const left = apply(snapshot, done.writes).game.turn_state;
+  const standing = topIf(left, "script") !== null;
+  const settled = standing
+    ? merge(done.writes, { game: { turn_state: pop(left) } })
+    : done.writes;
   const after = apply(snapshot, settled);
-  const noted = frame.mark ? markResolved(after, frame.mark) : {};
+  const noted = standing && frame.mark ? markResolved(after, frame.mark) : {};
   const kept: Changeset =
     frame.keep && frame.cardId
       ? {
@@ -297,8 +396,18 @@ export async function continueTopScript(
           },
         }
       : {};
+  /**
+   * And the die comes off the Obszar with it.
+   *
+   * The face is on the field frame so that every device can hold the Karta up
+   * and show it (`markRolled`); the Karta finishing is what makes it a thing
+   * that happened rather than a thing about to. „Dalej" is the press that
+   * reaches here for a table with nothing else to ask, and the last answer of a
+   * question the face opened reaches it for one that had.
+   */
+  const shown = markRolled(apply(snapshot, mergeAll(settled, noted, kept)), null);
   return {
-    writes: mergeAll(settled, noted, kept),
+    writes: mergeAll(settled, noted, kept, shown),
     result: { did: done.result.did, pending: null },
   };
 }
@@ -329,6 +438,7 @@ async function walk(
   if (
     follow !== null &&
     follow.length === 0 &&
+    !command.held &&
     (effect.op === "walka" || effect.op === "zaklecie")
   ) {
     return nothing([]);

@@ -1,7 +1,7 @@
 import { only } from "@/lib/engine/stack";
 import { describe, expect, it } from "vitest";
 import { apply } from "../change";
-import { aSeat, aTable, ports } from "../fixture";
+import { aSeat, aTable, ports, pressDalej } from "../fixture";
 import { scriptedRandom } from "@/lib/engine/ports";
 import { resolveFieldOffer } from "./resolving";
 import { claimMission } from "./friends";
@@ -45,15 +45,23 @@ const standing = (field: FieldId, gold = 0) =>
     ],
   });
 
-/** Takes the errand the given face assigns. */
+/**
+ * Takes the errand the given face assigns — the throw and the „Dalej" after it.
+ *
+ * The die stops the Obszar over the row it landed in until the player says go
+ * on (`heldAt`), so accepting an errand is both halves; `pressDalej` is the
+ * call that button makes.
+ */
 const accept = async (die: number, gold = 0) => {
   const table = standing(TWIERDZA, gold);
+  const dice = { random: scriptedRandom([die]) };
   const out = await resolveFieldOffer(
     table,
     { offerName: "Misja", decided: {}, shuffle: (items) => [...items] },
-    ports({ random: scriptedRandom([die]) }),
+    ports(dice),
   );
-  return { after: apply(table, out.writes), said: out.result.did.join("; ") };
+  const done = await pressDalej(table, out, dice);
+  return { after: apply(table, done.writes), said: done.did.join("; ") };
 };
 
 /** A fight already won, as the dice would have left it. */

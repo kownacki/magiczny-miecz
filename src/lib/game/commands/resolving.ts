@@ -24,7 +24,7 @@ import { skipsRollAt } from "@/lib/engine/abilities";
 import { addEffect, refuseWhileQueuedFor, refuseWhileUndrawn } from "./turn";
 import { keyOf, listed } from "@/lib/engine/state";
 import type { Decisions } from "./ops";
-import { applyEffect, markResolved } from "./effects";
+import { applyEffect, heldAt, markResolved, markRolled, type ApplyEffect } from "./effects";
 
 export interface UseResult {
   card: string;
@@ -231,20 +231,20 @@ export async function resolveFieldOffer(
         }
       : {};
 
-  const effect =
-    face !== undefined && offer.effect.op === "rzut" ? offer.effect.faces[face] : offer.effect;
-  const done = await applyEffect(
-    apply(snapshot, rolled),
-    {
-      seatId: seat.id,
-      effect,
-      reason: face !== undefined ? `${offer.name} (${face})` : offer.name,
-      decided: command.decided,
-      shuffle: command.shuffle,
-      mark: offerKey(offer.name),
-    },
-    ports,
-  );
+  const carried: ApplyEffect = {
+    seatId: seat.id,
+    effect: offer.effect,
+    reason: face !== undefined ? `${offer.name} (${face})` : offer.name,
+    decided: command.decided,
+    shuffle: command.shuffle,
+    mark: offerKey(offer.name),
+  };
+  /* The Obszar's die waits for „Dalej" exactly as a Karta's does — same reason,
+     same shape, and the same panel showing the face. */
+  const done =
+    face !== undefined
+      ? heldAt(apply(snapshot, rolled), carried, [face])
+      : await applyEffect(apply(snapshot, rolled), carried, ports);
 
   const soFar = merge(rolled, done.writes);
   const noted =
@@ -263,52 +263,6 @@ export async function resolveFieldOffer(
   return {
     writes: mergeAll(soFar, noted, shown),
     result: { offer: offer.name, ...(face !== undefined ? { face } : {}), ...done.result },
-  };
-}
-
-/**
- * „Dalej": the face has been read, and the sheet may move on.
- *
- * Its own command because it is its own act — the only one in the app whose
- * whole content is *somebody looked at this*. It writes nothing but the
- * erasure, and it is deliberately not gated on the die having been thrown by
- * the caller: the turn's player is who the sheet waits for, and a table screen
- * pressing it for them is the same press.
- */
-export function readRoll(snapshot: Snapshot): Outcome<void> {
-  return { writes: markRolled(snapshot, null), result: undefined };
-}
-
-/**
- * Puts the die that was just thrown onto the Obszar's own frame, or takes the
- * last one off it.
- *
- * The frame it belongs to is the `field` one, which is not always the top: a
- * card that suspended mid-walk is sitting above it, and that card's die is
- * exactly the one worth showing. So the stack is walked from the top down for
- * the first `field` frame, the same way a `walka` step finds the Obszar its
- * fight belongs to.
- */
-function markRolled(
-  snapshot: Snapshot,
-  face: { cardId: string; face: number } | null,
-): Changeset {
-  const stack = snapshot.game.turn_state.stack;
-  const at = stack.map((frame) => frame.phase).lastIndexOf("field");
-  if (at === -1) return {};
-  const field = stack[at];
-  if (field.phase !== "field") return {};
-  // Nothing to say when there was no die and none was standing.
-  if (!face && !field.rolled) return {};
-  const { rolled: _was, ...rest } = field;
-  return {
-    game: {
-      turn_state: {
-        stack: stack.map((frame, index) =>
-          index === at ? (face ? { ...rest, rolled: face } : rest) : frame,
-        ),
-      },
-    },
   };
 }
 
@@ -380,13 +334,9 @@ export async function resolveDrawnCard(
         }
       : {};
 
-  const effect =
-    face !== undefined && instruction.op === "rzut" ? instruction.faces[face] : instruction;
-  const done = await applyEffect(
-    apply(snapshot, rolled),
-    {
+  const carried: ApplyEffect = {
       seatId: seat.id,
-      effect,
+      effect: instruction,
       // The card is its own subject for `poloz-karte`: three Karty roll for
       // where they settle, and the effect has to know which card it is.
       cardId: command.cardId,
@@ -401,9 +351,21 @@ export async function resolveDrawnCard(
         face !== undefined ? `${cardName(command.cardId)} (${face})` : cardName(command.cardId),
       decided: command.decided,
       shuffle: command.shuffle,
-    },
-    ports,
-  );
+  };
+
+  /**
+   * A die stops the walk; anything else runs now.
+   *
+   * The face is thrown and written down, and what it *does* waits for „Dalej" —
+   * see `heldAt`, which has the argument. Everything below this line reads
+   * `done` and cannot tell the two apart: a suspended resolve pays no debts,
+   * marks nothing resolved and keeps nothing, which is exactly right for a
+   * Karta that has not finished happening.
+   */
+  const done =
+    face !== undefined
+      ? heldAt(apply(snapshot, rolled), carried, [face])
+      : await applyEffect(apply(snapshot, rolled), carried, ports);
 
   /**
    * "Musisz ją zabrać jako Przyjaciela" — a Spotkanie that stays with you.

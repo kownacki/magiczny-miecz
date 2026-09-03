@@ -1,7 +1,7 @@
 import { top } from "@/lib/engine/stack";
 import { describe, expect, it } from "vitest";
 import { apply } from "../change";
-import { aHolding, aSeat, aTable, ports } from "../fixture";
+import { aHolding, aSeat, aTable, ports, pressDalej } from "../fixture";
 import { scriptedRandom } from "@/lib/engine/ports";
 import { resolveFieldOffer } from "./resolving";
 import { compulsoryOffer } from "@/lib/engine/fieldScript";
@@ -41,15 +41,25 @@ const standing = (field: FieldId, cards: string[] = []) =>
     ),
   });
 
+/**
+ * Arriving, throwing whatever the square throws, and pressing „Dalej".
+ *
+ * A die suspends the offer over the row it landed in until the player says go
+ * on (`heldAt`), so a visit is both halves — which is what a player does, and
+ * `resume` is the same call their button makes. It does nothing at all to an
+ * Obszar that never rolled.
+ */
 const arrive = async (table: ReturnType<typeof standing>, field: FieldId, choices: number[] = []) => {
   const owed = compulsoryOffer(field, []);
   if (!owed) throw new Error(`nothing owed at ${field}`);
+  const dice = { random: scriptedRandom([1, 1, 1]) };
   const out = await resolveFieldOffer(
     table,
     { offerName: owed.name, decided: { choices }, shuffle: (items) => [...items] },
-    ports({ random: scriptedRandom([1, 1, 1]) }),
+    ports(dice),
   );
-  return { out, after: apply(table, out.writes) };
+  const done = await pressDalej(table, out, dice);
+  return { out, said: done.did, after: apply(table, done.writes) };
 };
 
 describe("the Ruchome Skały (Tracisz 1 Życie)", () => {
@@ -164,12 +174,16 @@ const rolling = (field: FieldId, die: number, cards: string[] = []) =>
 const face = async (field: FieldId, die: number, cards: string[] = []) => {
   const owed = compulsoryOffer(field, []);
   if (!owed) throw new Error(`nothing owed at ${field}`);
+  const table = rolling(field, die, cards);
+  const dice = { random: scriptedRandom([die, die, die]) };
   const out = await resolveFieldOffer(
-    rolling(field, die, cards),
+    table,
     { offerName: owed.name, decided: {}, shuffle: (items) => [...items] },
-    ports({ random: scriptedRandom([die, die, die]) }),
+    ports(dice),
   );
-  return out.result.did.join("; ");
+  // What the row did, which the throw does not say yet: the face waits for
+  // „Dalej" and the words come with what it then carries out.
+  return (await pressDalej(table, out, dice)).did.join("; ");
 };
 
 describe("Obszary that make you roll", () => {
@@ -274,12 +288,14 @@ const visit = async (
   cards: string[] = [],
 ) => {
   const table = asNature(field, nature, cards);
+  const dice = { random: scriptedRandom([die, die, die]) };
   const out = await resolveFieldOffer(
     table,
     { offerName: offer, decided: { choices }, shuffle: (items) => [...items] },
-    ports({ random: scriptedRandom([die, die, die]) }),
+    ports(dice),
   );
-  return { said: out.result.did.join("; "), life: apply(table, out.writes).seats[0].life };
+  const done = await pressDalej(table, out, dice);
+  return { said: done.did.join("; "), life: apply(table, done.writes).seats[0].life };
 };
 
 describe("the Czarci Młyn, which asks your Natura first", () => {
@@ -376,12 +392,14 @@ const pair = (sum: number): number[] => {
 
 const pray = async (field: FieldId, sum: number, choices: number[] = []) => {
   const table = praying(field);
+  const dice = { random: scriptedRandom([...pair(sum), 1, 1]) };
   const out = await resolveFieldOffer(
     table,
     { offerName: "Modlitwa", decided: { choices }, shuffle: (items) => [...items] },
-    ports({ random: scriptedRandom([...pair(sum), 1, 1]) }),
+    ports(dice),
   );
-  return { out, after: apply(table, out.writes) };
+  const done = await pressDalej(table, out, dice);
+  return { said: done.did, after: apply(table, done.writes) };
 };
 
 describe("the two Świątynie, and their two dice", () => {
@@ -406,15 +424,16 @@ describe("the two Świątynie, and their two dice", () => {
    * to abort the whole prayer with a stack trace.
    */
   it("says why a gift could not be taken, and finishes the prayer", async () => {
-    const { out } = await pray("swiatynia-bogini-nemed", 7);
-    expect(out.result.did.join(" ")).toMatch(/2\.6/);
-    expect(out.result.pending).toBeNull();
+    const { said, after } = await pray("swiatynia-bogini-nemed", 7);
+    expect(said.join(" ")).toMatch(/2\.6/);
+    // Finished: the prayer's frame is off and the Obszar is underneath again.
+    expect(after.game.turn_state.stack).toHaveLength(1);
   });
 
   it("takes both points where the row says both", async () => {
-    const { out } = await pray("swiatynia-tolimana", 3);
-    expect(out.result.did.join(" ")).toMatch(/Magii/);
-    expect(out.result.did.join(" ")).toMatch(/Miecza/);
+    const { said } = await pray("swiatynia-tolimana", 3);
+    expect(said.join(" ")).toMatch(/Magii/);
+    expect(said.join(" ")).toMatch(/Miecza/);
   });
 });
 

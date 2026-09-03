@@ -155,6 +155,21 @@ export type TurnPhase =
        */
       mark?: string;
       keep?: boolean;
+      /**
+       * The cursor names a node that has not run yet.
+       *
+       * A frame is written when a walk *stops*, and everywhere else that means
+       * the node at the cursor was reached and asked something: coming back
+       * down, a `walka` there has since been fought and counts as done. A die
+       * suspends the other way round — the face is thrown and the row it chose
+       * is waiting for „Dalej" (see `heldAt`) — so the same cursor means the
+       * opposite thing, and the difference has to be written down or a table
+       * whose 6 is a fight resumes past the fight without ever opening it.
+       *
+       * Cleared the moment the walk gets going: a second suspension is an
+       * ordinary one, whatever started this frame.
+       */
+      held?: boolean;
     }
   /**
    * One Wróg, fought in rounds (law 3, docs/STACK.md).

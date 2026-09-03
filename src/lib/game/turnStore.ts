@@ -40,7 +40,7 @@ import {
 import { healSeat as healCommand } from "./commands/life";
 import { fightBeast as fightBeastCommand } from "./commands/beast";
 import { applyEffect as applyEffectOn, type Decisions, type Resolution } from "./commands/effects";
-import { readRoll as readRollOn, resolveDrawnCard as resolveDrawnCardOn, resolveFieldOffer as resolveFieldOfferOn, spendHolding as spendHoldingOn, type UseResult } from "./commands/resolving";
+import { resolveDrawnCard as resolveDrawnCardOn, resolveFieldOffer as resolveFieldOfferOn, spendHolding as spendHoldingOn, type UseResult } from "./commands/resolving";
 import {
   breakFree as breakFreeOn,
   claimMission as claimMissionOn,
@@ -1524,17 +1524,6 @@ export async function resolveDrawnCard(
     manual: value !== null,
     shuffle: shuffleFor(of.game),
   }), { random: supplied([value], appRandom()) });
-}
-
-/**
- * „Dalej" under a die that has been read — see `rolled` on the field frame.
- *
- * A write whose whole content is that somebody has looked at something, which
- * is why it takes nothing but the game: the face it clears is on the frame, and
- * the frame is what every device is holding its sheet open on.
- */
-export async function readRoll(gameId: string): Promise<void> {
-  await change(gameId, readRollOn, () => undefined);
 }
 
 /**
