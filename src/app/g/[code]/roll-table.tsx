@@ -1,5 +1,7 @@
 "use client";
 
+/** A printed die table: rolled in place at a physical table, read-only in a simulation. */
+
 import { useState } from "react";
 import { parseRollTable } from "@/lib/engine/rollTable";
 import { suggestActions } from "@/lib/engine/cardEffects";

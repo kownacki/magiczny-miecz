@@ -1,16 +1,5 @@
 "use client";
 
-import { useId, useSyncExternalStore } from "react";
-import type { Intent } from "@/lib/engine/intentText";
-import {
-  beginChannelling,
-  cancelChannelling,
-  channelled,
-  CHANNEL_MS,
-  noChannelling,
-  watchChannelling,
-} from "./channelling";
-
 /**
  * The button that decides something in the game.
  *
@@ -60,6 +49,17 @@ import {
  * announce anything: one whose options are face down (9.3), and one that is not
  * a move in the game at all.
  */
+
+import { useId, useSyncExternalStore } from "react";
+import type { Intent } from "@/lib/engine/intentText";
+import {
+  beginChannelling,
+  cancelChannelling,
+  channelled,
+  CHANNEL_MS,
+  noChannelling,
+  watchChannelling,
+} from "./channelling";
 
 /** What kind of act it is. The colour follows from this, never from the caller. */
 export type ActionRole = "act" | "gain" | "harm" | "spell";

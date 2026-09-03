@@ -1,8 +1,8 @@
 "use client";
 
-import { Rules } from "./rule-ref";
-
 /** A card's or a field's script drawn as controls: what the app can apply for you becomes a button, and what it cannot is stated. */
+
+import { Rules } from "./rule-ref";
 
 import { type Effect } from "@/lib/engine/cardScript";
 import { FIELDS } from "@/lib/engine/board";

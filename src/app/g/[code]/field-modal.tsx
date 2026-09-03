@@ -1,5 +1,7 @@
 "use client";
 
+/** A field, opened: what it says, what is lying on it, and what the character standing here may do about it. */
+
 import { Fragment, useState } from "react";
 
 import { fieldWithText } from "@/lib/view/fieldText";

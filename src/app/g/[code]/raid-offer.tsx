@@ -1,8 +1,8 @@
 "use client";
 
-import { Rules } from "./rule-ref";
-
 /** The Poszukiwacz Przygód, sent out at something up to three Obszary off. */
+
+import { Rules } from "./rule-ref";
 
 import events from "@/data/events.json";
 import type { EventCard } from "@/data/types";

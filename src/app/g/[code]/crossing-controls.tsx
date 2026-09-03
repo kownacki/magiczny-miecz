@@ -1,9 +1,9 @@
 "use client";
 
+/** Everything the board asks of a character leaving one Obszar for another: a toll, a guardian, a threshold, and the six squares of the Kamienny Most (11.x, 14.x). */
+
 import { Rules } from "./rule-ref";
 import { DieMark } from "./die-mark";
-
-/** Everything the board asks of a character leaving one Obszar for another: a toll, a guardian, a threshold, and the six squares of the Kamienny Most (11.x, 14.x). */
 
 import { crossingFrom } from "@/lib/engine/rings";
 import { FIELDS, asFieldId } from "@/lib/engine/board";

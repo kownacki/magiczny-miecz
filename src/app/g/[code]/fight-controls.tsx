@@ -1,8 +1,8 @@
 "use client";
 
-import { Rules } from "./rule-ref";
-
 /** A fight, one die at a time — the two totals, the two rolls, and what the result costs (17.x, and a guardian's own terms at 11.8 and 11.11). */
+
+import { Rules } from "./rule-ref";
 
 import { type Fight } from "@/lib/engine/turn";
 import type { OnAction, Simulated } from "./turn-controls";

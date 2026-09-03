@@ -1,5 +1,10 @@
 "use client";
 
+/**
+ * The sheet every one of the turn's questions is asked on: the picture on the
+ * left, what the app has to add on the right.
+ */
+
 import Image from "next/image";
 import { CardMark, Corner, MARK_SIZE } from "./card-mark";
 import { Overlay } from "./overlay";
@@ -10,11 +15,6 @@ import { CHARACTER_ART_RATIO, characterStandeeUrl } from "@/lib/view/cardImages"
 import { Lookable } from "./lookable";
 import { PlayerName } from "./player-name";
 import { WithRules } from "./rule-ref";
-
-/**
- * The sheet every one of the turn's questions is asked on: the picture on the
- * left, what the app has to add on the right.
- */
 
 /**
  * What the sheet wears whichever question is on it.

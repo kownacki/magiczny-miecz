@@ -1,13 +1,5 @@
 "use client";
 
-import { useState } from "react";
-import { SLOT_LABEL, fitsIn, type Slot } from "@/lib/engine/slots";
-import { SLOT_ICON } from "@/lib/view/slotIcons";
-import { USE_VERB, isUsable, usageOf } from "@/lib/engine/uses";
-import { cornerClass } from "./card-mark";
-import { ItemSlot, SLOT_WIDTH, type SlotOccupant, type SlotTone } from "./item-slot";
-import { TILE_GAP } from "./tile-row";
-
 /**
  * What a character is wearing, laid out like a body.
  *
@@ -26,6 +18,15 @@ import { TILE_GAP } from "./tile-row";
  * Only in the slotted variant. In klasyczny play there is no body to lay out:
  * the rulebook has one kind of possession and one limit (5.4).
  */
+
+import { useState } from "react";
+import { SLOT_LABEL, fitsIn, type Slot } from "@/lib/engine/slots";
+import { SLOT_ICON } from "@/lib/view/slotIcons";
+import { USE_VERB, isUsable, usageOf } from "@/lib/engine/uses";
+import { cornerClass } from "./card-mark";
+import { ItemSlot, SLOT_WIDTH, type SlotOccupant, type SlotTone } from "./item-slot";
+import { TILE_GAP } from "./tile-row";
+
 /**
  * What is in a place on the body.
  *

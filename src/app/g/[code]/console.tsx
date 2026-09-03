@@ -1,19 +1,5 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { WithRules } from "./rule-ref";
-import { readConsole, writeConsole, type ConsoleLine } from "@/lib/game/consoleLog";
-import {
-  COMMANDS,
-  complete,
-  confirmationFor,
-  parseCommand,
-  type Stage,
-} from "@/lib/engine/console";
-import { LAYER } from "./layers";
-import { AnswersEscape, useDismissable } from "./overlay";
-import { ChromeButton, CloseButton, SurfaceHead } from "./chrome";
-
 /**
  * A line to type at, instead of a button for every test.
  *
@@ -29,6 +15,21 @@ import { ChromeButton, CloseButton, SurfaceHead } from "./chrome";
  * same routes as everything else, and journalled as a manual override — a
  * tested game must not be mistakable for a played one.
  */
+
+import { useEffect, useRef, useState } from "react";
+import { WithRules } from "./rule-ref";
+import { readConsole, writeConsole, type ConsoleLine } from "@/lib/game/consoleLog";
+import {
+  COMMANDS,
+  complete,
+  confirmationFor,
+  parseCommand,
+  type Stage,
+} from "@/lib/engine/console";
+import { LAYER } from "./layers";
+import { AnswersEscape, useDismissable } from "./overlay";
+import { ChromeButton, CloseButton, SurfaceHead } from "./chrome";
+
 /**
  * The one shrunk console on screen, if there is one, and how to grow it.
  *

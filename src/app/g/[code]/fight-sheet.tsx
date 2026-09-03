@@ -1,5 +1,10 @@
 "use client";
 
+/**
+ * The fight, and everybody's hand beside it: what is happening, and what the
+ * people watching it are holding while it happens.
+ */
+
 import { useEffect, useState } from "react";
 import { DrawSheet, type SheetChrome } from "./draw-sheet";
 import { FightControls } from "./fight-controls";
@@ -9,11 +14,6 @@ import type { OnAction, Simulated } from "./turn-controls";
 import { cardImageUrl } from "@/lib/view/cardImages";
 import { castableNow, spellScript, type SpellTiming } from "@/lib/engine/spells";
 import type { Fight } from "@/lib/engine/turn";
-
-/**
- * The fight, and everybody's hand beside it: what is happening, and what the
- * people watching it are holding while it happens.
- */
 
 /** Who has claimed the moment before the dice (17.3), and until when. */
 export interface SpellFloor {

@@ -1,10 +1,5 @@
 "use client";
 
-import items from "@/data/items.json";
-import type { Item } from "@/data/types";
-import { RELICS } from "@/lib/engine/stock";
-import { Rules } from "./rule-ref";
-
 /**
  * The four stacks the box actually has, drawn as stacks.
  *
@@ -22,6 +17,11 @@ import { Rules } from "./rule-ref";
  * hand nobody may see). So one shows backs and the other shows faces, and the
  * spent cards can be read through.
  */
+
+import items from "@/data/items.json";
+import type { Item } from "@/data/types";
+import { RELICS } from "@/lib/engine/stock";
+import { Rules } from "./rule-ref";
 
 import Image from "next/image";
 import { cardImageUrl } from "@/lib/view/cardImages";

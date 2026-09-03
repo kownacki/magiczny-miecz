@@ -1,5 +1,7 @@
 "use client";
 
+/** Everything the server has said about this table, and everything this device may say back. */
+
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Notice } from "./toast";
 import { useSettled } from "./settle";

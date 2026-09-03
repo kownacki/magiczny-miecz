@@ -1,5 +1,7 @@
 "use client";
 
+/** Which of the turn's five questions is on the sheet, and the state each one keeps for itself. */
+
 import { type SheetChrome } from "./draw-sheet";
 import { MoveChoice, BridgeChoice } from "./move-choice";
 import { FightSheet, type SpellFloor } from "./fight-sheet";

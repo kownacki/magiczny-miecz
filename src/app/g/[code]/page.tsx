@@ -1,5 +1,7 @@
 "use client";
 
+/** The table screen: one component that reads the table and composes the board, the sheet, the drawers and the overlays. */
+
 import { ScriptFramePanel } from "./script-frame";
 import { AskFramePanel } from "./ask-frame";
 import { top } from "@/lib/engine/stack";

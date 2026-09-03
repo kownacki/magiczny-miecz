@@ -1,5 +1,7 @@
 "use client";
 
+/** Choosing a Postać again after dying (4.4), offered and never forced. */
+
 import { Rules } from "./rule-ref";
 
 import { useState } from "react";

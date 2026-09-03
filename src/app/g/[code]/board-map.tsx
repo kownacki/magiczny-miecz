@@ -1,5 +1,7 @@
 "use client";
 
+/** The board, as a map of who is where and what lies on which Obszar. */
+
 import type { FieldId } from "@/lib/engine/board";
 import type { CardId } from "@/data/ids";
 import { cardArtUrl } from "@/lib/view/cardImages";

@@ -1,5 +1,7 @@
 "use client";
 
+/** The one place this app asks „are you sure?”, for the three things in the poczekalnia that cannot be taken back. */
+
 import { useEffect, useRef } from "react";
 import { Overlay } from "./overlay";
 import { LAYER } from "./layers";

@@ -1,14 +1,5 @@
 "use client";
 
-import type { CardId } from "@/data/ids";
-import type { EqMode } from "@/lib/engine/slots";
-import type { Nature } from "@/data/types";
-import { CardTile } from "./card-tile";
-import { tileFor } from "./table";
-import { isSpent, kolejkaFor, type KolejkaFrame } from "@/lib/engine/kolejka";
-import type { TurnCard } from "@/lib/engine/state";
-import { WithRules } from "./rule-ref";
-
 /**
  * What the Obszar still owes this turn, laid out left to right.
  *
@@ -35,6 +26,15 @@ import { WithRules } from "./rule-ref";
  * in a queue that says "next". `kolejkaFor` draws that line and this only
  * renders what comes back, so the two cannot disagree.
  */
+
+import type { CardId } from "@/data/ids";
+import type { EqMode } from "@/lib/engine/slots";
+import type { Nature } from "@/data/types";
+import { CardTile } from "./card-tile";
+import { tileFor } from "./table";
+import { isSpent, kolejkaFor, type KolejkaFrame } from "@/lib/engine/kolejka";
+import type { TurnCard } from "@/lib/engine/state";
+import { WithRules } from "./rule-ref";
 
 /**
  * Every Karta on the Obszar is a chip; only some of them stop the turn.

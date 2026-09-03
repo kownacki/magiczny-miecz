@@ -1,5 +1,7 @@
 "use client";
 
+/** The things a character can do outside the move-draw-fight loop, most of them companion mode's. */
+
 import { Rules } from "./rule-ref";
 
 import { useState } from "react";

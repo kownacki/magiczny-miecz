@@ -1,5 +1,7 @@
 "use client";
 
+/** A Zaklęcie hanging in the air, and the half-minute anybody has to answer it. */
+
 import { useEffect, useState } from "react";
 import type { Spoken } from "./use-table";
 import { Rules } from "./rule-ref";

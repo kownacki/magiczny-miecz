@@ -1,5 +1,7 @@
 "use client";
 
+/** A card picked up and stuck to the pointer: the click-to-carry that works where a drag does not. */
+
 import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { cardArtUrl } from "@/lib/view/cardImages";

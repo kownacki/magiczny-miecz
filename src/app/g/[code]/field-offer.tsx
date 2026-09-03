@@ -1,5 +1,7 @@
 "use client";
 
+/** A field's compulsory table (16.5) — the thing an Obszar does to you for arriving. */
+
 import { useState } from "react";
 import { DrawSheet, type SheetChrome } from "./draw-sheet";
 import { summariseEffect } from "@/lib/engine/effectText";
@@ -9,8 +11,6 @@ import type { Effect } from "@/lib/engine/cardScript";
 import { ActionButton } from "./action-button";
 import { DieMark } from "./die-mark";
 import { RollSaid, type Rolled } from "./roll-result";
-
-/** A field's compulsory table (16.5) — the thing an Obszar does to you for arriving. */
 
 /**
  * Nothing drawn to deal with, but the Obszar itself demands something.

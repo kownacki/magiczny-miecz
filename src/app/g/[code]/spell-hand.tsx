@@ -1,5 +1,7 @@
 "use client";
 
+/** The spells in your hand, and which of them you may speak right now. */
+
 import { useState } from "react";
 import { CarriedCard, useCarry } from "./carry";
 import spells from "@/data/spells.json";

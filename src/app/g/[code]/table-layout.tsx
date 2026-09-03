@@ -1,10 +1,5 @@
 "use client";
 
-import { LAYER } from "./layers";
-import type { SeatCharacter } from "@/lib/engine/characters";
-import type { TileCard } from "./card-tile";
-import type { Seat } from "./table";
-
 /**
  * The game screen: a board on the left, everything about you on the right.
  *
@@ -31,6 +26,12 @@ import type { Seat } from "./table";
  * every button, scrolled. The split is the golden ratio instead, the larger
  * share to the right: 61.8 / 38.2.
  */
+
+import { LAYER } from "./layers";
+import type { SeatCharacter } from "@/lib/engine/characters";
+import type { TileCard } from "./card-tile";
+import type { Seat } from "./table";
+
 /**
  * The bar across the top of a table, in the poczekalnia and in the game.
  *

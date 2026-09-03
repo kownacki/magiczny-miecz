@@ -1,9 +1,9 @@
 "use client";
 
+/** The pack: what a character is carrying, in the order its owner put it in. */
+
 import { cornerClass } from "./card-mark";
 import { Rules } from "./rule-ref";
-
-/** The pack: what a character is carrying, in the order its owner put it in. */
 
 import { useState } from "react";
 import { orderWith } from "./pack-order";

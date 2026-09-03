@@ -1,8 +1,5 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import { seatColour } from "@/lib/view/boardMap";
-
 /**
  * The turn, at the foot of every screen at the table.
  *
@@ -28,6 +25,10 @@ import { seatColour } from "@/lib/view/boardMap";
  * drawn only while every window is shut. It is what the absence of the turn
  * looks like, and there is no turn it is absent from.
  */
+
+import { useEffect, useRef } from "react";
+import { seatColour } from "@/lib/view/boardMap";
+
 /**
  * The gap the pill floats on, above whatever the console is taking.
  *

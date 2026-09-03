@@ -1,8 +1,5 @@
 "use client";
 
-import { useContext } from "react";
-import { AnswersEscape, type EscapeAnswer } from "./overlay";
-
 /**
  * The buttons that act on a surface rather than on the game.
  *
@@ -22,6 +19,9 @@ import { AnswersEscape, type EscapeAnswer } from "./overlay";
  * Those are illustrations and need the detail; a chevron is a geometric fact and
  * survives being 14 pixels wide, which the hand-drawn wrench famously did not.
  */
+
+import { useContext } from "react";
+import { AnswersEscape, type EscapeAnswer } from "./overlay";
 
 /**
  * The bar along the top of a surface: what it is, and what you can do to it.

@@ -1,5 +1,7 @@
 "use client";
 
+/** One card as a card: the tile, the back of a concealed pile, and the full-size detail. */
+
 import Image from "next/image";
 import { ART_BORDER, ASKABLE, PICKABLE } from "./pickable";
 import { WithRules } from "./rule-ref";

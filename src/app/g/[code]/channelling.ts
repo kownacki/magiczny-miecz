@@ -1,7 +1,5 @@
 "use client";
 
-import type { Intent } from "@/lib/engine/intentText";
-
 /**
  * A decision that has been made but not yet sent.
  *
@@ -31,6 +29,8 @@ import type { Intent } from "@/lib/engine/intentText";
  * disabled while another is filling — the invariant is real, so it is stated
  * here rather than hoped for from wherever a provider happened to be mounted.
  */
+
+import type { Intent } from "@/lib/engine/intentText";
 
 /**
  * How long a decision waits before it is sent.

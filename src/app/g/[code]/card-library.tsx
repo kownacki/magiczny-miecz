@@ -1,5 +1,7 @@
 "use client";
 
+/** Every card in the box, to look at: the Księga, shelved by kind and searched by name. */
+
 import { useMemo, useState } from "react";
 import events from "@/data/events.json";
 import spells from "@/data/spells.json";
