@@ -8,6 +8,7 @@ import { pendingIn } from "@/lib/engine/resolve";
 import type { Effect } from "@/lib/engine/cardScript";
 import { ActionButton } from "./action-button";
 import { DieMark } from "./die-mark";
+import { RollSaid, type Rolled } from "./roll-result";
 
 /** A field's compulsory table (16.5) — the thing an Obszar does to you for arriving. */
 
@@ -25,12 +26,18 @@ export function FieldOffer({
   chrome,
   offer,
   busy,
+  rolled,
+  onRollRead,
   onResolveField,
 }: {
   who: string;
   chrome: SheetChrome;
   offer: { name: string; effect: Effect };
   busy: boolean;
+  /** A die thrown for this Obszar's table and not yet read — see `RollSaid`. */
+  rolled?: Rolled | null;
+  /** „Dalej": the face has been read, and the turn may go on. */
+  onRollRead?: () => void;
   /**
    * Throws the field's own table and applies the row.
    *
@@ -77,7 +84,15 @@ export function FieldOffer({
       <FieldEffect effect={offer.effect} />
       {chrome.canAct && (
         <div className="mt-auto flex flex-wrap gap-2 border-t border-edge pt-3">
-          {owed?.op === "wybor" ? (
+          {/* The face where the button that threw it stood — the Obszar's table
+              reads the same way a Karta's does. */}
+          {rolled ? (
+            <RollSaid
+              face={rolled.face}
+              did={rolled.did}
+              onDone={onRollRead ?? (() => {})}
+            />
+          ) : owed?.op === "wybor" ? (
             owed.options.map((option, index) => (
               <ActionButton
                 key={option.label}

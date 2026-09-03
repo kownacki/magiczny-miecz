@@ -12,9 +12,12 @@ import type { TileCard } from "./card-tile";
 import type { OnAction, Simulated } from "./turn-controls";
 import type { Effect } from "@/lib/engine/cardScript";
 import { nextFrame } from "@/lib/engine/kolejka";
-import type { CardClass } from "@/data/types";
+import type { CardClass, EventCard } from "@/data/types";
+import events from "@/data/events.json";
 import type { SpellTiming } from "@/lib/engine/spells";
 import type { Fight, TurnMoveOption } from "@/lib/engine/turn";
+
+const EVENTS = events as EventCard[];
 
 /**
  * Which of the turn's questions is being asked, and of whom.
@@ -69,6 +72,8 @@ export function DrawModal({
   actor,
   aggression,
   busy,
+  rolled,
+  onRollRead,
   intent,
   onAction,
   onResolve,
@@ -156,6 +161,56 @@ export function DrawModal({
     onResolveField: (choices: number[]) => void | Promise<void>;
   }) {
   const chrome: SheetChrome = { canAct, minimized, onMinimize, error, seatIndex, actor };
+
+  /**
+   * The Karta whose die is still on screen, which outranks every other frame.
+   *
+   * A roll is committed the moment it is thrown: by the time the face reaches
+   * this device the Karta is settled, the kolejka has moved on, and a Karta
+   * that placed itself (15.1) is not in `cards` at all — which is why this is
+   * allowed to build one. What the player is owed is the face, standing where
+   * the button that threw it stood, and one press of „Dalej" clears it and lets
+   * everything below this line happen.
+   *
+   * Above the fight, too. A die table with a Wróg on one of its faces starts a
+   * fight in the same commit, and the fight sheet arriving over the unread
+   * result would leave the player fighting something they never saw arrive.
+   */
+  if (rolled?.cardId) {
+    const known = EVENTS.find((one) => one.id === rolled.cardId);
+    const held =
+      cards.find((entry) => entry.cardId === rolled.cardId) ??
+      (known ? { cardId: known.id, cardClass: known.cardClass } : null);
+    if (held) {
+      return (
+        <DrawnCard
+          who={who}
+          chrome={chrome}
+          card={held}
+          cards={cards}
+          resolved={resolved}
+          fought={fought}
+          beaten={beaten}
+          ring={ring}
+          occupied={occupied}
+          mySword={mySword}
+          nature={nature}
+          eqMode={eqMode}
+          aggression={aggression}
+          busy={busy}
+          rolled={rolled}
+          onRollRead={onRollRead}
+          intent={intent}
+          onResolve={onResolve}
+          onFight={onFight}
+          onEscape={onEscape}
+          onTake={onTake}
+          onLeave={onLeave}
+          onAsk={onAsk}
+        />
+      );
+    }
+  }
 
   if (move) {
     return (
@@ -246,6 +301,8 @@ export function DrawModal({
         chrome={chrome}
         offer={fieldOffer}
         busy={busy}
+        rolled={rolled?.cardId === null ? rolled : null}
+        onRollRead={onRollRead}
         onResolveField={onResolveField}
       />
     ) : null;
@@ -267,6 +324,8 @@ export function DrawModal({
       eqMode={eqMode}
       aggression={aggression}
       busy={busy}
+      rolled={rolled}
+      onRollRead={onRollRead}
       intent={intent}
       onResolve={onResolve}
       onFight={onFight}

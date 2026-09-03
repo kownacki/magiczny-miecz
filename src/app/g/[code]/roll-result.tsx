@@ -1,93 +1,89 @@
 "use client";
 
-/** What the die did, held on screen until the player who threw it has read it. */
+/** What the die did, where the button that threw it was standing. */
 
-import { Overlay } from "./overlay";
 import { ActionButton } from "./action-button";
 import { DieMark } from "./die-mark";
 import { WithRules } from "./rule-ref";
 
 /**
- * The face, and what it cost — the one moment the app decides and the player
- * only watches.
+ * A die that has been thrown and not yet read.
+ *
+ * Held by the table (`page.tsx`) rather than by the panel that shows it,
+ * because by the time it exists the panel has moved on: `post` refreshes before
+ * it returns, so the Karta is settled, the kolejka has advanced, and a Karta
+ * that placed itself (15.1) is out of the frame altogether.
+ */
+export interface Rolled {
+  /** The Karta it was thrown for. Null for an Obszar's own table. */
+  cardId: string | null;
+  /** What it was thrown for, in its own words — the Karta's name, or the offer's. */
+  title: string;
+  face: number;
+  /** What the app applied, as the command reported it. */
+  did: string[];
+}
+
+/**
+ * The face, and what it cost — standing where „Rzuć kostką" stood.
  *
  * Everything else under a Karta is pressed: you choose, and what follows is
- * what you chose. A die table is the opposite — „Rzuć kostką" is the whole of
- * the player's part, the app throws, and six lines above the button say what
- * *could* happen. Without this panel the turn simply moved on: the Karta was
- * gone, the next one was up, and the only record that a 5 had cost a point of
- * Życie was a line in the Dziennik nobody was looking at, plus a number on the
- * Karta Postaci that had quietly changed.
+ * what you chose. A die table is the opposite — the press is the whole of the
+ * player's part, the app throws, and the face decides. Without this the turn
+ * simply moved on: the Karta was gone, the next one was up, and the only record
+ * that a 5 had cost a point of Życie was a line in the Dziennik nobody was
+ * looking at and a number on the Karta Postaci that had quietly changed.
  *
- * So the kolejka waits here. Not because anything is undecided — the roll is
- * committed, the effect is applied, and this cannot refuse any of it — but
- * because a referee that decides for you owes you the sentence saying what it
- * decided. „Dalej" is an acknowledgement, and it is why the button says that
- * rather than „OK": what it does is let the turn go on.
+ * It was a small dialog over the sheet first, and that was the wrong place: a
+ * modal over the Karta hides the Karta, and what a player wants at that moment
+ * is the six lines above the button — the ones saying what the faces mean —
+ * with the one that came up read against them. So the outcome stands in the
+ * button's own place, under its own list, and nothing else on the sheet moves.
  *
- * The rest of the table gets the same thing where the rest of the table gets
- * everything — the Dziennik, in the order it happened. This is for the pair of
- * eyes that were on the button.
+ * „Dalej" channels like every other button that cannot be taken back: the
+ * kolejka goes on when it fires, and three seconds is how long this app gives
+ * you to mean it. It is the one button in this corner that does *not* pass
+ * `immediate` — the throw was not a decision and this is: it is the player
+ * saying they have read the result.
  */
-export function RollResult({
-  /** The Karta or the Obszar the die was thrown for, in its own words. */
-  title,
+export function RollSaid({
   face,
   did,
   onDone,
 }: {
-  title: string;
   face: number;
-  /** What the app applied, as the command reported it. */
   did: readonly string[];
   onDone: () => void;
 }) {
   return (
-    // Escape and a click outside mean the same as the button: this is a notice,
-    // and dismissing a notice is reading it.
-    <Overlay label={`${title} — wypadło ${face}`} onDismiss={onDone} alert>
-      <div className="w-full max-w-sm rounded-lg border border-edge bg-panel p-4 shadow-[0_8px_40px_rgba(0,0,0,0.6)]">
-        <h2 className="font-[family-name:var(--font-display)] text-lg text-ink">{title}</h2>
-
-        {/* The number at the size of the thing that just happened. The glyph
-            beside it is the one on the button that threw it, so the two read as
-            the same act finishing. */}
-        <p className="mt-3 flex items-center gap-2 text-ochre">
+    <div className="flex flex-col gap-2">
+      <div className="flex flex-wrap items-center gap-3">
+        <p className="flex items-center gap-2 text-ochre">
           <span className="text-[11px] uppercase tracking-widest text-muted">Wypadło</span>
-          <span className="font-[family-name:var(--font-display)] text-4xl tabular-nums">
+          <span className="font-[family-name:var(--font-display)] text-4xl leading-none tabular-nums">
             {face}
           </span>
+          {/* The glyph off the button that threw it, so the two read as one act
+              finishing rather than as a result arriving from somewhere else. */}
           <span className="text-ochre/70">
             <DieMark />
           </span>
         </p>
-
-        <ul className="mt-3 flex flex-col gap-1 border-t border-edge/60 pt-3">
-          {did.length > 0 ? (
-            did.map((line, at) => (
-              <li key={at} className="text-sm leading-snug text-ink">
-                {/* A rule number in an outcome is a link like every other one —
-                    „zamiana w Kamień na 3 tury (20.1)" comes through here. */}
-                <WithRules text={line} />
-              </li>
-            ))
-          ) : (
-            <li className="text-sm text-muted">nic się nie dzieje</li>
-          )}
-        </ul>
-
-        <ActionButton
-          weight="lead"
-          size="lg"
-          className="mt-4 w-full"
-          /* Nothing to take back and nothing to warn the table about: it has
-             happened already, and this button only puts the notice away. */
-          immediate
-          onClick={onDone}
-        >
+        <ActionButton weight="lead" size="lg" onClick={onDone}>
           Dalej
         </ActionButton>
       </div>
-    </Overlay>
+      {did.length > 0 && (
+        <ul className="flex flex-col gap-0.5">
+          {did.map((line, at) => (
+            <li key={at} className="text-xs leading-snug text-ink">
+              {/* A rule number in an outcome is a link like every other one —
+                  „zamiana w Kamień na 3 tury (20.1)" comes through here. */}
+              <WithRules text={line} />
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }

@@ -32,7 +32,7 @@ import {
 } from "./table-view";
 import { CardLibrary } from "./card-library";
 import { useTable, type Person, type Said } from "./use-table";
-import { RollResult } from "./roll-result";
+import type { Rolled } from "./roll-result";
 import { TestConsole, wakeConsole } from "./console";
 import { stageOf } from "@/lib/engine/console";
 import { TurnFab, owedLabel } from "./turn-fab";
@@ -68,7 +68,7 @@ import { RebornModal } from "./reborn-modal";
 import { AnnouncementModal } from "./announcement";
 import { ConfirmDialog, type Confirmation } from "./confirm";
 import { askAbout, usageOf } from "@/lib/engine/uses";
-import { compulsoryOffer } from "@/lib/engine/fieldScript";
+import { compulsoryOffer, offerNamed } from "@/lib/engine/fieldScript";
 import { MAX_SEATS } from "@/lib/game/modes";
 import { stillStone } from "@/lib/engine/status";
 import { Toasts } from "./toast";
@@ -435,9 +435,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
    * already up, so a notice living inside the card's own panel would have
    * nowhere to stand.
    */
-  const [rolled, setRolled] = useState<{ title: string; face: number; did: string[] } | null>(
-    null,
-  );
+  const [rolled, setRolled] = useState<Rolled | null>(null);
   /**
    * Raises that notice, for a reply that has a die in it.
    *
@@ -446,9 +444,10 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
    * roll, so none of them have a `face` and nothing is shown. What is left is
    * exactly the acts the app decided on somebody's behalf.
    */
-  const showDie = useCallback((said: Said | null) => {
+  const showDie = useCallback((cardId: string | null, said: Said | null) => {
     if (!said || typeof said.face !== "number") return;
     setRolled({
+      cardId,
       title: String(said.card ?? said.offer ?? ""),
       face: said.face,
       did: said.did ?? [],
@@ -736,12 +735,13 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
       // Red, like everything that takes something away from somebody — here
       // from the person pressing it.
       tone: "grave",
-      onConfirm: async () => {
+      onConfirm: () => {
         setAsk(null);
-        /* The nine Karty that are an act rather than a possession: four of them
-           are a die table, and a Szkatuła spent on a 3 owes the same sentence a
-           Karta's die does. */
-        showDie(await post("holdings", { action: "use", holdingId }));
+        /* No die shown for this one, unlike a Karta's own table or an Obszar's:
+           the face stands in the place the button that threw it was standing,
+           and a Przedmiot spent from the pack has no such place. What it did is
+           in the Dziennik, where it was before. */
+        post("holdings", { action: "use", holdingId });
       },
     });
   }
@@ -1062,7 +1062,10 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
         // And not while the deal is still being looked at — see `revealing`.
         !revealing &&
         (turnState.drawn.length > 0 ||
-          compulsoryOffer(active.field_id, turnState.resolved ?? []) !== null)));
+          compulsoryOffer(active.field_id, turnState.resolved ?? []) !== null ||
+          // A table that has been rolled and not yet read is still on screen —
+          // its own panel is where the face stands. See `RollSaid`.
+          rolled !== null)));
 
   /**
    * Whether anything of the turn is on screen at all.
@@ -1666,8 +1669,15 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                 : null
             }
             bridge={turnState.phase === "bridge" ? turnState.bridge : null}
+            /* The offer that is owed — or, while its die is still on screen,
+               the one that was: `compulsoryOffer` stops naming a table the
+               moment it is resolved, and the panel it was thrown in has to
+               stand there long enough to say what came up. */
             fieldOffer={
-              turnState.phase === "field" ? compulsoryOffer(active.field_id, turnState.resolved ?? []) : null
+              turnState.phase === "field"
+                ? (offerNamed(active.field_id, rolled?.cardId === null ? rolled.title : null) ??
+                  compulsoryOffer(active.field_id, turnState.resolved ?? []))
+                : null
             }
             simulated={game.mode === "simulation"}
             /**
@@ -1787,9 +1797,13 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
             aggression={active.aggression}
             busy={busy}
             error={error}
+            /* The die this device threw and has not read yet. It holds the
+               sheet on the Karta it belongs to — see `RollSaid`. */
+            rolled={rolled}
+            onRollRead={() => setRolled(null)}
             onAction={(body) => post("turn", body)}
             onResolve={async (cardId, decisions) => {
-              showDie(await post("turn", { action: "karta-efekt", cardId, ...decisions }));
+              showDie(cardId, await post("turn", { action: "karta-efekt", cardId, ...decisions }));
             }}
             onResolveField={async (choices) => {
               const offer = compulsoryOffer(
@@ -1799,7 +1813,10 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
               /* Awaited rather than dropped: the panel holds the button that was
                  pressed until this settles, and the die comes back on it. */
               if (!offer) return;
-              showDie(await post("turn", { action: "pole-tabela", offer: offer.name, choices }));
+              showDie(
+                null,
+                await post("turn", { action: "pole-tabela", offer: offer.name, choices }),
+              );
             }}
             onFight={(cardIds) => post("turn", { action: "fight", cardIds })}
             onEscape={() => post("turn", { action: "escape" })}
@@ -1854,18 +1871,6 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
           canAct={mine?.id === turnState.seatId || isTableScreen}
           busy={busy}
           onAnswer={(choice) => post("turn", { action: "answer", choice })}
-        />
-      )}
-
-      {/* What the die did, over whatever the turn has moved on to. Last, so it
-          is over the sheets above at the same layer — the roll is the newest
-          thing that happened and the only one waiting on a pair of eyes. */}
-      {rolled && (
-        <RollResult
-          title={rolled.title}
-          face={rolled.face}
-          did={rolled.did}
-          onDone={() => setRolled(null)}
         />
       )}
 

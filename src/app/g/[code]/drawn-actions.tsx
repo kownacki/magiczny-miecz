@@ -48,6 +48,7 @@ import { fieldName, plural, sentence } from "@/lib/engine/polish";
 import { mayWalkPast } from "@/lib/engine/kolejka";
 import { TheReader, specialRows } from "./card-facts";
 import { DieMark } from "./die-mark";
+import { RollSaid, type Rolled } from "./roll-result";
 import { effectRows } from "@/lib/engine/effectText";
 import { inertFor, pendingIn } from "@/lib/engine/resolve";
 import { asFieldId, type FieldId } from "@/lib/engine/board";
@@ -113,6 +114,16 @@ export interface DrawnActionsProps {
    */
   aggression?: string | null;
   busy: boolean;
+  /**
+   * A die thrown for this Karta and not yet read — see `RollSaid`.
+   *
+   * Only ever on the device that threw it: the turn has moved on for everybody
+   * else, and this is the sentence the app owes the one player who watched it
+   * decide something on their behalf. Null names no Karta and holds nothing.
+   */
+  rolled?: Rolled | null;
+  /** „Dalej": the player has read the face, and the kolejka may go on. */
+  onRollRead?: () => void;
   /**
    * What the acting player's button is about to do, while it is still filling.
    *
@@ -206,6 +217,8 @@ export function DrawnActions({
   eqMode,
   aggression,
   busy,
+  rolled,
+  onRollRead,
   intent,
   onResolve,
   onFight,
@@ -462,6 +475,15 @@ export function DrawnActions({
    * row goes, because the button beneath is that row.
    */
   const faces = rolls ? (effectRows(instruction) ?? []).slice(1) : [];
+
+  /**
+   * The die thrown for *this* Karta, if it is still waiting to be read.
+   *
+   * Asked by card id rather than taken on trust: the sheet is held on the Karta
+   * whose die is up (`DrawModal`), and a mismatch would put one Karta's face
+   * under another one's list.
+   */
+  const said6 = rolled && rolled.cardId === card.cardId ? rolled : null;
 
   /**
    * Whether walking away is one of the answers.
@@ -739,8 +761,13 @@ export function DrawnActions({
           did. A card with no script has nothing to do but be read. */}
       {nothingLeftToAsk && !inert && (
         <div className="flex flex-col items-start gap-2">
-          {/* What the die can do, read before it is thrown. */}
+          {/* What the die can do, read before it is thrown — and after, with
+              the face that came up standing under the list rather than over
+              it. */}
           {faces.length > 0 && <ul className="flex flex-col gap-1">{specialRows(faces)}</ul>}
+          {said6 ? (
+            <RollSaid face={said6.face} did={said6.did} onDone={onRollRead ?? (() => {})} />
+          ) : (
           <ActionButton
             weight="lead"
             size="lg"
@@ -767,6 +794,7 @@ export function DrawnActions({
                 kostką". */}
             {!instruction ? "Rozumiem" : rolls ? "Rzuć kostką" : "Rozpatrz"}
           </ActionButton>
+          )}
         </div>
       )}
 

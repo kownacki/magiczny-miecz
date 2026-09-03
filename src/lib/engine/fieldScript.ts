@@ -855,6 +855,24 @@ export function compulsoryOffer(
 }
 
 /**
+ * One of an Obszar's offers by name, owed or not.
+ *
+ * `compulsoryOffer` answers "what does this square still want", which is the
+ * question every caller has except one: a panel showing what the die did has to
+ * keep standing after the table it rolled is settled, and by then the offer is
+ * no longer owed by anybody. So this asks the other question — "which one was
+ * that" — and it is a lookup rather than a rule.
+ */
+export function offerNamed(
+  fieldId: FieldId | null,
+  name: string | null,
+): { name: string; effect: Effect } | null {
+  if (!fieldId || !name) return null;
+  const found = fieldScriptFor(fieldId)?.offers.find((offer) => offer.name === name);
+  return found ? { name: found.name, effect: found.effect } : null;
+}
+
+/**
  * Whether a card is an establishment, and so belongs in the field's offers
  * beside the ones the board prints.
  *
