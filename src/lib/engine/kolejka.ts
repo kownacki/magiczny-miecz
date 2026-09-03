@@ -1,8 +1,8 @@
 /** The Obszar's kolejka: which of the Karty lying there the turn must stop for, in the order 15.2 puts them. */
 
 import { CARD_CLASS, type CardClass } from "@/data/types";
-import { goesToAField, scriptFor } from "./cardScript";
-import { listed, type TurnCard } from "./state";
+import { scriptFor } from "./cardScript";
+import { listed, placedFirst, type TurnCard } from "./state";
 
 /**
  * Two words that are not the same word.
@@ -157,8 +157,9 @@ export function isSpent(
  */
 export function owesAFrame(card: TurnCard): boolean {
   // 15.1 sits above the numerals, and a Karta that relocates itself has to be
-  // dealt with before it can be anywhere else.
-  if (goesToAField(card.cardId)) return true;
+  // dealt with before it can be anywhere else. Only on the way there: one that
+  // has landed is an ordinary Karta of its own class — `placedFirst`.
+  if (placedFirst(card)) return true;
   switch (card.cardClass) {
     // 16.1, 16.2, 16.3: a Spotkanie is obeyed and a Wróg attacks. Neither
     // asks, and no card of either class is `optional`.
@@ -218,7 +219,7 @@ export function kolejkaFor(
 
     // 15.1's Karty are each their own frame whatever numeral they print: each
     // rolls its own die for its own Obszar, so two of them are two questions.
-    const kind: FrameKind = goesToAField(card.cardId)
+    const kind: FrameKind = placedFirst(card)
       ? "placed"
       : FRAME_OF[card.cardClass as Exclude<CardClass, "item" | "friend">];
 

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { goesToAField, reopensTheDrawing } from "./cardScript";
-import { resolutionOrder } from "./state";
+import { goesToAField, instructionIn, reopensTheDrawing, scriptFor } from "./cardScript";
+import { placedFirst, resolutionOrder } from "./state";
 import type { TurnCard } from "./state";
 
 /**
@@ -50,6 +50,37 @@ describe("a card that sends itself to a named Obszar", () => {
   it("keeps draw order between two that both place themselves", () => {
     const order = resolutionOrder([card("eremita", "encounter"), card("upior", "foe")]);
     expect(order.map((one) => one.cardId)).toEqual(["eremita", "upior"]);
+  });
+
+  /**
+   * Only on the way there. 15.1's parenthesis — „oczywiście tylko podczas
+   * aktualnej tury" — scopes the whole rule to the turn the Karta was turned
+   * over; once it has landed it is an ordinary Karta of its own class on its
+   * new square, and an Eremita jumping the kolejka a second time would go
+   * ahead of a Spotkanie that 16.4 says is dealt with first.
+   */
+  it("stops jumping the queue once it is lying there", () => {
+    const found = { ...card("eremita", "encounter"), lying: true };
+    expect(placedFirst(card("eremita", "encounter"))).toBe(true);
+    expect(placedFirst(found)).toBe(false);
+
+    const order = resolutionOrder([card("mgla", "encounter"), found]);
+    expect(order.map((one) => one.cardId)).toEqual(["mgla", "eremita"]);
+  });
+
+  /**
+   * And the sentence it is read changes with it. The die is thrown by whoever
+   * turned him over; the Magiczny Miecz is offered to whoever finds him.
+   */
+  it("reads its placement when drawn and its own text where it lies", () => {
+    const eremita = scriptFor("eremita")!;
+    expect(instructionIn(eremita, undefined).op).toBe("rzut");
+    expect(instructionIn(eremita, true).op).toBe("wybor");
+
+    // A Karta with one sentence says it to everybody, drawn or found.
+    const krol = scriptFor("krol-lasu")!;
+    expect(instructionIn(krol, undefined)).toBe(krol.effect);
+    expect(instructionIn(krol, true)).toBe(krol.effect);
   });
 });
 

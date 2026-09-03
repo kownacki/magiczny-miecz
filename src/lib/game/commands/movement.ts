@@ -560,6 +560,15 @@ export function liftFieldCards(
             {
               cardId: card.id,
               cardClass: card.cardClass,
+              /**
+               * Off the board, which is a different thing from being drawn.
+               *
+               * 15.1 is a draw-time rule, so a Karta that sends itself to a
+               * named Obszar says one thing on the way there and another once
+               * it is lying on it — and this is the only moment either side
+               * can tell which. See `instructionIn` and `placedFirst`.
+               */
+              lying: true,
               ...(row.granted ? { granted: true } : {}),
               ...(row.pool !== null ? { pool: row.pool } : {}),
             },

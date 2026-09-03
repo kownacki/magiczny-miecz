@@ -4,6 +4,7 @@ import {
   andWhom,
   describeCondition,
   describeEffect,
+  cardRows,
   effectRows,
   describeLoss,
   summariseEffect,
@@ -449,18 +450,30 @@ describe("the Mędrzec's riddle", () => {
   });
 });
 
-describe("a sequence beside a picture", () => {
+describe("a Karta with two occasions", () => {
   /** Die table then choice — the Eremita, and the one card that is both. */
-  it("flattens into the rows of its steps", () => {
-    const rows = effectRows(SCRIPTS["eremita"]!.effect)!;
-    // Two occasions, and each says whose it is: the die is thrown by whoever
-    // draws him (15.1), the gift belongs to whoever stops there afterwards.
+  it("says whose each of them is", () => {
+    const rows = cardRows(SCRIPTS["eremita"]!)!;
+    // The die is thrown by whoever draws him (15.1), the gift belongs to
+    // whoever stops there afterwards — and the two live in different fields of
+    // the script, which is what these headings read.
     expect(rows[0]).toBe("gdy wyciągnięta — rzuć kostką:");
     expect(rows[1]).toBe("1 — kładziesz Kartę: Bezdroża");
     expect(rows).toContain("gdy odwiedzony — do wyboru:");
     // A blank row between the two groups, which the panel draws as a gap.
     expect(rows).toContain("");
     expect(rows).toContain("— Otrzymujesz Magiczny Miecz");
+  });
+
+  /**
+   * All of the Upiór is his placement: whoever finds him fights him, and that
+   * is 16.2's business rather than his Karta's. A second heading over „nic" is
+   * a promise of a half that is not there.
+   */
+  it("leaves off the half a card does not have", () => {
+    const rows = cardRows(SCRIPTS["upior"]!)!;
+    expect(rows[0]).toBe("gdy wyciągnięta — rzuć kostką:");
+    expect(rows.join(" ")).not.toContain("odwiedzony");
   });
 
   /** A sequence of plain steps keeps its sentence. */

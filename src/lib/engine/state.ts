@@ -110,6 +110,38 @@ export interface TurnCard {
    * than "empty" — see `afterVisit`.
    */
   pool?: number | null;
+  /**
+   * This Karta came off the board rather than off the pile.
+   *
+   * `liftFieldCards` sets it when somebody stops on an Obszar and everything
+   * lying there joins their turn (12.1, 13.4, 16.8). Every other Karta in a
+   * frame was drawn into it, so absent means "just turned over".
+   *
+   * It exists for 15.1, which is a rule about the *draw*: a Karta that sends
+   * itself to a named Obszar is resolved first and does not touch the Postać
+   * who turned it over. Once it has landed it is an ordinary Karta on its new
+   * square, queued by numeral like anything else and saying whatever its text
+   * says to whoever finds it — so the same card id has to be able to mean two
+   * different things, and this is what tells them apart. See `instructionIn`
+   * and `placedFirst`.
+   *
+   * Not persisted anywhere: the lift derives it from the row every time, and a
+   * Karta nobody dealt with goes back onto the board at the end of the turn.
+   */
+  lying?: boolean;
+}
+
+/**
+ * Whether this copy is one 15.1 puts before everything else.
+ *
+ * The card's instruction *and* the fact that it has not carried it out yet.
+ * `goesToAField` alone is the card, and the card is not the whole question: an
+ * EREMITA rolled onto the Bezdroża is one of that square's Nieznajomi from
+ * then on, and jumping the kolejka a second time would put him ahead of a
+ * Spotkanie 16.4 says goes first.
+ */
+export function placedFirst(card: TurnCard): boolean {
+  return !card.lying && goesToAField(card.cardId);
 }
 
 /**
@@ -127,10 +159,12 @@ export interface TurnCard {
  * of them.
  *
  * The other half of 15.1 — "nie mają wpływu na Postać, która je wyciągnęła" —
- * needs nothing here and is not enforced anywhere either, because the shape
- * already gives it: `poloz-karte` lifts the card out of `drawn` and inserts it
- * into `fieldCards`, so it stops being part of this turn at the moment it is
- * resolved and waits for whoever ends a move there next.
+ * needs nothing *here*, but it did need something: the shape gives half of it,
+ * since `poloz-karte` lifts the card out of `drawn` and into `fieldCards` and
+ * it stops being part of this turn as it resolves. The half the shape does not
+ * give is a card that says something else as well — the Eremita's Magiczny
+ * Miecz, which used to be handed over on the way past. That is `placed`'s, in
+ * `cardScript.ts`, and `lying` is what this file contributes to it.
  *
  * **And a card that re-opens the badanie sits below its own class.** The Skalne
  * Wrota draw three more Karty into this same kolejka, and the community reading
@@ -190,7 +224,7 @@ export function nextNth(cards: readonly TurnCard[]): number {
 }
 
 export function resolutionOrder(cards: readonly TurnCard[]): TurnCard[] {
-  const placed = (card: TurnCard) => (goesToAField(card.cardId) ? 0 : 1);
+  const placed = (card: TurnCard) => (placedFirst(card) ? 0 : 1);
   const last = (card: TurnCard) => (reopensTheDrawing(card.cardId) ? 1 : 0);
   return [...cards].sort(
     (a, b) =>

@@ -61,7 +61,9 @@ const settle = (at: Snapshot, destination?: string) =>
 
 describe("where the Lewiatan settles", () => {
   it("is a question, and the two registers now agree it is one", () => {
-    const effect = scriptFor(LEWIATAN)!.effect;
+    // `placed`, not `effect`: where he goes is 15.1's instruction to whoever
+    // drew him, and what he does to whoever finds him in the water is a fight.
+    const effect = scriptFor(LEWIATAN)!.placed!;
     expect(isSettled(effect)).toBe(false);
     expect(pendingIn(effect, [])).toMatchObject({ op: "poloz-karte" });
   });

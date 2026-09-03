@@ -197,28 +197,37 @@ export const NIEZNAJOMI: Readonly<Record<string, CardScript>> = {
   },
   // Two rolls' worth of card in one: where he settles, and what he hands the
   // first Postać to find him. Both named items are finite ("jeśli jeszcze są").
+  /**
+   * Two sentences to two different people, which is why they are two fields.
+   *
+   * „Rzuć kostką i umieść Kartę Eremity na odpowiednim Obszarze: 1. Bezdroża…"
+   * is said to whoever turned him over, and 15.1 then puts him beyond their
+   * reach for the rest of that turn. „Pierwszej Postaci, Eremita ofiaruje do
+   * wyboru: Magiczny Miecz lub Tarczę Tolimana (jeśli jeszcze są)" is said
+   * where he settles, to whoever ends a move there first — see `placed`.
+   *
+   * They were one `po-kolei` for a while, and it was wrong twice over: the
+   * player who drew him rolled for his Obszar and was handed the Magiczny
+   * Miecz in the same breath, and the visitor who found him rolled for his
+   * Obszar all over again and moved him on.
+   */
   eremita: {
+    placed: {
+      op: "rzut",
+      faces: {
+        1: { op: "poloz-karte", gdzie: { kind: "pole", fieldId: "bezdroza" } },
+        2: { op: "poloz-karte", gdzie: { kind: "pole", fieldId: "uroczysko" } },
+        3: { op: "poloz-karte", gdzie: { kind: "pole", fieldId: "pustelnia" } },
+        4: { op: "poloz-karte", gdzie: { kind: "pole", fieldId: "wieza-przeznaczenia" } },
+        5: { op: "poloz-karte", gdzie: { kind: "pole", fieldId: "rozstajne-drogi-1" } },
+        6: { op: "poloz-karte", gdzie: { kind: "pole", fieldId: "ruiny-twierdzy" } },
+      },
+    },
     effect: {
-      op: "po-kolei",
-      steps: [
-        {
-          op: "rzut",
-          faces: {
-            1: { op: "poloz-karte", gdzie: { kind: "pole", fieldId: "bezdroza" } },
-            2: { op: "poloz-karte", gdzie: { kind: "pole", fieldId: "uroczysko" } },
-            3: { op: "poloz-karte", gdzie: { kind: "pole", fieldId: "pustelnia" } },
-            4: { op: "poloz-karte", gdzie: { kind: "pole", fieldId: "wieza-przeznaczenia" } },
-            5: { op: "poloz-karte", gdzie: { kind: "pole", fieldId: "rozstajne-drogi-1" } },
-            6: { op: "poloz-karte", gdzie: { kind: "pole", fieldId: "ruiny-twierdzy" } },
-          },
-        },
-        {
-          op: "wybor",
-          options: [
-            { label: "otrzymujesz Magiczny Miecz", effect: { op: "otrzymaj", co: "Magiczny Miecz" } },
-            { label: "otrzymujesz Tarczę Tolimana", effect: { op: "otrzymaj", co: "Tarcza Tolimana" } },
-          ],
-        },
+      op: "wybor",
+      options: [
+        { label: "otrzymujesz Magiczny Miecz", effect: { op: "otrzymaj", co: "Magiczny Miecz" } },
+        { label: "otrzymujesz Tarczę Tolimana", effect: { op: "otrzymaj", co: "Tarcza Tolimana" } },
       ],
     },
     disposition: { kind: "do-pierwszej" },

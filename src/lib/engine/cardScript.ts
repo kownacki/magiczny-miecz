@@ -27,8 +27,33 @@ import type { CardId } from "@/data/ids";
  * that he then leaves, whether or not you took the ride, is the other half.
  */
 export interface CardScript {
-  /** What resolving the card does. */
+  /** What resolving the card does, where it lies. */
   effect: Effect;
+  /**
+   * Where the Karta goes the moment it is turned over (15.1).
+   *
+   * „Karty, które zgodnie z ich instrukcją powinny zostać położone na
+   * konkretnym Obszarze, niezależnie od tego, gdzie zostały wyciągnięte,
+   * rozpatrywane są w pierwszej kolejności. **Nie mają one wpływu na Postać,
+   * która je wyciągnęła** (oczywiście tylko podczas aktualnej tury)." Three
+   * cards in the box do it: the UPIÓR and the EREMITA roll for their Obszar,
+   * the LEWIATAN is put down on one of six.
+   *
+   * Its own field for the same reason `przegrana` is: this is a *second* thing
+   * the card's text says, and it is said to somebody else. The Eremita reads
+   * „Rzuć kostką i umieść Kartę Eremity na odpowiednim Obszarze… Pierwszej
+   * Postaci, Eremita ofiaruje do wyboru: Magiczny Miecz lub Tarczę Tolimana" —
+   * one sentence to whoever turned him over and one to whoever finds him, and
+   * they are never the same person. Both lived in `effect` as a `po-kolei`
+   * until this field existed, which handed the Magiczny Miecz to the very
+   * Postać 15.1 says the Karta cannot touch, and made a visitor roll for his
+   * Obszar all over again — an Eremita who moved every time somebody called on
+   * him.
+   *
+   * `instructionIn` is what picks between the two, off the one fact that tells
+   * them apart: whether the Karta came off the pile or off the board.
+   */
+  placed?: Effect;
   /**
    * What losing a fight to this creature costs, on top of 17.4's point of Życie.
    *
@@ -534,19 +559,39 @@ export function isConsumedOnResolve(cardId: string): boolean {
  * Whether this card's instruction sends it to a named Obszar (15.1).
  *
  * "Karty, które zgodnie z ich instrukcją powinny zostać położone na konkretnym
- * Obszarze, niezależnie od tego, gdzie zostały wyciągnięte" — four cards in the
- * box: the Lewiatan, the Upiór and the Eremita, whose die tables send them to
- * water, to the Osada and to the Bezdroża.
+ * Obszarze, niezależnie od tego, gdzie zostały wyciągnięte" — three cards in
+ * the box: the Lewiatan, the Upiór and the Eremita, whose die tables send them
+ * to water, to the Osada and to the Bezdroża.
  *
- * Read off the script rather than listed, so a fifth transcribed tomorrow is
- * ordered correctly without anybody remembering this rule exists. The whole
- * script is searched, not just its top level, because all three reach
- * `poloz-karte` through a `rzut` table.
+ * Asked of `placed`, which is that instruction and nothing else. It used to be
+ * a `JSON.stringify(effect).includes('"poloz-karte"')` — the whole script
+ * searched as text, because the placement was buried inside a `rzut` inside a
+ * `po-kolei` and there was no field to ask. A card that is asked "do you send
+ * yourself somewhere" now answers from the one place that says so.
+ *
+ * Read off the script rather than listed, so a fourth transcribed tomorrow is
+ * ordered correctly without anybody remembering this rule exists.
  */
 export function goesToAField(cardId: string): boolean {
-  const script = scriptFor(cardId);
-  if (!script) return false;
-  return JSON.stringify(script.effect).includes('"poloz-karte"');
+  return scriptFor(cardId)?.placed !== undefined;
+}
+
+/**
+ * Which of a Karta's two instructions is the one being carried out now.
+ *
+ * 15.1 is a *draw-time* rule — the parenthesis scopes it to the turn the card
+ * was turned over — so a Karta with a `placed` says one thing on the way to its
+ * Obszar and another once it is there, and the only fact that tells the two
+ * apart is where this copy came from: off the pile, or off the board.
+ *
+ * One function, so the server and the sheet cannot disagree about which
+ * sentence is being read. Everything else about resolving is already shared
+ * that way; a card that rolled for its Obszar on one side and offered a
+ * Magiczny Miecz on the other would be the worst kind of divergence, because
+ * both halves look right on their own.
+ */
+export function instructionIn(script: CardScript, lying: boolean | undefined): Effect {
+  return !lying && script.placed ? script.placed : script.effect;
 }
 
 /**

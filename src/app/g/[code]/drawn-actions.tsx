@@ -42,7 +42,7 @@ import { listed } from "@/lib/engine/state";
 import { kindForCard } from "@/lib/engine/holdings";
 import { ActionButton } from "./action-button";
 import { intentSaid, type Intent } from "@/lib/engine/intentText";
-import { scriptFor } from "@/lib/engine/cardScript";
+import { instructionIn, scriptFor } from "@/lib/engine/cardScript";
 import { itemProfile, previewOf, requirementOf } from "@/lib/engine/abilityText";
 import { fieldName, plural, sentence } from "@/lib/engine/polish";
 import { mayWalkPast } from "@/lib/engine/kolejka";
@@ -268,6 +268,19 @@ export function DrawnActions({
   const script = scriptFor(known.id);
 
   /**
+   * Which of the Karta's sentences this Postać is being read (15.1).
+   *
+   * The same question `resolveDrawnCard` asks and the same function, off the
+   * same fact: a Karta that came off the pile is on its way to the Obszar its
+   * instruction names, and one that came off the board is where it was going.
+   * The EREMITA is „Rzuć i rozpatrz" to the player who turned him over and two
+   * gifts to the player who finds him, and the sheet must not offer one in
+   * place of the other — it did, and the Magiczny Miecz was on the table three
+   * squares from where the Eremita went to live.
+   */
+  const instruction = script ? instructionIn(script, card.lying) : null;
+
+  /**
    * Sends one decision and holds it on screen until the server has answered.
    *
    * Every button under a Karta that resolves it goes through here, so that the
@@ -330,7 +343,7 @@ export function DrawnActions({
   // simply do it. Nothing has been decided yet by definition — an answer given
   // here is sent, and what the card asks after it is the server's frame to put
   // up, not this panel's to guess at (see `sent`).
-  const asking = script ? pendingIn(script.effect, [], nature) : null;
+  const asking = instruction ? pendingIn(instruction, [], nature) : null;
 
   /* Kept for `inert` below: the line itself is `CardFacts`'s now, drawn from
      the same `requirementOf` against the same reader. What is asked here is
@@ -345,7 +358,7 @@ export function DrawnActions({
    * no hand. The shape is `inertFor`'s question and the verdict is
    * `requirementOf`'s; this only puts the two together.
    */
-  const inert = inertFor(script?.effect, needs?.met === false);
+  const inert = inertFor(instruction ?? undefined, needs?.met === false);
 
   /**
    * Whose decision this is, as the table knows them — „Test (WIEDŹMA)".
@@ -705,7 +718,7 @@ export function DrawnActions({
               a button that promises to try. What the app actually does is
               resolve the Karta; how much of it applies is the card's business
               and the server's, and either way the player pressed one thing. */}
-          {!script ? "Rozumiem" : script.effect.op === "rzut" ? "Rzuć i rozpatrz" : "Rozpatrz"}
+          {!instruction ? "Rozumiem" : instruction.op === "rzut" ? "Rzuć i rozpatrz" : "Rozpatrz"}
         </ActionButton>
       )}
 

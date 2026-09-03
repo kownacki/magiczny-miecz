@@ -34,14 +34,20 @@ const someSpells = () => ({
   ),
 });
 
-const meeting = (card: string, gold: number, magic = 4) =>
+/**
+ * `lying` is the Karta found where it lies rather than turned over now — what
+ * `liftFieldCards` marks, and the only thing that tells 15.1's two sentences
+ * apart. Off by default: every other Nieznajomy here is being drawn.
+ */
+const meeting = (card: string, gold: number, magic = 4, lying = false) =>
   aTable({
     game: {
       active_seat: 0,
       deck: someSpells() as never,
       turn_state: {
         phase: "field", fieldId: "wrzosowiska", from: null, draw: 0,
-        drawn: [{ cardId: card, cardClass: "stranger" }], resolved: [],
+        drawn: [{ cardId: card, cardClass: "stranger", ...(lying ? { lying: true } : {}) }],
+        resolved: [],
       } as TurnPhase,
     },
     seats: [
@@ -146,18 +152,37 @@ describe("the Dobre Bóstwo, which judges what you did", () => {
   });
 });
 
-describe("the Eremita, who was waiting on `otrzymaj`", () => {
+describe("the Eremita, who says one thing to each of two people", () => {
+  /**
+   * 15.1, in both halves. „Rzuć kostką i umieść Kartę Eremity na odpowiednim
+   * Obszarze" is what the Postać who turned him over does, and „Nie mają one
+   * wpływu na Postać, która je wyciągnęła" is what they get for it: nothing.
+   *
+   * He handed the Magiczny Miecz over on the way past for as long as both
+   * sentences lived in one `po-kolei` — the Karta went to the Bezdroża and the
+   * best Przedmiot in the box went to the player who never met him.
+   */
+  it("goes where the die sends him, and gives the drawer nothing", async () => {
+    const { after, said } = await visit(meeting("eremita", 0), "eremita", [0], [1]);
+    expect(after.fieldCards).toMatchObject([{ card_id: "eremita", field_id: "bezdroza" }]);
+    expect(after.holdings).toHaveLength(0);
+    expect(said).not.toMatch(/Miecz/);
+  });
+
   /**
    * "Pierwszej Postaci, Eremita ofiaruje do wyboru: Magiczny Miecz lub Tarczę
    * Tolimana (jeśli jeszcze są)." The parenthesis is 21.2's stock, which
    * `takeCard` counts — which is why the note about it could go.
+   *
+   * `lying`, because that is the whole difference: this copy came off the
+   * board, where it has been waiting since somebody else rolled for it.
    */
-  it("hands over whichever of the two was chosen", async () => {
-    const { after } = await visit(meeting("eremita", 0), "eremita", [0], [1]);
-    expect(after.holdings.map((h) => h.card_id)).toContain("magiczny-miecz");
+  it("hands whoever finds him whichever of the two they chose", async () => {
+    const found = (choice: number) =>
+      visit(meeting("eremita", 0, 4, true), "eremita", [choice]);
 
-    const other = await visit(meeting("eremita", 0), "eremita", [1], [1]);
-    expect(other.after.holdings.map((h) => h.card_id)).toContain("tarcza-tolimana");
+    expect((await found(0)).after.holdings.map((h) => h.card_id)).toContain("magiczny-miecz");
+    expect((await found(1)).after.holdings.map((h) => h.card_id)).toContain("tarcza-tolimana");
   });
 });
 

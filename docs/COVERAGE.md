@@ -51,11 +51,14 @@ starcia pozostanie nierozstrzygnięty" wants a card that can rewrite a settled
 fight, which is the same door the Złoczyńca's toll went through and the
 opposite direction.
 
-One caveat on that first number, learned the hard way on the Eremita:
+One caveat on that first number, learned the hard way on the Eremita, twice:
 `coverageOf` reports whether a card has a *script*, not whether the script can
-resolve. He was `pelne` for months while his first step, `poloz-karte`, was
-declared and unimplemented — so he rolled for where to settle and settled
-nowhere. If a card matters, run it rather than counting it.
+resolve, and not whether it resolves for the right person. He was `pelne` for
+months while his first step, `poloz-karte`, was declared and unimplemented — so
+he rolled for where to settle and settled nowhere — and `pelne` again while both
+his sentences ran together, handing his Magiczny Miecz to the one Postać 15.1
+says he cannot touch and moving him on every time somebody called on him. If a
+card matters, play it rather than counting it.
 
 ---
 
@@ -236,7 +239,7 @@ loss on death are the same either way, so nothing above this line changes.
 
 | | rule | status | where |
 |---|---|---|---|
-| 15.1 | cards that go to a named field resolve first and do not affect the drawer | ✅ | both halves. The ordering sits above 15.2's numerals in `resolutionOrder` — the Upiór is a Demon (III) and the Eremita a Nieznajomy (IV) and neither waits its class — and is read off the script (`goesToAField`) rather than a list, so a fifth such card transcribed tomorrow is ordered without anybody remembering this rule. The immunity needs no code and never did: `poloz-karte` lifts the card out of `drawn` into `fieldCards`, so it stops being part of this turn as it resolves and waits for whoever ends a move there next |
+| 15.1 | cards that go to a named field resolve first and do not affect the drawer | ✅ | both halves, and the second one cost a field. The ordering sits above 15.2's numerals in `resolutionOrder` — the Upiór is a Demon (III) and the Eremita a Nieznajomy (IV) and neither waits its class — read off `placed`, the script field that *is* that instruction, so a fourth such card transcribed tomorrow is ordered without anybody remembering this rule. Only on the way there: `placedFirst` asks `lying` as well, because a Karta that has landed is an ordinary one of its own class on its new square. The immunity was said here to need no code, on the grounds that `poloz-karte` lifts the card out of `drawn` into `fieldCards` as it resolves — true, and only half the rule. A Karta that says something else as well said it to the drawer: the Eremita's „Pierwszej Postaci… ofiaruje do wyboru" lived in the same `po-kolei` as his die, so the player who turned him over rolled him onto the Bezdroża and pocketed the Magiczny Miecz on the way past. The two sentences are two fields now, and `instructionIn` picks between them off `lying` |
 | 15.2 | the rest resolve in printed numeral order | ✅ | `resolutionOrder` |
 
 ## 16. Rodzaje Kart Zdarzeń

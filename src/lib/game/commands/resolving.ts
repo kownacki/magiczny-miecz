@@ -1,7 +1,7 @@
 /** The three doors an effect comes through: a Przedmiot used up, an Obszar's own offer, and a Karta just drawn. */
 
 import type { Shuffle } from "@/lib/engine/deck";
-import { scriptFor } from "@/lib/engine/cardScript";
+import { instructionIn, scriptFor } from "@/lib/engine/cardScript";
 import { fieldScriptFor, offerKey } from "@/lib/engine/fieldScript";
 import { describeEffect } from "@/lib/engine/effectText";
 import { usageOf } from "@/lib/engine/uses";
@@ -299,7 +299,17 @@ export async function resolveDrawnCard(
   const script = scriptFor(command.cardId);
   if (!script) throw new Error(`${cardName(command.cardId)} — tę Kartę rozpatrzcie sami.`);
 
-  const table = script.effect.op === "rzut";
+  /**
+   * Which of the Karta's sentences is being read (15.1).
+   *
+   * A card with a `placed` says one thing to whoever turned it over — roll,
+   * and put me on that Obszar — and another to whoever finds it there. Which
+   * one this is turns on where the copy came from, and `being.lying` is the
+   * mark `liftFieldCards` puts on everything it takes off the board.
+   */
+  const instruction = instructionIn(script, being.lying);
+
+  const table = instruction.op === "rzut";
   const face = table ? await ports.random.rollD6(`${cardName(command.cardId)}: tabela`) : undefined;
   const rolled: Changeset =
     face !== undefined
@@ -317,7 +327,7 @@ export async function resolveDrawnCard(
       : {};
 
   const effect =
-    face !== undefined && script.effect.op === "rzut" ? script.effect.faces[face] : script.effect;
+    face !== undefined && instruction.op === "rzut" ? instruction.faces[face] : instruction;
   const done = await applyEffect(
     apply(snapshot, rolled),
     {

@@ -59,6 +59,14 @@ This is a **draw-time** rule. The parenthesis scopes the whole of it to the turn
 the card was turned over; once it has landed, it is an ordinary Karta on its new
 square, queued by numeral like anything else. Two cards do it: UPIÓR, EREMITA.
 
+Which is why the placement is a field of its own — `CardScript.placed` — and not
+the card's `effect`. A Karta with both says one sentence to whoever turns it
+over and another to whoever finds it, and `lying` (set by `liftFieldCards` on
+everything it takes off the board) is the one fact that says which is being
+read. The Eremita is the card that proves it: with the two in one `po-kolei` he
+handed his Magiczny Miecz to the player who drew him and rolled for his Obszar
+again every time somebody visited.
+
 **Then the Spotkania and the Wrogowie**, which the book gates explicitly:
 
 > **16.4** — „Dopiero po rozpatrzeniu skutków wszystkich Spotkań i pokonaniu

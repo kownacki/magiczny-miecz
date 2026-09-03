@@ -1,6 +1,6 @@
 /** Every card effect, said in words, so the picture of the card is never the only place a rule lives. */
 
-import type { Condition, Destination, Effect, Target } from "./cardScript";
+import type { CardScript, Condition, Destination, Effect, Target } from "./cardScript";
 import {
   cardName,
   characterName,
@@ -218,42 +218,50 @@ export function effectRows(effect: Effect): string[] | null {
   if (effect.op === "po-kolei") {
     const steps = effect.steps.map((step) => effectRows(step));
     if (!steps.some((rows) => rows !== null)) return null;
-    /**
-     * 15.1's placement and what the Karta then offers are two different
-     * occasions, and the rows ran together as though both happened now.
-     *
-     * The EREMITA is the card: „Rzuć kostką i umieść Kartę Eremity na
-     * odpowiednim Obszarze… Pierwszej Postaci, Eremita ofiaruje do wyboru:
-     * Magiczny Miecz lub Tarczę Tolimana". The die is thrown by whoever draws
-     * him and does nothing to them (15.1); the choice belongs to whoever stops
-     * on the Obszar he lands on, which may be somebody else, several turns
-     * later. Six placements and two gifts in one undifferentiated list read as
-     * eight things happening to the reader.
-     *
-     * So each half says whose occasion it is, and the test is the placement
-     * itself — the same string `goesToAField` looks for, asked of a step rather
-     * than of a card id.
-     */
-    const out: string[] = [];
-    let placed = false;
-    effect.steps.forEach((step, at) => {
-      const rows = [...(steps[at] ?? [describeEffect(step)])];
-      if (JSON.stringify(step).includes('"poloz-karte"')) {
-        rows[0] = `gdy wyciągnięta — ${rows[0]}`;
-        placed = true;
-      } else if (placed) {
-        rows[0] = `gdy odwiedzony — ${rows[0]}`;
-        // A blank row, which the panel draws as a gap: the placement happened
-        // to whoever drew the Karta and this happens to whoever finds it, and
-        // running the two groups together is the ambiguity the headings were
-        // added to end.
-        out.push("");
-      }
-      out.push(...rows);
-    });
-    return out;
+    return effect.steps.flatMap((step, at) => steps[at] ?? [describeEffect(step)]);
   }
   return null;
+}
+
+/**
+ * A whole Karta as rows: where it goes when it is turned over, and what it says
+ * where it lies.
+ *
+ * The two are different occasions and used to run together as one list. The
+ * EREMITA is the card: „Rzuć kostką i umieść Kartę Eremity na odpowiednim
+ * Obszarze… Pierwszej Postaci, Eremita ofiaruje do wyboru: Magiczny Miecz lub
+ * Tarczę Tolimana". The die is thrown by whoever draws him and does nothing to
+ * them (15.1); the choice belongs to whoever stops on the Obszar he lands on,
+ * which may be somebody else, several turns later. Six placements and two gifts
+ * in one undifferentiated list read as eight things happening to the reader.
+ *
+ * The headings were inferred once, off a `po-kolei` whose step contained a
+ * `poloz-karte` — found by searching the step as text, which is what you do
+ * when the fact you want is not written down anywhere. It is written down now:
+ * `placed` is that instruction and `effect` is the other one, so this reads
+ * them rather than looking for them.
+ *
+ * `body` is what the caller decided the card's own half is — a gated card's
+ * rows are its branch's, not its condition's — and every Karta without a
+ * `placed`, which is all but three, comes back exactly as `effectRows` has it.
+ */
+export function cardRows(script: CardScript, body: Effect = script.effect): string[] | null {
+  if (!script.placed) return effectRows(body);
+
+  const placed = effectRows(script.placed) ?? [describeEffect(script.placed)];
+  const rows = [`gdy wyciągnięta — ${placed[0]}`, ...placed.slice(1)];
+
+  // The UPIÓR and the LEWIATAN are all placement: what happens to whoever finds
+  // them is a fight, which is their class's (16.2) and not their text's. A
+  // heading over „nic się nie dzieje" would say the card has a second half and
+  // that it is empty.
+  if (body.op === "nic") return rows;
+
+  const own = effectRows(body) ?? [describeEffect(body)];
+  // A blank row, which the panel draws as a gap: the placement happened to
+  // whoever drew the Karta and this happens to whoever finds it, and running
+  // the two groups together is the ambiguity the headings were added to end.
+  return [...rows, "", `gdy odwiedzony — ${own[0]}`, ...own.slice(1)];
 }
 
 /** "1, 2, 3" becomes "1-3"; scattered faces stay listed. */

@@ -106,10 +106,19 @@ export const WROGOWIE: Readonly<Record<string, CardScript>> = {
   demon: STRAZUJE(),
   widmo: STRAZUJE(),
   zjawa: STRAZUJE(),
-  // The card is rolled onto one of six fields and haunts it — the drawer stays
-  // exactly where they are.
+  /**
+   * The card is rolled onto one of six fields and haunts it — the drawer stays
+   * exactly where they are.
+   *
+   * All of him is `placed`, and his `effect` is nothing at all: what happens to
+   * whoever finds him on the Obszar he chose is a fight, and a fight is his
+   * *class*'s business (16.2) rather than his text's. Written out rather than
+   * left off, because a Karta with no `effect` would be a second shape for
+   * every reader of a script to know about, and „nic" is the honest answer to
+   * "what does this card do to the Postać standing in front of it".
+   */
   upior: {
-    effect: {
+    placed: {
       op: "rzut",
       faces: {
         1: { op: "poloz-karte", gdzie: { kind: "pole", fieldId: "osada" } },
@@ -120,12 +129,13 @@ export const WROGOWIE: Readonly<Record<string, CardScript>> = {
         6: { op: "poloz-karte", gdzie: { kind: "pole", fieldId: "wymarle-miasto" } },
       },
     },
+    effect: { op: "nic" },
     disposition: { kind: "zostaje" },
   },
   // Whichever of the three is free. Both printed copies of each are listed
   // because the card names the places, not one of their two halves.
   lewiatan: {
-    effect: {
+    placed: {
       op: "poloz-karte",
       gdzie: {
         kind: "jedno-z",
@@ -139,6 +149,9 @@ export const WROGOWIE: Readonly<Record<string, CardScript>> = {
         ],
       },
     },
+    // Nothing, for the reason the Upiór's says nothing: whoever finds him in
+    // the water fights him, and that is 16.2's, not the card's.
+    effect: { op: "nic" },
     disposition: { kind: "zostaje" },
   },
 };
