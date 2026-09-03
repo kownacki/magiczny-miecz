@@ -8,11 +8,12 @@ import {
   type FieldId,
 } from "@/lib/engine/board";
 import { dealtInto } from "@/lib/engine/turn";
+import { resolutionOrder } from "@/lib/engine/state";
 import type { CardClass, EventCard } from "@/data/types";
 import { combatValueOf } from "@/lib/engine/cards";
 import { type Effect } from "@/lib/engine/cardScript";
 import { continueTopScript } from "./commands/effects";
-import { only, requireTop } from "@/lib/engine/stack";
+import { only, requireTop, type TurnState } from "@/lib/engine/stack";
 import { answerAsk as answerAskOn } from "./commands/ask";
 import {
   afterFight,
@@ -355,23 +356,53 @@ export async function stageFight(
 }
 
 /**
- * Puts a Karta in front of the active seat as though it had just been drawn.
+ * Puts Karty in front of the active seat as though they had just been drawn.
  *
  * `stageFight` without the fight, and for the three classes that have no other
  * door: a Spotkanie, a Nieznajomy and a Miejsce are obeyed rather than held, so
  * neither the hand nor a staged fight is anywhere to put one. Before this the
  * only way to see one resolve was to draw until it came up.
  *
- * Marked `granted`, because the deck still holds this card — the whole point of
- * the test verb is that the piles are not touched. And appended rather than
+ * Marked `granted`, because the deck still holds these cards — the whole point
+ * of the test verb is that the piles are not touched. And appended rather than
  * replacing the frame when a turn is already standing on an Obszar, so 15.2's
- * order is worked out over everything drawn rather than over this card alone.
+ * order is worked out over everything drawn rather than over these cards alone.
  * With no field phase open it opens one where the figure stands, exactly as
- * `stageFight` does, so the card can be looked at without rolling first.
+ * `stageFight` does, so the cards can be looked at without rolling first.
+ *
+ * # Several at once, and why it is one commit
+ *
+ * `drawAll` deals what the Obszar owes in one act, because 13.4 settles the
+ * whole number at the moment of arrival and nobody at a table deals a card,
+ * resolves it, and then decides whether to deal the next. `deal` is `draw` with
+ * the choice taken off the deck, so it has to be able to stand in for the whole
+ * deal and not only for its first card.
+ *
+ * One `change`, folding `dealtInto` over the list rather than calling this once
+ * per card. Two reasons, and the first is a rule: dealing them separately would
+ * open the half-explored state between the presses that `drawAll`'s own note
+ * exists to close, and every card after the first would arrive into a turn the
+ * one before it had already changed. The second is the `merge` trap in
+ * CLAUDE.md — `turn_state` is a column each card reads and writes, so two
+ * changesets side by side would keep only the second card and silently lose the
+ * first. Threading the `TurnState` through the fold sidesteps both.
+ *
+ * The order typed is the order they arrive in, and that is all 15.2 needs:
+ * `dealtInto` hands each to `afterDraw`, which re-runs `resolutionOrder` over
+ * the whole kolejka, so a Wróg named third still resolves before a Przedmiot
+ * named first, and two of one class keep the order they were named in.
  */
-export async function stageCard(gameId: string, seatId: string, cardId: string): Promise<void> {
-  const card = EVENTS.find((one) => one.id === cardId);
-  if (!card) throw new Error(`Nieznana karta: ${cardId}`);
+export async function stageCards(
+  gameId: string,
+  seatId: string,
+  cardIds: readonly string[],
+): Promise<string[]> {
+  const cards = cardIds.map((cardId) => {
+    const card = EVENTS.find((one) => one.id === cardId);
+    if (!card) throw new Error(`Nieznana karta: ${cardId}`);
+    return card;
+  });
+  if (cards.length === 0) throw new Error("Nie podano żadnej karty.");
 
   await change(
     gameId,
@@ -380,11 +411,14 @@ export async function stageCard(gameId: string, seatId: string, cardId: string):
     if (!seat) throw new Error("Nieznane miejsce.");
     if (seat.seat_index !== snapshot.game.active_seat) throw new Error("To nie twoja tura.");
     if (!seat.field_id) throw new Error("Postać nie stoi na żadnym polu.");
+    const fieldId = seat.field_id;
 
-    const turn_state = dealtInto(
+    const turn_state = cards.reduce<TurnState | null>(
+      (state, card) =>
+        state === null
+          ? null
+          : dealtInto(state, { cardId: card.id, cardClass: card.cardClass, granted: true }, fieldId),
       snapshot.game.turn_state,
-      { cardId: card.id, cardClass: card.cardClass, granted: true },
-      seat.field_id,
     );
     // `draw`'s own refusal, in `draw`'s own words: a card resolves into the
     // turn, and mid-fight or mid-Karta there is nowhere to put one.
@@ -393,21 +427,35 @@ export async function stageCard(gameId: string, seatId: string, cardId: string):
     return {
       writes: {
         game: { turn_state },
-        journal: [
-          {
-            seatId,
-            round: snapshot.game.round,
-            kind: "test-deal",
-            payload: { cardId: card.id, fieldId: seat.field_id },
-            manual: true,
-          },
-        ],
+        journal: cards.map((card) => ({
+          seatId,
+          round: snapshot.game.round,
+          // One line per Karta, not one for the deal — `drawAll`'s rule, for
+          // the same reason: the Dziennik records what came up, and
+          // "wyciągnięto 3 Karty" is a record of a gesture.
+          kind: "test-deal" as const,
+          payload: { cardId: card.id, fieldId },
+          manual: true,
+        })),
       },
       result: undefined,
     };
     },
     undefined,
   );
+
+  /**
+   * The order the turn will reach them in, for whoever asked.
+   *
+   * The same `resolutionOrder` the frame ran, over the new cards alone — which
+   * is the relative order they hold inside the kolejka however much was already
+   * waiting there. Recomputed rather than read back off the written frame,
+   * because a frame that already held a copy of one of these names could not be
+   * asked which entry was the new one.
+   */
+  return resolutionOrder(
+    cards.map((card) => ({ cardId: card.id, cardClass: card.cardClass })),
+  ).map((card) => card.cardId);
 }
 
 /**

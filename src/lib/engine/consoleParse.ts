@@ -424,15 +424,44 @@ export function parseCommand(line: string): { ok: Command } | { error: string } 
     // Bare, it is a question rather than a mistake: "what can I ask for?" is
     // the thing somebody dressing a test table wants, and Tab's grid cannot
     // carry the headings that answer it.
-    if (tail === "") return { ok: { kind: "deal", cardId: null } };
-    // Every Karta in the box, because every Karta can be drawn. The two verbs
-    // this replaced each matched a slice of the deck, which is why asking for
-    // the wrong slice answered "No card called `SMOK`" about a card that is
-    // printed twice.
-    return name(READABLE, (card) => card.name, tail, "card", (card) => ({
-      kind: "deal",
-      cardId: card.id,
-    }), "deal");
+    if (tail === "") return { ok: { kind: "deal", cardIds: [] } };
+    /**
+     * Several Karty, separated by commas.
+     *
+     * A comma because no card in the box has one in its name and every card has
+     * spaces in it, so nothing else can tell TOPÓR ŚWIATŁA I CIEMNOŚCI from two
+     * cards. It is also what you would write on paper listing what came up.
+     *
+     * The list is the point rather than a convenience: 13.4 settles how many
+     * Karty an Obszar is worth at the moment you arrive and `drawAll` deals
+     * them in one act, so a verb that stands in for a draw and could only ever
+     * produce one card could not reproduce the thing the game actually does.
+     * The order typed is the order they arrive in, which is all 15.2 needs —
+     * `resolutionOrder` does the rest.
+     *
+     * A trailing comma is not an error. `deal SMOK,` is a line halfway through
+     * being typed, and refusing it teaches nothing the next keystroke would not
+     * have fixed.
+     */
+    const said = tail.split(",").map((one) => one.trim()).filter(Boolean);
+    if (said.length === 0) return { ok: { kind: "deal", cardIds: [] } };
+
+    const cardIds: string[] = [];
+    for (const one of said) {
+      // Every Karta in the box, because every Karta can be drawn. The two verbs
+      // this replaced each matched a slice of the deck, which is why asking for
+      // the wrong slice answered "No card called `SMOK`" about a card that is
+      // printed twice.
+      const hit = findByName(READABLE, (card) => card.name, one);
+      if ("ambiguous" in hit) {
+        return { error: `Which one — ${hit.ambiguous.slice(0, 6).join(", ")}?` };
+      }
+      // Named rather than "one of them": with several on the line, "No card
+      // called ``" would leave you counting commas to find which.
+      if ("missing" in hit) return { error: `No card called \`${one}\`.` };
+      cardIds.push(hit.found.id);
+    }
+    return { ok: { kind: "deal", cardIds } };
   }
 
   /**

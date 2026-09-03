@@ -150,23 +150,23 @@ suite("naming a card, a field or a creature", () => {
   it("types English and names Polish", () => {
     expect(ok("magic +1")).toMatchObject({ stat: "magic" });
     expect(err("magia +1")).toMatch(/No command/);
-    expect(ok("deal MAGICZNY MIECZ")).toMatchObject({ cardId: "magiczny-miecz" });
+    expect(ok("deal MAGICZNY MIECZ")).toMatchObject({ cardIds: ["magiczny-miecz"] });
     expect(ok("teleport Świątynia Tolimana")).toMatchObject({ fieldId: "swiatynia-tolimana" });
     expect(ok("pick BŁĘDNY RYCERZ")).toMatchObject({ characterId: "bledny-rycerz" });
   });
 
   it("finds a card by the name printed on it", () => {
-    expect(ok("deal MAGICZNY MIECZ")).toEqual({ kind: "deal", cardId: "magiczny-miecz" });
+    expect(ok("deal MAGICZNY MIECZ")).toEqual({ kind: "deal", cardIds: ["magiczny-miecz"] });
   });
 
   it("does not need a Polish keyboard", () => {
-    expect(ok("deal swiety graal")).toEqual({ kind: "deal", cardId: "swiety-graal" });
+    expect(ok("deal swiety graal")).toEqual({ kind: "deal", cardIds: ["swiety-graal"] });
   });
 
   it("prefers an exact name over the longer names containing it", () => {
     // MIECZ and MIECZ CHAOSU both exist; typing the whole of one is not
     // ambiguous just because the other starts the same way.
-    expect(ok("deal miecz")).toEqual({ kind: "deal", cardId: "miecz" });
+    expect(ok("deal miecz")).toEqual({ kind: "deal", cardIds: ["miecz"] });
   });
 
   it("asks which one when a query really does name several", () => {
@@ -281,7 +281,7 @@ suite("naming a card, a field or a creature", () => {
   it("reaches the Wyposażenie deck, which is not the Karty Zdarzeń", () => {
     // The card that could once not be asked for at all, because only the event
     // deck was searched.
-    expect(ok("deal tarcza tolimana")).toMatchObject({ cardId: "tarcza-tolimana" });
+    expect(ok("deal tarcza tolimana")).toMatchObject({ cardIds: ["tarcza-tolimana"] });
     expect(ok("place tarcza tolimana")).toMatchObject({ cardId: "tarcza-tolimana" });
   });
 
@@ -337,7 +337,7 @@ suite("naming a card, a field or a creature", () => {
 
   it("names a Zaklęcie where a hand can hold one, and not where a field cannot", () => {
     // 9.3 keeps a granted spell face down; `grantCard` has always taken one.
-    expect(ok("deal kamien filozoficzny")).toMatchObject({ cardId: "kamien-filozoficzny" });
+    expect(ok("deal kamien filozoficzny")).toMatchObject({ cardIds: ["kamien-filozoficzny"] });
     // 9.6 sends a spent spell to the used pile, and none lies on a board.
     expect(err("place kamien filozoficzny")).toMatch(/No card/);
   });
@@ -387,7 +387,7 @@ suite("naming a card, a field or a creature", () => {
       ["deal TARGOWISKO", "targowisko"],
       ["deal KRĄG PŁOMIENI", "krag-plomieni"],
     ] as const) {
-      expect(ok(said), said).toEqual({ kind: "deal", cardId });
+      expect(ok(said), said).toEqual({ kind: "deal", cardIds: [cardId] });
     }
   });
 
@@ -447,6 +447,21 @@ suite("naming a card, a field or a creature", () => {
     // The same hits, cut up rather than added to.
     const { options } = complete("deal ", []);
     expect(sections?.flatMap((one) => one.options).sort()).toEqual([...options].sort());
+  });
+
+  /**
+   * Past a comma, Tab is offering the *next* card and not finishing the last.
+   *
+   * Without this it went quiet after the first name: the fragment is every word
+   * from `at` onwards joined, so `deal MGŁA, WILKO` matched against the whole of
+   * that and no card starts with it. The comma is the only boundary a name with
+   * spaces in it can have, which is why the parser reads it and why Tab has to
+   * read the same one.
+   */
+  it("offers the next card after a comma, keeping what is already named", () => {
+    expect(complete("deal MGŁA, WILKO", []).line).toBe("deal MGŁA, WILKOŁAK ");
+    // And with nothing typed after the comma, the whole catalogue again.
+    expect(complete("deal MGŁA, ", []).options.length).toBeGreaterThan(50);
   });
 
   it("drops a heading the fragment has emptied", () => {
@@ -613,7 +628,46 @@ suite("naming a card, a field or a creature", () => {
   });
 
   it("takes a bare `deal` as a request for the list", () => {
-    expect(ok("deal")).toEqual({ kind: "deal", cardId: null });
+    expect(ok("deal")).toEqual({ kind: "deal", cardIds: [] });
+  });
+
+  /**
+   * Several Karty on one line, separated by commas.
+   *
+   * A comma because no card in the box has one in its name and every card has
+   * spaces in it, so nothing else can tell TOPÓR ŚWIATŁA I CIEMNOŚCI from two
+   * cards.
+   */
+  it("takes several cards separated by commas", () => {
+    expect(ok("deal MGŁA, WILKOŁAK, TARGOWISKO")).toEqual({
+      kind: "deal",
+      cardIds: ["mgla", "wilkolak", "targowisko"],
+    });
+  });
+
+  it("does not mind how the commas are spaced", () => {
+    expect(ok("deal MGŁA,WILKOŁAK ,  TARGOWISKO")).toEqual({
+      kind: "deal",
+      cardIds: ["mgla", "wilkolak", "targowisko"],
+    });
+  });
+
+  /** A line halfway through being typed, not a mistake to refuse. */
+  it("ignores a trailing comma", () => {
+    expect(ok("deal MGŁA,")).toEqual({ kind: "deal", cardIds: ["mgla"] });
+  });
+
+  /** Which one is wrong, said by name — with three on the line, "no card" is not enough. */
+  it("names the one it could not find", () => {
+    expect(err("deal MGŁA, NARNIA, WILKOŁAK")).toContain("NARNIA");
+  });
+
+  /** A name with spaces survives the split, because the split is on commas. */
+  it("keeps a multi-word name in one piece", () => {
+    expect(ok("deal MAGICZNY MIECZ, ŚWIĘTY GRAAL")).toEqual({
+      kind: "deal",
+      cardIds: ["magiczny-miecz", "swiety-graal"],
+    });
   });
 
   it("says when nothing is called that", () => {
@@ -1366,7 +1420,7 @@ const USAGE: Record<string, { line: string; becomes: unknown }> = {
     line: "effect fog Ola",
     becomes: { kind: "effect", effect: "fog", who: "Ola" },
   },
-  deal: { line: "deal MAGICZNY MIECZ", becomes: { kind: "deal", cardId: "magiczny-miecz" } },
+  deal: { line: "deal MAGICZNY MIECZ", becomes: { kind: "deal", cardIds: ["magiczny-miecz"] } },
   place: {
     line: "place MIECZ at Karczma",
     becomes: { kind: "place", cardId: "miecz", gold: null, fieldId: "karczma" },

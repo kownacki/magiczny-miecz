@@ -138,7 +138,22 @@ export function complete(
       );
     };
 
-    if (verb === "deal") return shelved(DEALABLE, 1);
+    /**
+     * `deal` takes a comma-separated list, so what is being typed is whatever
+     * follows the last comma.
+     *
+     * Without this Tab went quiet after the first card: the fragment is
+     * `parts.slice(at)` joined, so `deal SMOK, MIE` matched against "SMOK, MIE"
+     * and no card starts with that. The comma is the only boundary a name with
+     * spaces in it can have — see the parser — so it is the one Tab reads too.
+     */
+    if (verb === "deal") {
+      const comma = parts.reduce(
+        (found, part, index) => (index > 0 && part.endsWith(",") ? index : found),
+        0,
+      );
+      return shelved(DEALABLE, comma + 1);
+    }
     /**
      * `place` names a Karta first and an Obszar only after `at`; `clear` is its
      * inverse and reads the same way.

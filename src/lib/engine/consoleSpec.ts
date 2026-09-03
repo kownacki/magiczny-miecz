@@ -215,13 +215,15 @@ export type Command =
       who: string | null;
       force: boolean;
     }
-  /** `cardId` is null for a bare `give`, which lists what there is to ask for. */
   /**
-   * Test mode: a Karta happens to you, whatever kind of Karta it is.
+   * Test mode: Karty happen to you, whatever kind of Karta they are.
    *
-   * Null lists what there is to ask for, as bare `give` used to.
+   * A list, because a deal is: 13.4 settles the whole number at the moment of
+   * badanie Obszaru and `drawAll` deals it in one act, so the verb that stands
+   * in for a draw has to be able to stand in for the whole of one. Empty lists
+   * what there is to ask for, as bare `give` used to.
    */
-  | { kind: "deal"; cardId: string | null }
+  | { kind: "deal"; cardIds: string[] }
   /**
    * A Karta laid on an Obszar, and — with no card named — the catalogue of what
    * there is to lay.
@@ -924,7 +926,7 @@ export const COMMANDS: CommandSpec[] = [
      */
     name: "deal",
     aliases: [],
-    usage: "deal <card>",
+    usage: "deal <card>[, <card>…]",
     summary: "any Karta happens to you, whatever kind it is — bare, it lists them",
     needs: "testmode",
     group: "override",

@@ -1092,11 +1092,54 @@ a queue of their own on top of it? Appending is simpler and puts a Wróg drawn
 this way behind a Przedmiot already waiting, which 15.2 would not; nesting is
 right and is where the kolejka meets the resolution stack in docs/STACK.md.
 
+**Settled by the community, September 2026 — nesting, and the card goes last.**
+The card text is ambiguous on purpose or by accident, and
+[the thread that argues it out](https://forum.magiaimiecz.eu/viewtopic.php?t=3660)
+reaches one answer in two halves. Nemomon puts the first: „skoro instrukcja
+Skalnych Wrót nakazuje Ci wyciągnięcie kolejnych kart Zdarzeń, to **cofasz się
+do fazy badania obszaru** i badasz nowo wyciągnięte karty zgodnie z ich
+numeracją. Co, jakbyś został teleportowany na inny obszar" — the three are a
+fresh badanie, not an addition. Wiktor agrees and says what that rules out:
+„To nie jest tak, że do kart które rozpatrujesz **dokładasz** nowe karty i tych
+które nie są miejscami nie możesz rozpatrzyć, bo minęła ich kolej. Po prostu
+dostajesz nowe karty które rozpatrujesz **niezależnie** od rozpatrzonych już
+kart." Misiek, who started it, concedes that this is how he plays and holds
+that the card does not say so — „*Wyciągnij Karty* to nie to samo co *zyskujesz
+turę*, ani nigdzie nie ma zapisu *rozpatrz trzy nowe Karty*" — and Hellhound
+splits it: „masz rację pod względem przestrzegania zasad, ale na 99% podmiot
+lityczny miał na myśli rozwiązanie proponowane przez Nemo, i właśnie tak pewnie
+gra większość z nas."
+
+The second half is Misiek's, and it is the one that makes the first cheap:
+„Jeśli wylosowałeś Skalne Wrota wraz z innymi Kartami Miejsc, to **rozpatrz je
+jako ostatnie**." Wiktor turns it into an erratum for the card — „**Po
+rozpatrzeniu wszystkich kart**, jeżeli chcesz możesz przejść przez Skalne Wrota
+- wyciągnij 3 nowe Karty Zdarzeń i odłóż Kartę Wrót." Resolved last, there is
+nothing left in the kolejka when the three arrive, and appending and nesting
+produce the same play. The nesting question does not have to be answered; the
+ordering question does.
+
+**What the app does today, checked rather than assumed.** Deal SKALNE WROTA
+beside a WILKOŁAK and resolve the Wrota, and the three land in the same `drawn`
+and are re-sorted against the Wilkołak still waiting — 15.2 run over both
+badania at once, which is exactly the reading Wiktor rules out. Nothing stops
+the Wrota being resolved first, either: `resolveDrawnCard` will resolve any
+Karta named out of `drawn`, for every card and not only this one, and the
+Wrota is `optional` so it never earns a kolejka frame to be held behind. So
+both halves are still open, and the ordering half is the one to build first.
+
 Two other things about this card are unsettled with it. Its disposition is
 **conditional** — `odloz` only if you go through, otherwise it stays — and it
-is typed as a plain `odloz` today, so declining it would bin a card the box
-says waits for somebody braver. And it is the only card whose frame's answer
-decides whether the Karta leaves the Obszar.
+is typed as a plain `odloz` today. In practice that comes out right, because
+the card is `optional` and declining it means never resolving it, so the
+`odloz` never runs; it is right by accident rather than by saying so. And it is
+the only card whose frame's answer decides whether the Karta leaves the Obszar.
+
+One thing found while checking, which is not this card's: the three drawn
+included a second SKALNE WROTA off the real pile, and `resolved` keys on
+`cardId`, so the copy nobody had seen arrived already marked resolved. Any
+Obszar that deals two of one name has this; the Wrota only makes it easy to
+reach.
 
 Parked at the point the Obszar's kolejka was designed (September 2026), not
 forgotten.

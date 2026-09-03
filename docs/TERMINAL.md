@@ -210,6 +210,19 @@ resolves, so there is one path for all six. Nothing leaves a pile — every deal
 card is `granted`; `stack` is the verb for taking the real card off the real
 pile.
 
+It deals **several**, separated by commas: `deal MGŁA, WILKOŁAK, TARGOWISKO`. A
+comma because no card in the box has one in its name and every card has spaces
+in it, so nothing else can tell TOPÓR ŚWIATŁA I CIEMNOŚCI from two cards. The
+list is the point rather than a convenience — 13.4 settles how many Karty an
+Obszar is worth at the moment you arrive and `drawAll` deals them in one act, so
+a verb standing in for a draw that could only ever produce one card could not
+reproduce the thing 15.2 is about. The order typed is the order they arrive in;
+`resolutionOrder` does the rest, so a Wróg named third still resolves before a
+Przedmiot named first and two of a class keep the order they were named in. One
+commit for the lot, because `turn_state` is a column every card in the deal
+reads and writes and `merge` resolves that as later-wins — see `stageCards`. A
+Zaklęcie on the same line goes to the hand (9.5) and the rest to the Obszar.
+
 **Still open, found while building:** `me` prints a character's *own* Miecz and
 Magia. Rules 1.2–1.5 and 2.2–2.6 say points from items and friends are computed
 at read time and never stored, so a player reading `me` is not seeing what they

@@ -97,7 +97,7 @@ import {
   spendHolding,
   clearField,
   stackCard,
-  stageCard,
+  stageCards,
   stackNth,
   takeCard,
   takeFieldGold,
@@ -418,14 +418,42 @@ export const VERBS: { [K in Command["kind"]]: VerbRun<K> } = {
    */
   deal: async (ctx, command) => {
     const { gameId, seatOf, named } = ctx;
-    if (command.cardId === null) return catalogue(DEALABLE);
+    if (command.cardIds.length === 0) return catalogue(DEALABLE);
     const seat = seatOf(null);
-    if (SPELL_BY_ID.has(command.cardId)) {
-      await grantCard(gameId, seat.id, command.cardId);
-      return `${named(seat)} draws ${cardName(command.cardId)}.`;
-    }
-    await stageCard(gameId, seat.id, command.cardId);
-    return `Dealt: ${cardName(command.cardId)}.`;
+
+    /**
+     * The Zaklęcia go one way and everything else the other, in one line.
+     *
+     * Split rather than refused, because the split is not the player's problem:
+     * a Zaklęcie is a different pile and 9.5 deals one into a hand rather than
+     * onto an Obszar, which is a fact about the box and not about the line
+     * being typed. `deal RÓŻDŻKA ZAKLĘĆ, OŻYWIENIE` is one sentence a tester
+     * means, and making them type two is making them know which pile a card is
+     * on before they can ask for it.
+     */
+    const spells = command.cardIds.filter((cardId) => SPELL_BY_ID.has(cardId));
+    const events = command.cardIds.filter((cardId) => !SPELL_BY_ID.has(cardId));
+
+    // Before the Zaklęcia, and in one commit: the Karty are the half 15.2
+    // orders, and `stageCards` is what keeps that one act. See its note.
+    const dealt = events.length > 0 ? await stageCards(gameId, seat.id, events) : [];
+    for (const cardId of spells) await grantCard(gameId, seat.id, cardId);
+
+    /**
+     * Two sentences, because two different things happened.
+     *
+     * The Karty are reported in the order the turn will reach them rather than
+     * the order they were typed — that is the whole of what dealing several at
+     * once is for, and a line that echoed the typing back would be hiding the
+     * one thing worth seeing.
+     */
+    const drawn =
+      dealt.length > 0 ? `Dealt: ${dealt.map((id) => cardName(id)).join(", ")}.` : "";
+    const drew =
+      spells.length > 0
+        ? `${named(seat)} draws ${spells.map((id) => cardName(id)).join(", ")}.`
+        : "";
+    return [drawn, drew].filter(Boolean).join(" ");
   },
 
   /**

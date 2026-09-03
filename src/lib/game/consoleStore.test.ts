@@ -177,8 +177,98 @@ describe("the catalogue a bare command prints", () => {
 
   it("lists the Zaklęcia too when the verb is `deal`", async () => {
     const { gameId, actor } = await playing();
-    const said = await runCommand(gameId, actor, { kind: "deal", cardId: null });
+    const said = await runCommand(gameId, actor, { kind: "deal", cardIds: [] });
     expect(said).toContain("Zaklęcia (");
+  });
+});
+
+/**
+ * A deal is several Karty, because badanie Obszaru is.
+ *
+ * 13.4 settles the whole number at the moment of arrival and `drawAll` deals it
+ * in one act, so `deal` — which is `draw` with the choice taken off the deck —
+ * has to be able to stand in for the whole of one and not only for its first
+ * card. Before this it was one card a line, which meant a tester could never
+ * set up the thing 15.2 is actually about: several Karty on one Obszar.
+ */
+describe("dealing several Karty in one line", () => {
+  /** The order the turn will reach them in, off the frame the deal wrote. */
+  const waiting = async (gameId: string) =>
+    (top((await activeStore().load(gameId)).game.turn_state) as { drawn: { cardId: string }[] }).drawn.map(
+      (card) => card.cardId,
+    );
+
+  /**
+   * 15.2, which is the whole point: lowest numeral first, whatever order they
+   * were named in.
+   *
+   * TARGOWISKO is a Miejsce (VI), WILKOŁAK a Wróg (II) and MGŁA a Spotkanie
+   * (I), and they are typed backwards on purpose.
+   */
+  it("orders them by class, not by the order they were typed", async () => {
+    const { gameId, actor } = await playing();
+    const said = await runCommand(gameId, actor, {
+      kind: "deal",
+      cardIds: ["targowisko", "wilkolak", "mgla"],
+    });
+    expect(said).toBe("Dealt: MGŁA, WILKOŁAK, TARGOWISKO.");
+    expect(await waiting(gameId)).toEqual(["mgla", "wilkolak", "targowisko"]);
+  });
+
+  /**
+   * "Ties keep draw order", which for a deal is the order they were named.
+   *
+   * Two Wrogowie of the same numeral, so nothing but arrival can separate them
+   * — and `resolutionOrder` is a stable sort for exactly this reason.
+   */
+  it("keeps the order they were named in when the class is the same", async () => {
+    const { gameId, actor } = await playing();
+    await runCommand(gameId, actor, { kind: "deal", cardIds: ["wilkolak", "cyklop"] });
+    expect(await waiting(gameId)).toEqual(["wilkolak", "cyklop"]);
+
+    const { gameId: other, actor: too } = await playing();
+    await runCommand(other, too, { kind: "deal", cardIds: ["cyklop", "wilkolak"] });
+    expect(await waiting(other)).toEqual(["cyklop", "wilkolak"]);
+  });
+
+  /**
+   * A second deal joins the kolejka that is already there rather than replacing
+   * it — and is ordered against it, not merely appended to it.
+   *
+   * This is `dealtInto`'s promise and the reason it is a function rather than a
+   * line inside the command. A Wróg dealt after a Miejsce still goes first.
+   */
+  it("adds to a kolejka already waiting, and orders against it", async () => {
+    const { gameId, actor } = await playing();
+    await runCommand(gameId, actor, { kind: "deal", cardIds: ["targowisko"] });
+    await runCommand(gameId, actor, { kind: "deal", cardIds: ["wilkolak", "mgla"] });
+    expect(await waiting(gameId)).toEqual(["mgla", "wilkolak", "targowisko"]);
+  });
+
+  /**
+   * One commit, which is what stops the second card losing the first.
+   *
+   * `turn_state` is a column every card in the deal reads and writes, and
+   * `merge` resolves two writes to one column as *later wins* — so a deal built
+   * out of one changeset per card would have kept only the last name typed. The
+   * count is the test: three named, three waiting.
+   */
+  it("keeps every card of the deal, not just the last one written", async () => {
+    const { gameId, actor } = await playing();
+    await runCommand(gameId, actor, { kind: "deal", cardIds: ["mgla", "wilkolak", "targowisko"] });
+    expect(await waiting(gameId)).toHaveLength(3);
+  });
+
+  /**
+   * The Zaklęcia are a different pile (9.5) and go to a hand, so one line may
+   * mean both — which is a fact about the box, not about the line.
+   */
+  it("sends a Zaklęcie to the hand and the rest to the Obszar, in one line", async () => {
+    const { gameId, actor } = await playing();
+    const said = await runCommand(gameId, actor, { kind: "deal", cardIds: ["wilkolak", "ocalony"] });
+    expect(said).toContain("Dealt: WILKOŁAK.");
+    expect(said).toContain("OCALONY");
+    expect(await waiting(gameId)).toEqual(["wilkolak"]);
   });
 });
 
