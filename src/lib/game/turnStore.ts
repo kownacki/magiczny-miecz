@@ -675,8 +675,16 @@ export async function takeCard(
   gameId: string,
   seatId: string,
   cardId: string,
-  /** Set when this card came off a field that was holding a granted one. */
-  granted = false,
+  /**
+   * The mark of the copy being taken, when the caller knows which copy it is.
+   *
+   * Left undefined by everyone who only has a name — and it has to be
+   * undefined rather than `false`, which is what it defaulted to. The command
+   * reads it with `??` now, so a default of `false` was a caller *asserting*
+   * that the card is not conjured, and every `take` through this door stripped
+   * the mark off a card the console had dealt.
+   */
+  granted?: boolean,
 ): Promise<void> {
   const taken = await change(gameId, thenHold(takeCardOn), { seatId, cardId, granted });
   // A Sztuka Złota is not luggage — taking it resolves it. The command does the

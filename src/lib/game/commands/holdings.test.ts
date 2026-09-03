@@ -87,15 +87,58 @@ describe("taking a card", () => {
       expect(writes.holdings?.insert?.[0]).toMatchObject({ granted: false });
     });
 
-    it("cannot be taken off by a caller that says otherwise", () => {
-      // `||`, not `??`: a caller may add the mark and never remove one the
-      // table is already carrying.
+    /**
+     * A caller that names the mark is one holding the copy, so it wins.
+     *
+     * This asserted the opposite — `||`, so a caller could add the mark and
+     * never remove one — which was a guard against laundering a conjured card
+     * into a real one. It guarded the wrong door. The only caller that passes
+     * `granted` is `takeFromField`, which points at a *row*, has already
+     * deleted it, and passes that row's own mark; under `||` a conjured twin
+     * lying beside it made the real card it took come back `granted`, and a
+     * card the deck really had given up could then never return to a pile.
+     * That is the laundering, in the other direction and by accident.
+     *
+     * So `??`: told which copy, take its mark. Not told, `chosenHere` picks one
+     * and reads the mark off that — the two can no longer be about different
+     * cards.
+     */
+    it("takes the mark from the copy the caller named", () => {
       const { writes } = takeCard(dealt(), {
         seatId: "seat-a",
         cardId: "eliksir-sily",
         granted: false,
       });
+      expect(writes.holdings?.insert?.[0]).toMatchObject({ granted: false });
+    });
+
+    /**
+     * And the copy that leaves is the copy the mark came off.
+     *
+     * A real Eliksir drawn and a conjured one dealt beside it: `take` used to
+     * lift the real one (first in the list) and mark it conjured (because
+     * *some* copy here was), so the real card left the box and the test card
+     * stayed lying there.
+     */
+    it("lifts the conjured copy, not the real one it was standing beside", () => {
+      const both = table({
+        game: {
+          turn_state: only(
+            onField({
+              drawn: [
+                { cardId: "eliksir-sily", cardClass: "item" },
+                { cardId: "eliksir-sily", cardClass: "item", granted: true },
+              ],
+            }),
+          ),
+        },
+      });
+      const { writes } = takeCard(both, { seatId: "seat-a", cardId: "eliksir-sily" });
       expect(writes.holdings?.insert?.[0]).toMatchObject({ granted: true });
+      // The real one is what is left lying there.
+      const left = (top(apply(both, writes).game.turn_state) as { drawn: { granted?: boolean }[] }).drawn;
+      expect(left).toHaveLength(1);
+      expect(left[0].granted).toBeUndefined();
     });
   });
 

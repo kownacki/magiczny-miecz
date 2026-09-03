@@ -110,6 +110,8 @@ import {
 } from "./turnStore";
 import { activeStore } from "./gameStore";
 import { compulsoryOffer } from "@/lib/engine/fieldScript";
+import { copiesRanked } from "./commands/holdings";
+import type { TurnCard } from "@/lib/engine/state";
 import { only, replaceTop, requireTop, top, topIf } from "@/lib/engine/stack";
 import { askOnTop } from "@/lib/engine/ask";
 import { eqModeOf, seatView, trophyModeOf, turnQueueOf } from "./commands/seat";
@@ -1003,17 +1005,31 @@ export const VERBS: { [K in Command["kind"]]: VerbRun<K> } = {
     const drawn = (state.drawn ?? []).filter(
       (one) => !(state.resolved ?? []).includes(one.cardId),
     );
-    const hitDrawn = drawn.find((one) => sameName(one.cardId, command.name));
-    if (hitDrawn) {
-      await takeCard(gameId, seat.id, hitDrawn.cardId);
-      return `${named(seat)} takes ${cardName(hitDrawn.cardId)}.`;
-    }
-
     const here = snapshot.fieldCards.filter((one) => one.field_id === seat.field_id);
-    const hitField = here.find((one) => sameName(one.card_id, command.name));
-    if (!hitField) throw new Error(`Nothing here called \`${command.name}\`.`);
-    await takeFromField(gameId, seat.id, hitField.id);
-    return `${named(seat)} takes ${cardName(hitField.card_id)} off the Obszar.`;
+
+    /**
+     * Which copy, when the square holds more than one — `copiesRanked`'s
+     * answer, the same one `clear` gets.
+     *
+     * This asked the turn's own list first and the board second, each for its
+     * first match, so a conjured Miecz dealt beside a real one was reached only
+     * after the real one had gone. The verb that undoes `deal` should reach
+     * what `deal` put there.
+     *
+     * The two halves still go through different doors — the board's rows are
+     * taken by id and the turn's by name — but which of them it is is decided
+     * once, before either is opened.
+     */
+    const best = copiesRanked(here, drawn as TurnCard[]).find((one) =>
+      sameName(one.cardId, command.name!),
+    );
+    if (!best) throw new Error(`Nothing here called \`${command.name}\`.`);
+    if (best.where === "turn") {
+      await takeCard(gameId, seat.id, best.cardId);
+      return `${named(seat)} takes ${cardName(best.cardId)}.`;
+    }
+    await takeFromField(gameId, seat.id, best.id);
+    return `${named(seat)} takes ${cardName(best.cardId)} off the Obszar.`;
   },
 
   putdown: async (ctx, command) => {

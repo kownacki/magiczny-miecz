@@ -19,13 +19,13 @@ import { top } from "@/lib/engine/stack";
 
 afterEach(() => resetStore());
 
-async function playing(eqMode: "slots" | "classic" = "slots") {
+async function playing(eqMode: "slots" | "classic" = "slots", who = "goblin") {
   const tables = emptyTables();
   const { game } = await createGame("Kowi", "simulation", eqMode, null, memoryHandle(tables));
   setStore(memoryStore(tables));
   const seat = tables.seats[0].id as string;
   const user = (tables.users[0] as { id: string }).id;
-  await takeNewCharacter(game.id, seat, "goblin", seat);
+  await takeNewCharacter(game.id, seat, who as never, seat);
   await setReady(game.id, user, true);
   await startGame(game.id);
   return { gameId: game.id, actor: { userId: user, seatId: seat }, seat };
@@ -237,6 +237,84 @@ describe("the catalogue a bare command prints", () => {
     const { gameId, actor } = await playing();
     const said = await runCommand(gameId, actor, { kind: "deal", cardIds: [] });
     expect(said).toContain("Zaklęcia (");
+  });
+});
+
+/**
+ * Which copy `take` picks, and that the mark survives the trip.
+ *
+ * `clear` and `take` are the two verbs that undo `place` and `deal`, and both
+ * choose between duplicates by `copiesRanked` — the conjured copy first, then
+ * the newest. `take` used to answer two questions separately: it lifted the
+ * first copy of that name and marked it from "is *any* copy here conjured?",
+ * so a real Miecz beside a conjured one left the field marked as a card the
+ * deck had never given up. That card could never go back to a pile.
+ */
+describe("taking one of several copies", () => {
+  const marks = async (gameId: string) =>
+    (await activeStore().load(gameId)).holdings.map(
+      (one) => `${one.card_id}${one.granted ? " (granted)" : ""}`,
+    );
+
+  it("keeps the conjured mark on what it takes off the turn", async () => {
+    const { gameId, actor } = await playing();
+    await runCommand(gameId, actor, { kind: "deal", cardIds: ["miecz"] });
+    await runCommand(gameId, actor, { kind: "take", name: "MIECZ" });
+    expect(await marks(gameId)).toEqual(["miecz (granted)"]);
+  });
+
+  /**
+   * And off a row on the board, which is the other door — `takeFromField`, by
+   * id. It passes the row's own mark and that is now authoritative, which is
+   * what stops a conjured twin lying beside it deciding for it.
+   */
+  it("keeps it on what it takes off a row", async () => {
+    const { gameId, actor } = await playing();
+    // A deal first, to open the badanie 12.1 wants finished before anything is
+    // collected off the square.
+    await runCommand(gameId, actor, { kind: "deal", cardIds: ["miecz"] });
+    await runCommand(gameId, actor, { kind: "place", cardId: "helm", gold: null, fieldId: null });
+    await runCommand(gameId, actor, { kind: "take", name: "HEŁM" });
+    expect(await marks(gameId)).toEqual(["helm (granted)"]);
+  });
+});
+
+/**
+ * And the same key in the hand: the conjured copy is the one spent.
+ *
+ * `drop`, `sell`, `use` and `cast` each send a card somewhere, and `granted`
+ * decides where it can go — `putOnPile` keeps a conjured card out of a deck
+ * that never gave it up. Holding one real Miecz and one the console dealt,
+ * "the first" was a coin toss between leaving the game a real card and leaving
+ * it a test one.
+ */
+describe("spending one of two copies you are holding", () => {
+  it("drops the conjured one and keeps the real one", async () => {
+    const { gameId, actor, seat } = await playing("classic");
+
+    /**
+     * A real Miecz written straight in, because no console verb can make one:
+     * everything `deal` and `place` put in a hand is `granted` by definition,
+     * and the point here is to hold one of each.
+     */
+    const store = activeStore();
+    await store.commit(await store.load(gameId), {
+      holdings: {
+        insert: [{ seat_id: seat, card_id: "miecz", kind: "item", face: "open", granted: false }],
+      },
+    });
+
+    // And the conjured twin, off the Obszar this time.
+    await runCommand(gameId, actor, { kind: "deal", cardIds: ["miecz"] });
+    await runCommand(gameId, actor, { kind: "take", name: "MIECZ" });
+
+    const both = (await store.load(gameId)).holdings.filter((one) => one.card_id === "miecz");
+    // The real one is first in the pack, so "the first" is the wrong answer.
+    expect(both.map((one) => one.granted)).toEqual([false, true]);
+
+    await runCommand(gameId, actor, { kind: "putdown", name: "MIECZ" });
+    const left = (await store.load(gameId)).holdings.filter((one) => one.card_id === "miecz");
+    expect(left.map((one) => one.granted)).toEqual([false]);
   });
 });
 

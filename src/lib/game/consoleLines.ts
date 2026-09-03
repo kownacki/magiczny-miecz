@@ -305,13 +305,36 @@ export async function fieldCardNamed(gameId: string, said: string) {
  * One of this seat's holdings, by the name printed on it.
  *
  * A holding's id is a uuid and a person types a name, so every verb that acts
- * on something carried goes through here. Two copies of the same card are the
- * same card as far as this is concerned — the first is as good as the second.
+ * on something carried goes through here — `sell`, `cast`, `drop`, `use` and
+ * `equip`, five verbs and one reading.
+ *
+ * # Which copy, when you hold two
+ *
+ * "The first is as good as the second" is what this said, and for `equip` it is
+ * true. For the four that *spend* a card it is not: `drop`, `sell`, `use` and
+ * `cast` each send one somewhere, and `granted` decides where it can go —
+ * `putOnPile` keeps a conjured card out of a deck that never gave it up. Hold a
+ * real Miecz and one the console dealt, and dropping "the first" is a coin
+ * toss between leaving the game a real card and leaving it a test one.
+ *
+ * So the conjured copy goes first, which is the same key `copiesRanked` uses on
+ * an Obszar and the same invariant behind it: **spend what the deck never gave
+ * up, and the real cards stay in the game.**
+ *
+ * # And no second key, unlike a field
+ *
+ * `copiesRanked` breaks its remaining ties by arrival, newest first, because
+ * nobody arranged an Obszar — the order a square is read in *is* arrival. A
+ * pack is not like that. `holdingsFor` reads `order by ordinal nulls last,
+ * created_at`, and `ordinal` is the order the player dragged their own cards
+ * into; picking from the end of it would be overruling them about their own
+ * pack to no purpose. Past the mark, their order stands.
  */
 export async function holdingNamed(gameId: string, seatId: string, said: string) {
   const snapshot = await activeStore().load(gameId);
   const mine = snapshot.holdings.filter((one) => one.seat_id === seatId);
-  const hit = mine.find((one) => sameName(one.card_id, said));
+  const named = mine.filter((one) => sameName(one.card_id, said));
+  const hit = named.find((one) => one.granted) ?? named[0];
   if (hit) return hit;
   const near = mine.filter((one) => fold(cardName(one.card_id)).startsWith(fold(said.trim())));
   if (near.length > 0) {

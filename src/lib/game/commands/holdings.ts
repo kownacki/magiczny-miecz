@@ -21,6 +21,7 @@ import {
   whyPackIsFull,
 } from "@/lib/engine/holdings";
 import { type Slot } from "@/lib/engine/slots";
+import type { TurnCard } from "@/lib/engine/state";
 import { fromTheShop, stockLeft } from "@/lib/engine/stock";
 import { EVENTS, SPELLS, SPELL_BY_REF, decksOf, shuffleFor } from "../decks";
 import { apply, merge, mergeAll, type Changeset, type Outcome, type Snapshot } from "../change";
@@ -54,11 +55,20 @@ function forbiddenFor(card: EventCard): ("good" | "evil" | "chaotic")[] | undefi
  * the stack — gear lifted off the Obszar, a conjured one — simply is not found,
  * and nothing is written.
  */
-export function liftOffField(snapshot: Snapshot, cardId: string): Changeset {
+export function liftOffField(snapshot: Snapshot, cardId: string, index?: number): Changeset {
   const state = topIf(snapshot.game.turn_state, "field");
   if (!state) return {};
-  const at = state.drawn.findIndex((entry) => entry.cardId === cardId);
-  if (at === -1) return {};
+  /**
+   * The copy named rather than the first one found.
+   *
+   * A square can hold two Miecze and this took whichever came first, while the
+   * caller worked out `granted` from a different question entirely — so the two
+   * could disagree about *which* Miecz was being taken. `takeCard` picks once
+   * now and hands the index down; the fallback is the old behaviour, for the
+   * callers that have only a name.
+   */
+  const at = index ?? state.drawn.findIndex((entry) => entry.cardId === cardId);
+  if (at === -1 || state.drawn[at]?.cardId !== cardId) return {};
   return {
     game: {
       turn_state: replaceTop(snapshot.game.turn_state, {
@@ -211,15 +221,24 @@ function escortFor(
  * the deck never gave a conjured copy up, so it must not reach a pile as
  * though it had.
  */
-function grantedHere(snapshot: Snapshot, seatId: string, cardId: string): boolean {
-  const state = top(snapshot.game.turn_state);
-  if (state.phase === "field" && state.drawn.some((one) => one.cardId === cardId && one.granted)) {
-    return true;
-  }
+/**
+ * Which copy of this Karta a bare name means, on the Obszar this seat stands on.
+ *
+ * This was two questions with two answers: `grantedHere` asked "is *any* copy
+ * here conjured?" and `liftOffField` took "the *first* copy". With a real Miecz
+ * and a conjured one lying together the answers were about different cards —
+ * the real one left the field marked as a card the deck had never given up,
+ * which is a card quietly out of the box, and the conjured one stayed.
+ *
+ * One question now, and `copiesRanked` answers it: the copy that leaves and the
+ * mark it carries are read off the same entry.
+ */
+function chosenHere(snapshot: Snapshot, seatId: string, cardId: string): FieldCopy | null {
   const seat = snapshot.seats.find((row) => row.id === seatId);
-  return snapshot.fieldCards.some(
-    (row) => row.field_id === seat?.field_id && row.card_id === cardId && row.granted,
-  );
+  const state = top(snapshot.game.turn_state);
+  const inTurn = state.phase === "field" && state.fieldId === seat?.field_id ? state.drawn : [];
+  const rows = snapshot.fieldCards.filter((row) => row.field_id === seat?.field_id);
+  return copiesRanked(rows, inTurn).find((one) => one.cardId === cardId) ?? null;
 }
 
 /**
@@ -337,7 +356,18 @@ export function takeCard(snapshot: Snapshot, command: TakeCard): Outcome<Taken> 
    * `||` rather than `??`: a caller that knows may add the mark and can never
    * remove one the table is already carrying.
    */
-  const granted = command.granted || grantedHere(snapshot, seatId, cardId);
+  /**
+   * The copy being taken, and its mark, from one reading.
+   *
+   * `??` and not `||`: `takeFromField` points at a *row* and passes that row's
+   * own `granted`, which is authoritative — and `false || grantedHere(...)` sent
+   * it back to the "any copy here?" question, so pointing at the real Miecz
+   * while a conjured twin lay beside it still marked the real one conjured.
+   */
+  const chosen = chosenHere(snapshot, seatId, cardId);
+  const granted = command.granted ?? chosen?.granted ?? false;
+  /** Where in the turn's own stack it sits, when that is where it is lying. */
+  const atInTurn = chosen?.where === "turn" ? chosen.at : undefined;
 
   // Both decks. 21.1 has a character take the Wyposażenie card for a Magiczny
   // Miecz or a Tarcza Tolimana, and 21.3 lets either be left on the board like
@@ -384,7 +414,7 @@ export function takeCard(snapshot: Snapshot, command: TakeCard): Outcome<Taken> 
   if (isConsumedOnResolve(cardId)) {
     const script = scriptFor(cardId);
     return {
-      writes: merge(liftOffField(snapshot, cardId), {
+      writes: merge(liftOffField(snapshot, cardId, atInTurn), {
         journal: command.silent ? [] : [
           {
             seatId,
@@ -587,7 +617,9 @@ export function takeCard(snapshot: Snapshot, command: TakeCard): Outcome<Taken> 
   // `game.deck`, and reading the discard's snapshot keeps the two from being
   // decided against different tables even though today they touch different
   // keys.
-  const lifted = liftOffField(apply(snapshot, mergeAll(discarded, kept)), cardId);
+  // The same copy the mark was read off, not the first of that name — see
+  // `chosenHere`.
+  const lifted = liftOffField(apply(snapshot, mergeAll(discarded, kept)), cardId, atInTurn);
 
   return {
     writes: mergeAll(discarded, kept, lifted, {
@@ -909,6 +941,75 @@ function sweepGold(
   };
 }
 
+/** One copy of a Karta lying on an Obszar, in whichever of the two places it lies. */
+export type FieldCopy =
+  | { where: "board"; id: string; cardId: string; granted: boolean }
+  | { where: "turn"; at: number; cardId: string; granted: boolean };
+
+/**
+ * Every copy lying on one Obszar, best first — the answer to "which one?"
+ *
+ * A square can hold two Miecze, and every verb that names a Karta rather than
+ * pointing at a row has to choose between them. They used to choose differently
+ * and by accident: `clear` took the first row it found, `take` took the first
+ * entry in the turn, and `takeCard` asked a *third* question — "is any copy
+ * here conjured?" — to decide how to mark the one it took. With a real Miecz
+ * and a conjured one on one square that came apart completely: `take MIECZ`
+ * lifted the real card off the field, left the conjured one lying there, and
+ * marked what it took as `granted` — so a card the deck really had given up
+ * could never go back to a pile, and quietly left the box.
+ *
+ * One ranking, then, and both keys have a reason.
+ *
+ * **Conjured first.** `granted` is the mark a test shortcut leaves — the deck
+ * never gave this card up — and it travels with the card onto whatever square
+ * it lands on. `clear` and `take` are the undo for `place` and `deal`, and the
+ * copy you mean is the one you just conjured; taking the real one instead is
+ * the mistake above, twice over.
+ *
+ * **Then newest.** Both halves record arrival honestly, which is what lets this
+ * be a rule rather than a guess: `field_cards` is read `order by created_at`,
+ * and duplicates inside the turn's `drawn` keep the order they were drawn in —
+ * two copies of one card are one class, so 15.2's stable sort cannot separate
+ * them. Reversing each gives newest first.
+ *
+ * One honest gap in that: `created_at` defaults to `now()`, which in Postgres
+ * is the *transaction's* clock, so rows written in one batch — the several
+ * Karty `leaveCardsBehind` puts back at the end of a turn — all carry the same
+ * timestamp and are returned in whatever order the store has them. Between two
+ * copies that arrived in the same write there is no arrival to be later than,
+ * so there is nothing here to get right.
+ *
+ * The board's rows come before the turn's, and the precedence earns its place
+ * rather than being arbitrary: arriving on a square *lifts* every row on it
+ * into the turn (`liftFieldCards` deletes them), so a row still lying there
+ * while the turn stands on it is one `place`d since — newer than anything drawn.
+ */
+export function copiesRanked(
+  rows: readonly { id: string; card_id: string; granted: boolean }[],
+  inTurn: readonly TurnCard[],
+): FieldCopy[] {
+  return [
+    ...rows
+      .map((row): FieldCopy => ({
+        where: "board",
+        id: row.id,
+        cardId: row.card_id,
+        granted: row.granted,
+      }))
+      .reverse(),
+    ...inTurn
+      .map((card, at): FieldCopy => ({
+        where: "turn",
+        at,
+        cardId: card.cardId,
+        granted: card.granted ?? false,
+      }))
+      .reverse(),
+    // Stable, so the newest-first order above survives inside each half.
+  ].sort((a, b) => Number(b.granted) - Number(a.granted));
+}
+
 export function clearField(
   snapshot: Snapshot,
   command: {
@@ -1091,30 +1192,7 @@ export function clearField(
    * two copies: a filter by id would match the same candidate for both, and
    * `clear MIECZ, MIECZ` would answer that it took two while taking one.
    */
-  type Candidate =
-    | { where: "board"; id: string; cardId: string; granted: boolean }
-    | { where: "turn"; at: number; cardId: string; granted: boolean };
-
-  const candidates: Candidate[] = [
-    ...here.map(
-      (row): Candidate => ({
-        where: "board",
-        id: row.id,
-        cardId: row.card_id,
-        granted: row.granted,
-      }),
-    ).reverse(),
-    ...inTurn.map(
-      (card, at): Candidate => ({
-        where: "turn",
-        at,
-        cardId: card.cardId,
-        granted: card.granted ?? false,
-      }),
-    ).reverse(),
-  ]
-    // Stable, so the newest-first order above survives inside each half.
-    .sort((a, b) => Number(b.granted) - Number(a.granted));
+  const candidates = copiesRanked(here, inTurn);
 
   const claimedRows = new Set<string>();
   const claimedInTurn = new Set<number>();

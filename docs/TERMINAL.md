@@ -204,12 +204,17 @@ also mean its testmode namesake.
 `clear places`, `clear enemies`), the **money**, and any mix of the three —
 `clear MIECZ, strangers, gold` is one wish and one line. A named Karta takes
 one copy, so a name typed twice takes two, which is the only way to say it; a
-kind takes every one of its class. **Which copy** is settled by two keys:
-the conjured one first (`granted` — `clear` is the undo for `place` and `deal`,
-and taking the real card instead would leave the test card standing and return
-a card to a pile that never lost it), then the newest, `field_cards` being read
-`order by created_at` and duplicates in the turn's `drawn` keeping the order
-they arrived in. An unknown word is an error naming that
+kind takes every one of its class. **Which copy** is `copiesRanked`'s
+answer, shared with `take`: the conjured one first (`granted`), then the newest
+— `field_cards` is read `order by created_at` and duplicates in the turn's
+`drawn` keep the order they arrived in.
+
+The same first key runs in the **hand**, through `holdingNamed`, which is the
+one reading `sell`, `cast`, `drop`, `use` and `equip` share. One invariant
+behind both: **spend what the deck never gave up, and the real cards stay in
+the game.** There is no second key there, because a pack is read `order by
+ordinal` — the order the player dragged their own cards into — and overruling
+that would be arbitrary where a square's read order genuinely is arrival. An unknown word is an error naming that
 word, never a smaller sweep. A single bare word is still tried as an Obszar
 first (`clear Karczma`), and only a single one — `at` takes the one Obszar a
 sweep has. The words are
