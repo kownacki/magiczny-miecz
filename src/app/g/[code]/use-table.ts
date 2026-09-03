@@ -432,7 +432,7 @@ async function saidWrong(response: Response): Promise<string> {
       watched.current = reading;
       if (said) setAnnouncement(said);
     }
-  }, [code, router]);
+  }, [code, router, setError]);
 
   /**
    * One typed request, with the caller keeping the response.
@@ -720,7 +720,7 @@ async function saidWrong(response: Response): Promise<string> {
         setBusy(false);
       }
     },
-    [code, refresh],
+    [code, refresh, setError],
   );
 
   /**

@@ -8,7 +8,6 @@ import { FieldMarks } from "./field-marks";
 import { CardTile } from "./card-tile";
 import { TileRow } from "./tile-row";
 import { tileFor } from "./table";
-import { WithRules } from "./rule-ref";
 import type { EqMode } from "@/lib/engine/slots";
 import type { Nature } from "@/data/types";
 import { kindForCard } from "@/lib/engine/holdings";

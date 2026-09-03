@@ -8,7 +8,7 @@ import {
   type BridgeEntrance,
   type FieldId,
 } from "@/lib/engine/board";
-import { CROSSINGS, crossingFrom, trzesawiskaOutcome, type Crossing } from "@/lib/engine/rings";
+import { crossingFrom, trzesawiskaOutcome, type Crossing } from "@/lib/engine/rings";
 import {
   BRIDGE_GUARDIAN,
   BRIDGE_ORDEAL,
