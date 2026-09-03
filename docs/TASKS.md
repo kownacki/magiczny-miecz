@@ -825,30 +825,36 @@ and that is the part worth keeping.
 
 ## Still open
 
-- [ ] **Split `drawn-card.tsx` at line 488.** 819 lines, the fourth-largest
-      `.tsx` in the repo, and the seam is a single JSX element: the
-      `<div className="mt-auto …">` that opens the button area runs 332 lines —
-      40% of the file — and is a different responsibility from everything above
-      it. Above is what the Karta *is* (`known`, `art`, `profile`, `label`, the
-      header, `CardFacts`, the coverage notes); below is what you may *do* about
-      it, in ten mutually exclusive `{canAct && …}` branches.
+- [x] **`drawn-card.tsx` split at line 488** into the sheet and
+      `drawn-actions.tsx`. 845 lines became 276 and 693. The seam was a single
+      JSX element — the `<div className="mt-auto …">` that opened the button
+      area ran 327 lines, and was a different responsibility from everything
+      above it. Above is what the Karta *is* (`known`, `art`, `profile`,
+      `label`, the header, `CardFacts`, the coverage notes); below is what you
+      may *do* about it, in ten mutually exclusive `{canAct && …}` branches.
 
-      The seam was checked rather than eyeballed. All six callbacks —
-      `onResolve`, `onFight`, `onEscape`, `onTake`, `onLeave`, `onAsk` — and
-      both pieces of state, `choices` and `going`, have no use above 488 except
-      their own declarations and the effect that resets them, which move down
-      too. So do the derivations that feed only the buttons: `asking`, `gate`,
-      `inert`, `needs`, `chosen`, `said`, `offered`, `foe`, `keep`, `skippable`.
-      The new component derives those itself rather than taking them as props,
-      which keeps the surface to the card, the script, the label, the Natura,
-      `busy`, `ring`, `occupied`, `mySword` and the callbacks. About 480 lines
-      left and 350 moved.
+      Checked rather than eyeballed before it was moved: five of the six
+      callbacks and both pieces of state had no use above that line. The sixth
+      is `onLeave`, which the sheet also binds to Escape — and that shortcut
+      *stayed behind*, because it has to work for a card this app has never
+      heard of, which is exactly the case where the sheet renders nothing and
+      the buttons are never reached.
 
-      **Deliberately not done yet.** This is the hottest file in the repo and
-      the other agent has been in it all session; at the time this was written
-      its three uncommitted edits were all *inside* the block that would move.
-      Moving 332 lines out from under somebody is the one merge nobody can do by
-      hand. Do it when the file is clean, not before.
+      `DrawnActions` derives its own decisions — `foe`, `together`, `keep`,
+      `asking`, `inert`, `actor`, `said`, `offered`, `skippable`,
+      `leavingHere` — from the same raw inputs rather than taking them as
+      props, so what crosses the boundary is what the table knows and not what
+      somebody already concluded from it. `DrawnCard`'s props are
+      `Omit<DrawnActionsProps, "canAct"> & { chrome }`: derived, so a prop added
+      to one cannot go missing from the other, and `canAct` is read off the
+      chrome and handed down explicitly rather than reached for.
+
+      A move and not a rewrite, and that was verified rather than asserted: the
+      327-line JSX block diffs byte-identical against its old self, and the
+      moved derivations differ in exactly four places — `known` and `script`
+      recomputed on the other side, `label` dropped as the sheet's alone, and
+      `offered` reading its own `itemProfile` now that the sheet's no longer
+      reaches it.
 
 
 **Companion mode** (`COMPANION_PARKED`) is the only thing left, and this work
