@@ -30,6 +30,30 @@ import { createClient, type SupabaseClient } from "@supabase/supabase-js";
  * by a network that dislikes WebSockets, the table still plays — just at the
  * old speed. That is why this returns quietly rather than throwing when it
  * cannot connect.
+ *
+ * # The second thing on the wire
+ *
+ * The topic now carries one more event, `zamiar`, and it is the only exception
+ * to "a bare counter and nothing else" — so it is worth saying exactly why it
+ * is not the thin end of anything.
+ *
+ * It is *not state*. A `zamiar` is a decision that has been made and not sent:
+ * three seconds of a button filling, which either becomes a revision or is
+ * cancelled and never existed. Nothing reads it back, nothing is stored, and no
+ * device does anything with it but draw a line of text that is replaced by the
+ * truth a moment later.
+ *
+ * It cannot carry a secret. What travels is a seat index and a verb, plus at
+ * most an *index into a list the receiving browser is already drawing* — never
+ * a name, never a card, never a sentence composed by the sender. A watcher who
+ * cannot already see the options gets no `option` at all, which is why the
+ * Zaklęcia an `ask` frame fans out (9.3) announce nothing.
+ *
+ * And it is still the server talking. `anon` may read topics starting `stol:`
+ * and may not write to them; the browser asks a route handler to say this, the
+ * same route handler that decides every other thing a seat is told. The rule
+ * that matters — no client learns anything from Supabase that a route did not
+ * decide to tell it — is untouched.
  */
 let client: SupabaseClient | null = null;
 
@@ -71,6 +95,49 @@ export function watchRevision(joinCode: string, onChange: () => void): () => voi
   const channel = supabase
     .channel(`stol:${joinCode.toUpperCase()}`, { config: { private: true } })
     .on("broadcast", { event: "zmiana" }, () => onChange())
+    .subscribe();
+
+  return () => {
+    void supabase.removeChannel(channel);
+  };
+}
+
+/**
+ * Subscribes to what somebody is *about* to do.
+ *
+ * Same topic and same client as the revision above, because it is the same
+ * table and a second WebSocket to say a second thing would be a second thing to
+ * go wrong. `onIntent` is called with the message as sent, or with `null` when
+ * the decision was cancelled — the sender says which, rather than this end
+ * timing it out, so a cancel at 2.9 seconds is off the screen at 2.9 seconds.
+ *
+ * A `zamiar` that is never followed by anything — the tab that sent it closed
+ * mid-window — is cleared by the caller's own clock. Nothing here holds it.
+ */
+export function watchIntent(
+  joinCode: string,
+  onIntent: (intent: { by: number; kind: string; option?: number } | null) => void,
+): () => void {
+  const supabase = browserClient();
+  if (!supabase) return () => {};
+
+  const channel = supabase
+    .channel(`stol:${joinCode.toUpperCase()}`, { config: { private: true } })
+    .on("broadcast", { event: "zamiar" }, (message) => {
+      const said = message.payload as { by?: unknown; kind?: unknown; option?: unknown } | null;
+      // Off the wire and therefore not to be trusted, even though only the
+      // service role can have sent it: the shape is checked here and the *kind*
+      // is checked where it is turned into words.
+      if (!said || typeof said.by !== "number" || typeof said.kind !== "string") {
+        onIntent(null);
+        return;
+      }
+      onIntent({
+        by: said.by,
+        kind: said.kind,
+        ...(typeof said.option === "number" ? { option: said.option } : {}),
+      });
+    })
     .subscribe();
 
   return () => {

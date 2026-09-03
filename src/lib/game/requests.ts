@@ -102,6 +102,19 @@ export interface Requests {
   };
   host: { userId: string };
   /**
+   * „I am about to do this" — the three seconds before a decision is sent.
+   *
+   * Nothing is written and nothing is read back: the route repeats it to the
+   * table over Realtime and forgets it (`tellTable`). An empty `kind` is the
+   * cancel, which has to travel too — a watcher who was shown a decision has to
+   * be shown it being taken back, and at the same moment rather than after a
+   * timeout of its own.
+   *
+   * `option` is only ever an index into a list every device is already drawing.
+   * See `intentText.ts` for why it is a number and not the words.
+   */
+  intent: { kind: string; option: number };
+  /**
    * `name` is nullable because sitting down without giving one is a thing to
    * do — `join/route.ts` reads it as `typeof body.name === "string" &&
    * body.name.trim() ? … : null` and has always accepted it. It was typed

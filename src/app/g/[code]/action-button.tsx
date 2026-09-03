@@ -1,6 +1,7 @@
 "use client";
 
 import { useId, useSyncExternalStore } from "react";
+import type { Intent } from "@/lib/engine/intentText";
 import {
   beginChannelling,
   cancelChannelling,
@@ -52,6 +53,12 @@ import {
  * the point — a way out that some irreversible buttons have and others do not
  * is worse than none, because it teaches a player to expect it. `channelling.ts`
  * has the reasoning and the one place the three seconds is written down.
+ *
+ * A button that passes `says` also spends those three seconds telling the rest
+ * of the table what is coming. That part *is* opt-in, because only the call site
+ * knows what it is about to do — and because two kinds of button must not
+ * announce anything: one whose options are face down (9.3), and one that is not
+ * a move in the game at all.
  */
 
 /** What kind of act it is. The colour follows from this, never from the caller. */
@@ -131,6 +138,7 @@ export function ActionButton({
   title,
   disabled = false,
   onClick,
+  says,
   className,
   children,
 }: {
@@ -152,6 +160,15 @@ export function ActionButton({
   title?: string;
   disabled?: boolean;
   onClick: () => void;
+  /**
+   * What the watching players are told while this fills.
+   *
+   * Omitted where there is nothing they may know — an `ask` frame's Zaklęcia are
+   * face down (9.3) and announcing which one was picked would be the one place
+   * in the app that leaks a hand — and where the button is not a move in the
+   * game. `intentText.ts` holds the vocabulary and the words.
+   */
+  says?: Intent;
   /** Layout the parent owns — `self-start`, `w-full`. Never appearance. */
   className?: string;
   children: React.ReactNode;
@@ -167,7 +184,7 @@ export function ActionButton({
     <button
       type="button"
       disabled={disabled || waiting}
-      onClick={filling ? cancelChannelling : () => beginChannelling(id, onClick)}
+      onClick={filling ? cancelChannelling : () => beginChannelling(id, onClick, says ?? null)}
       // The label's own title would be answering a question the button has
       // stopped asking.
       title={filling ? undefined : title}

@@ -1,5 +1,7 @@
 "use client";
 
+import type { Intent } from "@/lib/engine/intentText";
+
 /**
  * A decision that has been made but not yet sent.
  *
@@ -41,10 +43,34 @@
  */
 export const CHANNEL_MS = 3000;
 
+/**
+ * Who tells the rest of the table, and how.
+ *
+ * A module cannot post anything itself — it has no join code, no token and no
+ * business holding either — so the table hands it a way to speak and takes it
+ * back on unmount. Nothing here waits for it or finds out whether it worked:
+ * the warning the other players get is a courtesy, and a courtesy must never be
+ * the reason a decision fails to be sent.
+ */
+type Announcer = (intent: Intent | null) => void;
+
+let announce: Announcer = () => {};
+
+export function announcingWith(say: Announcer) {
+  announce = say;
+  return () => {
+    // Only if it is still ours. A second table mounting before the first has
+    // finished tearing down would otherwise leave the room silent.
+    if (announce === say) announce = () => {};
+  };
+}
+
 /** The one decision in flight, or nothing. */
 export type Channelled = {
   /** Which button is filling. `useId` per `ActionButton` instance. */
   readonly id: string;
+  /** What the rest of the table was told, where the button had anything to say. */
+  readonly says: Intent | null;
   /** So the fill, the clock and anything watching agree on one deadline. */
   readonly startedAt: number;
   /** What the button would have done had it been an ordinary button. */
@@ -87,7 +113,7 @@ function listenForEscape(on: boolean) {
   else document.removeEventListener("keydown", onEscape, true);
 }
 
-export function beginChannelling(id: string, send: () => void) {
+export function beginChannelling(id: string, send: () => void, says: Intent | null = null) {
   // Nothing to decide: one at a time, and the others are disabled anyway.
   if (held) return;
   const startedAt = Date.now();
@@ -105,17 +131,26 @@ export function beginChannelling(id: string, send: () => void) {
     tell();
     send();
   }, CHANNEL_MS);
-  held = { id, startedAt, send, timer };
+  held = { id, startedAt, send, says, timer };
   listenForEscape(true);
   tell();
+  // After the record exists, so a synchronous announcer cannot find a half-built
+  // one. Nothing is announced when it *fires*: the decision is still in flight
+  // until the revision carrying it arrives, and the watching device expires the
+  // line on its own clock if it never does.
+  if (says) announce(says);
 }
 
 export function cancelChannelling() {
   if (!held) return;
+  const said = held.says;
   clearTimeout(held.timer);
   held = null;
   listenForEscape(false);
   tell();
+  // The cancel travels too, and at the moment it happens. A watcher shown a
+  // decision has to be shown it withdrawn rather than left to time it out.
+  if (said) announce(null);
 }
 
 /** The snapshot, stable by identity until it changes — `useSyncExternalStore`. */
