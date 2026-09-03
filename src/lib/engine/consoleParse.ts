@@ -558,7 +558,7 @@ export function parseCommand(line: string): { ok: Command } | { error: string } 
    */
   if (word === "clear") {
     if (tail === "") {
-      return { ok: { kind: "clear", fieldId: null, cardId: null, gold: null, classes: [] } };
+      return { ok: { kind: "clear", fieldId: null, cardIds: [], gold: null, classes: [] } };
     }
     /**
      * `place`'s grammar backwards, and the same `at` between the two names.
@@ -592,71 +592,98 @@ export function parseCommand(line: string): { ok: Command } | { error: string } 
      * called Złoto either, and a keyword that loses to a place name is a
      * keyword you cannot rely on.
      */
-    const asked = goldAsked(said);
-    if (asked !== null) {
-      if (asked === "" || asked.toLowerCase() === "all") {
-        return { ok: { kind: "clear", fieldId, cardId: null, gold: "all", classes: [] } };
+    const words = said.split(",").map((one) => one.trim()).filter(Boolean);
+
+    /**
+     * A single bare word is still tried as an Obszar first.
+     *
+     * `clear Karczma` means the square, and has since before any of this. Only
+     * for one word: two Obszary cannot both be swept — `at` takes one — so in a
+     * list the same word can only be a Karta or a kind, and trying the board
+     * there would let a place name shadow one.
+     */
+    if (cut === -1 && words.length === 1 && !isCategory(words[0])) {
+      const where = findByName(PLACES, (field) => field.name, said);
+      if ("found" in where) {
+        return {
+          ok: { kind: "clear", fieldId: where.found.id, cardIds: [], gold: null, classes: [] },
+        };
       }
-      const amount = coins(asked, "clear");
-      if ("error" in amount) return amount;
-      return { ok: { kind: "clear", fieldId, cardId: null, gold: amount.gold, classes: [] } };
     }
 
     /**
-     * Whole kinds, separated by commas: `clear strangers, places`.
+     * One list, three kinds of thing in it: `clear MIECZ, strangers, gold`.
      *
-     * The same list `deal` takes and for the same reason — one act at a table is
-     * one line here — and `gold` may stand in it, because bare `clear` has
-     * always swept the coins along with the Karty and „take the Nieznajomych
-     * and the money" is a thing somebody means. `clear gold N` keeps its own
-     * form: an amount belongs to the money alone.
+     * `deal`'s grammar, and the same reason — one act at a table is one line
+     * here. What is new against `deal` is that the words are not all of one
+     * sort, and they do not have to be: a Karta by name, a whole kind, and the
+     * money are three ways of pointing at what is lying on a square, and „take
+     * the Miecz, the Nieznajomych and the money" is one wish. Each is tried as
+     * a kind first — the words are English and nothing in the box is called
+     * `places` — then as a Karta.
+     *
+     * A named Karta takes **one copy**, as it always has, and a kind takes
+     * every one of its class; `clear MIECZ, MIECZ` therefore takes two, which
+     * is the only way to say it.
      *
      * All or nothing. A list with one word the console does not know is a typo
      * rather than a smaller sweep, and half-obeying it would take Karty off a
-     * square the typist meant to keep — so a miss here is an error, and it says
-     * which word, the way `deal` names the card it could not find.
+     * square the typist meant to keep — so a miss is an error naming the word,
+     * the way `deal` names the card it could not find.
      */
-    const words = said.split(",").map((one) => one.trim()).filter(Boolean);
-    if (words.length > 0 && words.every((one) => isCategory(one))) {
-      const classes: CardClass[] = [];
-      let money = false;
-      for (const one of words) {
-        if (GOLD_WORDS.has(one.toLowerCase())) {
-          money = true;
+    const classes: CardClass[] = [];
+    const cardIds: string[] = [];
+    let money: number | "all" | null = null;
+    for (const one of words) {
+      /**
+       * The money, with or without an amount, and in the list like everything
+       * else.
+       *
+       * `clear gold`, `clear gold all` and `clear gold 3` were a branch of
+       * their own above this, which is one path too many the moment the rest of
+       * the line became a list: `clear gold all` stopped being read at all,
+       * because the branch only caught a number and the list did not know the
+       * word. One reader for one word, and an amount is simply what may follow
+       * it — `clear MIECZ, gold 3` costs nothing extra and refusing it would
+       * have been arbitrary.
+       */
+      const asked = goldAsked(one);
+      if (asked !== null) {
+        if (asked === "" || asked.toLowerCase() === "all") {
+          money = "all";
           continue;
         }
-        for (const cardClass of CATEGORIES.get(one.toLowerCase()) ?? []) {
-          if (!classes.includes(cardClass)) classes.push(cardClass);
-        }
+        const amount = coins(asked, "clear");
+        if ("error" in amount) return amount;
+        money = amount.gold;
+        continue;
       }
-      return money
-        ? { ok: { kind: "clear", fieldId, cardId: null, gold: "all", classes } }
-        : { ok: { kind: "clear", fieldId, cardId: null, gold: null, classes } };
-    }
-    /**
-     * One word out of several was a kind, so the line was meant as a list of
-     * them — said here rather than falling through to the card lookup, which
-     * would answer "No card called `strangers, palces`" about a typo in the
-     * second word.
-     */
-    if (words.length > 1 && words.some((one) => isCategory(one))) {
-      const missed = words.find((one) => !isCategory(one));
-      return { error: `No kind called \`${missed}\`.` };
+      const word = one.toLowerCase();
+      const kind = CATEGORIES.get(word);
+      if (kind) {
+        for (const cardClass of kind) if (!classes.includes(cardClass)) classes.push(cardClass);
+        continue;
+      }
+      const hit = findByName(CARDS, (card) => card.name, one);
+      if ("ambiguous" in hit) {
+        return { error: `Which one — ${hit.ambiguous.slice(0, 6).join(", ")}?` };
+      }
+      // Named rather than "one of them": with several on the line, "No card
+      // called ``" would leave you counting commas to find which.
+      if ("missing" in hit) {
+        return words.length === 1
+          ? { error: `No card called \`${one}\`.` }
+          : { error: `No card or kind called \`${one}\`.` };
+      }
+      cardIds.push(hit.found.id);
     }
 
-    if (cut === -1) {
-      const where = findByName(PLACES, (field) => field.name, said);
-      if ("found" in where) {
-        return { ok: { kind: "clear", fieldId: where.found.id, cardId: null, gold: null, classes: [] } };
-      }
-    }
-    return name(CARDS, (one) => one.name, said, "card", (one) => ({
-      kind: "clear",
-      fieldId,
-      cardId: one.id,
-      gold: null,
-      classes: [],
-    }), "clear");
+    return {
+      ok:
+        money !== null
+          ? { kind: "clear", fieldId, cardIds, gold: money, classes }
+          : { kind: "clear", fieldId, cardIds, gold: null, classes },
+    };
   }
 
   if (word === "place" || word === "put") {

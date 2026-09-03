@@ -914,7 +914,14 @@ export function clearField(
   command: {
     seatId: string;
     fieldId: FieldId;
-    cardId?: string;
+    /**
+     * Karty by name, one copy each — `clear MIECZ, HEŁM`.
+     *
+     * A list rather than one, mirroring `deal`, and a repeat means a second
+     * copy: `clear MIECZ, MIECZ` takes two, which is the only way to say it,
+     * since a name alone has always meant one.
+     */
+    cardIds?: readonly string[];
     gold?: number | "all";
     /**
      * Whole kinds at a time — `clear strangers, places`, and `enemies` for both
@@ -928,6 +935,8 @@ export function clearField(
 ): Outcome<{ cards: string[]; gold: number }> {
   const classes = command.classes ?? [];
   const byKind = classes.length > 0;
+  const cardIds = command.cardIds ?? [];
+  const byName = cardIds.length > 0;
 
   /**
    * The money on its own, which is a different sweep and not a filter on this
@@ -941,7 +950,7 @@ export function clearField(
    * that takes both, and routing it here would have taken the coins and left
    * the Nieznajomi standing — which is the command doing less than it said.
    */
-  if (command.gold !== undefined && !byKind) {
+  if (command.gold !== undefined && !byKind && !byName) {
     return sweepGold(snapshot, command.fieldId, command.gold, command.seatId);
   }
 
@@ -976,10 +985,39 @@ export function clearField(
    * thing; sweeping the money along with it would be the command doing
    * something nobody typed, and the coins have no name to type.
    */
+  /**
+   * Swept by a bare `clear`, and otherwise only when the money was named.
+   *
+   * `clear MIECZ` and `clear places` each name Karty and nothing else, so
+   * taking the coins with them would be the command doing something nobody
+   * typed — and the coins have no name to type, which is why `gold` is a word
+   * in the list at all.
+   */
   const coins =
-    command.cardId || (byKind && command.gold === undefined)
+    (byName || byKind) && command.gold === undefined
       ? undefined
       : snapshot.fieldGold.find((row) => row.field_id === command.fieldId);
+
+  /**
+   * How many of them go, which is not always all of them.
+   *
+   * An amount could only ever reach `sweepGold` before, because that was the
+   * only path that read one — so `clear strangers, gold 2` swept the square's
+   * whole purse and reported five. A named amount means the same here as it
+   * does there: take that much, leave the rest, which is still the only way to
+   * put a square *back* to a particular sum, `place gold` being able only to
+   * add. Bare, and with `all`, it is the lot.
+   */
+  const takenGold = ((): number => {
+    if (!coins) return 0;
+    if (typeof command.gold !== "number") return coins.gold;
+    const want = Math.floor(command.gold);
+    if (!Number.isFinite(want) || want < 1) throw new Error("Ile Sztuk Złota?");
+    if (want > coins.gold) {
+      throw new Error(`Leży tu tylko ${coins.gold} — tyle najwyżej możesz zdjąć.`);
+    }
+    return want;
+  })();
 
   if (here.length === 0 && inTurn.length === 0 && !coins) {
     throw new Error("Na tym Obszarze nic nie leży.");
@@ -1012,30 +1050,68 @@ export function clearField(
    * Karta on the same square — but a rule that is written down is one nobody
    * has to work out from the outcome.
    */
-  const lying = command.cardId
-    ? here.filter((row) => row.card_id === command.cardId).slice(0, 1)
-    : byKind
-      ? here.filter((row) => wanted(row.card_id))
-      : here;
-  const takenFromTurn = ((): readonly number[] => {
-    if (!command.cardId) {
-      // Every copy of the kind, unlike a named Karta: „take the Nieznajomi off"
-      // means all of them, and asking for one of a kind has no way to say which.
-      const indices = inTurn.map((_, index) => index);
-      return byKind ? indices.filter((index) => classes.includes(inTurn[index].cardClass)) : indices;
+  /**
+   * One copy per name, taken off the board first and out of the turn second.
+   *
+   * Claimed rather than filtered, because a name may be typed twice and mean
+   * two copies: a filter by id would match the same row for both, and
+   * `clear MIECZ, MIECZ` would answer that it took two while taking one. So
+   * each name claims a row nothing else has claimed, and a name whose copies
+   * have run out is a miss rather than a silent repeat of the first.
+   *
+   * A row on the board goes before a card in the turn, so the two halves are
+   * ordered rather than raced. Nothing turns on which — they are the same Karta
+   * on the same square — but a rule that is written down is one nobody has to
+   * work out from the outcome.
+   */
+  const claimedRows = new Set<string>();
+  const claimedInTurn = new Set<number>();
+  const missing: string[] = [];
+  for (const cardId of cardIds) {
+    const row = here.find((one) => one.card_id === cardId && !claimedRows.has(one.id));
+    if (row) {
+      claimedRows.add(row.id);
+      continue;
     }
-    if (lying.length > 0) return [];
-    const found = inTurn.findIndex((card) => card.cardId === command.cardId);
-    return found === -1 ? [] : [found];
-  })();
+    const at = inTurn.findIndex((card, index) => card.cardId === cardId && !claimedInTurn.has(index));
+    if (at !== -1) {
+      claimedInTurn.add(at);
+      continue;
+    }
+    missing.push(cardId);
+  }
+
+  // Only a named Karta can be missing. A bare sweep and a kind cannot: one
+  // takes what is there and the other takes what matches, and neither promised
+  // a particular card.
+  if (missing.length > 0) {
+    const names = [...new Set(missing)].map((one) => cardName(one)).join(", ");
+    throw new Error(
+      missing.length === 1
+        ? `${names} nie leży na tym Obszarze.`
+        : `Nie leżą na tym Obszarze: ${names}.`,
+    );
+  }
+
+  const lying =
+    byName || byKind
+      ? here.filter((row) => claimedRows.has(row.id) || (byKind && wanted(row.card_id)))
+      : here;
+  const takenFromTurn: readonly number[] = inTurn
+    .map((_, index) => index)
+    .filter((index) =>
+      byName || byKind
+        ? claimedInTurn.has(index) || (byKind && classes.includes(inTurn[index].cardClass))
+        : true,
+    );
 
   /**
    * A kind that is not here is worth saying, the way a named Karta that is not
    * here is.
    *
-   * Silent when the money was asked for too and there is some — `clear
-   * strangers, gold` on a square with coins and no Nieznajomi did what it could
-   * and there is a line to show for it.
+   * Silent when a Karta was named beside it and found, or when the money was
+   * asked for and there is some — `clear strangers, gold` on a square with
+   * coins and no Nieznajomi did what it could and has a line to show for it.
    */
   if (byKind && lying.length === 0 && takenFromTurn.length === 0 && !coins) {
     // The names the *cards* print, not the console's English keys: you typed
@@ -1044,14 +1120,6 @@ export function clearField(
     throw new Error(
       `${classes.map((one) => CARD_CLASS_LABEL[one]).join(", ")} — nic z tego tu nie leży.`,
     );
-  }
-
-  // Only a named Karta can be missing. A bare sweep has already been let
-  // through by the guard above, which knows about the gold — and this one did
-  // not, so a square holding nothing but coins refused with the name of the
-  // card nobody had asked for: „undefined nie leży na tym Obszarze".
-  if (command.cardId && lying.length === 0 && takenFromTurn.length === 0) {
-    throw new Error(`${cardName(command.cardId)} nie leży na tym Obszarze.`);
   }
 
   const swept = new Set(takenFromTurn);
@@ -1094,7 +1162,9 @@ export function clearField(
   ];
   const gone: Changeset = {
     ...(lying.length > 0 ? { fieldCards: { delete: lying.map((row) => row.id) } } : {}),
-    ...(coins ? { fieldGold: { delete: [coins.id] } } : {}),
+    // Through `takeGold` rather than a bare delete, which is what lets an
+    // amount leave some behind — it deletes the row only when nothing is left.
+    ...(coins ? takeGold(snapshot, command.fieldId, takenGold) : {}),
     ...(edited ? { game: edited } : {}),
   };
   return {
@@ -1112,14 +1182,14 @@ export function clearField(
               cards: taken.map((card) => card.cardId),
               // Named only when there was some, so every line that swept only
               // Karty reads exactly as it did.
-              ...(coins ? { gold: coins.gold } : {}),
+              ...(coins ? { gold: takenGold } : {}),
             },
             manual: true,
           },
         ],
       }),
     ),
-    result: { cards: taken.map((card) => card.cardId), gold: coins?.gold ?? 0 },
+    result: { cards: taken.map((card) => card.cardId), gold: takenGold },
   };
 }
 

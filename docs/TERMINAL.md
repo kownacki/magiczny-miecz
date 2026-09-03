@@ -199,8 +199,15 @@ are the verbs for those.
 lost `drop`. Both freed words belong to the lawful vocabulary, and neither can
 also mean its testmode namesake.
 
-`clear` takes a whole **kind** at a time — `clear strangers`, `clear places`,
-`clear enemies`, and a comma list of them, `deal`'s grammar. The words are
+`clear` takes a comma list, `deal`'s grammar: **Karty by name**
+(`clear MIECZ, HEŁM`), a whole **kind** at a time (`clear strangers`,
+`clear places`, `clear enemies`), the **money**, and any mix of the three —
+`clear MIECZ, strangers, gold` is one wish and one line. A named Karta takes
+one copy, so a name typed twice takes two, which is the only way to say it; a
+kind takes every one of its class. An unknown word is an error naming that
+word, never a smaller sweep. A single bare word is still tried as an Obszar
+first (`clear Karczma`), and only a single one — `at` takes the one Obszar a
+sweep has. The words are
 English because a class is the engine's word and not the box's (the same
 reason `spoils gold` says gold), and they are derived from `CARD_CLASS`'s keys
 so a seventh class cannot arrive without its category word. **Plural**, because

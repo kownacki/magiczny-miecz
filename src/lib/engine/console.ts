@@ -194,9 +194,14 @@ export function complete(
           (found, part, index) => (index > 0 && part.endsWith(",") ? index : found),
           0,
         );
-        // Only after a comma is the line certainly a list of kinds; before one
-        // it could still become a Karta or an Obszar, so everything is offered.
-        if (comma > 0) return shelved([BY_TYPE], comma + 1);
+        /**
+         * Past a comma the Obszar drops out and everything else stays.
+         *
+         * A list may hold Karty as well as kinds — `clear MIECZ, strangers` —
+         * so both are offered. What cannot be there is a place name: `at` takes
+         * the one Obszar a sweep has, and two of them is not a thing to say.
+         */
+        if (comma > 0) return shelved([BY_TYPE, ...PLACEABLE], comma + 1);
       }
       const names = PLACEABLE.flatMap((group) => group.cards.map((one) => one.name));
       if (finished(names)) return { pool: ["at"], at: parts.length - 1 };

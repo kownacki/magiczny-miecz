@@ -469,20 +469,31 @@ export const VERBS: { [K in Command["kind"]]: VerbRun<K> } = {
       gameId,
       seat.id,
       requireFieldId(where),
-      command.cardId,
+      command.cardIds,
       command.gold ?? undefined,
       command.classes,
     );
-    if (command.cardId) return `${cardName(command.cardId)} off ${fieldName(asFieldId(where))}.`;
+
+    /**
+     * Named Karty and nothing else: the names you typed, back at you.
+     *
+     * A list rather than one word now, and the count is what it says — one copy
+     * per name, so `clear MIECZ, MIECZ` reports both.
+     */
+    if (command.cardIds.length > 0 && command.classes.length === 0 && command.gold === null) {
+      return `${command.cardIds.map((id) => cardName(id)).join(", ")} off ${fieldName(asFieldId(where))}.`;
+    }
 
     /**
      * A kind names what it swept, because you cannot see what was there.
      *
      * `clear TARGOWISKO` echoes a name you typed and the count is one; a kind is
      * a wish rather than a list, and the answer to "did that do anything?" is
-     * which Karty went. The coins come after when they were asked for too.
+     * which Karty went. The coins come after when they were asked for too. A
+     * mixed line reads the same way — what actually left the square is the one
+     * thing worth printing, whichever half of the line asked for it.
      */
-    if (command.classes.length > 0) {
+    if (command.classes.length > 0 || command.cardIds.length > 0) {
       const cards =
         gone.cards.length === 0
           ? "nothing"

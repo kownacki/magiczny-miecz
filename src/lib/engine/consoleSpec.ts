@@ -265,15 +265,16 @@ export type Command =
   /**
    * Test mode: everything lying on an Obszar, off it (`place`'s inverse).
    *
-   * `classes` is the third way of saying *what* — a whole kind at a time,
-   * `clear strangers, places`. Empty on the other two forms rather than absent,
-   * the way `cardId: null` and `gold: null` already are, so the three ways of
-   * naming what to sweep read as three fields of one command.
+   * Three ways of saying *what*, and they are three fields of one command
+   * rather than three commands: `cardIds` names Karty, `classes` names whole
+   * kinds, `gold` names the money. One comma-separated list fills all three —
+   * `clear MIECZ, strangers, gold` — the way `deal`'s list fills its one, and
+   * naming nothing at all is the bare sweep that takes the lot.
    */
   | {
       kind: "clear";
       fieldId: FieldId | null;
-      cardId: string | null;
+      cardIds: string[];
       gold: null;
       classes: CardClass[];
     }
@@ -289,7 +290,7 @@ export type Command =
   | {
       kind: "clear";
       fieldId: FieldId | null;
-      cardId: null;
+      cardIds: string[];
       gold: number | "all";
       classes: CardClass[];
     }
@@ -982,8 +983,8 @@ export const COMMANDS: CommandSpec[] = [
     // a test table that dressed a field had no way to undress it.
     name: "clear",
     aliases: [],
-    usage: "clear [gold [N]|card|kinds] [at field]",
-    summary: "take Złoto, a Karta or whole kinds off an Obszar — bare, the lot; `at` names another",
+    usage: "clear [gold [N]|card|kinds][, …] [at field]",
+    summary: "take Złoto, Karty or whole kinds off an Obszar — bare, the lot; `at` names another",
     needs: "testmode",
     group: "override",
   },

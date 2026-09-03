@@ -238,12 +238,12 @@ suite("naming a card, a field or a creature", () => {
    * since `place gold` can only add.
    */
   it("takes the gold off an Obszar, all of it unless a number says", () => {
-    expect(ok("clear gold")).toEqual({ kind: "clear", cardId: null, gold: "all", fieldId: null, classes: [] });
+    expect(ok("clear gold")).toEqual({ kind: "clear", cardIds: [], gold: "all", fieldId: null, classes: [] });
     expect(ok("clear gold all")).toMatchObject({ gold: "all" });
-    expect(ok("clear gold 3")).toEqual({ kind: "clear", cardId: null, gold: 3, fieldId: null, classes: [] });
+    expect(ok("clear gold 3")).toEqual({ kind: "clear", cardIds: [], gold: 3, fieldId: null, classes: [] });
     expect(ok("clear gold 3 at Karczma")).toEqual({
       kind: "clear",
-      cardId: null,
+      cardIds: [],
       gold: 3,
       fieldId: "karczma",
       classes: [],
@@ -261,7 +261,7 @@ suite("naming a card, a field or a creature", () => {
     expect(ok("clear strangers")).toEqual({
       kind: "clear",
       fieldId: null,
-      cardId: null,
+      cardIds: [],
       gold: null,
       classes: ["stranger"],
     });
@@ -269,6 +269,55 @@ suite("naming a card, a field or a creature", () => {
       fieldId: "karczma",
       classes: ["place"],
     });
+  });
+
+  /**
+   * Karty by name, several of them — `deal`'s grammar, backwards.
+   *
+   * `clear MIECZ, HEŁM` was "No card called `MIECZ, HEŁM`" before this: the
+   * comma had one meaning for `deal` and none here.
+   */
+  it("takes several Karty by name", () => {
+    expect(ok("clear MIECZ, HEŁM")).toMatchObject({ cardIds: ["miecz", "helm"], classes: [] });
+  });
+
+  /** A name twice means two copies, since a name once has always meant one. */
+  it("keeps a repeated name, because it means a second copy", () => {
+    expect(ok("clear MIECZ, MIECZ")).toMatchObject({ cardIds: ["miecz", "miecz"] });
+  });
+
+  /**
+   * And the three sorts of word mix, because they are three ways of pointing at
+   * what is lying on one square and „the Miecz, the Nieznajomych and the money"
+   * is one wish.
+   */
+  it("takes Karty, kinds and the money in one line", () => {
+    expect(ok("clear MIECZ, strangers, gold")).toMatchObject({
+      cardIds: ["miecz"],
+      classes: ["stranger"],
+      gold: "all",
+    });
+  });
+
+  it("still reads an amount, in the list or on its own", () => {
+    expect(ok("clear gold 3")).toMatchObject({ cardIds: [], gold: 3 });
+    expect(ok("clear gold all")).toMatchObject({ gold: "all" });
+    expect(ok("clear MIECZ, gold 2")).toMatchObject({ cardIds: ["miecz"], gold: 2 });
+  });
+
+  it("names the word it knew neither as a Karta nor as a kind", () => {
+    expect(err("clear MIECZ, palces")).toContain("palces");
+    expect(err("clear MIECZ, palces")).toMatch(/card or kind/);
+  });
+
+  /**
+   * A single word is still tried as an Obszar first, which is what `clear
+   * Karczma` has always meant — but only a single one: `at` takes the one
+   * Obszar a sweep has, so in a list a place name would only shadow a Karta.
+   */
+  it("keeps the one-word Obszar form, and does not look for one in a list", () => {
+    expect(ok("clear Karczma")).toMatchObject({ fieldId: "karczma", cardIds: [] });
+    expect(err("clear Karczma, MIECZ")).toContain("Karczma");
   });
 
   /** Several, the way `deal` takes several, and in the order they were named. */
@@ -303,9 +352,9 @@ suite("naming a card, a field or a creature", () => {
    * and the Karta is reached the way it always was, past `at`.
    */
   it("leaves the singular alone, so the Karta and the Obszar are still reachable", () => {
-    expect(ok("clear demons")).toMatchObject({ cardId: null, classes: ["demon"] });
+    expect(ok("clear demons")).toMatchObject({ cardIds: [], classes: ["demon"] });
     expect(ok("clear demon")).toMatchObject({ fieldId: "demon-zaglady", classes: [] });
-    expect(ok("clear demon at Karczma")).toMatchObject({ cardId: "demon", classes: [] });
+    expect(ok("clear demon at Karczma")).toMatchObject({ cardIds: ["demon"], classes: [] });
   });
 
   it("does not mind the case or the spacing", () => {
@@ -321,9 +370,9 @@ suite("naming a card, a field or a creature", () => {
   });
 
   it("still means the Karta, and the Obszar, where those are what was named", () => {
-    expect(ok("clear 1 SZTUKA ZŁOTA")).toMatchObject({ cardId: "1-sztuka-zlota", gold: null });
-    expect(ok("clear Karczma")).toMatchObject({ fieldId: "karczma", cardId: null, gold: null });
-    expect(ok("clear")).toEqual({ kind: "clear", cardId: null, gold: null, fieldId: null, classes: [] });
+    expect(ok("clear 1 SZTUKA ZŁOTA")).toMatchObject({ cardIds: ["1-sztuka-zlota"], gold: null });
+    expect(ok("clear Karczma")).toMatchObject({ fieldId: "karczma", cardIds: [], gold: null });
+    expect(ok("clear")).toEqual({ kind: "clear", cardIds: [], gold: null, fieldId: null, classes: [] });
   });
 
   it("names both halves of a place, and complains about the one that is wrong", () => {
@@ -534,14 +583,21 @@ suite("naming a card, a field or a creature", () => {
     expect(complete("deal MGŁA, ", []).options.length).toBeGreaterThan(50);
   });
 
-  /** Past a comma `clear` is certainly naming kinds, so that is all it offers. */
-  it("offers only kinds and the money after a comma", () => {
+  /** Past a comma the Obszar drops out; a Karta and a kind are both still on. */
+  it("offers kinds and Karty after a comma, and no Obszar", () => {
     expect(complete("clear strangers, ", []).sections?.map((one) => one.title)).toEqual([
       "By type",
+      "Przedmioty",
+      "Przyjaciele",
+      "Wrogowie",
+      "Spotkania",
+      "Nieznajomi",
+      "Miejsca",
     ]);
+    expect(complete("clear strangers, MIECZ CH", []).line).toBe("clear strangers, MIECZ CHAOSU ");
     // Money at the head of them, the way 12.1 lists it, and the classes in the
     // order the numeral prints them.
-    expect(complete("clear strangers, ", []).options).toEqual([
+    expect(complete("clear strangers, ", []).options.slice(0, 9)).toEqual([
       "gold",
       "encounters",
       "foes",
@@ -1530,7 +1586,7 @@ const USAGE: Record<string, { line: string; becomes: unknown }> = {
   pile: { line: "pile events", becomes: { kind: "pile", pile: "events" } },
   clear: {
     line: "clear Karczma",
-    becomes: { kind: "clear", fieldId: "karczma", cardId: null, gold: null, classes: [] },
+    becomes: { kind: "clear", fieldId: "karczma", cardIds: [], gold: null, classes: [] },
   },
   endcast: { line: "endcast", becomes: { kind: "endcast" } },
   endfight: { line: "endfight", becomes: { kind: "endfight" } },

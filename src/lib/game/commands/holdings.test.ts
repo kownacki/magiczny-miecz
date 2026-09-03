@@ -947,7 +947,7 @@ describe("clearing an Obszar", () => {
         { id: "fc-2", card_id: "targowisko" },
         { id: "fc-3", card_id: "cyklop" },
       ]),
-      { seatId: "seat-a", fieldId: HERE, cardId: "targowisko" },
+      { seatId: "seat-a", fieldId: HERE, cardIds: ["targowisko"] },
     );
     expect(result.cards).toEqual(["targowisko"]);
     expect(writes.fieldCards?.delete).toEqual(["fc-1"]);
@@ -958,7 +958,7 @@ describe("clearing an Obszar", () => {
       clearField(table([{ id: "fc-1", card_id: "cyklop" }]), {
         seatId: "seat-a",
         fieldId: HERE,
-        cardId: "targowisko",
+        cardIds: ["targowisko"],
       }),
     ).toThrow(/nie leży na tym Obszarze/);
   });
@@ -997,7 +997,7 @@ describe("clearing an Obszar", () => {
 
     it("sweeps a named Karta out of the turn when no row holds it", () => {
       const at = standing([{ cardId: "sidh" }, { cardId: "grota" }]);
-      const { writes, result } = clearField(at, { seatId: "seat-a", fieldId: HERE, cardId: "sidh" });
+      const { writes, result } = clearField(at, { seatId: "seat-a", fieldId: HERE, cardIds: ["sidh"] });
       expect(result.cards).toEqual(["sidh"]);
       expect(top(writes.game!.turn_state!)).toMatchObject({
         phase: "field",
@@ -1022,7 +1022,7 @@ describe("clearing an Obszar", () => {
       const at = standing([{ cardId: "sidh" }, { cardId: "grota" }], {
         resolved: ["sidh", "grota"],
       });
-      const { writes } = clearField(at, { seatId: "seat-a", fieldId: HERE, cardId: "sidh" });
+      const { writes } = clearField(at, { seatId: "seat-a", fieldId: HERE, cardIds: ["sidh"] });
       expect(top(writes.game!.turn_state!)).toMatchObject({ resolved: ["grota"] });
     });
 
@@ -1042,7 +1042,7 @@ describe("clearing an Obszar", () => {
           }),
         },
       });
-      const { writes } = clearField(at, { seatId: "seat-a", fieldId: HERE, cardId: "sidh" });
+      const { writes } = clearField(at, { seatId: "seat-a", fieldId: HERE, cardIds: ["sidh"] });
       expect(writes.fieldCards?.delete).toEqual(["fc-1"]);
       expect(writes.game?.turn_state).toBeUndefined();
     });

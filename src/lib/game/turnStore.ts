@@ -1390,7 +1390,7 @@ export async function clearField(
   gameId: string,
   seatId: string,
   fieldId: FieldId,
-  cardId?: string | null,
+  cardIds?: readonly string[],
   gold?: number | "all",
   /** Whole kinds at a time — `clear strangers, places`. Empty is "not asked". */
   classes?: readonly CardClass[],
@@ -1398,7 +1398,7 @@ export async function clearField(
   return change(gameId, clearFieldOn, {
     seatId,
     fieldId,
-    ...(cardId ? { cardId } : {}),
+    ...(cardIds && cardIds.length > 0 ? { cardIds } : {}),
     ...(gold !== undefined && gold !== null ? { gold } : {}),
     ...(classes && classes.length > 0 ? { classes } : {}),
   });

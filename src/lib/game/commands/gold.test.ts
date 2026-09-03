@@ -350,7 +350,7 @@ describe("sweeping an Obszar takes the gold with the Karty", () => {
     const { writes, result } = clearField(before, {
       seatId: "seat-a",
       fieldId: HERE,
-      cardId: "targowisko",
+      cardIds: ["targowisko"],
     });
     expect(result.gold).toBe(0);
     expect(apply(before, writes).fieldGold.map((row) => row.gold)).toEqual([6]);
@@ -532,5 +532,111 @@ describe("sweeping an Obszar by kind", () => {
     expect(result.cards).toEqual(["cudotworca"]);
     const frame = top(apply(before, writes).game.turn_state) as { drawn: { cardId: string }[] };
     expect(frame.drawn.map((one) => one.cardId)).toEqual(["cyklop"]);
+  });
+});
+
+/**
+ * Several Karty by name, mirroring `deal`.
+ *
+ * A named Karta has always taken one copy — a square can hold two Targowiska
+ * and "take that one off" is the likelier wish — and a list is that rule said
+ * several times, which is what makes a repeated name mean a second copy.
+ */
+describe("sweeping several named Karty", () => {
+  const twoOfEach = () =>
+    apply(table(), {
+      fieldCards: {
+        insert: ["miecz", "miecz", "helm", "cudotworca"].map((card_id) => ({
+          field_id: HERE,
+          card_id,
+          granted: true,
+        })),
+      },
+    });
+
+  const left = (before: ReturnType<typeof twoOfEach>, command: Parameters<typeof clearField>[1]) =>
+    apply(before, clearField(before, command).writes).fieldCards.map((row) => row.card_id);
+
+  it("takes one copy of each name", () => {
+    const before = twoOfEach();
+    expect(left(before, { seatId: "seat-a", fieldId: HERE, cardIds: ["miecz", "helm"] })).toEqual([
+      "miecz",
+      "cudotworca",
+    ]);
+  });
+
+  /**
+   * The claim is what makes this work. Filtering by id would have matched the
+   * same row twice and reported two Miecze while taking one.
+   */
+  it("takes two copies when the name is given twice", () => {
+    const before = twoOfEach();
+    expect(left(before, { seatId: "seat-a", fieldId: HERE, cardIds: ["miecz", "miecz"] })).toEqual([
+      "helm",
+      "cudotworca",
+    ]);
+  });
+
+  /** And asking for more copies than are there is a miss, not a smaller sweep. */
+  it("refuses when a name has run out of copies", () => {
+    const before = twoOfEach();
+    expect(() =>
+      clearField(before, { seatId: "seat-a", fieldId: HERE, cardIds: ["helm", "helm"] }),
+    ).toThrow(/HEŁM nie leży na tym Obszarze/);
+  });
+
+  it("names every one it could not find", () => {
+    const before = twoOfEach();
+    expect(() =>
+      clearField(before, { seatId: "seat-a", fieldId: HERE, cardIds: ["zbroja", "latarnia"] }),
+    ).toThrow(/Nie leżą na tym Obszarze: ZBROJA, LATARNIA/);
+  });
+
+  /** Names and kinds in one sweep, because one line may hold both. */
+  it("takes named Karty and whole kinds together", () => {
+    const before = twoOfEach();
+    expect(
+      left(before, {
+        seatId: "seat-a",
+        fieldId: HERE,
+        cardIds: ["helm"],
+        classes: ["stranger"],
+      }),
+    ).toEqual(["miecz", "miecz"]);
+  });
+
+  /** The coins stay unless the money was named, exactly as for one Karta. */
+  it("leaves the gold alone unless it was asked for", () => {
+    const before = apply(twoOfEach(), { fieldGold: { insert: [{ field_id: HERE, gold: 5 }] } });
+    expect(clearField(before, { seatId: "seat-a", fieldId: HERE, cardIds: ["helm"] }).result.gold).toBe(0);
+    expect(
+      clearField(before, { seatId: "seat-a", fieldId: HERE, cardIds: ["helm"], gold: "all" }).result,
+    ).toEqual({ cards: ["helm"], gold: 5 });
+  });
+
+  /**
+   * And an amount beside a Karta takes that much, not the purse.
+   *
+   * The amount could only reach `sweepGold` before, which is the path a line
+   * naming nothing else takes — so `clear strangers, gold 2` swept all five and
+   * said so.
+   */
+  it("takes the stated amount when Karty are named beside it", () => {
+    const before = apply(twoOfEach(), { fieldGold: { insert: [{ field_id: HERE, gold: 5 }] } });
+    const some = clearField(before, {
+      seatId: "seat-a",
+      fieldId: HERE,
+      cardIds: ["helm"],
+      gold: 2,
+    });
+    expect(some.result).toEqual({ cards: ["helm"], gold: 2 });
+    expect(apply(before, some.writes).fieldGold.map((row) => row.gold)).toEqual([3]);
+  });
+
+  it("refuses more coins than are lying there, on this path too", () => {
+    const before = apply(twoOfEach(), { fieldGold: { insert: [{ field_id: HERE, gold: 5 }] } });
+    expect(() =>
+      clearField(before, { seatId: "seat-a", fieldId: HERE, classes: ["stranger"], gold: 9 }),
+    ).toThrow(/tylko 5/);
   });
 });
