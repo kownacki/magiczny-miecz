@@ -109,7 +109,25 @@ export function effectRows(effect: Effect): string[] | null {
     return ["do wyboru:", ...effect.options.map((option) => `— ${option.label}`)];
   }
   if (effect.op === "rzut") {
-    return ["rzut kostką:", ...dieRows(effect.faces)];
+    return ["rzuć kostką:", ...dieRows(effect.faces)];
+  }
+  /**
+   * A sequence flattens into the rows of its steps, but only if a step has any.
+   *
+   * The EREMITA is a die table and then a choice — „Rzuć kostką i umieść Kartę
+   * Eremity na odpowiednim Obszarze: 1. Bezdroża… Pierwszej Postaci, Eremita
+   * ofiaruje do wyboru: Magiczny Miecz lub Tarczę Tolimana" — and joined into
+   * one line that is eight faces and two gifts in a paragraph. Split, it is the
+   * card.
+   *
+   * A `po-kolei` of plain steps keeps the sentence: „tracisz 1 Życie, potem
+   * przenosisz się" reads better as prose than as two bullets, and a rule that
+   * turned every sequence into a list would make a list of everything.
+   */
+  if (effect.op === "po-kolei") {
+    const steps = effect.steps.map((step) => effectRows(step));
+    if (!steps.some((rows) => rows !== null)) return null;
+    return steps.flatMap((rows, at) => rows ?? [describeEffect(effect.steps[at])]);
   }
   return null;
 }
@@ -186,7 +204,7 @@ export function describeEffect(effect: Effect): string {
       return `do wyboru: ${effect.options.map((option) => option.label).join(" · ")}`;
 
     case "rzut":
-      return `rzut kostką: ${dieTable(effect.faces)}`;
+      return `rzuć kostką: ${dieTable(effect.faces)}`;
 
     case "gdy":
       return (
@@ -314,7 +332,7 @@ export function describeEffect(effect: Effect): string {
      */
     case "zgadnij":
       return (
-        "wybierasz cyfrę od 1 do 6 i mówisz ją głośno, potem rzut kostką — " +
+        "wybierasz cyfrę od 1 do 6 i mówisz ją głośno, potem rzuć kostką — " +
         `jeśli wypadnie twoja: ${describeEffect(effect.nagroda)}`
       );
 

@@ -4,6 +4,7 @@ import {
   andWhom,
   describeCondition,
   describeEffect,
+  effectRows,
   describeLoss,
   summariseEffect,
 } from "./effectText";
@@ -430,8 +431,24 @@ describe("the Mędrzec's riddle", () => {
    */
   it("says what to guess, when, and how loudly", () => {
     expect(describeEffect(SCRIPTS["medrzec"]!.effect)).toBe(
-      "wybierasz cyfrę od 1 do 6 i mówisz ją głośno, potem rzut kostką — " +
+      "wybierasz cyfrę od 1 do 6 i mówisz ją głośno, potem rzuć kostką — " +
         "jeśli wypadnie twoja: bierzesz 1 Zaklęcie",
     );
+  });
+});
+
+describe("a sequence beside a picture", () => {
+  /** Die table then choice — the Eremita, and the one card that is both. */
+  it("flattens into the rows of its steps", () => {
+    const rows = effectRows(SCRIPTS["eremita"]!.effect)!;
+    expect(rows[0]).toBe("rzuć kostką:");
+    expect(rows[1]).toBe("1 — kładziesz Kartę: Bezdroża");
+    expect(rows).toContain("do wyboru:");
+    expect(rows).toContain("— Magiczny Miecz");
+  });
+
+  /** A sequence of plain steps keeps its sentence. */
+  it("leaves prose as prose", () => {
+    expect(effectRows({ op: "po-kolei", steps: [{ op: "nic" }, { op: "nic" }] })).toBeNull();
   });
 });

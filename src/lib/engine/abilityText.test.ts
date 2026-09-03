@@ -157,7 +157,7 @@ describe("what using a card does", () => {
     // The picture is not always there — a fresh checkout has no scans — so a
     // rule the app carries has to be sayable without one.
     const box = itemProfile("tajemnicza-szkatula");
-    expect(box.special.join(" ")).toMatch(/rzut kostką/);
+    expect(box.special.join(" ")).toMatch(/rzuć kostką/);
   });
 
   it("writes out the rules no typed kind can hold", () => {
