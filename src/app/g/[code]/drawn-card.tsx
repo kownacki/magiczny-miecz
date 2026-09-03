@@ -504,15 +504,20 @@ export function DrawnCard({
             ))}
           </ul>
         )}
-        {/* One line, three things it can say. Waiting for somebody, watching
+        {/* One line, three things it can say: waiting for somebody, watching
             them decide, and — when the Karta was never theirs to act on —
-            saying so. The middle one is the only sentence in this panel about
-            something that has not happened yet, so it is the table's own
-            colour rather than the grey the other two are: what it describes is
-            live, and three seconds later it is either the Dziennik or it never
-            was. */}
+            saying so.
+
+            One colour for all three. The middle one was ochre for a while, on
+            the reasoning that it is the only sentence here about something
+            that has not happened yet; on screen it read as a different kind of
+            notice arriving rather than as this one changing what it says, and
+            the sentence is doing that work by itself. A step up in size
+            instead, for all three at once — this is the only thing the rest of
+            the table has to read, and it was set smaller than the card's own
+            small print. */}
         {!canAct && (
-          <p className={`text-[11px] ${said ? "text-ochre" : "text-muted"}`}>
+          <p className="text-xs text-muted">
             {said ?? (inert ? `${actor} nie spełnia warunków` : `Decyzję podejmuje ${actor}`)}
           </p>
         )}
@@ -565,7 +570,7 @@ export function DrawnCard({
               role="gain"
               weight="lead"
               size="lg"
-              says={{ kind: "bierze" }}
+              says={{ kind: keep === "friend" ? "bierze-przyjaciela" : "bierze-przedmiot" }}
               disabled={busy}
               onClick={() => onTake(known.id)}
             >
@@ -574,7 +579,7 @@ export function DrawnCard({
             <ActionButton
               weight="decline"
               size="lg"
-              says={{ kind: "zostawia" }}
+              says={{ kind: keep === "friend" ? "zostawia-przyjaciela" : "zostawia-przedmiot" }}
               disabled={busy}
               onClick={() => onLeave(known.id)}
             >
@@ -637,19 +642,25 @@ export function DrawnCard({
                        * Karczma", not „na Karczmę" — for the reason the journal
                        * keeps names bare: the data carries one case and Polish
                        * wants several.
+                       *
+                       * Asked first and the three seconds after — see `confirm`
+                       * on `ActionButton`. `onClick` is what those seconds
+                       * eventually run, not what the press runs.
                        */
                       onClick={() =>
+                        onResolve(known.id, {
+                          choices: [...choices, index],
+                          destination: going as FieldId,
+                        })
+                      }
+                      confirm={(proceed) =>
                         onAsk({
                           title: "Przenieść się?",
                           body:
                             `Obszar: ${FIELDS.get(going as FieldId)?.name ?? going}. ` +
                             "Rozpatrzysz go tak, jakby twój ruch skończył się tam (16.8).",
                           confirmLabel: "Przenieś się",
-                          onConfirm: () =>
-                            onResolve(known.id, {
-                              choices: [...choices, index],
-                              destination: going as FieldId,
-                            }),
+                          onConfirm: proceed,
                         })
                       }
                     >
