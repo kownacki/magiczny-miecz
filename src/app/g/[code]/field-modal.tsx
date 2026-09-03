@@ -182,6 +182,7 @@ export function FieldModal({
   onTakeGold,
   standing = [],
   onPickSeat,
+  pickedSeat = null,
   asked = [],
   onClose,
   notice,
@@ -302,6 +303,14 @@ export function FieldModal({
   standing?: readonly SeatHere[];
   /** Open the roster on that seat, the same way the turn bar's chips do. */
   onPickSeat?: (seatId: string) => void;
+  /**
+   * The seat the Gracze drawer is already open about, when it is open.
+   *
+   * Only the tooltip wants it. The click is a toggle — the same figure shuts
+   * what it opened — and a hover that said „otwórz" over the one figure that
+   * closes is the kind of small lie that makes the next tooltip worth less.
+   */
+  pickedSeat?: string | null;
   busy: boolean;
   onTake: (fieldCardId: string) => void;
   /**
@@ -551,7 +560,11 @@ export function FieldModal({
               lookup={false}
               onClick={onPickSeat ? () => onPickSeat(seat.id) : undefined}
               title={
-                onPickSeat ? `${nameOf(seat)} — otwórz w Graczach` : nameOf(seat)
+                onPickSeat
+                  ? `${nameOf(seat)} — ${
+                      pickedSeat === seat.id ? "zamknij Graczy" : "otwórz w Graczach"
+                    }`
+                  : nameOf(seat)
               }
             />
             <figcaption

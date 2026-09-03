@@ -430,6 +430,33 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
   const [askedAbout, setAskedAbout] = useState<string | null>(null);
 
   /**
+   * The roster, opened about one seat — and shut again by the same click.
+   *
+   * Three places point at a person and mean "who is that": a standee on the
+   * Obszar's Gracze shelf, the name in the turn bar, and a skipped player's
+   * chip. All three opened the drawer and none of them could close it, so the
+   * gesture only worked one way: click the figure you are already reading about
+   * and nothing happens, because the state it sets is the state it is in.
+   *
+   * The bar button and the G shortcut have always toggled. This is the same
+   * rule reached from the figure instead of the letter, which is where a hand
+   * that is already pointing at somebody goes.
+   *
+   * Only the seat it is *already about* closes it. Open about somebody else, a
+   * click is a question about this one and switches — which is what you meant
+   * by clicking a different figure, and shutting the drawer to make you open it
+   * again would be the gesture arguing with itself.
+   */
+  const showSeat = useCallback(
+    (seatId: string) => {
+      const already = rightDrawer === "gracze" && askedAbout === seatId;
+      setRightDrawer(already ? null : "gracze");
+      setAskedAbout(already ? null : seatId);
+    },
+    [rightDrawer, askedAbout],
+  );
+
+  /**
    * A letter for each surface, being the letter it starts with.
    *
    * K for the Księga, S for the Stosy, G for the Gracze. They are the three
@@ -1203,10 +1230,8 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
               active: seat.seat_index === game.active_seat,
               mine: seat.id === mySeat?.id,
             }))}
-          onPickSeat={(seatId) => {
-            setAskedAbout(seatId);
-            setRightDrawer("gracze");
-          }}
+          onPickSeat={showSeat}
+          pickedSeat={rightDrawer === "gracze" ? askedAbout : null}
           /* What the box has left of each Wyposażenie card (21.2), what this
              seat carries against 5.4, what it has to spend and what it could
              sell.
@@ -2196,10 +2221,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                   playerName={active.player_name ?? `Miejsce ${active.seat_index + 1}`}
                   round={game.round}
                   seatIndex={active.seat_index}
-                  onPlayer={() => {
-                    setAskedAbout(active.id);
-                    setRightDrawer("gracze");
-                  }}
+                  onPlayer={() => showSeat(active.id)}
                   characterId={active.character_id}
                   characterName={
                     CHARACTERS.find((one) => one.id === active.character_id)?.name ?? null
@@ -2325,9 +2347,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                  */
                 onPick={(seatIndex) => {
                   const row = seats.find((one) => one.seat_index === seatIndex);
-                  if (!row) return;
-                  setAskedAbout(row.id);
-                  setRightDrawer("gracze");
+                  if (row) showSeat(row.id);
                 }}
               />
             </div>
