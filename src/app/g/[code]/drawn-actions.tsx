@@ -52,7 +52,8 @@ import { RollSaid, type Rolled } from "./roll-result";
 import { TileRow } from "./tile-row";
 import { ItemSlot } from "./item-slot";
 import { CARD_NAMES, tileFor, type Held } from "./table";
-import { effectRows } from "@/lib/engine/effectText";
+import { dieGroups, faceRun } from "@/lib/engine/effectText";
+import { WithRules } from "./rule-ref";
 import { inertFor, pendingIn } from "@/lib/engine/resolve";
 import { asFieldId, type FieldId } from "@/lib/engine/board";
 import type { Confirmation } from "./confirm";
@@ -528,15 +529,57 @@ export function DrawnActions({
   const rolls = nothingLeftToAsk && !inert && instruction?.op === "rzut";
 
   /**
-   * What can come up, in the rows the hover panel and the watchers already get.
+   * What can come up, grouped as the card groups it.
    *
    * `DrawnCard` empties `special` for the player whose turn it is, on the
    * grounds that what a Karta does is what the buttons under it are — true of a
    * `wybor`, whose options are the buttons, and false of a die: one button and
-   * six outcomes, none of them written anywhere the actor could read. The label
-   * row goes, because the button beneath is that row.
+   * six outcomes, none of them written anywhere the actor could read.
+   *
+   * The groups rather than the rendered rows, because a table that has been
+   * thrown has to know which line the face landed in — and reading „3" back out
+   * of „1-3 — przemykasz" is parsing our own output. `dieGroups` is that
+   * grouping before it becomes a string.
    */
-  const faces = rolls ? (effectRows(instruction) ?? []).slice(1) : [];
+  const faces =
+    rolls && instruction?.op === "rzut" ? dieGroups(instruction.faces) : [];
+
+  /**
+   * The table, with the face that came up standing out of it.
+   *
+   * Drawn for everybody and not only for the player pressing: the six lines are
+   * what a 3 *means*, so a watcher reading „WYPADŁO 3" without them is reading
+   * a number. Before the throw they are all one colour — nothing has happened
+   * yet and no line is the answer; after it, the line that came up keeps the
+   * colour and the rest step back, which is the same „lighting a few beats
+   * dulling the rest" the trofea settled on.
+   *
+   * No „rzuć kostką:" over it. That was `describeEffect`'s heading for the
+   * whole table, and read as an instruction — to a watcher, an instruction
+   * addressed to them. The one player it *is* addressed to has „Musisz rzucić
+   * kostką" and a button; everybody else has a list of what the Karta can do.
+   */
+  const dieTable = (face: number | null) =>
+    faces.length > 0 ? (
+      <ul className="flex flex-col gap-1">
+        {faces.map((group) => {
+          const hit = face !== null && group.on.includes(face);
+          return (
+            <li
+              key={group.on.join(",")}
+              className={`text-[11px] leading-snug ${
+                face === null ? "text-ochre/90" : hit ? "text-ochre" : "text-muted/50"
+              }`}
+            >
+              <WithRules text={`${faceRun(group.on)} — ${group.said}`} />
+            </li>
+          );
+        })}
+      </ul>
+    ) : null;
+
+  /** What the face that came up says it does, so the outcome need not repeat it. */
+  const saidByFace = (face: number) => faces.find((group) => group.on.includes(face))?.said;
 
   /**
    * The loss this Karta is waiting on, if it is this Karta's.
@@ -602,14 +645,21 @@ export function DrawnActions({
         : null;
     return (
       <div className="mt-auto flex flex-col gap-2 border-t border-edge pt-3">
-        {offered.length > 0 && (
+        {/* The same table the player pressing is looking at, marked the same
+            way — and headed by nothing, because „Rzuć kostką:" said to somebody
+            who cannot press anything is an instruction addressed to the wrong
+            person. For every other Karta this is `itemProfile`'s rows, which is
+            what a watcher has always had. */}
+        {rolls ? (
+          dieTable(owing?.face ?? null)
+        ) : offered.length > 0 ? (
           <ul className="flex flex-col gap-1 pb-1">{specialRows(offered)}</ul>
-        )}
+        ) : null}
         {/* The face, for the players who did not press the button. It is not
             in the reply they never received — it is on the frame, which is the
             same thing said to everybody at once (`faceAt`). What it *did* is
-            the actor's own line and the Dziennik's; here the six rows above
-            already say what a 4 means. */}
+            the actor's own line and the Dziennik's; the marked row above is
+            what a 4 means. */}
         {owing?.face !== null && owing?.face !== undefined && (
           <RollSaid face={owing.face} did={[]} />
         )}
@@ -652,7 +702,13 @@ export function DrawnActions({
     const chosen = giving !== null ? (owing.cards[giving] ?? null) : null;
     return (
       <div className="mt-auto flex flex-col gap-2 border-t border-edge pt-3">
-        {said6 && <RollSaid face={said6.face} did={said6.did} />}
+        {dieTable(owing.face)}
+        {said6 && (
+          <RollSaid
+            face={said6.face}
+            did={said6.did.filter((line) => line !== saidByFace(said6.face))}
+          />
+        )}
         <p className="text-[11px] text-muted">Wybierz, co tracisz</p>
         <TileRow frame={false}>
           {owing.cards.map((held, index) => (
@@ -923,11 +979,18 @@ export function DrawnActions({
               instruction when it has been obeyed. */}
           {rolls && !said6 && <p className="text-[11px] text-muted">Musisz rzucić kostką</p>}
           {/* What the die can do, read before it is thrown — and after, with
-              the face that came up standing under the list rather than over
-              it. */}
-          {faces.length > 0 && <ul className="flex flex-col gap-1">{specialRows(faces)}</ul>}
+              the line it landed in picked out of the list. */}
+          {dieTable(said6?.face ?? null)}
           {said6 ? (
-            <RollSaid face={said6.face} did={said6.did} onDone={onRollRead ?? (() => {})} />
+            <RollSaid
+              face={said6.face}
+              /* Only what the marked line does not already say. „+1 Miecza"
+                 under a list whose third row reads „+1 Miecza" is the same
+                 sentence twice; „Zaklęcie: KAMIEŃ FILOZOFICZNY" over „zyskujesz
+                 1 Zaklęcie" is the card it turned out to be, and worth a line. */
+              did={said6.did.filter((line) => line !== saidByFace(said6.face))}
+              onDone={onRollRead ?? (() => {})}
+            />
           ) : (
           <ActionButton
             weight="lead"

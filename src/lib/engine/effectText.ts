@@ -101,7 +101,16 @@ export function describeCondition(condition: Condition): string {
  */
 const GUESS = "wybierasz cyfrę od 1 do 6 i mówisz ją głośno";
 
-function dieRows(faces: Record<number, Effect>): string[] {
+/**
+ * The same grouping, with the faces still numbers.
+ *
+ * `dieRows` renders each group as „1-3 — przemykasz" and that is what almost
+ * every caller wants. One does not: a panel showing a table that has *been*
+ * thrown has to know which row the face landed in, and reading it back out of
+ * the string is parsing our own output. So the grouping is the exported shape
+ * and the string is what is made of it.
+ */
+export function dieGroups(faces: Record<number, Effect>): { said: string; on: number[] }[] {
   const order: { said: string; on: number[] }[] = [];
   for (const face of Object.keys(faces).map(Number).sort((a, b) => a - b)) {
     const said = describeEffect(faces[face]);
@@ -109,7 +118,16 @@ function dieRows(faces: Record<number, Effect>): string[] {
     if (existing) existing.on.push(face);
     else order.push({ said, on: [face] });
   }
-  return order.map((entry) => `${runs(entry.on)} — ${entry.said}`);
+  return order;
+}
+
+/** How a group of faces is headed — „1-3", „5". */
+export function faceRun(on: readonly number[]): string {
+  return runs([...on]);
+}
+
+function dieRows(faces: Record<number, Effect>): string[] {
+  return dieGroups(faces).map((entry) => `${runs(entry.on)} — ${entry.said}`);
 }
 
 function dieTable(faces: Record<number, Effect>): string {
