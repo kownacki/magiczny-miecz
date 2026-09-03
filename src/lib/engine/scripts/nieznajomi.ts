@@ -30,7 +30,7 @@ export const NIEZNAJOMI: Readonly<Record<string, CardScript>> = {
       op: "wybor",
       options: [
         {
-          label: "Przenieś się na dowolny Obszar w tym Kręgu",
+          label: "przenosisz się na dowolny Obszar w tym Kręgu",
           effect: { op: "przenies", to: { kind: "dowolne-w-kregu" } },
         },
         { label: "Pomiń", effect: { op: "nic" } },
@@ -42,7 +42,7 @@ export const NIEZNAJOMI: Readonly<Record<string, CardScript>> = {
     effect: {
       op: "wybor",
       options: [
-        { label: "Weź dodatkowy ruch", effect: { op: "ruch-dodatkowy" } },
+        { label: "zyskujesz dodatkowy ruch", effect: { op: "ruch-dodatkowy" } },
         { label: "Pomiń", effect: { op: "nic" } },
       ],
     },
@@ -185,8 +185,8 @@ export const NIEZNAJOMI: Readonly<Record<string, CardScript>> = {
         {
           op: "wybor",
           options: [
-            { label: "Magiczny Miecz", effect: { op: "otrzymaj", co: "Magiczny Miecz" } },
-            { label: "Tarcza Tolimana", effect: { op: "otrzymaj", co: "Tarcza Tolimana" } },
+            { label: "otrzymujesz Magiczny Miecz", effect: { op: "otrzymaj", co: "Magiczny Miecz" } },
+            { label: "otrzymujesz Tarczę Tolimana", effect: { op: "otrzymaj", co: "Tarcza Tolimana" } },
           ],
         },
       ],
@@ -223,11 +223,11 @@ export const NIEZNAJOMI: Readonly<Record<string, CardScript>> = {
       op: "wybor",
       options: [
         {
-          label: "Zamień punkty Miecza na punkty Magii",
+          label: "zamieniasz punkty Miecza na punkty Magii",
           effect: { op: "zamien-punkty", z: "sword" },
         },
         {
-          label: "Zamień punkty Magii na punkty Miecza",
+          label: "zamieniasz punkty Magii na punkty Miecza",
           effect: { op: "zamien-punkty", z: "magic" },
         },
         // Bare, like every other declining option in the box. The two above
@@ -275,9 +275,9 @@ export const NIEZNAJOMI: Readonly<Record<string, CardScript>> = {
       to: {
         op: "wybor",
         options: [
-          { label: "Złóż 1 Sz. Z. w ofierze", effect: { op: "punkty", stat: "gold", delta: -1 } },
+          { label: "tracisz 1 Sztukę Złota", effect: { op: "punkty", stat: "gold", delta: -1 } },
           {
-            label: "Odmów — zostajesz tu na 1 turę",
+            label: "zostajesz tu na 1 turę",
             effect: {
               op: "efekt",
               label: "Osądzony — nie ruszysz się stąd przez turę",

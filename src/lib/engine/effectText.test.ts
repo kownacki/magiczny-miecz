@@ -412,14 +412,15 @@ describe("naming the target a panel is talking about", () => {
 describe("a choice, described", () => {
   it("prints the labels and nothing else", () => {
     expect(describeEffect(SCRIPTS["krol-lasu"]!.effect)).toBe(
-      "do wyboru: 1 punkt Miecza · 1 punkt Magii · 1 punkt Życia · " +
-        "1 Zaklęcie · 1 Sztuka Złota · Przenieś się na dowolny Obszar w tym Kręgu",
+      "do wyboru: zyskujesz 1 punkt Miecza · zyskujesz 1 punkt Magii · " +
+        "zyskujesz 1 punkt Życia · zyskujesz 1 Zaklęcie · zyskujesz 1 Sztukę Złota · " +
+        "przenosisz się na dowolny Obszar w tym Kręgu",
     );
   });
 
   it("reads the same behind a condition", () => {
     expect(describeEffect(SCRIPTS["wrozka"]!.effect)).toContain(
-      "do wyboru: 1 punkt Miecza · ",
+      "do wyboru: zyskujesz 1 punkt Miecza · ",
     );
   });
 });
@@ -448,7 +449,7 @@ describe("a sequence beside a picture", () => {
     expect(rows).toContain("gdy odwiedzony — do wyboru:");
     // A blank row between the two groups, which the panel draws as a gap.
     expect(rows).toContain("");
-    expect(rows).toContain("— Magiczny Miecz");
+    expect(rows).toContain("— otrzymujesz Magiczny Miecz");
   });
 
   /** A sequence of plain steps keeps its sentence. */

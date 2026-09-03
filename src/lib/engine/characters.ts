@@ -134,6 +134,53 @@ export const STARTING_KIT: Readonly<Partial<Record<CharacterId, StartingKit>>> =
  * because the interesting half of a Charakterystyka is usually the half that
  * bends a rule rather than adds a number.
  */
+/**
+ * The grammatical gender of each Karta Postaci's name.
+ *
+ * Written out rather than guessed, because Polish will not have it guessed:
+ * BARBARZYŃCA and ZDOBYWCA end in -a like WIEDŹMA and are masculine, and any
+ * rule about endings gets those two wrong in the one place a player would
+ * notice — a sentence about their own Postać.
+ *
+ * Complete rather than partial, so a twenty-eighth character cannot be added
+ * without declaring one. Only two of the twenty-seven are feminine.
+ */
+export const CHARACTER_GENDER: Readonly<Record<CharacterId, "m" | "f">> = {
+  awanturnik: "m",
+  barbarzynca: "m",
+  "bledny-rycerz": "m",
+  czarodziej: "m",
+  demon: "m",
+  elf: "m",
+  goblin: "m",
+  hobgoblin: "m",
+  hummit: "m",
+  kaplan: "m",
+  kaplanka: "f",
+  karzel: "m",
+  kat: "m",
+  krasnolud: "m",
+  ksiaze: "m",
+  lotr: "m",
+  mag: "m",
+  magog: "m",
+  obbol: "m",
+  olbrzym: "m",
+  pustelnik: "m",
+  quark: "m",
+  "rycerz-ciemnosci": "m",
+  spryciarz: "m",
+  troll: "m",
+  wiedzma: "f",
+  zdobywca: "m",
+};
+
+/** The gender of a Postać named by an id off the wire, masculine for an unknown one. */
+export function genderOf(characterId: string | null | undefined): "m" | "f" {
+  const known = characterId ? asCharacterId(characterId) : null;
+  return known ? CHARACTER_GENDER[known] : "m";
+}
+
 export const CHARACTER_NOTES: Readonly<Partial<Record<CharacterId, readonly string[]>>> = {
   awanturnik: [
     "Zamiast atakować Postać możesz zabrać jej 1 losowe Zaklęcie.",

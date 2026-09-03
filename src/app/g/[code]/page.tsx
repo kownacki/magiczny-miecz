@@ -57,6 +57,7 @@ import type { EventCard, Spell } from "@/data/types";
 import { TheReader } from "./card-facts";
 import type { Reader } from "@/lib/engine/abilityText";
 import { characterName } from "@/lib/engine/polish";
+import { genderOf } from "@/lib/engine/characters";
 import { FieldModal } from "./field-modal";
 import { RaidOffer } from "./raid-offer";
 import { FriendOffer } from "./friend-offer";
@@ -969,20 +970,31 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
    * answers a question nobody asked. They are usually the same Postać and
    * differ exactly when you are watching somebody else's turn.
    */
+  /**
+   * How the table refers to somebody: „Marcin (MAG)".
+   *
+   * Both halves, because either alone is ambiguous — two players may have taken
+   * the same kind of Postać in different games, and one player may be running
+   * two seats on a table screen. The name says whom to look at and the Karta
+   * says what they are.
+   */
+  const reads = (seat: { player_name?: string | null; seat_index: number; character_id?: string | null }) =>
+    `${seat.player_name ?? `Miejsce ${seat.seat_index + 1}`} (${characterName(seat.character_id ?? "")})`;
+
   const viewer: Reader | null = mySeat
     ? {
         nature: asNature(mySeat.nature),
         aggression: mySeat.aggression,
-        name: characterName(mySeat.character_id ?? ""),
-        mine: true,
+        name: reads(mySeat),
+        gender: genderOf(mySeat.character_id),
       }
     : null;
   const dealt: Reader | null = active
     ? {
         nature: asNature(active.nature),
         aggression: active.aggression,
-        name: characterName(active.character_id ?? ""),
-        mine: active.id === mySeat?.id,
+        name: reads(active),
+        gender: genderOf(active.character_id),
       }
     : null;
 

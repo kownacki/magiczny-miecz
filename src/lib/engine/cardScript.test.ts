@@ -83,7 +83,7 @@ describe("the card that prompted the vocabulary", () => {
     expect(script.effect).toEqual({
       op: "wybor",
       options: [
-        { label: "Przenieś się na dowolny Obszar w tym Kręgu", effect: { op: "przenies", to: { kind: "dowolne-w-kregu" } } },
+        { label: "przenosisz się na dowolny Obszar w tym Kręgu", effect: { op: "przenies", to: { kind: "dowolne-w-kregu" } } },
         { label: "Pomiń", effect: { op: "nic" } },
       ],
     });

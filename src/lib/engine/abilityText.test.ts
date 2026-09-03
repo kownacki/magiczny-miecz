@@ -212,6 +212,16 @@ describe("how long a Nieznajomy or a Miejsce stays", () => {
  * serve one Natura — different rules, one question for the person reading.
  */
 describe("what a Karta asks of the character in front of it", () => {
+  /** „Marcin (MAG) jest zły" — the adjective agrees with the Karta Postaci. */
+  it("names the Postać and agrees with its gender", () => {
+    expect(
+      requirementOf("wrozka", { nature: "evil", name: "Marcin (MAG)", gender: "m" })?.detail,
+    ).toBe("Marcin (MAG) jest zły");
+    expect(
+      requirementOf("wrozka", { nature: "evil", name: "Ania (WIEDŹMA)", gender: "f" })?.detail,
+    ).toBe("Ania (WIEDŹMA) jest zła");
+  });
+
   it("reads a Nieznajomy's own condition, and says who passes", () => {
     // „Pierwszej Dobrej Postaci, która do niej zawita ofiaruje do wyboru…"
     expect(requirementOf("wrozka", "good")).toEqual({
@@ -276,7 +286,7 @@ describe("what the summary beside the picture leaves out", () => {
     // One row per gift, so six alternatives read as six things (15.2's own
     // sentence is a paragraph; this is a list).
     expect(wrozka[0]).toBe("do wyboru:");
-    expect(wrozka[1]).toBe("— 1 punkt Miecza");
+    expect(wrozka[1]).toBe("— zyskujesz 1 punkt Miecza");
     expect(wrozka).toHaveLength(7);
   });
 
@@ -315,10 +325,23 @@ describe("a Karta that accuses", () => {
       requirementOf("dobre-bostwo", {
         nature: "good",
         aggression: null,
-        name: "BARBARZYŃCA",
-        mine: false,
+        name: "Marcin (BARBARZYŃCA)",
+        gender: "m",
       })?.detail,
-    ).toMatch(/^Postać BARBARZYŃCA jeszcze nigdy nie zaatakowała/);
+    ).toBe(
+      "Marcin (BARBARZYŃCA) jeszcze nigdy nie zaatakował innej Postaci " +
+        "ani nie użył swoich zdolności na jej niekorzyść",
+    );
+
+    // And the two Karty Postaci that are feminine take the other ending.
+    expect(
+      requirementOf("dobre-bostwo", {
+        nature: "good",
+        aggression: null,
+        name: "Ania (WIEDŹMA)",
+        gender: "f",
+      })?.detail,
+    ).toMatch(/^Ania \(WIEDŹMA\) jeszcze nigdy nie zaatakowała innej Postaci ani nie użyła/);
   });
 
   /** Outside a game nobody is reading it, so neither colour is earned. */

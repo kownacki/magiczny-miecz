@@ -159,6 +159,21 @@ export const NATURE_LABEL: Record<string, string> = {
   any: "dowolna",
 };
 
+/**
+ * The same four for a masculine subject.
+ *
+ * `NATURE_LABEL` agrees with „Postać", which is feminine whoever it is, and is
+ * right wherever the sentence says „Postać". A sentence that names the Postać
+ * instead — „Marcin (MAG) jest zły" — agrees with the name, and twenty-five of
+ * the twenty-seven Karty Postaci are masculine.
+ */
+export const NATURE_LABEL_M: Record<string, string> = {
+  good: "dobry",
+  evil: "zły",
+  chaotic: "chaotyczny",
+  any: "dowolny",
+};
+
 /** What a `strata` takes off you. */
 export type Loss = Extract<Effect, { op: "strata" }>["co"];
 

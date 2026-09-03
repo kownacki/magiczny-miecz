@@ -8,7 +8,7 @@ import type { Status } from "./status";
 import { classOf } from "./cards";
 import { describeEffect, effectRows } from "./effectText";
 import { abilitiesOfCharacter, asCharacterId } from "./characters";
-import { NATURE_LABEL, cardName, fieldName, plural } from "./polish";
+import { NATURE_LABEL, NATURE_LABEL_M, cardName, fieldName, plural } from "./polish";
 import { slotsFor, SLOT_LABEL, isWearable, type EqMode, type Slot } from "./slots";
 
 function fieldNames(fieldIds: readonly FieldId[]): string {
@@ -319,22 +319,31 @@ export interface Reader {
   nature: Nature | null;
   /** Their last act of aggression, in words, or null — see `describeAggression`. */
   aggression?: string | null;
-  /** What that Postać is called, for a sentence about them rather than about you. */
+  /**
+   * Who they are, as the table knows them — „Marcin (MAG)".
+   *
+   * The player and the Postać together, because either alone is ambiguous at a
+   * table where one person may have played two: the name says whom to look at
+   * and the Karta says what they are.
+   */
   name?: string;
-  /** Whether they are the reader's own Postać, which changes only the pronoun. */
-  mine?: boolean;
+  /** Their Karta Postaci's grammatical gender, which the adjectives agree with. */
+  gender?: "m" | "f";
 }
 
 /**
- * The subject of a sentence about the Postać a Karta is being read for.
+ * The subject of a sentence about the Postać a Karta is being read for, and the
+ * ending its verbs and adjectives take.
  *
- * „Postać" is the head word in both, and that is the point: it is feminine, so
- * „nie zaatakowała" and „użyła" agree whoever it is. Put a player's name there
- * instead and Polish wants a gender the box does not print and the app has
- * never been told.
+ * „Marcin (MAG) jest zły" agrees with the Karta Postaci, not with the player —
+ * a name tells the app nothing about gender and never will, while `genderOf`
+ * knows all twenty-seven. Outside a game there is no name and „Twoja Postać" is
+ * the subject instead, which is feminine and takes „zła" whoever is reading.
  */
-function whose(reader: Reader): string {
-  return reader.mine === false && reader.name ? `Postać ${reader.name}` : "Twoja Postać";
+function subject(reader: Reader): { who: string; a: string; feminine: boolean } {
+  if (!reader.name) return { who: "Twoja Postać", a: "a", feminine: true };
+  const feminine = reader.gender === "f";
+  return { who: reader.name, a: feminine ? "a" : "", feminine };
 }
 
 export function requirementOf(
@@ -356,9 +365,7 @@ export function requirementOf(
        * line is the half a player wants: „tylko Postać: dobra" in red is a
        * refusal, and „Twoja Postać jest zła" is its reason.
        */
-      ...(who.nature === null
-        ? {}
-        : { detail: `${whose(who)} jest ${NATURE_LABEL[who.nature] ?? who.nature}` }),
+      ...(who.nature === null ? {} : { detail: natureLine(who, who.nature) }),
     };
   }
   /**
@@ -378,12 +385,26 @@ export function requirementOf(
     return {
       ...line,
       met: who.aggression !== null,
-      detail: who.aggression
-        ? `${whose(who)}: ${who.aggression}`
-        : `${whose(who)} jeszcze nigdy nie zaatakowała innej Postaci ani nie użyła swoich zdolności na jej niekorzyść`,
+      detail: who.aggression ? `${subject(who).who}: ${who.aggression}` : acquittal(who),
     };
   }
   return null;
+}
+
+/** „Marcin (MAG) jest zły" — the Natura, agreeing with the Karta Postaci. */
+function natureLine(reader: Reader, nature: Nature): string {
+  const { who, feminine } = subject(reader);
+  const label = feminine ? NATURE_LABEL[nature] : NATURE_LABEL_M[nature];
+  return `${who} jest ${label ?? nature}`;
+}
+
+/** The Dobre Bóstwo's own two limbs, said in the negative. */
+function acquittal(reader: Reader): string {
+  const { who, a } = subject(reader);
+  return (
+    `${who} jeszcze nigdy nie zaatakował${a} innej Postaci ` +
+    `ani nie użył${a} swoich zdolności na jej niekorzyść`
+  );
 }
 
 /** The kind of test a Karta's own `gdy` applies, when its whole effect is one. */
