@@ -79,7 +79,7 @@ export function describeCondition(condition: Condition): string {
  * "1, 2, 3 — przemykasz; 4 — Upiór (Magia 4)" is the card. Six separate lines
  * for six faces is the same information arranged so nobody reads it.
  */
-function dieTable(faces: Record<number, Effect>): string {
+function dieRows(faces: Record<number, Effect>): string[] {
   const order: { said: string; on: number[] }[] = [];
   for (const face of Object.keys(faces).map(Number).sort((a, b) => a - b)) {
     const said = describeEffect(faces[face]);
@@ -87,7 +87,31 @@ function dieTable(faces: Record<number, Effect>): string {
     if (existing) existing.on.push(face);
     else order.push({ said, on: [face] });
   }
-  return order.map((entry) => `${runs(entry.on)} — ${entry.said}`).join("; ");
+  return order.map((entry) => `${runs(entry.on)} — ${entry.said}`);
+}
+
+function dieTable(faces: Record<number, Effect>): string {
+  return dieRows(faces).join("; ");
+}
+
+/**
+ * A branching effect as rows, for a panel that has room to stack them.
+ *
+ * The same two shapes read very differently in a sentence and in a list: six
+ * gifts or six faces run together with separators are a paragraph, and a
+ * paragraph beside a picture is not read. `describeEffect` still joins them,
+ * for the places that have one line — a journal entry, a console echo, a hover
+ * on a tile. Null for everything else, which is most of the box: a card that
+ * does one thing has one row and does not need this.
+ */
+export function effectRows(effect: Effect): string[] | null {
+  if (effect.op === "wybor") {
+    return ["do wyboru:", ...effect.options.map((option) => `— ${option.label}`)];
+  }
+  if (effect.op === "rzut") {
+    return ["rzut kostką:", ...dieRows(effect.faces)];
+  }
+  return null;
 }
 
 /** "1, 2, 3" becomes "1-3"; scattered faces stay listed. */

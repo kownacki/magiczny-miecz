@@ -260,9 +260,13 @@ describe("what the summary beside the picture leaves out", () => {
    * again as „Jeśli dobra:" pushes the six gifts a clause further from the eye.
    */
   it("does not repeat the Natura the requirement line states", () => {
-    const wrozka = itemProfile("wrozka").special.join(" ");
-    expect(wrozka).not.toContain("dobra:");
-    expect(wrozka).toContain("do wyboru: 1 punkt Miecza");
+    const wrozka = itemProfile("wrozka").special;
+    expect(wrozka.join(" ")).not.toContain("dobra:");
+    // One row per gift, so six alternatives read as six things (15.2's own
+    // sentence is a paragraph; this is a list).
+    expect(wrozka[0]).toBe("do wyboru:");
+    expect(wrozka[1]).toBe("— 1 punkt Miecza");
+    expect(wrozka).toHaveLength(7);
   });
 
   /** „Możesz je wybrać ze stosu" — the one Zaklęcie in the box that is chosen. */

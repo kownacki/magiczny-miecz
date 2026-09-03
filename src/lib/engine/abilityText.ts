@@ -5,7 +5,7 @@ import { FIELDS, type FieldId } from "./board";
 import { ABILITIES, CARD_NOTES, type Ability } from "./abilities";
 import { describeDisposition, scriptFor } from "./cardScript";
 import { classOf } from "./cards";
-import { describeEffect } from "./effectText";
+import { describeEffect, effectRows } from "./effectText";
 import { abilitiesOfCharacter, asCharacterId } from "./characters";
 import { NATURE_LABEL, cardName, fieldName, plural } from "./polish";
 import { slotsFor, SLOT_LABEL, isWearable, type EqMode, type Slot } from "./slots";
@@ -242,7 +242,7 @@ function specialOf(cardId: string): string[] {
     script.effect.inaczej === undefined
       ? script.effect.to
       : script.effect;
-  const lines = [describeEffect(body)];
+  const lines = effectRows(body) ?? [describeEffect(body)];
   /**
    * Only worth saying when the card does not simply stay with you — and not at
    * all where `staysAs` has already said it. On a Nieznajomy the two ran one
