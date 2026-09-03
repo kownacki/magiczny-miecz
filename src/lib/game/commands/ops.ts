@@ -1094,7 +1094,45 @@ const OPS: { [K in LeafOp]: OpRun<K> } = {
   },
 
   "zaklecia-do-limitu": unimplemented,
-  "zamien-punkty": unimplemented,
+  /**
+   * The Kuglarz: one parameter takes the other's value, and the other stands.
+   *
+   * „Może zamienić twoje punkty Miecza na punkty Magii lub odwrotnie." Not a
+   * swap — a swap would be symmetric and „lub odwrotnie" would have nothing to
+   * offer. `z` names the parameter that *changes*: with „sword" the Miecz
+   * becomes whatever the Magia is, and the Magia is left alone.
+   *
+   * Through `adjustSeat` like every other change to a number, which is what
+   * puts 1.3 and 2.3's floor under it and writes the `points` line. Expressed
+   * as the delta that lands on the target, so nothing here has to know how the
+   * flooring works — only what the answer should be.
+   */
+  "zamien-punkty": (ctx, effect) => {
+    const { snapshot, seatId, reason } = ctx;
+    const seat = snapshot.seats.find((one) => one.id === seatId);
+    if (!seat) throw new Error("Nieznane miejsce.");
+    const [now, target] =
+      effect.z === "sword" ? [seat.sword_own, seat.magic_own] : [seat.magic_own, seat.sword_own];
+    const done = adjustSeat(snapshot, {
+      seatId,
+      stat: effect.z,
+      delta: target - now,
+      reason,
+      record: { kind: "points", manual: false },
+    });
+    const label = effect.z === "sword" ? "Miecz" : "Magia";
+    return {
+      writes: done.writes,
+      result: {
+        did: [
+          done.result.moved === 0
+            ? `${label} ${now} — bez zmian`
+            : `${label} ${now} → ${done.result.to}`,
+        ],
+        pending: null,
+      },
+    };
+  },
   zgadnij: unimplemented,
 };
 

@@ -481,18 +481,15 @@ export function previewOf(effect: Effect, points: OwnPoints): string | null {
 
   if (effect.op === "zamien-punkty") {
     /**
-     * „zamienić twoje punkty Miecza na punkty Magii lub odwrotnie" — the two
-     * trade places, whole. Clamping one side would not be a swap: it would
-     * hold a Miecz at its floor and hand the Magia the higher number anyway,
-     * inventing points out of a rule that exists to stop them being lost.
-     *
-     * So where 1.2–1.5 would refuse the trade, this says nothing rather than
-     * something. What the engine does about it is `zamien-punkty`'s to settle
-     * and it has not been written yet; a preview must not decide that here.
+     * One parameter takes the other's value and the other stands — see the op.
+     * `z` names the one that changes, so the two directions land on different
+     * numbers and the two buttons are two different offers.
      */
-    const [sword, magic] = [points.magic, points.sword];
-    if (sword < points.swordFloor || magic < points.magicFloor) return null;
-    return `${shown("Miecz", points.sword, sword)} · ${shown("Magia", points.magic, magic)}`;
+    const [now, from, floor] =
+      effect.z === "sword"
+        ? [points.sword, points.magic, points.swordFloor]
+        : [points.magic, points.sword, points.magicFloor];
+    return shown(effect.z === "sword" ? "Miecz" : "Magia", now, Math.max(floor, from));
   }
 
   if (effect.op === "uzdrow" && effect.upTo !== undefined) {

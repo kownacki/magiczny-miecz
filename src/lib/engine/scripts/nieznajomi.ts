@@ -253,11 +253,11 @@ export const NIEZNAJOMI: Readonly<Record<string, CardScript>> = {
       op: "wybor",
       options: [
         {
-          label: "zamieniasz bazowe punkty Miecza na bazowe punkty Magii",
+          label: "ustawiasz bazowy Miecz na wartość bazową Magii",
           effect: { op: "zamien-punkty", z: "sword" },
         },
         {
-          label: "zamieniasz bazowe punkty Magii na bazowe punkty Miecza",
+          label: "ustawiasz bazową Magię na wartość bazową Miecza",
           effect: { op: "zamien-punkty", z: "magic" },
         },
         // Bare, like every other declining option in the box. The two above

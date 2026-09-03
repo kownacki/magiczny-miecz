@@ -160,3 +160,65 @@ describe("the Eremita, who was waiting on `otrzymaj`", () => {
     expect(other.after.holdings.map((h) => h.card_id)).toContain("tarcza-tolimana");
   });
 });
+
+/**
+ * „Może zamienić twoje punkty Miecza na punkty Magii lub odwrotnie" — not a
+ * swap. One parameter takes the other's value and the other stands, which is
+ * what makes „lub odwrotnie" two different offers rather than one said twice.
+ */
+describe("the Kuglarz, who reads one parameter off the other", () => {
+  const juggler = (sword: number, magic: number) =>
+    aTable({
+      game: {
+        active_seat: 0,
+        turn_state: {
+          phase: "field",
+          fieldId: "osada",
+          from: null,
+          draw: 0,
+          drawn: [{ cardId: "kuglarz", cardClass: "stranger" as const }],
+          resolved: [],
+        } as TurnPhase,
+      },
+      seats: [
+        aSeat({
+          id: "seat-a",
+          character_id: asSeatCharacter("awanturnik"),
+          field_id: "osada",
+          sword_own: sword,
+          magic_own: magic,
+          sword_floor: 2,
+          magic_floor: 2,
+        }),
+      ],
+    });
+
+  it("gives the Miecz the Magia's value and leaves the Magia", async () => {
+    const { after } = await visit(juggler(3, 9), "kuglarz", [0]);
+    expect(after.seats[0].sword_own).toBe(9);
+    expect(after.seats[0].magic_own).toBe(9);
+  });
+
+  it("does the other one the other way", async () => {
+    const { after } = await visit(juggler(3, 9), "kuglarz", [1]);
+    expect(after.seats[0].magic_own).toBe(3);
+    expect(after.seats[0].sword_own).toBe(3);
+  });
+
+  /** Through `adjustSeat`, so the floor and the journal line come with it. */
+  it("writes a points line and stops at the floor (1.3, 2.3)", async () => {
+    const out = await resolveDrawnCard(
+      juggler(9, 3),
+      { cardId: "kuglarz", decided: { choices: [0] }, shuffle: asIs },
+      ports(),
+    );
+    // Miecz would take the Magia's 3, which is above the floor of 2.
+    expect(out.writes.journal?.some((line) => line.kind === "points")).toBe(true);
+  });
+
+  it("does nothing, loudly, when the value is already there", async () => {
+    const { after, said } = await visit(juggler(5, 5), "kuglarz", [0]);
+    expect(after.seats[0].sword_own).toBe(5);
+    expect(said).toMatch(/bez zmian/);
+  });
+});

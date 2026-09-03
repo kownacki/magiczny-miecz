@@ -74,13 +74,11 @@ const MANUAL: Readonly<Partial<Record<CardId, string>>> = {
 
   // --- cards whose disposition is handled but whose body is not -------------
   //
-  // Both of these now *offer* their gift on the sheet — a button a player can
-  // press — and neither op is written: `zamien-punkty` throws out of the walk
-  // and `ruch-dodatkowy` hands the table a sentence. Offering a control that
-  // cannot be carried out is worse than offering none, so until the ops exist
-  // the cards say so where a player will read it.
-  kuglarz:
-    "Zamianę punktów wykonajcie sami — aplikacja pokazuje wybór, ale go jeszcze nie przeprowadza.",
+  // The Rumak offers his gift on the sheet — a button a player can press — and
+  // `ruch-dodatkowy` is not written: it hands the table a sentence and writes
+  // nothing. Offering a control that cannot be carried out is worse than
+  // offering none, so the card says so where a player will read it. The Kuglarz
+  // was here beside him until `zamien-punkty` was written.
   "dziki-rumak":
     "Dodatkowy ruch wykonajcie sami — rzućcie jeszcze raz i przesuńcie figurę.",
 

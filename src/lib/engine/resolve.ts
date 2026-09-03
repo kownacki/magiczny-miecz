@@ -161,8 +161,20 @@ export function isSettled(effect: Effect): boolean {
     // and empty — a prayer that appeared to do nothing and left the turn
     // waiting on a question nobody had been asked.
     case "zaklecia-do-limitu":
-    case "zamien-punkty":
       return false;
+
+    /**
+     * The Kuglarz, which used to sit above with the unsettled ones.
+     *
+     * His two offers *are* the question, and answering one leaves nothing for
+     * anybody to decide: the parameter takes the other's value and `adjustSeat`
+     * puts 1.3 and 2.3's floor under it. While it was unsettled the walk handed
+     * it straight back as `pending`, so a player picked an option and watched
+     * nothing happen — the same shape as `otrzymaj`'s and the Targowisko's
+     * deadlocks above, and the third time this file has had it.
+     */
+    case "zamien-punkty":
+      return true;
 
     /**
      * A borrowed table is exactly as settled as the table it borrows.

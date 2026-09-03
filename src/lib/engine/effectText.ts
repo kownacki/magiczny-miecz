@@ -454,8 +454,8 @@ export function describeEffect(effect: Effect): string {
      */
     case "zamien-punkty":
       return effect.z === "sword"
-        ? "zamieniasz bazowe punkty Miecza na bazowe punkty Magii"
-        : "zamieniasz bazowe punkty Magii na bazowe punkty Miecza";
+        ? "ustawiasz bazowy Miecz na wartość bazową Magii"
+        : "ustawiasz bazową Magię na wartość bazową Miecza";
 
     /**
      * The Mędrzec's riddle, said in full because every word of it is a rule.

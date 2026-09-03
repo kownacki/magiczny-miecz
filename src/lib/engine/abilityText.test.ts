@@ -429,18 +429,26 @@ describe("what one option would do to the numbers", () => {
    * would take a Barbarzyńca's Miecz to 2 does not — and the sheet must not
    * promise it would.
    */
-  it("says nothing rather than promising what the floors refuse", () => {
-    // A Barbarzyńca starts on Miecz 6, so there is no swap to be had: holding
-    // one side at its floor and moving the other would invent points.
-    expect(previewOf({ op: "zamien-punkty", z: "sword" }, barbarzynca)).toBeNull();
-    // A character with room to move sees the trade it really is: a Mag starts
-    // on Miecz 2 and Magia 4, so both halves clear their floors.
+  /**
+   * The Kuglarz is not a swap: one parameter takes the other's value and the
+   * other stands, so the two directions are two different offers.
+   */
+  it("moves the parameter the direction names, and leaves the other", () => {
+    // Miecz becomes what the Magia is. A Barbarzyńca on 6 and 12 gains six.
     expect(
-      previewOf(
-        { op: "zamien-punkty", z: "sword" },
-        { ...barbarzynca, sword: 5, magic: 4, swordFloor: 2, magicFloor: 4 },
-      ),
-    ).toBe("Miecz 5 → 4 · Magia 4 → 5");
+      previewOf({ op: "zamien-punkty", z: "sword" }, { ...barbarzynca, magic: 12 }),
+    ).toBe("Miecz 6 → 12");
+    // The other way round, off the same numbers, is a different answer.
+    expect(
+      previewOf({ op: "zamien-punkty", z: "magic" }, { ...barbarzynca, magic: 12 }),
+    ).toBe("Magia 12 → 6");
+  });
+
+  /** 1.3 and 2.3 put a floor under own points, and it holds here too. */
+  it("stops at the floor", () => {
+    expect(previewOf({ op: "zamien-punkty", z: "sword" }, barbarzynca)).toBe(
+      "Miecz 6 — bez zmian",
+    );
   });
 
   /** „tylko do wysokości startowej — 4 punktów" is the Cudotwórca's ceiling. */
