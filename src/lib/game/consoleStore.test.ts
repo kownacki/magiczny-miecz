@@ -149,6 +149,62 @@ describe("handing the turn on over a surplus", () => {
     ).rejects.toThrow(/Najpierw zejdź do limitu/);
   });
 
+  /**
+   * Three Zaklęcia against a Goblin's Magia, which is two: the third lands and
+   * opens the frame behind it.
+   *
+   * Asserted rather than swallowed. Written with a `.catch()` these tests would
+   * have passed on a build where the *setup* refused, which is the one way a
+   * regression test for a refusal can quietly stop testing anything.
+   */
+  const overSpelled = async (gameId: string, actor: { userId: string; seatId: string }) => {
+    for (const spell of ["ocalony", "odrodzenie", "olsnienie"]) {
+      await runCommand(gameId, actor, { kind: "deal", cardIds: [spell] });
+    }
+    expect(top((await activeStore().load(gameId)).game.turn_state)).toMatchObject({
+      phase: "overflow",
+    });
+  };
+
+  /**
+   * And nothing may be dealt while the table is waiting on the surplus.
+   *
+   * 5.6's „natychmiast" is a frame on the stack, and `refuseWhileOverflow` is
+   * the sentence every verb owes it. `deal` owed it in both halves and paid
+   * neither: the Zaklęcie half went through `grantCard`, which skips every
+   * check on purpose and skipped this one by accident, so the console dug the
+   * hole it was standing in — `deal` a fourth Zaklęcie and a fifth and the only
+   * refusal came two cards later. The Karta half was caught by the stack's own
+   * generic sentence, which is true and useless: it named neither the count nor
+   * the rule nor a way out.
+   */
+  it("will not deal another Zaklęcie onto a surplus", async () => {
+    const { gameId, actor } = await playing();
+    await overSpelled(gameId, actor);
+    await expect(
+      runCommand(gameId, actor, { kind: "deal", cardIds: ["fatum"] }),
+    ).rejects.toThrow(/Najpierw zejdź do limitu/);
+  });
+
+  it("answers a Karta with the frame's own words, not the stack's", async () => {
+    const { gameId, actor } = await playing();
+    await overSpelled(gameId, actor);
+    // The count, the rule that is actually being enforced, and the ways back
+    // under — none of which "trzeba odłożyć nadmiar Kart" said.
+    await expect(
+      runCommand(gameId, actor, { kind: "deal", cardIds: ["cudotworca"] }),
+    ).rejects.toThrow(/Najpierw zejdź do limitu: 1 za dużo \(2\.6\)/);
+  });
+
+  it("deals again once the surplus is gone", async () => {
+    const { gameId, actor } = await playing();
+    await overSpelled(gameId, actor);
+    await runCommand(gameId, actor, { kind: "putdown", name: "OCALONY" });
+    expect(await runCommand(gameId, actor, { kind: "deal", cardIds: ["cudotworca"] })).toContain(
+      "CUDOTWÓRCA",
+    );
+  });
+
   it("passes it when forced, and says that is what it did", async () => {
     const { gameId, actor } = await overloaded();
     expect(await runCommand(gameId, actor, { kind: "turn", act: "end", force: true })).toBe(

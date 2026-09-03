@@ -27,7 +27,7 @@ import {
   type Decks,
 } from "./decks";
 import { change, effectRowsFor, merge, type EffectRow, type Handler } from "./change";
-import { holdOverflow, releaseOverflow } from "./commands/overflow";
+import { holdOverflow, refuseWhileOverflow, releaseOverflow } from "./commands/overflow";
 import { closeFight, resume } from "./commands/frames";
 import { finishTurn as finishTurnOn, resetTurn as resetTurnOn } from "./commands/turn";
 import { appRandom, supplied } from "./random";
@@ -412,6 +412,20 @@ export async function stageCards(
     if (seat.seat_index !== snapshot.game.active_seat) throw new Error("To nie twoja tura.");
     if (!seat.field_id) throw new Error("Postać nie stoi na żadnym polu.");
     const fieldId = seat.field_id;
+
+    /**
+     * A surplus on the stack, refused in the frame's own words rather than the
+     * stack's.
+     *
+     * Without this the generic sentence below caught it — "Nie ma gdzie położyć
+     * Karty — trzeba odłożyć nadmiar Kart", which is true and useless. The
+     * frame knows how many have to go, which rule says so (5.6 for the pack,
+     * 2.6 for the hand) and the three ways back under, and
+     * `refuseWhileOverflow` says all three. It is also the sentence every other
+     * verb owes this frame, so `deal` stops being the one that answers
+     * differently.
+     */
+    refuseWhileOverflow(snapshot, seatId);
 
     const turn_state = cards.reduce<TurnState | null>(
       (state, card) =>

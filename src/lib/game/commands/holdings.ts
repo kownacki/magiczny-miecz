@@ -7,6 +7,7 @@ import { forbiddenNatures } from "@/lib/engine/abilityText";
 import { abilitiesOf, carriesSpell, entryPrice, unavailableIn } from "@/lib/engine/abilities";
 import { barredFromFriends } from "@/lib/engine/status";
 import { refuseWhileQueued, storedStatuses } from "./turn";
+import { refuseWhileOverflow } from "./overflow";
 import { FIELDS, requireFieldId, type FieldId } from "@/lib/engine/board";
 import { drawFrom } from "@/lib/engine/deck";
 import { isConsumedOnResolve, scriptFor, type Effect } from "@/lib/engine/cardScript";
@@ -1247,6 +1248,24 @@ export function grantCard(
   command: { seatId: string; cardId: string },
 ): Outcome<void> {
   const { seatId, cardId } = command;
+
+  /**
+   * The one check it does not skip: a surplus already on the stack.
+   *
+   * Everything above is about the rules this shortcut is *for* stepping round —
+   * 5.3's Natura, 5.4's limit, 21.2's finite pile — and stepping round them is
+   * the point. A surplus frame is not one of those. It is 5.6's „natychmiast"
+   * made into a state the whole table is waiting on, and this walked straight
+   * past it: `deal OLŚNIENIE` opened the frame and `deal FATUM` and `deal GOLEM`
+   * both landed on top of it, so the console dug the hole it was standing in
+   * and the only refusal anybody saw came two cards later.
+   *
+   * `refuseWhileOverflow` is the sentence every other verb already owes the
+   * frame, and it is the one worth having here: it counts how many have to go,
+   * cites the rule that is actually being enforced (5.6 for the pack, 2.6 for
+   * the hand), and names the three ways back under.
+   */
+  refuseWhileOverflow(snapshot, seatId);
   const spell = SPELLS.find((card) => card.id === cardId);
   const equipment = (items as Item[]).find((item) => item.id === cardId);
   const event = EVENTS.find((card) => card.id === cardId);
