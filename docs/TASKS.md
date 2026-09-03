@@ -1225,10 +1225,25 @@ with „Najpierw WILKOŁAK".
 
 One thing about this card is still unsettled. Its disposition is
 **conditional** — `odloz` only if you go through, otherwise it stays — and it
-is typed as a plain `odloz`. In practice that comes out right, because the card
-is `optional` and declining it means never resolving it, so the `odloz` never
-runs; it is right by accident rather than by saying so, and it is the only card
-whose frame's answer decides whether the Karta leaves the Obszar.
+is typed as a plain `odloz`. **It was not right by accident either — it was
+wrong.** Declining the Wrota discarded them: „Jeśli nie chcesz ryzykować, Wrota
+będą czekać na tym Obszarze na kogoś odważniejszego" and they did not, they
+went on the used pile at the end of the turn.
+
+The card is not where the fault was. `leavesWhenResolved` answers only half of
+„a następnie ją odłóż" — is this a Karta that goes when it is read? — and
+`leaveCardsBehind` never asked the other half, whether it *had been* read. For
+a compulsory Karta that is invisible, because 16.4 will not let a turn end over
+an unresolved one; the four that ask first are the ones it was wrong for, and
+three of them reach it: SKALNE WROTA and both Kapliczki, which close for good
+after a visit and were closing after a look. (The Tajemnicza Szkatuła is a
+Przedmiot, and `SPENT_BY_READING` holds only the three classes that are used up
+by being read.)
+
+So the disposition needed no new shape. `leaveCardsBehind` takes the frame's
+own `resolved` now and asks both halves, which is the same question `isSpent`
+has always asked for the kolejka and the Obszar's window — through `listed`,
+so two Kapliczki cannot both be shut by one visit either.
 
 ~~One thing found while checking, which is not this card's: the three drawn
 included a second SKALNE WROTA off the real pile, and `resolved` keys on

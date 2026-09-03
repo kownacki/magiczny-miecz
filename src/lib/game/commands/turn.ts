@@ -6,7 +6,7 @@ import { drawsFromPool, poolRemains, startingPool } from "@/lib/engine/pools";
 import { leavesWhenResolved, mayWalkPast } from "@/lib/engine/kolejka";
 import { whyQueuedHere } from "@/lib/engine/holdings";
 import { abilitiesOf, entryPrice } from "@/lib/engine/abilities";
-import type { TurnCard } from "@/lib/engine/state";
+import { listed, type TurnCard } from "@/lib/engine/state";
 import { only, top, topIf } from "@/lib/engine/stack";
 import {
   apply,
@@ -237,6 +237,14 @@ export function leaveCardsBehind(
     round: number;
     /** Wrogowie who died here — kept by their killer, not left behind (16.2). */
     beaten?: readonly string[];
+    /**
+     * What this turn actually settled — the frame's own `resolved`.
+     *
+     * The half that was missing. Without it a Karta whose text ends „odłóż" was
+     * discarded for *being that card*, resolved or not, which is right for
+     * every compulsory one and wrong for the four that ask first.
+     */
+    settled?: readonly string[];
   },
 ): Changeset {
   // `leavesWhenResolved` is the same question the Obszar's window and the
@@ -276,7 +284,28 @@ export function leaveCardsBehind(
    * lying there for the next character.
    */
   const died = new Set(input.beaten ?? []);
-  const goes = (card: TurnCard) => spentByReading(card) || walksOff(card) || ranDry(card);
+  /**
+   * Read *and* discarded — the two halves of „a następnie ją odłóż".
+   *
+   * `leavesWhenResolved` answers only the second: is this a card whose own text
+   * says it goes when it is read? It never asked whether it *was* read, and
+   * nothing here asked either, so any such Karta left the Obszar at the end of
+   * the turn whether or not anybody had dealt with it.
+   *
+   * For a compulsory Karta that is invisible and harmless: the kolejka will not
+   * let a turn end over one, so it has always been resolved by the time this
+   * runs. The four that ask first are the ones it was wrong for, and the SKALNE
+   * WROTA says so in as many words — „Jeśli nie chcesz ryzykować, Wrota będą
+   * czekać na tym Obszarze na kogoś odważniejszego." Declined, they vanished
+   * instead. So did both Kapliczki, which close for good *after* a visit and
+   * were closing after a look.
+   *
+   * `listed` and not `includes`, because `resolved` names a copy: two
+   * Kapliczki cannot both be shut by one visit either.
+   */
+  const readAndSpent = (card: TurnCard) =>
+    spentByReading(card) && listed(input.settled ?? [], card);
+  const goes = (card: TurnCard) => readAndSpent(card) || walksOff(card) || ranDry(card);
   const stays = input.remaining.filter((card) => !goes(card) && !died.has(card.cardId));
 
   // The other half of the same sentence: a Karta whose own text says "odłóż" is
@@ -404,6 +433,7 @@ export function passTurn(snapshot: Snapshot, force = false): Changeset {
           fieldId: state.fieldId,
           remaining: state.drawn,
           beaten: state.beaten,
+          settled: state.resolved,
           seatId: seat?.id ?? null,
           round: game.round,
         })
@@ -585,6 +615,7 @@ export function resetTurn(snapshot: Snapshot): Outcome<void> {
           fieldId: field.fieldId,
           remaining: field.drawn,
           beaten: field.beaten,
+          settled: field.resolved,
           seatId: seat?.id ?? null,
           round: snapshot.game.round,
         })

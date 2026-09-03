@@ -222,6 +222,57 @@ describe("what is left on the Obszar at the end of a turn", () => {
     });
 
   /**
+   * „a następnie ją odłóż" is two halves, and only the second was being asked.
+   *
+   * `leavesWhenResolved` answers "is this a Karta that goes when it is read?" —
+   * and nothing asked whether it *had been* read, so any such card left the
+   * Obszar at the end of the turn either way. Invisible for a compulsory one,
+   * which the kolejka will not let a turn end over; wrong for the ones that ask
+   * first, and the SKALNE WROTA says so itself: „Jeśli nie chcesz ryzykować,
+   * Wrota będą czekać na tym Obszarze na kogoś odważniejszego." They did not.
+   */
+  describe("a Karta that is discarded by being read", () => {
+    const ending = (cardId: string, settled: string[]) =>
+      leaveCardsBehind(aTable({ seats: [aSeat({ id: "seat-a" })] }), {
+        fieldId: "przelecz-wichrow",
+        seatId: "seat-a",
+        round: 3,
+        remaining: [{ cardId, cardClass: "place" } as never],
+        settled,
+      });
+
+    const lyingAfter = (cardId: string, settled: string[]) =>
+      (ending(cardId, settled).fieldCards?.insert ?? []).map((row) => row.card_id);
+
+    it("waits on the Obszar when nobody went through it", () => {
+      expect(lyingAfter("skalne-wrota", [])).toEqual(["skalne-wrota"]);
+    });
+
+    it("is odłożona once somebody has", () => {
+      expect(lyingAfter("skalne-wrota", ["skalne-wrota"])).toEqual([]);
+    });
+
+    /**
+     * Both Kapliczki are the same shape and were the same bug: they borrow
+     * their temple's table and then close for good — after a visit, not after
+     * a look.
+     */
+    it("leaves a Kapliczka open until somebody prays at it", () => {
+      expect(lyingAfter("kapliczka-nemed", [])).toEqual(["kapliczka-nemed"]);
+      expect(lyingAfter("kapliczka-tolimana", ["kapliczka-tolimana"])).toEqual([]);
+    });
+
+    /**
+     * And a compulsory one is unaffected either way, which is why this went
+     * unnoticed: 16.4 will not let a turn end over an unresolved Spotkanie, so
+     * by the time this runs it has always been read.
+     */
+    it("still discards a compulsory Karta that was read", () => {
+      expect(lyingAfter("zaraza", ["zaraza"])).toEqual([]);
+    });
+  });
+
+  /**
    * 16.7's three wells, whose count belongs to the Karta and not to anybody.
    *
    * Nothing subtracted from these before: `disposition` said `zostaje-z-pula`

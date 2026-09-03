@@ -368,6 +368,7 @@ export function placeSeat(
           fieldId: field.fieldId,
           remaining: field.drawn,
           beaten: field.beaten,
+          settled: field.resolved,
           seatId: seat.id,
           round: snapshot.game.round,
         })
