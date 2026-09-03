@@ -702,6 +702,65 @@ describe("a Karta whose instruction comes to nothing", () => {
     const { writes } = await walk();
     expect(writes.journal).toBeUndefined();
   });
+
+  /**
+   * And no reason where there is none. „DOBRE BÓSTWO nic nie daje — nic się nie
+   * dzieje" is the same shrug twice; the sentence the *player* is told still
+   * says it, because there the line is the whole answer.
+   */
+  it("gives the Dziennik no reason for a Karta that simply did nothing", async () => {
+    const { writes, result } = await walk({ cardId: "dobre-bostwo" });
+    expect(result.did).toEqual(["nic się nie dzieje"]);
+    expect(writes.journal?.[0].payload).toEqual({ cardId: "dobre-bostwo" });
+  });
+
+  /**
+   * The rest of the family, which used to say it to the player and write
+   * nothing down: a Karta read, its instruction carried out as far as it goes,
+   * and what it came to is nothing — for a reason worth keeping.
+   */
+  it("writes the reason for the shrugs that have one", async () => {
+    const table = aTable({
+      seats: [aSeat({ id: "seat-a", seat_index: 0, life: 4 })],
+    });
+    const each: [string, Effect][] = [
+      ["nie masz Przyjaciół", { op: "rzut-za-kazdego", co: "przyjaciel", gubiPrzy: 2 }],
+      ["Życie już na poziomie początkowym", { op: "uzdrow", upTo: 4 }],
+      ["stos jest pusty", { op: "podejrzyj", count: 5 }],
+    ];
+    for (const [why, effect] of each) {
+      const { writes, result } = await applyEffect(
+        table,
+        { seatId: "seat-a", effect, cardId: "dobre-bostwo", reason: "KARTA", shuffle: asIs },
+        ports(),
+      );
+      expect(result.did, why).toEqual([why]);
+      expect(writes.journal?.[0], why).toMatchObject({
+        kind: "no-effect",
+        payload: { cardId: "dobre-bostwo", why },
+      });
+    }
+  });
+
+  /**
+   * And the other half of the line, which stays silent: these say the op was
+   * called wrong rather than that anything happened, and a row for them is the
+   * noise that makes the real ones stop being read.
+   */
+  it("leaves plumbing alone", async () => {
+    const { writes } = await applyEffect(
+      aTable({ seats: [aSeat({ id: "seat-a", seat_index: 0 })] }),
+      {
+        seatId: "seat-a",
+        effect: { op: "zabierz", co: "przyjaciel" },
+        cardId: "dobre-bostwo",
+        reason: "KARTA",
+        shuffle: asIs,
+      },
+      ports(),
+    );
+    expect(writes.journal).toBeUndefined();
+  });
 });
 
 describe("the rest of the vocabulary", () => {

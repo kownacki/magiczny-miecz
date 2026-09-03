@@ -114,6 +114,62 @@ export const nothing = (did: string[]): Outcome<Resolution> => ({
   result: { did, pending: null },
 });
 
+/**
+ * The Karta resolved and came to nothing, said in the Dziennik.
+ *
+ * `nothing` for a plain shrug that leaves no record; this for the shrugs that
+ * are *outcomes* — the Karta was read, its instruction was carried out as far
+ * as it goes, and what it came to is nothing. Those are the one thing in the
+ * game that leaves no trace of its own: every other moves a figure, a number or
+ * a card, so a turn that walks past in silence is indistinguishable from the
+ * app having lost the Karta.
+ *
+ * # Which shrugs get one
+ *
+ * The line is the same one CLAUDE.md draws for rule numbers. A Postać with no
+ * Przyjaciół to roll for, a Życie already at its start, an empty pile to peek
+ * at, a Magia too low to accept the Zaklęcie — those are the game, and the
+ * table wants them written down.
+ *
+ * What does not is plumbing: `zabierz` with nobody to give to, `poloz-karte`
+ * with no Karta named, `otrzymaj` with a name nobody has transcribed. Those say
+ * the op was called wrong, not that anything happened, and a row for them is
+ * the noise that makes the real ones stop being read. They stay on `nothing`.
+ *
+ * Silent without a `cardId` for the same reason: `nic` and its neighbours are
+ * also die faces and `wybor` branches, which have lines of their own, and
+ * without a Karta there is nothing here to name.
+ */
+export const cameToNothing = (
+  ctx: Pick<OpContext, "snapshot" | "seatId" | "cardId">,
+  /** What the player is told, in the second person, as any other `did` is. */
+  said: string,
+  /**
+   * The reason, for the Dziennik's „nic nie daje — {why}".
+   *
+   * Defaults to what the player was told, because for most of these the two are
+   * the same sentence: „nie masz Przyjaciół" is both. Null where there is no
+   * reason to give — a Karta whose own branch is `nic` did nothing for no
+   * stated cause, and „nic nie daje — nic się nie dzieje" is the same shrug
+   * twice.
+   */
+  why: string | null = said,
+): Outcome<Resolution> => ({
+  writes: ctx.cardId
+    ? {
+        journal: [
+          {
+            seatId: ctx.seatId,
+            round: ctx.snapshot.game.round,
+            kind: "no-effect" as const,
+            payload: { cardId: ctx.cardId, ...(why === null ? {} : { why }) },
+          },
+        ],
+      }
+    : {},
+  result: { did: [said], pending: null },
+});
+
 /** The walk stopped here: the whole node back as pending, the cursor to it. */
 export const owedAt = (effect: Effect, path: number[]): Outcome<Resolution> => ({
   writes: {},
@@ -227,21 +283,7 @@ const OPS: { [K in LeafOp]: OpRun<K> } = {
    * No `why`: the condition is what `gdy` knows and this does not. The card and
    * the fact that it did nothing are what there is to say.
    */
-  nic: (ctx) => ({
-    writes: ctx.cardId
-      ? {
-          journal: [
-            {
-              seatId: ctx.seatId,
-              round: ctx.snapshot.game.round,
-              kind: "no-effect" as const,
-              payload: { cardId: ctx.cardId },
-            },
-          ],
-        }
-      : {},
-    result: { did: ["nic się nie dzieje"], pending: null },
-  }),
+  nic: (ctx) => cameToNothing(ctx, "nic się nie dzieje", null),
 
   /**
    * Puts the character under something that lasts.
@@ -314,7 +356,7 @@ const OPS: { [K in LeafOp]: OpRun<K> } = {
       (held) => held.seat_id === seatId && held.kind === kind,
     );
     if (mine.length === 0) {
-      return nothing([`nie masz ${effect.co === "przyjaciel" ? "Przyjaciół" : "Przedmiotów"}`]);
+      return cameToNothing(ctx, `nie masz ${effect.co === "przyjaciel" ? "Przyjaciół" : "Przedmiotów"}`);
     }
 
     const gone: typeof mine = [];
@@ -364,7 +406,7 @@ const OPS: { [K in LeafOp]: OpRun<K> } = {
     const card = snapshot.holdings.find(
       (h) => h.seat_id === seatId && h.card_id === effect.od,
     );
-    if (left.length === held.length && !card) return nothing([`${name} — nic cię nie trzyma`]);
+    if (left.length === held.length && !card) return cameToNothing(ctx, `${name} — nic cię nie trzyma`);
 
     const lifted: Changeset = card ? { holdings: { delete: [card.id] } } : {};
     const piled = card
@@ -416,7 +458,7 @@ const OPS: { [K in LeafOp]: OpRun<K> } = {
           result: { did: ["zabierasz 1 Sztukę Złota"], pending: null },
         };
       }
-      return nothing(["nie ma czego zabrać"]);
+      return cameToNothing(ctx, "nie ma czego zabrać");
     }
 
     const picked = decided.choices?.shift();
@@ -534,7 +576,7 @@ const OPS: { [K in LeafOp]: OpRun<K> } = {
     const hit = targeted(snapshot, seatId, effect.target, [], ctx.fieldId);
     // Waits for somebody to arrive, or for the holder to choose.
     if (hit === null) return owedAt(effect, path);
-    if (hit.length === 0) return nothing(["nikogo to nie dotyczy"]);
+    if (hit.length === 0) return cameToNothing(ctx, "nikogo to nie dotyczy");
 
     let writes: Changeset = {};
     /** What the seats actually moved by, which the floor under own points may cut. */
@@ -599,7 +641,7 @@ const OPS: { [K in LeafOp]: OpRun<K> } = {
     const { snapshot, seatId, reason, path } = ctx;
     const hit = targeted(snapshot, seatId, effect.target, effect.oprocz ?? [], ctx.fieldId);
     if (hit === null) return owedAt(effect, path);
-    if (hit.length === 0) return nothing(["nikogo to nie dotyczy"]);
+    if (hit.length === 0) return cameToNothing(ctx, "nikogo to nie dotyczy");
 
     const actor = snapshot.seats.find((s) => s.id === seatId);
     const names: string[] = [];
@@ -827,7 +869,7 @@ const OPS: { [K in LeafOp]: OpRun<K> } = {
         result: { did: [`+${done.result} Życia (4.7)`], pending: null },
       };
     } catch {
-      return nothing(["Życie już na poziomie początkowym"]);
+      return cameToNothing(ctx, "Życie już na poziomie początkowym");
     }
   },
 
@@ -847,9 +889,10 @@ const OPS: { [K in LeafOp]: OpRun<K> } = {
      */
     const buyer = effect.cena ? snapshot.seats.find((one) => one.id === seatId) : undefined;
     if (effect.cena && buyer && buyer.gold < effect.cena * effect.count) {
-      return nothing([
+      return cameToNothing(
+        ctx,
         `Za mało złota: ${plural(effect.cena * effect.count, "Sztuka Złota", "Sztuki Złota", "Sztuk Złota")}.`,
-      ]);
+      );
     }
     /**
      * A gift the character may not accept is reported, not thrown.
@@ -1067,12 +1110,10 @@ const OPS: { [K in LeafOp]: OpRun<K> } = {
     const top = deck.draw
       .slice(0, effect.count)
       .map((ref) => BY_REF.get(ref)?.name ?? ref);
+    if (top.length === 0) return cameToNothing(ctx, "stos jest pusty");
     return {
       writes: {},
-      result: {
-        did: top.length > 0 ? [`na wierzchu: ${top.join(", ")}`] : ["stos jest pusty"],
-        pending: null,
-      },
+      result: { did: [`na wierzchu: ${top.join(", ")}`], pending: null },
     };
   },
 
