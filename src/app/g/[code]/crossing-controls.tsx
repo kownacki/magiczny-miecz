@@ -1,6 +1,7 @@
 "use client";
 
 import { Rules } from "./rule-ref";
+import { DieMark } from "./die-mark";
 
 /** Everything the board asks of a character leaving one Obszar for another: a toll, a guardian, a threshold, and the six squares of the Kamienny Most (11.x, 14.x). */
 
@@ -172,7 +173,13 @@ export function BridgeOrdeal({
         onClick={() => onAction({ action: "most-pole" })}
         className="rounded border border-vermilion/60 px-3 py-1 text-xs text-ink transition hover:bg-vermilion/20 disabled:opacity-50"
       >
-        {label}
+        {/* A die on the ones that throw one, and not on the Gra ze Śmiercią,
+            whose label does not say „Rzuć" because the card does not: you play
+            a game with her, and the dice are inside it. */}
+        <span className="flex items-center gap-2">
+          {label}
+          {label.startsWith("Rzuć") && <DieMark />}
+        </span>
       </button>
     </section>
   );
@@ -248,7 +255,10 @@ export function Crossing({
             onClick={() => onAction({ action: "cross" })}
             className="rounded border border-ochre/50 px-3 py-1 text-xs text-ink transition hover:bg-edge disabled:opacity-50"
           >
-            Rzuć dwoma kostkami
+            <span className="flex items-center gap-2">
+              Rzuć dwoma kostkami
+              <DieMark />
+            </span>
           </button>
         </>
       )}

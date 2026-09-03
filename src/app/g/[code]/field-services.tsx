@@ -10,6 +10,7 @@ import type { EqMode } from "@/lib/engine/slots";
 import type { Nature } from "@/data/types";
 import type { Holding } from "@/lib/engine/state";
 import { EffectControls } from "./effect-controls";
+import { DieMark } from "./die-mark";
 import { Shop } from "./shop";
 import type { Confirmation } from "./confirm";
 import type { Offer } from "./field-offers";
@@ -263,7 +264,10 @@ function ScriptedRoll({
           }
           className="rounded border border-edge px-2 py-0.5 text-[11px] text-ink transition hover:border-ochre disabled:opacity-50"
         >
-          Rzuć
+          <span className="flex items-center gap-1.5">
+            Rzuć
+            <DieMark />
+          </span>
         </button>
         {ctx.typedRolls &&
           [1, 2, 3, 4, 5, 6].map((face) => (

@@ -6,6 +6,7 @@ import { Rules } from "./rule-ref";
 
 import { type Fight } from "@/lib/engine/turn";
 import type { OnAction, Simulated } from "./turn-controls";
+import { DieMark } from "./die-mark";
 
 /**
  * A fight, one die at a time.
@@ -73,7 +74,14 @@ export function FightControls({
             onClick={() => onAction({ action: "guardian-strength" })}
             className="rounded border border-ochre/60 bg-raised px-4 py-2 font-[family-name:var(--font-display)] text-sm tracking-wide text-ochre transition hover:bg-edge disabled:opacity-50"
           >
-            Rzuć kostką
+            {/* The die goes on every control that throws one — see `DieMark`.
+                These are raw buttons rather than `ActionButton`s, and stay so:
+                giving them the shared grammar would give them its three-second
+                window as well, and a throw is not a decision to take back. */}
+            <span className="flex items-center gap-2">
+              Rzuć kostką
+              <DieMark />
+            </span>
           </button>
           {!simulated && (
             <>
@@ -352,7 +360,10 @@ function FightSide({
               onClick={() => onRoll(null)}
               className="rounded border border-edge px-2 py-1 text-xs text-ink hover:border-ochre disabled:opacity-50"
             >
-              Rzuć
+              <span className="flex items-center gap-1.5">
+                Rzuć
+                <DieMark />
+              </span>
             </button>
             {typedRolls &&
               [1, 2, 3, 4, 5, 6].map((value) => (
