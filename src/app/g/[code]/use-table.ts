@@ -5,6 +5,23 @@ import type { Notice } from "./toast";
 import { useSettled } from "./settle";
 import { useRouter } from "next/navigation";
 import type { Requests, Route } from "@/lib/game/requests";
+
+/**
+ * What a command hands back, as much of it as anybody here reads.
+ *
+ * The commands return a good deal more — what was drawn, what is still owed,
+ * which copy was settled — and none of it is wanted on this side: the table
+ * that comes back from `refresh` is the truth about all of it. `face` and `did`
+ * are the exception, because a die is gone by the time the state arrives: what
+ * is left of it is a number in a journal line, and the player who threw it is
+ * owed the number itself. `card` and `offer` are what to head the notice with.
+ */
+export interface Said {
+  card?: string;
+  offer?: string;
+  face?: number;
+  did?: string[];
+}
 import {
   forgetSeatToken,
   noteRemoved,
@@ -212,8 +229,14 @@ export interface Table {
    */
   intent: AnnouncedIntent | null;
   refresh: () => Promise<void>;
-  /** One request, with its body checked against what that route reads. */
-  post: <R extends Route>(path: R, body?: Partial<Requests[R]>) => Promise<void>;
+  /**
+   * One request, with its body checked against what that route reads.
+   *
+   * Settles when the table it changed is on screen — `post` refreshes before it
+   * returns — and hands back what the command said, for the one caller that
+   * needs the die (see `Said`).
+   */
+  post: <R extends Route>(path: R, body?: Partial<Requests[R]>) => Promise<Said | null>;
   runConsole: (line: string) => Promise<string>;
   leave: () => Promise<void>;
   join: (name: string) => Promise<void>;
@@ -719,7 +742,7 @@ async function saidWrong(response: Response): Promise<string> {
           else setError(said.error);
         }
         /**
-         * Nothing is read off the answer any more.
+         * The answer is handed back, and almost nobody takes it.
          *
          * It used to be turned into a sentence for the person who pressed the
          * button — „DOBRE BÓSTWO: nic się nie dzieje" — on the argument that
@@ -727,10 +750,21 @@ async function saidWrong(response: Response): Promise<string> {
          * table is taking the referee's word for it. The argument is right and
          * the place was wrong: what a die did lands on the thing it did it to,
          * and the record of it is the Dziennik, which is built for a running
-         * account and reads in the order things happened. See the note where
-         * the Obszar drawer used to draw this.
+         * account and reads in the order things happened.
+         *
+         * One caller reads it, and reads one thing: the *die*. A roll is the
+         * one act the player has no part in — they press „Rzuć kostką" and the
+         * app decides — so it is the one that owes them a sentence before the
+         * kolejka moves on. See `RollResult`. Everything else that comes back
+         * here is dropped on the floor exactly as it was.
+         *
+         * Parsed after the refresh would be too late: `refresh` replaces the
+         * state this reply describes, so the body is taken first and the caller
+         * gets it once the table it belongs to is on screen.
          */
+        const said = response.ok ? ((await response.json().catch(() => null)) as Said) : null;
         await refresh();
+        return said;
       } finally {
         setBusy(false);
       }
