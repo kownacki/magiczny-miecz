@@ -517,24 +517,65 @@ export function DrawnCard({
         {canAct && asking?.op === "wybor" && (
           <div>
             <p className="mb-1 text-[11px] text-muted">Wybierz jedno:</p>
-            <div className="flex flex-wrap gap-2">
-              {asking.options.map((option, index) => (
-                <ActionButton
-                  key={option.label}
-                  disabled={busy}
-                  onClick={() => {
-                    const next = [...choices, index];
-                    setChoices(next);
-                    onResolve(known.id, { choices: next });
-                  }}
-                  // What it would leave you with. A choice between two rules is
-                  // not a choice until you know the numbers: „Miecz 6 → 2 ·
-                  // Magia 2 → 6" is the decision the label only describes.
-                  note={reader?.points ? previewOf(option.effect, reader.points) : undefined}
-                >
-                  {sentence(option.label)}
-                </ActionButton>
-              ))}
+            <div className="flex flex-wrap items-center gap-2">
+              {asking.options.map((option, index) =>
+                /**
+                 * An option that is itself a question, asked in place.
+                 *
+                 * The Jednorożec's „przenosisz się na dowolny Obszar w tym
+                 * Kręgu" was a button that revealed a button: pressing it only
+                 * brought up the Obszar picker, so the card took two clicks to
+                 * say one thing — and „Pomiń" disappeared between them, which
+                 * is the worse half, since the second screen offered no way
+                 * back from the answer the first had just taken.
+                 *
+                 * The picker stands among the other options instead and its
+                 * confirm carries both halves at once: which option, and where.
+                 */
+                option.effect.op === "przenies" && option.effect.to.kind !== "pole" ? (
+                  <span key={option.label} className="flex flex-wrap items-center gap-2">
+                    <select
+                      value={going}
+                      onChange={(event) => setGoing(event.target.value as FieldId)}
+                      className="rounded border border-edge bg-night px-2 py-1.5 text-sm text-ink"
+                    >
+                      <option value="">— wybierz Obszar —</option>
+                      {ring.map((fieldId) => (
+                        <option key={fieldId} value={fieldId}>
+                          {FIELDS.get(fieldId)?.name ?? fieldId}
+                        </option>
+                      ))}
+                    </select>
+                    <ActionButton
+                      disabled={busy || !going}
+                      onClick={() =>
+                        onResolve(known.id, {
+                          choices: [...choices, index],
+                          destination: going as FieldId,
+                        })
+                      }
+                    >
+                      Przenieś się
+                    </ActionButton>
+                  </span>
+                ) : (
+                  <ActionButton
+                    key={option.label}
+                    disabled={busy}
+                    onClick={() => {
+                      const next = [...choices, index];
+                      setChoices(next);
+                      onResolve(known.id, { choices: next });
+                    }}
+                    // What it would leave you with. A choice between two rules is
+                    // not a choice until you know the numbers: „Miecz 6 → 2 ·
+                    // Magia 2 → 6" is the decision the label only describes.
+                    note={reader?.points ? previewOf(option.effect, reader.points) : undefined}
+                  >
+                    {sentence(option.label)}
+                  </ActionButton>
+                ),
+              )}
             </div>
           </div>
         )}
