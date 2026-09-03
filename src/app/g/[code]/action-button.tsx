@@ -129,6 +129,13 @@ const SIZE: Record<ActionSize, string> = {
   xs: "px-2 py-0.5 text-[11px]",
 };
 
+/**
+ * Starts one button's three seconds from outside it — see `confirm`.
+ *
+ * The id is the button's own `useId`, which is why this is handed back rather
+ * than called: only the button knows which one it is, and only the caller knows
+ * when the question was answered.
+ */
 export function ActionButton({
   role = "act",
   weight = "outline",
@@ -139,6 +146,7 @@ export function ActionButton({
   disabled = false,
   onClick,
   says,
+  confirm,
   className,
   children,
 }: {
@@ -169,6 +177,17 @@ export function ActionButton({
    * game. `intentText.ts` holds the vocabulary and the words.
    */
   says?: Intent;
+  /**
+   * Asked before the three seconds start, for an action that also needs a yes.
+   *
+   * The two go in this order and not the other: a dialog raised *after* the
+   * channelling has run is a question asked about something already decided,
+   * and a channel that fills while a dialog is up is a countdown behind a modal
+   * nobody can see. So the button asks, and the answer starts the fill — which
+   * is still cancellable, so „są pewni?" and „ostatnia szansa" stay two
+   * different offers rather than the same one twice.
+   */
+  confirm?: () => void;
   /** Layout the parent owns — `self-start`, `w-full`. Never appearance. */
   className?: string;
   children: React.ReactNode;
@@ -184,7 +203,13 @@ export function ActionButton({
     <button
       type="button"
       disabled={disabled || waiting}
-      onClick={filling ? cancelChannelling : () => beginChannelling(id, onClick, says ?? null)}
+      onClick={
+        filling
+          ? cancelChannelling
+          : confirm
+            ? confirm
+            : () => beginChannelling(id, onClick, says ?? null)
+      }
       // The label's own title would be answering a question the button has
       // stopped asking.
       title={filling ? undefined : title}
