@@ -17,7 +17,7 @@ import { mayWalkPast } from "@/lib/engine/kolejka";
 import { TheReader } from "./card-facts";
 import { WithRules } from "./rule-ref";
 import type { Nature } from "@/data/types";
-import { inertFor, isSettled, pendingIn } from "@/lib/engine/resolve";
+import { pendingIn } from "@/lib/engine/resolve";
 import { coverageOf, manualNote, NOT_HANDLED } from "@/lib/engine/coverage";
 import { FIELDS, type FieldId } from "@/lib/engine/board";
 
@@ -242,7 +242,21 @@ export function DrawnCard({
    * old pair — „Rozpatrz" beside „Pomiń" — offered a choice between two ways of
    * doing nothing, one of which quietly did not finish the Karta.
    */
-  const inert = script !== null && inertFor(script.effect, nature);
+  /**
+   * Nothing here for this Postać at all.
+   *
+   * A `gdy` whose condition they fail and whose other branch does nothing —
+   * the WRÓŻKA met by a Zła Postać, the DOBRE BÓSTWO met by somebody who has
+   * raised no hand. Read off `requirementOf`, so it covers every condition the
+   * requirement line can state rather than only a Natura: `inertFor` knew about
+   * `gdy natura` and left the Bóstwo to fall through to a button promising to
+   * do what it could, which was nothing.
+   */
+  const gate = script?.effect;
+  const inert =
+    gate?.op === "gdy" &&
+    (gate.inaczej === undefined || gate.inaczej.op === "nic") &&
+    needs?.met === false;
 
   /**
    * Whose decision this is, as the table knows them — „Test (WIEDŹMA)".
@@ -607,7 +621,10 @@ export function DrawnCard({
               onClick={() => onResolve(known.id, { choices })}
               className="rounded border border-ochre/60 bg-ochre/10 px-4 py-2 text-sm text-ochre transition hover:bg-ochre/20 disabled:opacity-50"
             >
-              Pomiń
+              {/* „Musisz", because it is the only thing there is to press. The
+                  other „Pomiń" — a Miejsce whose own text asks first — is a
+                  choice among others and says so by not saying this. */}
+              Musisz pominąć
             </button>
           </div>
         )}
@@ -622,13 +639,12 @@ export function DrawnCard({
             }
             className="self-start rounded border border-ochre/60 bg-ochre/10 px-4 py-2 text-sm text-ochre transition hover:bg-ochre/20 disabled:opacity-50"
           >
-            {!script
-              ? "Rozumiem"
-              : script.effect.op === "rzut"
-                ? "Rzuć i rozpatrz"
-                : isSettled(script.effect)
-                  ? "Rozpatrz"
-                  : "Rozpatrz, co się da"}
+            {/* „Rozpatrz, co się da" is gone. It was the label for an effect
+                the browser could not fully predict, and it read as a shrug —
+                a button that promises to try. What the app actually does is
+                resolve the Karta; how much of it applies is the card's business
+                and the server's, and either way the player pressed one thing. */}
+            {!script ? "Rozumiem" : script.effect.op === "rzut" ? "Rzuć i rozpatrz" : "Rozpatrz"}
           </button>
         )}
 
