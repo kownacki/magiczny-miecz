@@ -230,7 +230,12 @@ export const NIEZNAJOMI: Readonly<Record<string, CardScript>> = {
           label: "Zamień punkty Magii na punkty Miecza",
           effect: { op: "zamien-punkty", z: "magic" },
         },
-        { label: "Pomiń — nic nie zamieniasz", effect: { op: "nic" } },
+        // Bare, like every other declining option in the box. The two above
+        // are long because each names a trade and the trade is the decision;
+        // declining is the same act on every card that offers one, and saying
+        // what it does not do adds a clause to the one option nobody has to
+        // read.
+        { label: "Pomiń", effect: { op: "nic" } },
       ],
     },
     disposition: { kind: "odloz" },
