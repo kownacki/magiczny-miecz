@@ -1,15 +1,3 @@
-`node scripts/export-card-back.mjs` cuts one back per pile into
-`public/cards/back-*.jpg`, committed. The ZDARZENIE back was in the scans all
-along, filed where nobody would look — the five of them share sheet 9's reverse
-with the Zamieniony w Kamień cards, the Dobry/Zły markers and the standees,
-which is why there is no "Karty Zdarzeń (tyły)" file to go looking for. The
-ZAKLĘCIE and WYPOSAŻENIE backs were **not** in the Drive at all: they came from
-the community archive `oficjalne.rar` (linked from the *MAGICZNY MIECZ DO
-DRUKU* thread on forum.magiaimiecz.eu), which carries a `rewersy/` folder the
-Drive copy does not, at the same 2480x3508 as everything else. Those two are
-mirrored into `assets/raw/MM - Magiczny Miecz/Rewersy/` under the archive's own
-spelling. macOS `bsdtar` reads RAR; `unar` is not needed.
-
 # Magiczny Miecz
 
 A referee for the 1993 Polish board game *Magiczny Miecz* (Sfera, Adrian
@@ -250,15 +238,17 @@ for use as an icon where a whole card would be a grey smear.
 `node scripts/export-tokens.mjs` cuts the thirteen Żetony Pomocnicze — Miecz,
 Magia and Życie in denominations of 1 to 4, and the Sztuka Złota — off `MM -
 Żetony.pdf` into `public/tokens/`, which is committed.
-`node scripts/export-card-back.mjs` cuts the one card back the archive has —
-five ZDARZENIE backs share sheet 9's reverse with the Zamieniony w Kamień
-cards, the Dobry/Zły markers and the standees — into `public/cards/back.jpg`,
-committed. It is the *only* back: these are print-and-play sheets and the
-"(tyły)" files are reverse sides to print onto the back, which the Zdarzenia
-got and the Zaklęcia and Wyposażenie never did. Checked against the Drive
-folder itself, not just the mirror. Draw a spell pile with the Magia-tinted
-blank `CardBack` already uses for a concealed hand (9.3) rather than borrowing
-the ZDARZENIE back for it.
+`node scripts/export-card-back.mjs` cuts one back per pile into
+`public/cards/back-*.jpg`, committed. The ZDARZENIE back was in the scans all
+along, filed where nobody would look — the five of them share sheet 9's reverse
+with the Zamieniony w Kamień cards, the Dobry/Zły markers and the standees,
+which is why there is no "Karty Zdarzeń (tyły)" file to go looking for. The
+ZAKLĘCIE and WYPOSAŻENIE backs were **not** in the Drive at all: they came from
+the community archive `oficjalne.rar` (linked from the *MAGICZNY MIECZ DO
+DRUKU* thread on forum.magiaimiecz.eu), which carries a `rewersy/` folder the
+Drive copy does not, at the same 2480x3508 as everything else. Those two are
+mirrored into `assets/raw/MM - Magiczny Miecz/Rewersy/` under the archive's own
+spelling. macOS `bsdtar` reads RAR; `unar` is not needed.
 `node scripts/export-nature-card.mjs` builds 7.2's Karta Zmiany Natury, one
 per Natura, into `public/cards/natura-*.jpg`, committed. **There is no third
 face and no scan of one**: not in the box and not in any of the five
