@@ -722,10 +722,20 @@ describe("the rest of the vocabulary", () => {
     expect(top(writes.game!.turn_state!).phase).toBe("fight");
   });
 
-  it("hands an extra move back to the turn rather than taking it itself", async () => {
+  /**
+   * „Możesz natychmiast zyskać dodatkowy ruch." A turn is „a) ruch b) spotkania
+   * i badanie Obszaru" (10.1), so a move on its own is a turn that comes back —
+   * which is what `znowu` already means and what `passTurn` already honours,
+   * the Formuła Czasu having needed it first. This used to hand the table a
+   * sentence and write nothing.
+   */
+  it("grants an extra move as a turn that comes back", async () => {
     const { writes, result } = await run({ op: "ruch-dodatkowy" });
-    expect(writes).toEqual({});
-    expect(result.did).toEqual(["dodatkowy ruch — rzuć jeszcze raz"]);
+    expect(writes.effects?.insert?.[0]).toMatchObject({
+      modifier: { kind: "znowu" },
+      ends: { kind: "turns", turns: 1 },
+    });
+    expect(result.did).toEqual(["dodatkowy ruch — tura wróci do ciebie"]);
   });
 });
 

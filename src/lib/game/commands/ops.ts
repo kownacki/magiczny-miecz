@@ -207,7 +207,41 @@ const unimplemented = (_ctx: OpContext, effect: Effect): never => {
 };
 
 const OPS: { [K in LeafOp]: OpRun<K> } = {
-  nic: () => nothing(["nic się nie dzieje"]),
+  /**
+   * A Karta that turns out to do nothing, said in the Dziennik.
+   *
+   * The one outcome in the game that leaves no trace of its own — every other
+   * moves a figure, a number or a card — so a turn that walks past it in
+   * silence is indistinguishable from the app having lost the Karta. That is
+   * `no-effect`'s whole argument, and it applied here too: it was written for
+   * a `gdy` whose condition failed *and had no other branch*, while a card that
+   * spells the branch out (`inaczej: { op: "nic" }` — the DOBRE BÓSTWO for
+   * anybody who has attacked nobody) reached the same nothing by the other road
+   * and said it nowhere. Two ways of writing one card's shrug should not be the
+   * difference between a record and none.
+   *
+   * Only for a Karta. `nic` is also a face of a die table and a branch of a
+   * `wybor`, and those have their own lines; without a `cardId` there is
+   * nothing here to name and nothing is written.
+   *
+   * No `why`: the condition is what `gdy` knows and this does not. The card and
+   * the fact that it did nothing are what there is to say.
+   */
+  nic: (ctx) => ({
+    writes: ctx.cardId
+      ? {
+          journal: [
+            {
+              seatId: ctx.seatId,
+              round: ctx.snapshot.game.round,
+              kind: "no-effect" as const,
+              payload: { cardId: ctx.cardId },
+            },
+          ],
+        }
+      : {},
+    result: { did: ["nic się nie dzieje"], pending: null },
+  }),
 
   /**
    * Puts the character under something that lasts.
@@ -1067,7 +1101,37 @@ const OPS: { [K in LeafOp]: OpRun<K> } = {
     };
   },
 
-  "ruch-dodatkowy": () => nothing(["dodatkowy ruch — rzuć jeszcze raz"]),
+  /**
+   * „Możesz natychmiast zyskać dodatkowy ruch" — the Dziki Rumak's.
+   *
+   * A turn is „a) ruch b) spotkania i badanie Obszaru" (10.1), so a move
+   * granted on its own is a turn that comes back: you roll, you go, and you
+   * explore where you land. Which is exactly what `znowu` already means, and it
+   * is already honoured — `passTurn` hands the turn to the same seat while one
+   * is held and counts it out afterwards, because the Formuła Czasu needed it
+   * first.
+   *
+   * „Natychmiast" is satisfied by that shape rather than by anything here: the
+   * turn does not pass to the next player and come back, it simply does not
+   * pass.
+   *
+   * This used to hand the table a sentence and write nothing, which was fine
+   * while nobody could reach it and stopped being fine the moment the Rumak
+   * grew a button.
+   */
+  "ruch-dodatkowy": (ctx) =>
+    ({
+      writes: addEffect(ctx.snapshot, {
+        seatId: ctx.seatId,
+        effect: {
+          source: ctx.cardId ?? "10.1",
+          label: "Dodatkowy ruch",
+          modifier: { kind: "znowu" },
+          ends: { kind: "turns", turns: 1 },
+        },
+      }),
+      result: { did: ["dodatkowy ruch — tura wróci do ciebie"], pending: null },
+    }) as Outcome<Resolution>,
 
   /**
    * A shop opening, which is all resolving the Karta does.
