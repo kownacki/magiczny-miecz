@@ -252,40 +252,43 @@ function Line({
         </li>
       )}
       <li className="flex items-baseline gap-2 text-xs leading-snug">
-        <span
-          aria-hidden
-          style={colour ? { backgroundColor: colour } : undefined}
-          className={`mt-1 h-1.5 w-1.5 shrink-0 rounded-full ${colour ? "" : "bg-edge"}`}
-        />
         {/**
-         * When it happened, on the reader's own clock.
+         * When it happened, on the reader's own clock — the first thing on the
+         * line, outside the seat's dot rather than inside it.
          *
-         * Before the sentence and in a fixed column, because that is what makes
-         * a feed scannable: „kiedy" is the question you ask of a list you are
-         * running your eye down, and an answer that moves with the length of
-         * the line above it cannot be scanned at all. `tnum` holds the figures
-         * on one width so the colons line up.
+         * Both of them are in fixed columns and only one can be first, and the
+         * time is the one worth putting there: the dot is a colour and reads
+         * from anywhere on the row, while „kiedy" is a figure you actually scan
+         * down a list to find. Times against the margin make one column; times
+         * indented past a dot make a column that starts a few pixels in for no
+         * reason a reader can see. `tnum` holds the figures on one width so the
+         * colons line up under each other.
          *
          * Hour and minute only. The whole instant — the date, and the seconds
-         * that separate two lines written in the same minute — is on the hover,
-         * where the rest of what the app knows about a line lives. `cursor-help`
-         * says the hover is there, the same way it does on every other thing in
-         * the app you may point at and not press.
+         * that separate two lines written in the same minute — is on the hover.
+         * A `title` and not a `CardPreview`: one short string with nothing to
+         * lay out, and the OS tooltip is the right size for it.
          *
-         * A `title` and not a `CardPreview`: this is one short string with
-         * nothing to lay out, and the OS tooltip is the right size for it. The
-         * note in `card-tile.tsx` about a tooltip landing over a preview does
-         * not apply — there is no preview here to cover.
+         * No `cursor-help`. That mark is for a thing whose *only* offer is the
+         * hover, and it earns its keep on a picture, where nothing else says so.
+         * Here every line has a time, the tooltip adds a date to a time already
+         * on screen, and a `?` following the pointer down a feed of twenty rows
+         * would be pointing at a detail rather than at an answer.
          */}
         {line.at && (
           <time
             dateTime={line.at}
             title={momentOf(line.at)}
-            className="tnum mt-px shrink-0 cursor-help text-[10px] leading-none text-muted/50"
+            className="tnum mt-px shrink-0 text-[10px] leading-none text-muted/50"
           >
             {clockOf(line.at)}
           </time>
         )}
+        <span
+          aria-hidden
+          style={colour ? { backgroundColor: colour } : undefined}
+          className={`mt-1 h-1.5 w-1.5 shrink-0 rounded-full ${colour ? "" : "bg-edge"}`}
+        />
         <span className={line.manual ? "text-ochre/90" : "text-muted"}>
           <Looked text={line.text} refs={line.refs} eqMode={eqMode} />
           {/* A hand overruling the referee, which LOBBY.md wants visible rather
