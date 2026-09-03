@@ -1119,14 +1119,23 @@ nothing left in the kolejka when the three arrive, and appending and nesting
 produce the same play. The nesting question does not have to be answered; the
 ordering question does.
 
-**What the app does today, checked rather than assumed.** Deal SKALNE WROTA
-beside a WILKOŁAK and resolve the Wrota, and the three land in the same `drawn`
-and are re-sorted against the Wilkołak still waiting — 15.2 run over both
-badania at once, which is exactly the reading Wiktor rules out. Nothing stops
-the Wrota being resolved first, either: `resolveDrawnCard` will resolve any
-Karta named out of `drawn`, for every card and not only this one, and the
-Wrota is `optional` so it never earns a kolejka frame to be held behind. So
-both halves are still open, and the ordering half is the one to build first.
+**Built — appended, and the card ordered last.** The three join the kolejka
+they were drawn into, which is what `wyciagnij` already did, and
+`reopensTheDrawing` is the sort key that puts the Wrota behind its own class so
+that appending *is* the fresh badanie. Not nested, and the reason is that a
+`field` frame is per-Obszar and not per-badanie: 13.4's count, `resolved`,
+`fought`, the 16.7 pools and `leaveCardsBehind` are all one-per-square, and two
+frames naming one `fieldId` would split every one of them and overlap on
+`cardId` besides. `kolejka.ts` says it outright — six Karty on Płaskowyż Mgieł
+are one frame with six entries. The base game already had one card of this
+shape appending by this route: ODMIANA LOSU, which takes one out of a running
+`drawn` and draws its replacement into it.
+
+The Wrota is a Miejsce (VI), the highest numeral, so 15.2 already put it behind
+everything except another Miejsce drawn beside it; the key closes that case.
+What it cannot do on its own is stop a player naming it early —
+`resolveDrawnCard` resolves any Karta in `drawn`, for every card — which is the
+12.1 gate below.
 
 Two other things about this card are unsettled with it. Its disposition is
 **conditional** — `odloz` only if you go through, otherwise it stays — and it

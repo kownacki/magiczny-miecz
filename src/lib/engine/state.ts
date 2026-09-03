@@ -3,7 +3,7 @@
 import { CARD_CLASS, type CardClass, type Nature } from "@/data/types";
 import type { Slot } from "./slots";
 import type { FieldId } from "./board";
-import { goesToAField } from "./cardScript";
+import { goesToAField, reopensTheDrawing } from "./cardScript";
 
 /**
  * One player's live state.
@@ -111,10 +111,22 @@ export interface TurnCard {
  * already gives it: `poloz-karte` lifts the card out of `drawn` and inserts it
  * into `fieldCards`, so it stops being part of this turn at the moment it is
  * resolved and waits for whoever ends a move there next.
+ *
+ * **And a card that re-opens the badanie sits below its own class.** The Skalne
+ * Wrota draw three more Karty into this same kolejka, and the community reading
+ * of a card the box left ambiguous is that they are a fresh badanie — which
+ * they are, exactly when the Wrota is resolved after everything else. It is a
+ * Miejsce (VI) and so already last against every other numeral; this is the key
+ * that also puts it behind another Miejsce drawn beside it. See
+ * `reopensTheDrawing`, which carries the argument and the thread.
  */
 export function resolutionOrder(cards: readonly TurnCard[]): TurnCard[] {
   const placed = (card: TurnCard) => (goesToAField(card.cardId) ? 0 : 1);
+  const last = (card: TurnCard) => (reopensTheDrawing(card.cardId) ? 1 : 0);
   return [...cards].sort(
-    (a, b) => placed(a) - placed(b) || CARD_CLASS[a.cardClass] - CARD_CLASS[b.cardClass],
+    (a, b) =>
+      placed(a) - placed(b) ||
+      CARD_CLASS[a.cardClass] - CARD_CLASS[b.cardClass] ||
+      last(a) - last(b),
   );
 }

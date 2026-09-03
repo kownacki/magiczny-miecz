@@ -568,6 +568,106 @@ describe("swapping the Karta in front of you", () => {
   });
 });
 
+/**
+ * The Skalne Wrota's three, which join the kolejka they were drawn into.
+ *
+ * The card the box left ambiguous, and the community reading — forum
+ * t=3660 — is that the three are a fresh badanie: „Po prostu dostajesz nowe
+ * karty które rozpatrujesz niezależnie od rozpatrzonych już kart." What makes
+ * appending exactly that is the other half of the thread's answer, that the
+ * Wrota is rozpatrywana jako ostatnia — see `reopensTheDrawing`, which is the
+ * sort key that guarantees it. Resolved last, the kolejka holds nothing
+ * unresolved when the three arrive, so joining it and opening a new one are the
+ * same play, and one Obszar keeps one frame.
+ */
+describe("a Karta that draws three more (SKALNE WROTA)", () => {
+  const atTheWrota = (deck: string[]) =>
+    aTable({
+      seats: [aSeat({ id: "seat-a", seat_index: 0 })],
+      game: {
+        turn_state: only({
+          phase: "field",
+          fieldId: "wrzosowiska",
+          from: null,
+          // Nothing owed: the Obszar's own count is spent, which is the state a
+          // Wrota is actually resolved in. `byCard` is what lets it draw past.
+          draw: 0,
+          drawn: [{ cardId: "skalne-wrota", cardClass: "place" }],
+          resolved: [],
+          fought: [],
+        } as never),
+        deck: {
+          events: { draw: deck.flatMap((id) => EVENT_COPIES.get(id)!.slice(0, 1)), discard: [] },
+          spells: { draw: [], discard: [] },
+        },
+      },
+    });
+
+  const walk = (deck: string[]) =>
+    applyEffect(
+      atTheWrota(deck),
+      {
+        seatId: "seat-a",
+        effect: { op: "wyciagnij", count: 3 },
+        reason: "SKALNE WROTA",
+        shuffle: asIs,
+      },
+      ports(),
+    );
+
+  const queue = (writes: { game?: { turn_state?: TurnState } }) =>
+    (top(writes.game!.turn_state!) as { drawn: { cardId: string }[] }).drawn.map(
+      (one) => one.cardId,
+    );
+
+  it("adds all three to the kolejka rather than replacing it", async () => {
+    const { writes } = await walk(["helm", "cyklop", "mgla"]);
+    // Four: the Wrota that drew them, and the three it drew.
+    expect(queue(writes)).toHaveLength(4);
+  });
+
+  /**
+   * And 15.2 orders them, which is the whole reason they go in one at a time
+   * through `afterDraw` rather than being pushed onto the end.
+   */
+  it("orders the three by class, not by the order they came off the pile", async () => {
+    const { writes } = await walk(["helm", "cyklop", "mgla"]);
+    expect(queue(writes)).toEqual(["mgla", "cyklop", "helm", "skalne-wrota"]);
+  });
+
+  /**
+   * The Wrota stays at the back of its own queue.
+   *
+   * Not cosmetic: it is still in `drawn` after it has drawn, and if it sorted
+   * in front of the three it had just conjured, the frame would read as though
+   * the card that is finished were the next thing to do.
+   */
+  it("leaves itself behind the Karty it drew", async () => {
+    const { writes } = await walk(["targowisko", "targowisko", "targowisko"]);
+    expect(queue(writes)[3]).toBe("skalne-wrota");
+  });
+
+  /**
+   * Three lines in the Dziennik, not one. `merge` concatenates journals, which
+   * is what makes the loop in `wyciagnij` honest — one line per Karta is what a
+   * table saw happen.
+   */
+  it("writes down every Karta that came up", async () => {
+    const { writes } = await walk(["helm", "cyklop", "mgla"]);
+    const cards = (writes.journal ?? []).filter((line) => line.kind === "card");
+    expect(cards).toHaveLength(3);
+  });
+
+  /**
+   * Drawn past what the Obszar owed (`byCard`), so three extra Karty cannot
+   * spend a count the square had already settled under 13.4.
+   */
+  it("does not spend the Obszar's own tally", async () => {
+    const { writes } = await walk(["helm", "cyklop", "mgla"]);
+    expect(top(writes.game!.turn_state!)).toMatchObject({ draw: 0 });
+  });
+});
+
 describe("the rest of the vocabulary", () => {
   it("heals up to the starting level, and says so when there is nothing to heal", async () => {
     const hurt = aTable({ seats: [aSeat({ id: "seat-a", life: 2 })] });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { goesToAField } from "./cardScript";
+import { goesToAField, reopensTheDrawing } from "./cardScript";
 import { resolutionOrder } from "./state";
 import type { TurnCard } from "./state";
 
@@ -50,5 +50,63 @@ describe("a card that sends itself to a named Obszar", () => {
   it("keeps draw order between two that both place themselves", () => {
     const order = resolutionOrder([card("eremita", "encounter"), card("upior", "foe")]);
     expect(order.map((one) => one.cardId)).toEqual(["eremita", "upior"]);
+  });
+});
+
+/**
+ * And the other end of the sort: a card that draws more Karty goes last.
+ *
+ * The Skalne Wrota's three join this same kolejka, and the community reading of
+ * the card — forum.magiaimiecz.eu t=3660 — is that they are a fresh badanie,
+ * which they are exactly when the Wrota is resolved after everything else.
+ * See `reopensTheDrawing`.
+ */
+describe("a card that re-opens the badanie", () => {
+  it("is recognised from its script, not from a list", () => {
+    expect(reopensTheDrawing("skalne-wrota")).toBe(true);
+    // The other Miejsce that moves you about does not draw anything.
+    expect(reopensTheDrawing("tajemne-przejscie")).toBe(false);
+    expect(reopensTheDrawing("targowisko")).toBe(false);
+    expect(reopensTheDrawing("nie-ma-takiej")).toBe(false);
+  });
+
+  /**
+   * The case the key exists for. Both are Miejsca (VI), so class cannot
+   * separate them and a stable sort would keep the order they arrived in — the
+   * Wrota first, and its three would then land in front of the Targowisko.
+   */
+  it("goes behind another Miejsce however it was drawn", () => {
+    const wrotaFirst = resolutionOrder([
+      card("skalne-wrota", "place"),
+      card("targowisko", "place"),
+    ]);
+    expect(wrotaFirst.map((one) => one.cardId)).toEqual(["targowisko", "skalne-wrota"]);
+
+    // And it does not disturb the order when it was drawn last anyway.
+    const wrotaLast = resolutionOrder([
+      card("targowisko", "place"),
+      card("skalne-wrota", "place"),
+    ]);
+    expect(wrotaLast.map((one) => one.cardId)).toEqual(["targowisko", "skalne-wrota"]);
+  });
+
+  /**
+   * Below its own class only. A Miejsce that draws is still a Miejsce, so it
+   * does not overtake anything and nothing of a lower numeral falls behind it —
+   * 15.2 is untouched, and 15.1 still sits above both.
+   */
+  it("does not disturb 15.1 or 15.2 around it", () => {
+    const order = resolutionOrder([
+      card("skalne-wrota", "place"),
+      card("miecz", "item"),
+      card("cyklop", "foe"),
+      card("upior", "foe"),
+    ]);
+    expect(order.map((one) => one.cardId)).toEqual([
+      "upior",
+      "cyklop",
+      "miecz",
+      "skalne-wrota",
+    ]);
   });
 });

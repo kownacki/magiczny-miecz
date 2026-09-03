@@ -549,6 +549,44 @@ export function goesToAField(cardId: string): boolean {
   return JSON.stringify(script.effect).includes('"poloz-karte"');
 }
 
+/**
+ * Whether resolving this card re-opens the badanie by drawing more Karty.
+ *
+ * One card in the box: SKALNE WROTA, „wyciągnij 3 nowe Karty Zdarzeń". Read off
+ * the script rather than named, the way `goesToAField` is, so a second one
+ * transcribed tomorrow is ordered correctly without anybody remembering this
+ * exists — and the whole script is searched, not just its top level, because
+ * the next one may well reach `wyciagnij` through a `rzut` table.
+ *
+ * # Why the ordering needs it
+ *
+ * The card text does not say when you may go through, and the community read
+ * — [forum.magiaimiecz.eu t=3660](https://forum.magiaimiecz.eu/viewtopic.php?t=3660)
+ * — is that the three are a fresh badanie: „cofasz się do fazy badania obszaru
+ * … Co, jakbyś został teleportowany na inny obszar" (Nemomon), „Po prostu
+ * dostajesz nowe karty które rozpatrujesz **niezależnie** od rozpatrzonych już
+ * kart" (Wiktor). The thread then finds the cheap way to get that: Misiek's
+ * „Jeśli wylosowałeś Skalne Wrota wraz z innymi Kartami Miejsc, to rozpatrz je
+ * jako ostatnie", which Wiktor turns into an erratum for the card — „**Po
+ * rozpatrzeniu wszystkich kart**, jeżeli chcesz możesz przejść przez Skalne
+ * Wrota".
+ *
+ * That is what makes appending correct. Resolved last, there is nothing left in
+ * the kolejka when the three arrive, so joining the queue and opening a new one
+ * are the same play — and the kolejka stays one frame per Obszar, which is what
+ * `kolejka.ts` is built on and what keeps 13.4's count, `resolved`, `fought`
+ * and `leaveCardsBehind` single-valued for one square.
+ *
+ * Skalne Wrota is a Miejsce (VI), the highest numeral, so 15.2 already puts it
+ * behind everything **except another Miejsce drawn after it** — ties keep
+ * arrival order. This is the key that closes that one case.
+ */
+export function reopensTheDrawing(cardId: string): boolean {
+  const script = scriptFor(cardId);
+  if (!script) return false;
+  return JSON.stringify(script.effect).includes('"wyciagnij"');
+}
+
 export function scriptFor(cardId: string): CardScript | null {
   // The registry's *keys* are checked — a typo in one of the ~250 card names
   // above is a compile error, which is the whole point. The lookup itself takes
