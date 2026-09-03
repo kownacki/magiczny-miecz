@@ -335,11 +335,17 @@ export function DrawnCard({
           a turn being taken the answer is known. */}
       {needs && (
         <p className={`text-[11px] ${passes}`}>
+          {/* Only the answer is hoverable: „tylko Postać" is the question and
+              has nothing to explain, and dotting the whole line offers a
+              tooltip on the half that does not have one. Dotted only where
+              there is something under it, since a line that looks hoverable and
+              answers nothing is worse than a plain one. */}
+          {sentence(needs.label)}:{" "}
           <span
             className={needs.detail ? "cursor-help underline decoration-dotted underline-offset-2" : ""}
             title={needs.detail}
           >
-            {sentence(needs.text)}
+            {needs.value}
           </span>
         </p>
       )}

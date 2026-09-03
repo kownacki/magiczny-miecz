@@ -318,29 +318,36 @@ export interface Reader {
   mine?: boolean;
 }
 
-/** „Twoja Postać" or the name, for a sentence that has to say whose. */
+/**
+ * The subject of a sentence about the Postać a Karta is being read for.
+ *
+ * „Postać" is the head word in both, and that is the point: it is feminine, so
+ * „nie zaatakowała" and „użyła" agree whoever it is. Put a player's name there
+ * instead and Polish wants a gender the box does not print and the app has
+ * never been told.
+ */
 function whose(reader: Reader): string {
-  return reader.mine === false && reader.name ? reader.name : "Twoja Postać";
+  return reader.mine === false && reader.name ? `Postać ${reader.name}` : "Twoja Postać";
 }
 
 export function requirementOf(
   cardId: string,
   reader: Nature | null | Reader,
-): { text: string; met: boolean | null; detail?: string } | null {
+): { label: string; value: string; met: boolean | null; detail?: string } | null {
   const who: Reader = typeof reader === "object" && reader !== null ? reader : { nature: reader };
   const only = servedNatures(cardId);
   if (only) {
     const met = who.nature === null ? null : only.includes(who.nature);
     return {
-      text: `tylko Postać: ${only.map((one) => NATURE_LABEL[one] ?? one).join(" lub ")}`,
+      label: "tylko Postać",
+      value: only.map((one) => NATURE_LABEL[one] ?? one).join(" lub "),
       met,
       /**
        * Their Natura, said outright.
        *
-       * The colour says whether they pass and nothing says why, which on a red
+       * The colour says whether they pass and nothing said why, which on a red
        * line is the half a player wants: „tylko Postać: dobra" in red is a
-       * refusal, and „Twoja Postać jest zła" is its reason. „Postać" is
-       * feminine whoever it is, so this needs no gender it does not have.
+       * refusal, and „Twoja Postać jest zła" is its reason.
        */
       ...(who.nature === null
         ? {}
@@ -354,15 +361,19 @@ export function requirementOf(
    * Said as a requirement because that is what it is: the Karta has nothing for
    * an innocent Postać and everything for a guilty one, which is the same shape
    * as „tylko Postać: dobra" and reads better in the same place. The detail is
-   * the accusation's evidence — or, where there is none, the acquittal.
+   * the accusation's evidence — or, where there is none, the acquittal, in the
+   * card's own two limbs: „zaatakowałeś inną Postać lub użyłeś swoich zdolności
+   * na jej niekorzyść".
    */
   if (conditionOf(cardId) === "attacker") {
-    if (who.aggression === undefined) return { text: "tylko Postać: uznany agresor", met: null };
+    const line = { label: "tylko Postać", value: "uznany agresor" };
+    if (who.aggression === undefined) return { ...line, met: null };
     return {
-      text: "tylko Postać: uznany agresor",
+      ...line,
       met: who.aggression !== null,
-      detail:
-        who.aggression ?? `${whose(who)} nie jest uznanym agresorem`,
+      detail: who.aggression
+        ? `${whose(who)}: ${who.aggression}`
+        : `${whose(who)} jeszcze nigdy nie zaatakowała innej Postaci ani nie użyła swoich zdolności na jej niekorzyść`,
     };
   }
   return null;
@@ -377,11 +388,10 @@ function conditionOf(cardId: string): Condition["is"] | null {
 /**
  * One act of aggression, in the words a player can check against the journal.
  *
- * „Runda 3 — atak na Postać WIEDŹMA, Obszar Osada". Impersonal and without a
- * gender, because the same sentence is read about your own Postać and about
- * somebody else's, and Polish would otherwise need „zaatakowałeś" here and
- * „zaatakowała" or „zaatakował" there — three wordings and a table of genders
- * the box does not print.
+ * „Runda 3 — atak na Postać WIEDŹMA, Obszar Osada" — a record rather than a
+ * sentence, so it has no person and no gender to get wrong. Whoever prints it
+ * says whose in front of it („Twoja Postać:"), and that half is a sentence with
+ * „Postać" as its subject, which is feminine whoever it is.
  *
  * Where the victim stood somewhere else it says both, which no base-game act
  * does — 13.3 puts the two Postacie on one Obszar — and a Przyjaciel sent three
@@ -390,11 +400,10 @@ function conditionOf(cardId: string): Condition["is"] | null {
 export function describeAggression(
   act: Extract<Status["modifier"], { kind: "attacker" }>,
 ): string {
-  const when = act.round === undefined ? "" : `Runda ${act.round} — `;
   const ability = act.how === "zdolnosc";
+  const when = act.round === undefined ? "" : `Runda ${act.round} — `;
   // Naming the class before the name — „na Postać WIEDŹMA" — is what lets the
-  // name stay in the nominative it is printed in. With no name there is nothing
-  // to protect and the ordinary phrasing is better.
+  // name stay in the nominative it is printed in.
   const whom = act.victim
     ? `${ability ? "zdolność użyta przeciw Postaci" : "atak na Postać"} ${act.victim}`
     : ability

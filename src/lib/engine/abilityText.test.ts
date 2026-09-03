@@ -215,7 +215,8 @@ describe("what a Karta asks of the character in front of it", () => {
   it("reads a Nieznajomy's own condition, and says who passes", () => {
     // „Pierwszej Dobrej Postaci, która do niej zawita ofiaruje do wyboru…"
     expect(requirementOf("wrozka", "good")).toEqual({
-      text: "tylko Postać: dobra",
+      label: "tylko Postać",
+      value: "dobra",
       met: true,
       detail: "Twoja Postać jest dobra",
     });
@@ -239,7 +240,7 @@ describe("what a Karta asks of the character in front of it", () => {
 
   it("still reads 5.3 off a Przedmiot", () => {
     const talizman = requirementOf("relikwiarz", "good");
-    if (talizman) expect(talizman.text).toMatch(/^tylko Postać: /);
+    if (talizman) expect(talizman.label).toBe("tylko Postać");
   });
 
   it("says nothing where the Karta serves anybody", () => {
@@ -285,15 +286,31 @@ describe("a Karta that accuses", () => {
   it("names the aggressor, and hangs the evidence off it", () => {
     const guilty = requirementOf("dobre-bostwo", {
       nature: "good",
-      aggression: "Runda 3 — zaatakowałeś WIEDŹMĘ na Obszarze Osada",
+      aggression: "Runda 3 — atak na Postać WIEDŹMA, Obszar Osada",
     });
-    expect(guilty?.text).toBe("tylko Postać: uznany agresor");
+    expect(guilty?.value).toBe("uznany agresor");
     expect(guilty?.met).toBe(true);
-    expect(guilty?.detail).toBe("Runda 3 — zaatakowałeś WIEDŹMĘ na Obszarze Osada");
+    expect(guilty?.detail).toBe("Twoja Postać: Runda 3 — atak na Postać WIEDŹMA, Obszar Osada");
   });
 
   it("clears a Postać with nothing against them", () => {
-    expect(requirementOf("dobre-bostwo", { nature: "good", aggression: null })?.met).toBe(false);
+    const clean = requirementOf("dobre-bostwo", { nature: "good", aggression: null });
+    expect(clean?.met).toBe(false);
+    // The acquittal in the card's own two limbs.
+    expect(clean?.detail).toBe(
+      "Twoja Postać jeszcze nigdy nie zaatakowała innej Postaci ani nie użyła " +
+        "swoich zdolności na jej niekorzyść",
+    );
+
+    // Somebody else's, where „Postać" carries the agreement so no gender is needed.
+    expect(
+      requirementOf("dobre-bostwo", {
+        nature: "good",
+        aggression: null,
+        name: "BARBARZYŃCA",
+        mine: false,
+      })?.detail,
+    ).toMatch(/^Postać BARBARZYŃCA jeszcze nigdy nie zaatakowała/);
   });
 
   /** Outside a game nobody is reading it, so neither colour is earned. */
