@@ -69,12 +69,22 @@ export function TileCaption({
           for its neighbour. */}
       {children ? <span aria-hidden className="absolute inset-x-0 top-full h-2" /> : null}
       {children ? (
-        // The caption's own typography, because these two take turns on one
-        // line: `text-[9px] leading-tight` is what the name is set in, and
-        // without it the controls inherited the panel's 24px line-height and
-        // sat a few pixels lower than the word they replace. The swap should
-        // look like the same line saying something else.
-        <div className="absolute inset-x-0 top-0 z-10 hidden flex-col items-center text-[9px] leading-tight group-hover/tile:flex group-focus-within/tile:flex">
+        /* The caption's own typography, because these two take turns on one
+           line: `text-[9px] leading-tight` is what the name is set in, and
+           without it the controls inherited the panel's 24px line-height and
+           sat a whole half-line below the word they replace.
+
+           The pixel up is an *optical* correction and not a geometric one —
+           the boxes were already flush. Measured: caption and controls both sit
+           at top 88 with a height of 11.25px, on the same baseline, and the
+           controls still read low. A card's name is set in capitals, so its ink
+           fills the cap height and stops at the baseline; „odrzuć" is lowercase
+           with nothing above the x-height and an underline hanging below it, so
+           the same baseline puts noticeably more of the word underneath the
+           line than above it. Their optical centres are about 1.7px apart. One
+           whole pixel takes most of that back and stays crisp, which 1.5 does
+           not. */
+        <div className="absolute inset-x-0 top-0 z-10 hidden -translate-y-px flex-col items-center text-[9px] leading-tight group-hover/tile:flex group-focus-within/tile:flex">
           {children}
         </div>
       ) : null}
