@@ -12,7 +12,7 @@ import {
 } from "./cardScript";
 import type { Status } from "./status";
 import { classOf } from "./cards";
-import { describeEffect, effectRows } from "./effectText";
+import { cardRows, describeEffect } from "./effectText";
 import { abilitiesOfCharacter, asCharacterId } from "./characters";
 import {
   NATURE_LABEL,
@@ -289,7 +289,23 @@ function specialOf(cardId: string): string[] {
   const stated =
     gate !== null && (gate.warunek.is === "natura" || gate.warunek.is === "attacker");
   const body = stated && gate !== null ? gate.to : script.effect;
-  const lines = effectRows(body) ?? [describeEffect(body)];
+  // The whole Karta, which for the three of 15.1 is two occasions rather than
+  // one: where it goes when it is turned over, then what it says where it lies.
+  /**
+   * A script that is only a disposition has nothing to say in a list of what
+   * the card does, and „nic się nie dzieje" is a claim rather than a blank.
+   *
+   * It was on twenty-five cards. Every plain Wróg is `{ op: "nic" }`, because
+   * turning a WILK over does nothing — you fight it, and the fight is not this
+   * panel's — so the one formalised line under a creature's picture said the
+   * card had no rules at all. And UKŁAD PLANET, whose entry is only the clock
+   * because the doubling has nowhere to live, said the same words and meant
+   * something quite different by them.
+   *
+   * Asked after `cardRows`, not instead of it: a Karta whose body is empty may
+   * still have a placement to say (15.1), and that is a row.
+   */
+  const lines = cardRows(script, body) ?? (body.op === "nic" ? [] : [describeEffect(body)]);
   /**
    * Only worth saying when the card does not simply stay with you — and not at
    * all where `staysAs` has already said it. On a Nieznajomy the two ran one

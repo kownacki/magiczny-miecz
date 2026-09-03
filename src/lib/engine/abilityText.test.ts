@@ -162,6 +162,19 @@ describe("what using a card does", () => {
     expect(box.special.join(" ")).toMatch(/rzuć kostką/);
   });
 
+  /**
+   * „Nic się nie dzieje" was on twenty-five cards, and meant two different
+   * things on them: a WILK you fight rather than resolve, and an UKŁAD PLANET
+   * whose doubling has nowhere in the model to live. Neither is a rule, and a
+   * panel that prints one line under a picture should not spend it saying so.
+   */
+  it("says nothing where the script is only a disposition", () => {
+    expect(itemProfile("wilk").special).toEqual([]);
+    expect(itemProfile("uklad-planet").special).toEqual([]);
+    // The clock is still said — in the terms line, where it belongs.
+    expect(itemProfile("uklad-planet").visit).toBe("działa przez 1 turę");
+  });
+
   it("writes out the rules no typed kind can hold", () => {
     const mirror = itemProfile("zwierciadlo-zniszczenia");
     expect(mirror.notes).toHaveLength(1);
