@@ -88,7 +88,22 @@ export function SurfaceHead({
        * moves for a one-line title, which is every other surface and most
        * Obszary; a name that cannot fit wraps instead of escaping.
        */}
-      <div className="flex min-h-8 items-center justify-between gap-3 py-1">
+      {/**
+       * Aligned to the top, and given a line box that makes the top the middle.
+       *
+       * `items-center` drifts the controls down past the first line of the name
+       * the moment a title wraps, which is where a reader looks for the way
+       * out. `items-start` alone fixes that and breaks the common case: with a
+       * 20-pixel title in a 32-pixel row there are twelve pixels of slack, all
+       * of it underneath, and a one-line header sits visibly high.
+       *
+       * So both children get the row's own height as their line box — `leading-6`
+       * on the title, `min-h-6` on the controls — and 24 plus `py-1`'s eight is
+       * the 32 the bar was always going to be. One line has no slack to fall
+       * through and reads as centred; a wrapped one grows downwards and leaves
+       * the controls where the first line is. The two cases are the same rule.
+       */}
+      <div className="flex min-h-8 items-start justify-between gap-3 py-1">
         {/**
          * `min-w-0`, not `shrink-0`.
          *
@@ -98,13 +113,13 @@ export function SurfaceHead({
          * yields — wrapping, since nothing here truncates — and `shrink-0` on
          * the controls below finally means what it says.
          */}
-        <h2 className={`min-w-0 text-[13px] uppercase tracking-widest ${tone}`}>{title}</h2>
+        <h2 className={`min-w-0 leading-6 text-[13px] uppercase tracking-widest ${tone}`}>{title}</h2>
         {aside}
         {/* Their own clicks stop here. The bar restores the surface and the
             buttons on it do their own thing; without this, `zamknij` on a
             minimised console would close it and bring it back at once. */}
         <div
-          className="flex shrink-0 items-center gap-3"
+          className="flex min-h-6 shrink-0 items-center gap-3"
           onClick={(event) => event.stopPropagation()}
         >
           {controls}
