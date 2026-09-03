@@ -15,8 +15,13 @@ const SEATS: JournalSeat[] = [
   { id: "d", seatIndex: 3, playerName: null, characterId: null },
 ];
 
+/** One instant for every entry a test builds. See `entry`. */
+const AT = "2026-09-03T09:15:00.000Z";
+
 function entry(kind: JournalKind, payload: Record<string, unknown> = {}, over: Partial<JournalEntry> = {}) {
-  return { seq: 1, seatId: "a", round: 2, kind, payload, manual: false, ...over };
+  // A fixed instant, so a test that cares about the clock can say what it
+  // expects and the rest never has to think about it.
+  return { seq: 1, seatId: "a", round: 2, at: AT, kind, payload, manual: false, ...over };
 }
 
 /** The third argument is a seat id, or the whole entry when a test needs more of it. */

@@ -354,6 +354,8 @@ async function recent(count: number): Promise<void> {
         seatId: (row.seat_id as string | null) ?? null,
         actorName: (row.actor_name as string | null) ?? null,
         round: row.round as number,
+        // The instant, untouched. The reader's clock is the reader's.
+        at: String(row.created_at),
         kind,
         payload: (row.payload ?? {}) as Record<string, unknown>,
         manual: Boolean(row.manual),

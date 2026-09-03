@@ -52,6 +52,8 @@ export async function GET(request: Request, { params }: { params: Promise<{ code
         // seat's name by the reader, so a takeover cannot rewrite the past.
         actorName: (row.actor_name as string | null) ?? null,
         round: row.round as number,
+        // The instant, untouched. The reader's clock is the reader's.
+        at: String(row.created_at),
         kind,
         payload: (row.payload ?? {}) as Record<string, unknown>,
         manual: Boolean(row.manual),

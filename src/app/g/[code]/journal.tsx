@@ -21,6 +21,7 @@ import { readSeatToken } from "@/lib/game/seatToken";
 import { Lookable } from "./lookable";
 import { WithRules } from "./rule-ref";
 import type { JournalLine, JournalRef } from "@/lib/engine/journalText";
+import { clockOf, momentOf } from "@/lib/view/clock";
 import type { EqMode } from "@/lib/engine/slots";
 
 /**
@@ -256,6 +257,35 @@ function Line({
           style={colour ? { backgroundColor: colour } : undefined}
           className={`mt-1 h-1.5 w-1.5 shrink-0 rounded-full ${colour ? "" : "bg-edge"}`}
         />
+        {/**
+         * When it happened, on the reader's own clock.
+         *
+         * Before the sentence and in a fixed column, because that is what makes
+         * a feed scannable: „kiedy" is the question you ask of a list you are
+         * running your eye down, and an answer that moves with the length of
+         * the line above it cannot be scanned at all. `tnum` holds the figures
+         * on one width so the colons line up.
+         *
+         * Hour and minute only. The whole instant — the date, and the seconds
+         * that separate two lines written in the same minute — is on the hover,
+         * where the rest of what the app knows about a line lives. `cursor-help`
+         * says the hover is there, the same way it does on every other thing in
+         * the app you may point at and not press.
+         *
+         * A `title` and not a `CardPreview`: this is one short string with
+         * nothing to lay out, and the OS tooltip is the right size for it. The
+         * note in `card-tile.tsx` about a tooltip landing over a preview does
+         * not apply — there is no preview here to cover.
+         */}
+        {line.at && (
+          <time
+            dateTime={line.at}
+            title={momentOf(line.at)}
+            className="tnum mt-px shrink-0 cursor-help text-[10px] leading-none text-muted/50"
+          >
+            {clockOf(line.at)}
+          </time>
+        )}
         <span className={line.manual ? "text-ochre/90" : "text-muted"}>
           <Looked text={line.text} refs={line.refs} eqMode={eqMode} />
           {/* A hand overruling the referee, which LOBBY.md wants visible rather

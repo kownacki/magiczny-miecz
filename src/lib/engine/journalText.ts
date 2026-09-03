@@ -17,6 +17,20 @@ import type { JournalKind } from "./journal";
 export interface JournalEntry {
   seq: number;
   seatId: string | null;
+  /**
+   * When it happened, as the database wrote it: an ISO instant in UTC.
+   *
+   * Stored and carried in UTC and formatted nowhere near here. A table can be
+   * played across time zones — the whole point of the join code is that nobody
+   * has to be in the room — so the only honest thing to keep is the instant,
+   * and whose clock it is read on is the reader's business. `clock.ts` in
+   * `view/` does that, on the machine doing the reading.
+   *
+   * `moves.created_at` is `not null default now()`, and the in-memory store
+   * stamps it too (`STAMPED` in `fakeDb.ts`), so every row has one and this is
+   * not optional.
+   */
+  at: string;
   /** The round it happened in — see CONTEXT.md, "tura". */
   round: number;
   kind: JournalKind;
@@ -32,6 +46,18 @@ export interface JournalEntry {
    */
   actorName?: string | null;
 }
+
+/**
+ * A line before it is dated.
+ *
+ * The builders below turn a row into a sentence and know nothing about when it
+ * happened — `entry.at` is the row's, and stamping it here would mean writing
+ * the same field into a hundred object literals. So they answer this, and
+ * `journalLines` adds the instant on the way out. The distinction is real and
+ * not bookkeeping: what a line *says* is derived from the payload, and when it
+ * happened is derived from the row.
+ */
+export type JournalSentence = Omit<JournalLine, "at">;
 
 export interface JournalSeat {
   id: string;
@@ -59,6 +85,8 @@ export interface JournalRef {
 
 export interface JournalLine {
   seq: number;
+  /** When it happened, in UTC — see `JournalEntry.at`. */
+  at: string;
   /** The round it happened in — see CONTEXT.md, "tura". */
   round: number;
   text: string;
@@ -257,7 +285,7 @@ export function describe(
   seats: readonly JournalSeat[],
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   viewerSeatId: string | null,
-): JournalLine | null {
+): JournalSentence | null {
   if (UNSPOKEN.has(entry.kind)) return null;
 
   const seat = seats.find((candidate) => candidate.id === entry.seatId);
@@ -330,7 +358,7 @@ export function describe(
   /** The person and nothing else, for the lines whose news is the Postać. */
   const justPerson = entry.actorName ?? seat?.playerName ?? "Ktoś";
 
-  const line = (text: string): JournalLine => ({
+  const line = (text: string): JournalSentence => ({
     seq: entry.seq,
     round: entry.round,
     text,
@@ -998,7 +1026,7 @@ export function describe(
 export function describeTurnChange(
   entry: JournalEntry,
   seats: readonly JournalSeat[],
-): JournalLine[] {
+): JournalSentence[] {
   if (entry.kind !== "turn-end") return [];
   const data = entry.payload;
   /**
@@ -1022,7 +1050,7 @@ export function describeTurnChange(
   // order they are written here.
   let at = 0;
   const at_ = () => entry.seq + at++ / 1000;
-  const lines: JournalLine[] = [];
+  const lines: JournalSentence[] = [];
 
   /** One line's worth of names, so each carries only what it mentions. */
   const named = (who: JournalSeat | undefined) => {
@@ -1104,9 +1132,15 @@ export function journalLines(
 ): JournalLine[] {
   const lines: JournalLine[] = [];
   for (const entry of entries) {
-    lines.push(...describeTurnChange(entry, seats));
+    /**
+     * Stamped here rather than at each of the hundred places a sentence is
+     * built, because the answer is the same for all of them: a line derived
+     * from a row happened when that row did. `describeTurnChange` can make two
+     * lines out of one `turn-end`, and both share its instant.
+     */
     const one = describe(entry, seats, viewerSeatId);
-    if (one) lines.push(one);
+    const made = [...describeTurnChange(entry, seats), ...(one ? [one] : [])];
+    for (const one of made) lines.push({ ...one, at: entry.at });
   }
   return lines.sort((a, b) => a.seq - b.seq);
 }

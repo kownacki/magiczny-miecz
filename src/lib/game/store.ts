@@ -373,7 +373,7 @@ export async function journalRows(
 ): Promise<Record<string, unknown>[]> {
   let query = on
     .from("moves")
-    .select("seq,seat_id,actor_name,round,kind,payload,manual")
+    .select("seq,seat_id,actor_name,round,kind,payload,manual,created_at")
     .eq("game_id", gameId)
     .order("seq", { ascending: false })
     .limit(options.limit);
