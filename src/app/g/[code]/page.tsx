@@ -987,6 +987,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
         aggression: mySeat.aggression,
         name: reads(mySeat),
         gender: genderOf(mySeat.character_id),
+        mine: true,
       }
     : null;
   const dealt: Reader | null = active
@@ -995,6 +996,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
         aggression: active.aggression,
         name: reads(active),
         gender: genderOf(active.character_id),
+        mine: active.id === mySeat?.id,
       }
     : null;
 

@@ -510,7 +510,12 @@ export function DrawnCard({
           >
             {!script
               ? "Rozumiem"
-              : script.effect.op === "rzut"
+              : /* Nothing is going to be asked and nothing is going to happen —
+                   this Karta is for another Natura. „Rozpatrz, co się da" over
+                   an empty column promises a column. */
+                skippable && script !== null && inertFor(script.effect, nature)
+                ? "Rozpatrz"
+                : script.effect.op === "rzut"
                 ? "Rzuć i rozpatrz"
                 : isSettled(script.effect)
                   ? "Rozpatrz"

@@ -295,13 +295,18 @@ export function forbiddenNatures(cardId: string): readonly Nature[] | undefined 
  * answer has to come from one place or the sheet says „tylko Dobra Postać" for
  * the Talizman and nothing for the Wróżka.
  */
-function servedNatures(cardId: string): readonly Nature[] | undefined {
+function servedNatures(
+  cardId: string,
+): { natures: readonly Nature[]; rule: string | null } | undefined {
   const abilities = ABILITIES[cardId as keyof typeof ABILITIES] ?? [];
   const only = abilities.find((ability) => ability.kind === "tylko-natura");
-  if (only && only.kind === "tylko-natura") return only.natury;
+  // 5.3 is a rule about *holding* a card, so it is cited on the cards it is
+  // about. A Nieznajomy serving one Natura is not 5.3 and cites nothing: no
+  // rule in the book says the Wróżka waits for a Dobra Postać — her Karta does.
+  if (only && only.kind === "tylko-natura") return { natures: only.natury, rule: "(5.3)" };
   const gate = scriptFor(cardId)?.effect;
   if (gate?.op === "gdy" && gate.warunek.is === "natura" && gate.inaczej === undefined) {
-    return gate.warunek.jedna_z;
+    return { natures: gate.warunek.jedna_z, rule: null };
   }
   return undefined;
 }
@@ -329,6 +334,8 @@ export interface Reader {
   name?: string;
   /** Their Karta Postaci's grammatical gender, which the adjectives agree with. */
   gender?: "m" | "f";
+  /** Whether this is the reader's own Postać, which is then not named. */
+  mine?: boolean;
 }
 
 /**
@@ -341,7 +348,9 @@ export interface Reader {
  * the subject instead, which is feminine and takes „zła" whoever is reading.
  */
 function subject(reader: Reader): { who: string; a: string; feminine: boolean } {
-  if (!reader.name) return { who: "Twoja Postać", a: "a", feminine: true };
+  // Your own Postać is not introduced to you. „Twoja Postać" is also feminine,
+  // which is why the one form that needs no gender at all is the one used most.
+  if (reader.mine || !reader.name) return { who: "Twoja Postać", a: "a", feminine: true };
   const feminine = reader.gender === "f";
   return { who: reader.name, a: feminine ? "a" : "", feminine };
 }
@@ -353,10 +362,12 @@ export function requirementOf(
   const who: Reader = typeof reader === "object" && reader !== null ? reader : { nature: reader };
   const only = servedNatures(cardId);
   if (only) {
-    const met = who.nature === null ? null : only.includes(who.nature);
+    const met = who.nature === null ? null : only.natures.includes(who.nature);
     return {
       label: "tylko Postać",
-      value: only.map((one) => NATURE_LABEL[one] ?? one).join(" lub "),
+      value:
+        only.natures.map((one) => NATURE_LABEL[one] ?? one).join(" lub ") +
+        (only.rule ? ` ${only.rule}` : ""),
       met,
       /**
        * Their Natura, said outright.

@@ -17,7 +17,7 @@
 
 import { createContext, useContext } from "react";
 import type { ItemProfile, Reader } from "@/lib/engine/abilityText";
-import { forbiddenNatures, requirementOf } from "@/lib/engine/abilityText";
+import { requirementOf } from "@/lib/engine/abilityText";
 import type { Nature } from "@/data/types";
 import { sentence } from "@/lib/engine/polish";
 import { WithRules } from "./rule-ref";
@@ -64,8 +64,6 @@ export function CardFacts({
   profile: ItemProfile;
   nature: Nature | null;
 }) {
-  // 5.3, answered for the reader rather than stated in the abstract.
-  const barred = nature !== null && (forbiddenNatures(cardId)?.includes(nature) ?? false);
 
   /**
    * The Karta's own condition, from wherever it is written.
@@ -118,27 +116,11 @@ export function CardFacts({
         </p>
       )}
 
-      {/* What it asks before it gives. Above the bonuses on purpose: a card
-          you may not hold is not a card whose bonuses matter.
-
-          Green or red by whether the person reading it passes — the useful
-          question is not "does this have a restriction" but "does it shut
-          ME out", and the answer is known. Neutral only when no Natura is
-          known, which is the shelf read from outside a game. */}
-      {profile.requirements.length > 0 && (
-        <ul className="flex flex-col gap-1 border-t border-edge/60 pt-2">
-          {profile.requirements.map((need, at) => (
-            <li
-              key={at}
-              className={`text-[11px] leading-snug ${
-                nature === null ? "text-muted" : barred ? "text-vermilion" : "text-verdigris"
-              }`}
-            >
-              <WithRules text={sentence(need.what)} />
-            </li>
-          ))}
-        </ul>
-      )}
+      {/* `profile.requirements` is not drawn: it is the same 5.3 ability the
+          line above reads through `servedNatures`, and drawing both printed
+          „Tylko Postać: dobra lub zła" twice on every Przedmiot that has one.
+          One requirement system for a Przedmiot and a Nieznajomy, and the rule
+          number rides on the value where there is a rule to cite. */}
 
       {profile.facts.length > 0 && (
         <ul className="flex flex-col gap-1.5 border-t border-edge/60 pt-2">

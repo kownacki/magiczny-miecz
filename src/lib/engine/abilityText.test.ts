@@ -213,6 +213,18 @@ describe("how long a Nieznajomy or a Miejsce stays", () => {
  */
 describe("what a Karta asks of the character in front of it", () => {
   /** „Marcin (MAG) jest zły" — the adjective agrees with the Karta Postaci. */
+  /** Your own Postać is not introduced to you, and „Postać" is feminine. */
+  it("does not introduce the reader to their own Postać", () => {
+    expect(
+      requirementOf("wrozka", {
+        nature: "evil",
+        name: "Marcin (MAG)",
+        gender: "m",
+        mine: true,
+      })?.detail,
+    ).toBe("Twoja Postać jest zła");
+  });
+
   it("names the Postać and agrees with its gender", () => {
     expect(
       requirementOf("wrozka", { nature: "evil", name: "Marcin (MAG)", gender: "m" })?.detail,
