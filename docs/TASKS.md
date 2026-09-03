@@ -405,12 +405,21 @@ because the app rolls, moves and computes everything.
       up. Nobody's decision — just work nobody has done, and another session was
       measuring it as this was written.
 
-- [ ] **The last 6 cards.** 132 of 138 distinct event cards have a script — 128
-      `pelne` and 4 `czesciowe`, after the sweep of 2026-08-31 took the MANUAL
+- [ ] **The last 5 cards.** 133 of 138 distinct event cards have a script — 128
+      `pelne` and 5 `czesciowe`, after the sweep of 2026-08-31 took the MANUAL
       list from twenty-two clauses to seven. The app says on screen which is
       which — see `coverage.ts`.
 
-      The six with nothing at all, and what each of them actually wants:
+      The Diament Królów has come off this list. The Mgła was never on it and
+      should have been: it had a script, so it counted as `pelne`, and the
+      script was `{ op: "nic" }` with a two-turn countdown — the app telling a
+      table that the storm which halves everybody's walk does nothing. It is a
+      `move-max` of 1 on every seat now. Its twin the **Układ Planet** is the
+      fifth `czesciowe`: „podwojona zostaje Magia wszystkich Demonów" is the
+      same wall as the Wampir below, so it keeps the clock and names the half
+      it does not do.
+
+      The five with nothing at all, and what each of them actually wants:
 
       - **Sobowtór** — one line. His strength being his opponent's is already
         carried in `cards.ts` and tested; what he lacks is a `SCRIPTS` entry, so
@@ -422,16 +431,13 @@ because the app rolls, moves and computes everything.
         rows in that ring go to the used pile.
       - **Turniej Rycerski** — assembly. A challenge, a teleport and an ordinary
         duel, all three of which exist.
-      - **Diament Królów** — mostly assembly. Its second half, a lost duel that
-        must be paid with the Diament rather than anything else, is
-        `CardScript.przegrana` pointing the other way.
       - **Wampir** — blocked. His Życie grows as he wins, which is a number
         that has to live on the Karta lying on the Obszar. Same wall as the
         three Zaklęcia below.
       - **Tajemna Sakwa** — blocked. "W Sakwie możesz umieścić 1 Przedmiot" is
         the container link the Magiczna Sakwa and the Tragarz also want.
 
-      So they are three afternoons and two blockers, not six puzzles.
+      So they are three afternoons and two blockers, not five puzzles.
 
       Three reasons listed here have since gone. A consumable spent at a moment
       of the holder's choosing is `uses.ts`; a friend that imposes an ongoing
