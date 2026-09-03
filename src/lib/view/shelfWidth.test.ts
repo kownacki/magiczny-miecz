@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { OBSZAR_WIDTH, SHELF_WIDTH } from "./cardImages";
+import { OBSZAR_WIDTH, PLAYERS_WIDTH, SHELF_WIDTH } from "./cardImages";
 
 /**
  * The drawer's width is one measurement and it is written down twice.
@@ -35,6 +35,22 @@ describe("the drawer widths", () => {
   it("declares --obszar-w as OBSZAR_WIDTH", () => {
     expect(declared("obszar-w"), "globals.css should declare --obszar-w").not.toBeNull();
     expect(declared("obszar-w")).toBe(OBSZAR_WIDTH);
+  });
+
+  /**
+   * And the roster, which is the same three tiles through more chrome — so it
+   * is wider than the Obszar and by a stated amount, rather than by whatever
+   * the default happened to be.
+   */
+  it("declares --gracze-w as PLAYERS_WIDTH", () => {
+    expect(declared("gracze-w"), "globals.css should declare --gracze-w").not.toBeNull();
+    expect(declared("gracze-w")).toBe(PLAYERS_WIDTH);
+  });
+
+  it("makes the roster wider than the Obszar by the chrome between them", () => {
+    // 21 a side against 16: the column's `p-3`, the seat box's border and the
+    // open panel's `px-2`, where the Obszar has only its own `px-4`.
+    expect(PLAYERS_WIDTH - OBSZAR_WIDTH).toBe(10);
   });
 
   /**

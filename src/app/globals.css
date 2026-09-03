@@ -58,6 +58,13 @@ html {
      board the whole time you are reading it. `OBSZAR_WIDTH` in `cardImages.ts`
      is the source, and `shelfWidth.test.ts` pins this to it as well. */
   --obszar-w: 330px;
+
+  /* And the roster, which is the same row of three and ten pixels wider: in
+     here the tiles are not laid straight into the drawer but into a box per
+     player, so the column's `p-3`, that box's border and the open panel's
+     `px-2` come between them and the edge. `PLAYERS_WIDTH` in `cardImages.ts`
+     is the source, and `shelfWidth.test.ts` pins this to it too. */
+  --gracze-w: 340px;
 }
 
 @theme {

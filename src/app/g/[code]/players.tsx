@@ -136,20 +136,23 @@ export function PlayersDrawer({
         </>
       }
       /**
-       * The drawer's own width, which is the Stosy drawer's.
+       * Three tiles across, like the Obszar, and ten pixels more.
        *
-       * It was 350px, counted to fit exactly three `CardTile`s across and not a
-       * pixel more: 3 x 92 + 2 x 8 = 292, plus the seat box's padding and
-       * border, the column's, a scrollbar, and the drawer's own left edge. The
-       * arithmetic was right and the premise stopped being: a seat now carries
-       * a row of effect tiles, their durations in words underneath, and
-       * several seats open at once. The widest thing in here is no longer the
-       * row of three.
+       * It took the Księga's five-tile default for a while, on the reading that
+       * the widest thing in a seat is no longer the row of three — a seat
+       * carries effect tiles and their durations in words now, and several
+       * seats open at once. That is still true and it is not the argument: a
+       * panel of prose does not need five tiles' worth of drawer, and this one
+       * lies over the board the whole time it is open, so the width it does not
+       * use is board somebody is not looking at.
        *
-       * So it takes the default, and the default is what Stosy takes — two
-       * drawers of the same width read as two drawers rather than as one that
-       * has moved. Three tiles still fit, with slack rather than to the pixel.
+       * The ten pixels are the difference in chrome, not slack. The Obszar lays
+       * its row straight into `px-4`; here it is three boxes deep by the time it
+       * is drawn — the column's `p-3`, the seat box's border, the open panel's
+       * `px-2` — which is 21 a side against 16. `PLAYERS_WIDTH` carries the
+       * arithmetic and `shelfWidth.test.ts` keeps this and the CSS var together.
        */
+      width="max-w-[var(--gracze-w)]"
       onClose={onClose}
     >
       <div className="flex flex-col gap-2 p-3">

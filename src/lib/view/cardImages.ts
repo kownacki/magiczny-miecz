@@ -47,8 +47,8 @@ export const TILE_GAP_PX = 8;
 /**
  * How wide a left-hand drawer holding N tiles across is.
  *
- * N x `TILE_WIDTH` + (N-1) x `TILE_GAP_PX` for the row itself, + 32 for the
- * padding either side, + 1 for the border, + the scrollbar. That last term is
+ * N x `TILE_WIDTH` + (N-1) x `TILE_GAP_PX` for the row itself, + the padding
+ * either side, + 1 for the border, + the scrollbar. That last term is
  * the one that cannot be a measurement: a scrollbar is reserved in *device*
  * pixels, so its size in the CSS pixels this sum is written in grows as the
  * reader zooms out — 15 at 100%, 16.7 at 90%, 18.75 at 80%, 22.4 at 67%. A
@@ -57,9 +57,14 @@ export const TILE_GAP_PX = 8;
  * it down to about 65%, and what is left at 100% is 8px — the row's own gap,
  * once, past the last tile, which is the least it can be while still being a
  * margin.
+ *
+ * The padding is a parameter because not every drawer wraps its row in the same
+ * chrome. Most put the tiles straight inside `px-4` and 32 is the whole of it;
+ * the roster puts each player in a box of their own, and the row is three boxes
+ * deep by the time it is drawn.
  */
-export function shelfWidth(tiles: number): number {
-  return tiles * TILE_WIDTH + (tiles - 1) * TILE_GAP_PX + 32 + 1 + 23;
+export function shelfWidth(tiles: number, sides = 32): number {
+  return tiles * TILE_WIDTH + (tiles - 1) * TILE_GAP_PX + sides + 1 + 23;
 }
 
 /**
@@ -89,6 +94,26 @@ export const SHELF_WIDTH = shelfWidth(5);
  */
 export const OBSZAR_TILES = 3;
 export const OBSZAR_WIDTH = shelfWidth(OBSZAR_TILES);
+/**
+ * Three across again: the roster.
+ *
+ * The same row of three as the Obszar, so the two drawers read as two of a
+ * kind — and ten pixels wider, because in here the row is not laid straight
+ * into the drawer. Each player is a box of their own, and between the tiles and
+ * the drawer's edge there is the column's `p-3`, that box's border, and the
+ * open panel's `px-2`: 21 a side against the Obszar's 16.
+ *
+ * It used to take the Księga's five-tile width, on the reading that the widest
+ * thing in a seat is no longer the row of three — a seat carries effect tiles
+ * and their durations in words now. It is still not, but five tiles' worth of
+ * drawer for a panel of text is two tiles of board given away, and the roster
+ * lies over the board like the Obszar does.
+ *
+ * Measured rather than reasoned: the narrowest width that keeps three tiles on
+ * one line through this chain is 317 plus the scrollbar's 23.
+ */
+export const PLAYERS_WIDTH = shelfWidth(OBSZAR_TILES, 2 * (12 + 1 + 8));
+
 export const TILE_ART_HEIGHT = Math.round(TILE_WIDTH / ART_RATIO);
 
 /**
