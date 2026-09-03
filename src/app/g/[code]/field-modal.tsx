@@ -587,22 +587,30 @@ export function FieldModal({
          column keeps its floor at `--shelf-w`, which is the widest drawer that
          can be laid over it, so a narrower one costs that guarantee nothing. */
       width="max-w-[var(--obszar-w)]"
-      title={
-        <span className="flex items-center gap-2">
-          <span className="min-w-0 truncate">{field.name}</span>
-          {/**
-           * The same row the map draws under this square, from the same
-           * `marksFor`: what is here, said the same way in both places, so a
-           * player who has learnt the map has learnt this.
-           *
-           * Sized to the bar rather than the bar to them: `SurfaceHead` is a
-           * fixed 32 now, so 16 sits inside it with room either side and
-           * nothing about this row can move the strip.
-           */}
-          <span className="shrink-0 text-muted/80">
-            <FieldMarks marks={marksFor(fieldId, cards)} draw={dealtOn(fieldId)} size={16} />
-          </span>
-        </span>
+      /* The name alone, and it wraps. Nothing truncates an Obszar: it is the
+         one word on this surface that says where you are, and half of RÓWNINA
+         SAMOTNYCH SKAŁ is not half an answer. */
+      title={field.name}
+      /**
+       * The same row the map draws under this square, from the same `marksFor`:
+       * what is here, said the same way in both places, so a player who has
+       * learnt the map has learnt this.
+       *
+       * **Under the name, always, and not beside it.** Beside it they were a
+       * second rigid thing in a row that already had two, and on a long name
+       * the three of them pushed `zamknij` off the end of the header. Under it
+       * they also stop competing for the line the name needs to wrap into.
+       *
+       * The row keeps its height whether or not there is anything in it —
+       * `FieldMarks` draws nothing on a square with no marks and no Karty to
+       * draw, and a header that were shorter for those Obszary would jump every
+       * time you opened a different one. Same reasoning as the bar's own floor,
+       * one level down.
+       */
+      head={
+        <div className="flex items-center text-muted/80" style={{ height: 16 }}>
+          <FieldMarks marks={marksFor(fieldId, cards)} draw={dealtOn(fieldId)} size={16} />
+        </div>
       }
       onClose={onClose}
       /**

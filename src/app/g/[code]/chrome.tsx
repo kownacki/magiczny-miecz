@@ -73,17 +73,32 @@ export function SurfaceHead({
           box — which sat the glyphs a few pixels above the words they share the
           row with. The middle is the one thing a glyph and a word both have. */}
       {/**
-       * A fixed 32, and the border is the 33rd pixel.
+       * A floor of 32, and the border is the 33rd pixel.
        *
        * It was `py-1.5` around whatever the title happened to be, so the bar
        * was as tall as its tallest word — which is fine until something else
-       * goes in it. The Obszar's name carries the square's marks beside it now,
-       * and a strip that grows by half a pixel when a Karta settles somewhere
-       * is a strip that moves for reasons nobody can see. Height first, and
-       * what goes in it fits.
+       * goes in it, and a strip that grows by half a pixel when a Karta settles
+       * somewhere is a strip that moves for reasons nobody can see.
+       *
+       * A floor rather than a fixed height, because a long name has to go
+       * somewhere. RÓWNINA SAMOTNYCH SKAŁ in a drawer this narrow is wider than
+       * the bar, and against a rigid `h-8` and a `shrink-0` title it went
+       * *outwards*: the row overflowed its own header, `zamknij` was pushed off
+       * the end, and the whole strip ran across the board behind it. Nothing
+       * moves for a one-line title, which is every other surface and most
+       * Obszary; a name that cannot fit wraps instead of escaping.
        */}
-      <div className="flex h-8 items-center justify-between gap-3">
-        <h2 className={`shrink-0 text-[13px] uppercase tracking-widest ${tone}`}>{title}</h2>
+      <div className="flex min-h-8 items-center justify-between gap-3 py-1">
+        {/**
+         * `min-w-0`, not `shrink-0`.
+         *
+         * Two rigid children in one flex row cannot both be honoured, and the
+         * one that has to give is the title: the controls are the way out of
+         * the surface and a way out you cannot reach is not one. So the title
+         * yields — wrapping, since nothing here truncates — and `shrink-0` on
+         * the controls below finally means what it says.
+         */}
+        <h2 className={`min-w-0 text-[13px] uppercase tracking-widest ${tone}`}>{title}</h2>
         {aside}
         {/* Their own clicks stop here. The bar restores the surface and the
             buttons on it do their own thing; without this, `zamknij` on a
