@@ -94,6 +94,27 @@ suite("journal vocabulary", () => {
    * renderer reads a different payload — so the row went in, came back, was
    * found empty and dropped, and the Upiór moved to the Osada in silence.
    */
+  /**
+   * A name in a sentence is only lookupable when the line hands back a
+   * reference for it — `journal.tsx` splits on those. The Kuglarz's own name
+   * was in the reason and there was nothing to press.
+   */
+  it("hands back the Karta named in a points line, so it can be looked up", () => {
+    const said = describe(
+      entry("points", {
+        stat: "sword",
+        delta: 6,
+        from: 3,
+        to: 9,
+        reason: "KUGLARZ: ustawiasz bazowy Miecz na wartość bazową Magii",
+        cardId: "kuglarz",
+      }),
+      SEATS,
+      null,
+    );
+    expect(said?.refs?.some((ref) => ref.id === "kuglarz" && ref.kind === "card")).toBe(true);
+  });
+
   it("says where a Karta that places itself went (15.1)", () => {
     expect(text("placed", { cardId: "upior", fieldId: "osada" })).toContain("UPIÓR");
     expect(text("placed", { cardId: "upior", fieldId: "osada" })).toContain("Osada");

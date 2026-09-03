@@ -44,6 +44,15 @@ export interface Adjustment {
    */
   record?: { kind: JournalKind; manual: boolean };
   /**
+   * The Karta that did it, so the journal can make its name a link.
+   *
+   * `reason` already carries the name in its text — „KUGLARZ: ustawiasz bazowy
+   * Miecz…" — but a name in a sentence is only lookupable when the line hands
+   * back a reference for it, and a reference needs the id. The `card()` call in
+   * `journalText` remembers one; this is what it has to remember.
+   */
+  byCard?: string;
+  /**
    * Push past the floor 1.3 and 2.3 put under own points.
    *
    * The test console's, and nobody else's. Reaching a character weaker than the
@@ -136,6 +145,7 @@ export function adjustSeat(snapshot: Snapshot, command: Adjustment): Outcome<Adj
           from: current,
           to: next,
           reason: command.reason,
+          ...(command.byCard ? { cardId: command.byCard } : {}),
           ...(command.force ? { forced: true } : {}),
           // Only where something was cut, and only then, because it is the
           // one fact the sentence cannot work out for itself: whether the

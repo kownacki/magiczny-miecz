@@ -526,6 +526,7 @@ const OPS: { [K in LeafOp]: OpRun<K> } = {
         stat: effect.stat,
         delta: effect.delta,
         reason,
+        byCard: ctx.cardId ?? undefined,
         // A card doing what the card says is the opposite of somebody
         // overruling the referee, and the journal draws those differently.
         record: { kind: "points", manual: false },
@@ -1118,6 +1119,7 @@ const OPS: { [K in LeafOp]: OpRun<K> } = {
       stat: effect.z,
       delta: target - now,
       reason,
+      byCard: ctx.cardId ?? undefined,
       record: { kind: "points", manual: false },
     });
     const label = effect.z === "sword" ? "Miecz" : "Magia";

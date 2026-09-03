@@ -799,6 +799,15 @@ export function describe(
             ? life(many)
             : `${many} ${plural(many, "punkt", "punkty", "punktów")} ` +
               `${data.stat === "sword" ? "Miecza" : "Magii"}`;
+      /**
+       * The Karta named in the reason, remembered so it can be looked up.
+       *
+       * „— KUGLARZ: ustawiasz bazowy Miecz na wartość bazową Magii" already had
+       * the name in it and no way to press it. `card()` is what turns a name in
+       * a sentence into a reference, and `journal.tsx` splits on those, so
+       * remembering the id is the whole of it — the text does not change.
+       */
+      if (typeof data.cardId === "string") card(data.cardId);
       return line(
         `${who} ${delta > 0 ? "zyskuje" : "traci"} ${what}` +
           `${held(data)}` +
