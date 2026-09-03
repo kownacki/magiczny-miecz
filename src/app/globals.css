@@ -162,3 +162,35 @@ body {
 @theme {
   --animate-channel-fill: channel-fill 3s linear forwards;
 }
+
+/* Scrollbars, in the panel's own colours.
+
+   The default is a light slab: on a dark sheet it reads as a second column of
+   chrome, and on the Karta's own text column — which overflows by a line as
+   soon as a die table is under it — it looked like something had gone wrong
+   rather than like a page continuing. What a scroll needs to say is *there is
+   more below*, and a thin edge-coloured thumb on nothing says it.
+
+   `scrollbar-*` first, because that is the standard pair and what Chrome and
+   Firefox both read now; the WebKit pseudo-elements are the same thing again
+   for the Safari versions that never learned them. Everything scrollable in
+   the app is inside a panel, so one rule serves the sheet, the drawers, the
+   Dziennik and the kolejka alike. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-edge) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-edge);
+  border-radius: 4px;
+}
