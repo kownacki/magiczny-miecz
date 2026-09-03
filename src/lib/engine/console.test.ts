@@ -1247,7 +1247,7 @@ const EXAMPLE: Record<string, string> = {
   "3": "3",
   "3|MAGOG": "MAGOG",
   "good|evil|chaotic": "good",
-  "fog|frozen|barred": "fog",
+  "fog|frozen|barred|nolimit": "fog",
   "MAGICZNY": "MAGICZNY",
   "HEŁM": "HEŁM",
   "BŁYSKAWICA": "BŁYSKAWICA",

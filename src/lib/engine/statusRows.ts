@@ -187,6 +187,8 @@ export type Stacking =
  * discipline `RULE_FOR` uses to make every journal line name its rule.
  */
 const STACKING: Record<Modifier["kind"], Stacking> = {
+  // Off is off. A second one lifts a cap that is already lifted.
+  "bez-limitu-zaklec": "exclusive",
   // 1.2-1.5's arithmetic: two Eliksiry are two points, and `bonusFrom` sums.
   points: "sums",
   // `movementCap` takes the smaller of the caps, so a second one either tightens

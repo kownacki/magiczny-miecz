@@ -12,7 +12,7 @@ import { trophyPointsOf } from "@/lib/engine/trophies";
 import { SPELL_BY_REF } from "./decks";
 import { TROPHY_RATE, offersFor } from "./commands/shop";
 import { fightsForYou, type Ability } from "@/lib/engine/abilities";
-import type { Modifier } from "@/lib/engine/status";
+import type { Ends, Modifier } from "@/lib/engine/status";
 import { type StatusRow } from "@/lib/engine/statusRows";
 import { nameOfSeat } from "./commands/lobby";
 import { activeStore } from "./gameStore";
@@ -35,12 +35,26 @@ import { fold } from "@/lib/engine/search";
  * the only English on anybody's screen, and the point of the state is to look
  * exactly like the card's.
  */
-export const EFFECTS: Record<EffectName, { label: string; modifier: Modifier }> = {
+export const EFFECTS: Record<EffectName, { label: string; modifier: Modifier; ends?: Ends }> = {
   fog: { label: "Mgła (tryb testowy)", modifier: { kind: "move-max", fields: 1 } },
   frozen: { label: "Bez ruchu (tryb testowy)", modifier: { kind: "frozen" } },
   barred: {
     label: "Most zamknięty (tryb testowy)",
     modifier: { kind: "barred", place: "most" },
+  },
+  /**
+   * The only one here that carries its own `ends`, because it is the only one
+   * that is a switch rather than a thing that happened.
+   *
+   * A turn is the right life for a Mgła — „na 1 turę" is what the Karta says —
+   * and quite wrong for a cap taken off in order to set a hand up: it would
+   * come back on in the middle of the arrangement it was turned off for.
+   * `dispelled` never lapses on its own, which is what a switch means.
+   */
+  nolimit: {
+    label: "Bez limitu Zaklęć (tryb testowy)",
+    modifier: { kind: "bez-limitu-zaklec" },
+    ends: { kind: "dispelled" },
   },
 };
 

@@ -17,6 +17,7 @@ import { seatColour } from "@/lib/view/boardMap";
 import { roundShown } from "@/lib/engine/polish";
 import type { TurnStep, TurnWindow, WindowId } from "@/lib/engine/turnWindows";
 import { Lookable } from "./lookable";
+import { WithRules } from "./rule-ref";
 
 export function NowBox({
   playerName,
@@ -32,6 +33,7 @@ export function NowBox({
   steps,
   canRoll,
   owed,
+  surplus,
   away,
   since,
   busy,
@@ -81,6 +83,26 @@ export function NowBox({
   /** Said on the disabled control, so a refusal explains itself (see `duties.ts`). */
   /** The turn has not been rolled yet — 10.2 makes this the first thing it does. */
   canRoll: boolean;
+  /**
+   * The one thing that stops a turn without being part of one.
+   *
+   * 5.6 and 2.6 both say *natychmiast*, and the app enforces that by refusing
+   * every other verb while a surplus is on the stack — so the table sits on
+   * „Gra czeka" and this box, which is the thing a player reads to find out
+   * what is happening, said nothing about it at all. Whoever is over got a
+   * refusal each time they tried something else, and everybody else got a
+   * table that had quietly stopped.
+   *
+   * `said` is the engine's own sentence, in the voice for whoever is reading —
+   * second person for the player who has to act, the seat's name for the rest
+   * of the table.
+   */
+  surplus?: {
+    said: string;
+    what: "przedmioty" | "zaklecia";
+    /** Only for the seat that has to act; everybody else is a bystander. */
+    onFix: (() => void) | null;
+  } | null;
   /** The Obszar still owes cards (13.4 counts what is already lying there). */
   /**
    * How many Karty this Obszar still owes (13.4).
@@ -332,6 +354,31 @@ export function NowBox({
           kartę" was about to be a lie on every square that prints two or three
           — and the count is exactly what a player wants to know before pressing
           it, since what is already lying here has been subtracted from it. */}
+      {/* Above the roll and the draw, because it is the reason neither of them
+          will work. Compulsory red rather than the ochre those two wear: those
+          are the turn, and this is the turn being held up.
+
+          The button goes where the Karty are, which is the seat card — the
+          hand, the pack and the words that shed a card all live there, and
+          there is no second place to send anybody. It is the same door
+          `onPlayer` opens. */}
+      {surplus && (
+        <div className="mt-2 shrink-0 rounded border border-vermilion/60 bg-vermilion/10 p-2">
+          <p className="text-[11px] leading-snug text-vermilion">
+            <WithRules text={surplus.said} />
+          </p>
+          {surplus.onFix && (
+            <button
+              onClick={surplus.onFix}
+              disabled={busy}
+              className="mt-2 w-full rounded border border-vermilion bg-vermilion/20 px-2 py-1.5 font-[family-name:var(--font-display)] text-[13px] tracking-wide text-ink transition hover:bg-vermilion/30 disabled:opacity-40"
+            >
+              {surplus.what === "zaklecia" ? "Odrzuć Zaklęcia" : "Upuść Przedmioty"}
+            </button>
+          )}
+        </div>
+      )}
+
       {isMine && owed > 0 && (
         <button
           onClick={onDraw}

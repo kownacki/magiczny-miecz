@@ -64,6 +64,8 @@ export function SpellHand({
   onInspect,
   onReorder,
   onDrop,
+  id,
+  openSignal,
 }: {
   spells: HeldSpell[];
   /** Every window the turn is open for right now — a moment can be several. */
@@ -79,7 +81,12 @@ export function SpellHand({
    * kind of fact and was the one of the two nobody could see: a player learns
    * their limit by being refused a Zaklęcie they had already decided to take.
    */
-  capacity?: number;
+  /**
+   * 2.6's cap. `undefined` where there is none to report — the fight sheet —
+   * and `null` where the console has taken it off, which is a different thing
+   * and prints „∞".
+   */
+  capacity?: number | null;
   /**
    * Where this is standing.
    *
@@ -127,6 +134,17 @@ export function SpellHand({
    * table is waiting for.
    */
   onDrop?: (holdingId: string) => void;
+  /** So the turn box has something to scroll to when it says «Odrzuć Zaklęcia». */
+  id?: string;
+  /**
+   * Bumped to open the fold from outside, whoever last shut it.
+   *
+   * A number rather than a boolean, because what is being sent is an *act* and
+   * not a state: „open now" happens twice in a row if a player closes the hand
+   * between two presses, and a boolean that is already `true` says nothing the
+   * second time. The fold stays theirs to close afterwards — this only opens.
+   */
+  openSignal?: number;
   onCast: (
     holdingId: string,
     target: {
@@ -175,6 +193,21 @@ export function SpellHand({
   const { carried, lifted, pickUp, putDown, announceDrag } = useCarry();
   /** Whether the hand is showing. Before the early return, like every hook. */
   const [showing, setShowing] = useState(true);
+  /**
+   * Opened from outside — the turn box's «Odrzuć Zaklęcia», which scrolls here
+   * and would otherwise land on a closed fold.
+   *
+   * Adjusted during render rather than in an effect. React's own name for this
+   * pattern, and the rule against `setState` in an effect body is right about
+   * why: an effect would paint the fold shut and then re-open it, which is a
+   * flicker on the one frame a player is looking straight at it. Comparing the
+   * signal to the last one seen is what makes it happen once.
+   */
+  const [lastSignal, setLastSignal] = useState(openSignal);
+  if (openSignal !== lastSignal) {
+    setLastSignal(openSignal);
+    if (openSignal) setShowing(true);
+  }
 
   /**
    * The hand in the order its owner put it in.
@@ -213,7 +246,7 @@ export function SpellHand({
    * learning the shape of, and this one belongs to a rule that has stopped the
    * whole table until it is answered.
    */
-  const surplus = capacity !== undefined && held.length > capacity;
+  const surplus = capacity !== undefined && capacity !== null && held.length > capacity;
 
   // The count against what will fit, exactly as the pack says it — and the same
   // red when there is no room, which is the moment 9.4 starts to bite.
@@ -221,23 +254,13 @@ export function SpellHand({
     capacity === undefined ? (
       `(${held.length})`
     ) : (
-      <span className={held.length >= capacity ? "text-vermilion" : "text-muted/70"}>
-        {held.length} / {capacity}
-        {/* „29 / 3" is the fact and not the instruction. A player reading it
-            knows the hand is over and not what the table is waiting for — and
-            while a surplus is on the stack, every other verb is being refused,
-            so this is the only thing anybody can usefully do. The number is the
-            same one `refuseWhileOverflow` says out loud, in the same words: not
-            how many you hold, but how many have to go.
-            Only past the cap, never at it: a full hand is legal and „29 / 3"
-            already reds itself at the ceiling. */}
-        {surplus && (
-          <span className="ml-1 normal-case tracking-normal">
-            · musisz odrzucić {held.length - capacity}{" "}
-            {plural(held.length - capacity, "Zaklęcie", "Zaklęcia", "Zaklęć")}, żeby gra ruszyła
-            dalej
-          </span>
-        )}
+      // „∞" exactly as the Plecak writes it for a Zaprzęg, and for the same
+      // reason: a cap that has been taken off is still a cap worth naming, and
+      // „29" on its own would read as a hand nobody had counted.
+      <span
+        className={capacity !== null && held.length >= capacity ? "text-vermilion" : "text-muted/70"}
+      >
+        {held.length} / {capacity ?? "∞"}
       </span>
     );
 
@@ -248,7 +271,7 @@ export function SpellHand({
     //
     // Controlled outright rather than left to the browser, which is the pack's
     // arrangement kept for the sake of one behaviour rather than two.
-    <div className={section ? "" : "mt-4 rounded-lg border border-magia/30 bg-panel/60 p-3"}>
+    <div id={id} className={section ? "" : "mt-4 rounded-lg border border-magia/30 bg-panel/60 p-3"}>
     <Fold
       // A section in the seat card, or a panel of its own on a table screen:
       // the same fold either way, and only the box round it differs.
@@ -260,8 +283,31 @@ export function SpellHand({
          says how full the hand is and nothing about what is in it. Only ever
          your own hand: 9.3 keeps everybody else's concealed, and this
          component is never given anybody else's cards. */
+      /* „29 / 3" is the fact and not the instruction: a player reading it knows
+         the hand is over and not what the table is waiting for — and while a
+         surplus is on the stack every other verb is being refused, so this is
+         the only thing anybody can usefully do. The number is the one
+         `refuseWhileOverflow` says out loud, in the same words: not how many
+         you hold, but how many have to go.
+
+         In the `aside` and not beside the tally, which is where it started and
+         where it wrapped the heading onto a second line. This slot is the one
+         thing on that row built to run out of room — `min-w-0 flex-1 truncate`
+         is what gives the Plecak „MIECZ · MIEC…" — so the sentence ends in an
+         ellipsis instead of pushing the fold taller.
+
+         It takes the slot from the card names whether the fold is open or shut,
+         because a hand over the limit has one thing worth saying about it and
+         it is not what is in it. Only past the cap, never at it: a full hand is
+         legal, and the tally already reds itself at the ceiling. */
       aside={
-        showing || hand.length === 0 ? undefined : (
+        surplus ? (
+          <span className="min-w-0 flex-1 truncate normal-case tracking-normal text-vermilion">
+            musisz odrzucić {held.length - capacity!}{" "}
+            {plural(held.length - capacity!, "Zaklęcie", "Zaklęcia", "Zaklęć")}, żeby gra ruszyła
+            dalej
+          </span>
+        ) : showing || hand.length === 0 ? undefined : (
           <span className="min-w-0 flex-1 truncate normal-case tracking-normal text-magia/80">
             {hand.map((entry) => SPELL_BY_ID.get(entry.cardId)?.name ?? entry.cardId).join(" · ")}
           </span>
@@ -766,7 +812,11 @@ export function SpellHand({
             places to aim at: past the last card is the end of the row, which is
             what a free square means — so they take no events and the row
             behind them answers instead, exactly as in the Plecak. */}
+        {/* No free squares to draw where there is no cap: „wolne" past the last
+            card means „this many more will fit", and with 2.6 switched off the
+            honest answer is a row that simply ends. */}
         {capacity !== undefined &&
+          capacity !== null &&
           Array.from({ length: Math.max(0, capacity - held.length) }, (_, i) => (
             <ItemSlot
               key={`wolne-${i}`}

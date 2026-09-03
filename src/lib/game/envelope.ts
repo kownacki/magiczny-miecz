@@ -12,6 +12,8 @@ import { cardName } from "@/lib/engine/polish";
 import type { Slot } from "@/lib/engine/slots";
 import { shopStock } from "./commands/draw";
 import { cardLending, seatView, turnQueueOf } from "./commands/seat";
+import { overflowOf } from "./commands/overflow";
+import { overflowOnTop, overflowSaid } from "@/lib/engine/overflow";
 import type { Snapshot } from "./change";
 import {
   AWAY_AFTER_MS,
@@ -56,7 +58,8 @@ export interface EnvelopeSeat {
   hidden_count: number;
   sword_total: number;
   magic_total: number;
-  spell_capacity: number;
+  /** 2.6's cap, or null when the console has taken it off for this seat. */
+  spell_capacity: number | null;
   /** Why no Zaklęcie may be spoken at all right now — see `whyNoSpells`. */
   spells_blocked: string | null;
   /** The last act of aggression, in words, or null — see `describeAggression`. */
@@ -107,6 +110,29 @@ export interface Envelope {
     /** The seat it was aimed at, where it was aimed at one. */
     at: number | null;
     until: number;
+  } | null;
+  /**
+   * The surplus the whole table is waiting on, if there is one.
+   *
+   * A table-level fact like `spoken`, and for the same reason: 5.6 and 2.6 both
+   * say *natychmiast*, so while this is set every other verb is being refused
+   * for everybody, not only for the seat that is over. Nothing 9.3 hides
+   * travels — a count, a limit and a seat index, all of which the refusal says
+   * out loud to whoever asks.
+   *
+   * `said` is worked out here rather than in the browser for the reason
+   * `spell_capacity` is: the sentence the table reads and the sentence the
+   * route refuses with have to rest on one basis rather than two that usually
+   * agree. It is also why the voice is chosen here — this envelope knows who is
+   * reading it, and „Ania: 29 Zaklęć" shown to Ania is the app talking about
+   * her in the third person while she is looking at it.
+   */
+  surplus: {
+    seatIndex: number;
+    what: "przedmioty" | "zaklecia";
+    /** How many have to go — the number to act on, not the number held. */
+    over: number;
+    said: string;
   } | null;
   /**
    * Who this device is, as far as the table is concerned — and null when the
@@ -314,6 +340,26 @@ export function envelopeFor(
           until: spoken.said.until,
         }
       : null,
+    surplus: (() => {
+      const frame = overflowOnTop(game.turn_state);
+      if (!frame) return null;
+      const over = overflowOf(table, frame.seatId);
+      const row = seats.find((seat) => seat.id === frame.seatId);
+      if (!over || !row) return null;
+      const yours = mine?.id === frame.seatId;
+      return {
+        seatIndex: row.seat_index,
+        what: over.what,
+        over: over.over,
+        said: overflowSaid(
+          over,
+          yours
+            ? null
+            : (users.find((one) => one.seat_index === row.seat_index)?.name ??
+               `Miejsce ${row.seat_index + 1}`),
+        ),
+      };
+    })(),
     me: me ? seenOf(me) : null,
     users: users.map(seenOf),
     mySeatIndex: mine?.seat_index ?? null,
@@ -406,7 +452,12 @@ export function envelopeFor(
         // not in the basis the enforcement uses, and a cap that moved when a
         // Zaklęcie landed would be a cap nothing honoured. See `fromCards` for
         // why a wand in the pack counts as much as one on the body.
-        spell_capacity: view.spellCapacity,
+        // `null` and not `Infinity`, because JSON has no infinity — it would
+        // arrive as `null` anyway, having gone over the wire as a silent
+        // `JSON.stringify` quirk instead of a thing this file decided. Null is
+        // „no cap", the fold prints „∞" for it the way the Plecak does for a
+        // Zaprzęg, and 2.6 is off for that seat (`bez-limitu-zaklec`).
+        spell_capacity: Number.isFinite(view.spellCapacity) ? view.spellCapacity : null,
         /**
          * Why the whole rack is shut, when it is — the sentence `castSpell`
          * would refuse with, worked out here for the same reason

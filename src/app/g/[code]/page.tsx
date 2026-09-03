@@ -87,6 +87,16 @@ import { PilesDrawer } from "./piles";
  * Read off the data rather than typed in, so the day a card turns out to be
  * missing from a scan this number moves with it instead of quietly disagreeing.
  */
+/**
+ * Where the turn box sends a player who is over a limit.
+ *
+ * Written down rather than passed around, because the two ends of this are a
+ * button in one component and a `<div>` in another and nothing between them
+ * has any business knowing about either. `getElementById` and not a ref for
+ * the same reason: the hand is built here and rendered three components deep.
+ */
+const SPELLS_ANCHOR = "zaklecia-w-rece";
+
 const PRINTED_EVENTS = (events as EventCard[]).length;
 
 /**
@@ -158,6 +168,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
     fieldGold,
     stock,
     spoken,
+    surplus,
     users,
     me,
     mySeatIndex,
@@ -191,6 +202,8 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
   const [inspecting, setInspecting] = useState<FieldId | null>(null);
   /** A card somebody tapped, shown large with its full text. */
   const [inspectingCard, setInspectingCard] = useState<TileCard | null>(null);
+  /** Bumped to open the Zaklęcia fold from the turn box — see `showSurplus`. */
+  const [openSpells, setOpenSpells] = useState(0);
   /** The reference drawer of every card in the box. */
   /**
    * Which drawer is out on each side, at most one apiece.
@@ -731,6 +744,27 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
         void leave();
       },
     });
+  }
+
+  /**
+   * Takes the player to the cards they have to shed, and opens the box.
+   *
+   * Not a drawer and not a dialog: the hand and the pack are already on screen,
+   * in the seat card, with the words that shed a card under every Karta. What
+   * a player over the limit is missing is not a place to go but the *way* to
+   * it — the seat card is long, the fold may be shut, and the refusal that
+   * brought them here was written across the screen in the turn box.
+   *
+   * `center` and not `start`, because the row of cards is the thing to land on
+   * and a fold pinned to the top of the viewport puts its heading there and its
+   * cards below the fold. Smooth, since this is a jump the player asked for and
+   * arriving without the movement leaves them wondering what changed.
+   */
+  function showSpells() {
+    setOpenSpells((n) => n + 1);
+    document
+      .getElementById(SPELLS_ANCHOR)
+      ?.scrollIntoView({ behavior: "smooth", block: "center" });
   }
 
   function askToDrop(holdingId: string) {
@@ -2319,6 +2353,32 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                   // "since when" already: everything that happens bumps it.
                   away={active.away}
                   since={game.revision}
+                  /* The one thing that stops a turn without being part of
+                     one. Whoever is over gets the button; everybody else gets
+                     the sentence, because the table has stopped for them too
+                     and a box that says nothing about it looks broken. The
+                     door is the seat card — the hand, the pack and the words
+                     that shed a card all live there, and there is no second
+                     place to send anybody. */
+                  surplus={
+                    surplus
+                      ? {
+                          said: surplus.said,
+                          what: surplus.what,
+                          /* Only for a hand, and only for the person holding
+                             it. A Plecak over 5.6 gets the sentence and no
+                             button: the pack is always on screen with its own
+                             „4 / 12" and an „upuść" under every Karta, so
+                             there is nothing to be led to. A hand can be a
+                             fold shut two screens down. */
+                          onFix:
+                            surplus.what === "zaklecia" &&
+                            surplus.seatIndex === mySeatIndex
+                              ? showSpells
+                              : null,
+                        }
+                      : null
+                  }
                   canRoll={turnState.phase === "roll"}
                   onRoll={() => post("turn", { action: "roll" })}
                   // 13.4: what is already lying here counts against the number
@@ -2567,6 +2627,8 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                 spells={
                   <SpellHand
                     frame="section"
+                    id={SPELLS_ANCHOR}
+                    openSignal={openSpells}
                     capacity={mine.spell_capacity}
                     spells={mine.holdings
                       // Both halves matter: the server says which holdings are

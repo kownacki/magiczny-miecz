@@ -273,11 +273,17 @@ export function seatView(snapshot: Snapshot, seatId: string): SeatView {
     // Deliberately without `under`: a Zaklęcie's own bonus is not in the basis
     // the draw is refused against, and a cap that moved when a spell landed
     // would be a cap nothing honoured. Same reasoning the envelope had.
-    spellCapacity: spellAllowance(
-      row.magic_own + parametr.magia,
-      startingKit(asCharacterId(row.character_id)).spells ?? 0,
-      fromCards,
-    ),
+    // `Infinity` and not a large number: every reader of this asks whether
+    // something is over the cap, and „over infinity" is false everywhere at
+    // once — `overflowIn`, `dropCard`'s 9.4 guard, the fold's tally. See the
+    // modifier's own note; it is the console's switch and no card's.
+    spellCapacity: statuses.some((one) => one.modifier.kind === "bez-limitu-zaklec")
+      ? Infinity
+      : spellAllowance(
+          row.magic_own + parametr.magia,
+          startingKit(asCharacterId(row.character_id)).spells ?? 0,
+          fromCards,
+        ),
     statuses,
     asTarget: {
       seatIndex: row.seat_index,

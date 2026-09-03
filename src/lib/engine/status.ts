@@ -115,6 +115,27 @@ export type Modifier =
    */
   | { kind: "no-spells" }
   /**
+   * 2.6's cap lifted entirely — the console's, and no card's.
+   *
+   * The one modifier in this union that is not printed on anything in the box.
+   * Testing a hand needs a hand, and every way of getting one runs into the
+   * limit that is being tested around: `deal` refuses while a surplus is up,
+   * so filling a hand past three means shedding it again between every pair of
+   * cards.
+   *
+   * A status rather than a column on `games`, because that is what this file is
+   * for and because it costs no migration — it also means it is on *one seat*,
+   * which is the right scope: a table testing the Mag's hand should not have
+   * 2.6 switched off for everybody. `ends: dispelled` keeps it until somebody
+   * takes it off, since a switch that expired after a turn would be no switch.
+   *
+   * `spellCapacity` becomes `Infinity` and every reader follows from that —
+   * `overflowIn` finds nothing over, the fold prints „∞" the way the Plecak
+   * does for a Zaprzęg, and 9.4's guard stands aside because the rule it
+   * enforces is the one being switched off.
+   */
+  | { kind: "bez-limitu-zaklec" }
+  /**
    * A crossing granted, to be taken instead of a move (Pan Trzęsawisk, Władca
    * Lodu).
    *
@@ -772,6 +793,12 @@ export function markOf(status: Status): Mark {
     // worse about the character, there is simply something they may not speak.
     case "no-spells":
       return { glyph: "⊘", tone: "zly", title };
+    // The console's switch, and the only mark here that is not something the
+    // game did to anybody. Neutral rather than „dobry": having no cap is not a
+    // blessing a Postać earned, it is a rule that has been turned off, and a
+    // green triangle beside a name would read as the former.
+    case "bez-limitu-zaklec":
+      return { glyph: "∞", tone: "obojetny", title };
     // A way opened rather than a weight carried: the one mark here that is
     // something a character *may* do.
     case "przeprawa":

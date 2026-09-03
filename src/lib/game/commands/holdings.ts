@@ -663,7 +663,10 @@ export function dropCard(
       const view = seatView(snapshot, seat.id);
       const spells = view.holdings.filter((h) => h.kind === "spell");
       const allowed = view.spellCapacity;
-      if (spells.length <= allowed) {
+      // An infinite cap is 2.6 switched off from the console, and 9.4 is the
+      // rule it switches off — so the guard stands aside rather than becoming
+      // the thing that makes a spell undroppable forever.
+      if (Number.isFinite(allowed) && spells.length <= allowed) {
         throw new Error(
           `Zaklęć nie odrzuca się, dopóki nie masz ich więcej niż ${allowed} (9.4, 2.6).`,
         );

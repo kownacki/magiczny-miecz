@@ -171,7 +171,16 @@ export type Nature = "good" | "evil" | "chaotic";
  * nothing else does: the Mgła's cap on a move, the Zaklinacz Czasu's stolen
  * turn, and 11.11's year off the Kamienny Most.
  */
-export type EffectName = "fog" | "frozen" | "barred";
+/**
+ * `nolimit` is the one here that is on no Karta.
+ *
+ * It takes 2.6's cap off one seat so that a hand can be built at all. Testing
+ * anything about Zaklęcia runs into the limit being tested around: a surplus
+ * stops the table, `deal` is refused while it is up, and filling a hand past
+ * three otherwise means shedding it again between every pair of cards. One
+ * seat, never the table, and it stays until somebody takes it off.
+ */
+export type EffectName = "fog" | "frozen" | "barred" | "nolimit";
 
 export type Command =
   | { kind: "help"; about: string | null }
@@ -921,8 +930,8 @@ export const COMMANDS: CommandSpec[] = [
   {
     name: "effect",
     aliases: [],
-    usage: "effect fog|frozen|barred [player]",
-    summary: "a Mgła's cap, a stolen turn, or 11.11's year off the Most",
+    usage: "effect fog|frozen|barred|nolimit [player]",
+    summary: "a Mgła's cap, a stolen turn, 11.11's year off the Most — or 2.6 off",
     needs: "testmode",
     group: "override",
   },

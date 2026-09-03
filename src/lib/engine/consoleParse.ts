@@ -303,6 +303,7 @@ export const EFFECTS: Record<string, EffectName> = {
   fog: "fog",
   frozen: "frozen",
   barred: "barred",
+  nolimit: "nolimit",
 };
 
 /** The three Natury, under the words typed at them. English, like every verb here. */

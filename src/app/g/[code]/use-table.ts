@@ -154,6 +154,19 @@ export interface Table {
   game: Game | null;
   /** The Zaklęcie in the air, if one is. */
   spoken: Spoken | null;
+  /**
+   * The surplus the whole table is waiting on (5.6, 2.6), or nothing.
+   *
+   * Worked out on the server beside `spell_capacity` and for the same reason:
+   * the sentence a player reads and the sentence the route refuses with rest on
+   * one basis. `said` arrives already in the right voice for this device.
+   */
+  surplus: {
+    seatIndex: number;
+    what: "przedmioty" | "zaklecia";
+    over: number;
+    said: string;
+  } | null;
   seats: Seat[];
   fieldCards: FieldCard[];
   /** Loose Sztuki Złota lying on an Obszar (12.1). */
@@ -225,6 +238,7 @@ export function useTable(code: string): Table {
   /** What the Wyposażenie pile still holds (21.2), so a shop offers only what it has. */
   const [stock, setStock] = useState<Record<string, number>>({});
   const [spoken, setSpoken] = useState<Spoken | null>(null);
+  const [surplus, setSurplus] = useState<Table["surplus"]>(null);
   /** The last thing that broke, as opposed to the last thing that was refused. */
   const [failure, setFailure] = useState<string | null>(null);
   /** The character asked for and not yet heard back about (see `chooseCharacter`). */
@@ -411,6 +425,7 @@ async function saidWrong(response: Response): Promise<string> {
     setFieldGold(data.fieldGold ?? []);
     setStock(data.stock ?? {});
     setSpoken((data.spoken as Spoken | null) ?? null);
+    setSurplus((data.surplus as Table["surplus"]) ?? null);
     setUsers(data.users ?? []);
     setMe(data.me ?? null);
     setMySeatIndex(data.mySeatIndex);
@@ -1031,6 +1046,7 @@ async function saidWrong(response: Response): Promise<string> {
     fieldGold,
     stock,
     spoken,
+    surplus,
     users,
     me,
     mySeatIndex,

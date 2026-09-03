@@ -33,6 +33,10 @@ export function overflowOf(snapshot: Snapshot, seatId: string): Overflow | null 
     magia: view.parametr.magia,
     atSetup: startingKit(asCharacterId(row.character_id)).spells ?? 0,
     abilities: view.abilities,
+    // The cap `seatView` settled, rather than a second reckoning of it here.
+    // The two agreed until the console could switch 2.6 off, and then this end
+    // went on enforcing a limit the rest of the app had stopped drawing.
+    allowed: view.spellCapacity,
   });
 }
 

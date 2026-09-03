@@ -216,6 +216,50 @@ describe("handing the turn on over a surplus", () => {
     ).rejects.toThrow(/Gra czeka: masz o 1 Zaklęcie za dużo \(2\.6\)/);
   });
 
+  /**
+   * The switch, and the reason it exists.
+   *
+   * Every way of building a hand runs into the limit being tested around: three
+   * Zaklęcia is the most 2.6 ever allows, the fourth stops the table, and
+   * `deal` is refused while it is stopped — so a hand of six for a test means
+   * shedding it again between every pair of cards. `effect nolimit` takes the
+   * cap off one seat and leaves it off, and everything else follows from
+   * `spellCapacity` being `Infinity`: nothing is over, so no frame opens.
+   */
+  it("takes 2.6's cap off one seat, and deals past it", async () => {
+    const { gameId, actor } = await playing();
+    await runCommand(gameId, actor, { kind: "effect", effect: "nolimit", who: null });
+    for (const spell of ["ocalony", "odrodzenie", "olsnienie", "fatum"]) {
+      await runCommand(gameId, actor, { kind: "deal", cardIds: [spell] });
+    }
+    // Four in a hand 2.6 caps at three at the very most, and the table has not
+    // stopped: no frame, so nothing to answer and nothing being refused.
+    const after = await activeStore().load(gameId);
+    expect(top(after.game.turn_state)).not.toMatchObject({ phase: "overflow" });
+    expect(
+      after.holdings.filter((one) => one.seat_id === actor.seatId && one.kind === "spell"),
+    ).toHaveLength(4);
+  });
+
+  /**
+   * 9.4 is the rule the switch switches off, so its guard has to stand aside.
+   *
+   * „Postać nie może odrzucać Zaklęć, chyba, że posiada ich więcej, niż wynika
+   * to z jej parametru Magii" — read against an infinite limit, nobody ever has
+   * more, and the card that could not be discarded would be every card. The
+   * guard asks whether the limit is a number first.
+   */
+  it("lets a Zaklęcie go while the cap is off, which 9.4 alone would not", async () => {
+    const { gameId, actor } = await playing();
+    await runCommand(gameId, actor, { kind: "effect", effect: "nolimit", who: null });
+    await runCommand(gameId, actor, { kind: "deal", cardIds: ["ocalony"] });
+    await runCommand(gameId, actor, { kind: "putdown", name: "OCALONY" });
+    const after = await activeStore().load(gameId);
+    expect(
+      after.holdings.filter((one) => one.seat_id === actor.seatId && one.kind === "spell"),
+    ).toHaveLength(0);
+  });
+
   it("deals again once the surplus is gone", async () => {
     const { gameId, actor } = await playing();
     await overSpelled(gameId, actor);

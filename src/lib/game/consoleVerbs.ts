@@ -672,12 +672,15 @@ export const VERBS: { [K in Command["kind"]]: VerbRun<K> } = {
   effect: async (ctx, command) => {
     const { gameId, seatOf, named } = ctx;
     const seat = seatOf(command.who);
-    const { label, modifier } = EFFECTS[command.effect];
+    const { label, modifier, ends } = EFFECTS[command.effect];
     await addEffect(gameId, seat.id, {
       source: "tryb testowy",
       label,
       modifier,
-      ends: { kind: "turns", turns: 1 },
+      // A turn, unless the effect says otherwise — which only a *switch* does.
+      // See `nolimit`: a cap taken off to set a hand up must not come back on
+      // in the middle of the arrangement it was taken off for.
+      ends: ends ?? { kind: "turns", turns: 1 },
     });
     return `${named(seat)}: ${label}.`;
   },

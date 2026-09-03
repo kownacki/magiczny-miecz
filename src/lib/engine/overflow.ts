@@ -32,8 +32,23 @@ export interface Overflow {
 export function overflowIn(
   holdings: readonly Holding[],
   eqMode: EqMode,
-  /** The seat's total Magia and its setup hand, for 2.6's table and the Różdżka. */
-  spells: { magia: number; atSetup: number; abilities: readonly Ability[] },
+  /**
+   * The seat's total Magia and its setup hand, for 2.6's table and the Różdżka
+   * — or the cap itself, already worked out.
+   *
+   * `allowed` exists because this was the *second* place computing 2.6, and two
+   * bases that usually agree is the bug the envelope's own note warns about.
+   * `seatView.spellCapacity` is the one the refusal, the greying and the tally
+   * all rest on, and the console can take it off entirely
+   * (`bez-limitu-zaklec`) — which this end could not see, so a seat with the
+   * cap lifted went on opening overflow frames against a cap it no longer had.
+   */
+  spells: {
+    magia: number;
+    atSetup: number;
+    abilities: readonly Ability[];
+    allowed?: number;
+  },
 ): Overflow | null {
   const carried = carriedCount(holdings, eqMode);
   const limit = carryLimit(holdings, eqMode);
@@ -42,7 +57,8 @@ export function overflowIn(
   }
 
   const held = holdings.filter((one) => one.kind === "spell").length;
-  const allowed = spellAllowance(spells.magia, spells.atSetup, spells.abilities);
+  const allowed =
+    spells.allowed ?? spellAllowance(spells.magia, spells.atSetup, spells.abilities);
   if (held > allowed) {
     return { what: "zaklecia", held, limit: allowed, over: held - allowed };
   }
@@ -179,15 +195,21 @@ export function overflowOnTop(state: TurnState): OverflowFrame | null {
  * both about the surplus, and "odrzuć 2" is the sentence a player can act on
  * where "masz 6 przy limicie 4" is one they have to do arithmetic on. Both are
  * here, because the second is what makes the first checkable.
+ *
+ * `who` is null for the person it is happening to, which is the only reason
+ * this takes a name at all rather than being two functions. The console always
+ * names a seat because it is read over somebody's shoulder; the turn box is
+ * read by the player who has to act, and „Ania: 29 Zaklęć" to Ania is the app
+ * talking about her in the third person while she is looking at it.
  */
-export function overflowSaid(over: Overflow, who: string): string {
+export function overflowSaid(over: Overflow, who: string | null): string {
   const noun =
     over.what === "przedmioty"
       ? `${over.held} ${plural(over.held, "Przedmiot", "Przedmioty", "Przedmiotów")}`
       : `${over.held} ${plural(over.held, "Zaklęcie", "Zaklęcia", "Zaklęć")}`;
   const rule = over.what === "przedmioty" ? "5.6" : "2.6";
   return (
-    `${who}: ${noun} przy limicie ${over.limit}` +
+    `${who === null ? `Masz ${noun}` : `${who}: ${noun}`} przy limicie ${over.limit}` +
     ` — ${over.over} ${plural(over.over, "musi", "muszą", "musi")} zniknąć, zanim gra ruszy dalej (${rule}).`
   );
 }
