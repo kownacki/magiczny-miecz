@@ -303,10 +303,12 @@ export function DrawnCard({
       footer={
         worthShowing(cards) ? (
         <KolejkaStrip
-          cards={cards.map((one) => ({
-            cardId: one.cardId,
-            cardClass: one.cardClass as CardClass,
-          }))}
+          /* The whole card, not two fields of it. Rebuilding it as `{ cardId,
+             cardClass }` dropped `granted`, so a Karta the console had conjured
+             wore its wrench on the sheet above and lost it in the row below —
+             the one place the two are side by side. `ref` and `pool` went the
+             same way. */
+          cards={cards.map((one) => ({ ...one, cardClass: one.cardClass as CardClass }))}
           settled={[...resolved, ...fought]}
           /* The Karta this sheet is showing, so the row cannot light a
              different one. */

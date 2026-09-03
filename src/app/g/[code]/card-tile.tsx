@@ -275,6 +275,20 @@ export function CardTile({
           />
         )}
         {struck && <StruckOut />}
+        {/* Bottom edge, not the top: the top of every card in this game is its
+            printed title, and covering that is covering the one thing a player
+            scans for. */}
+        {badge && (
+          <span className="absolute inset-x-0 bottom-0 bg-night/85 px-1 py-0.5 text-center text-[9px] leading-tight text-ochre">
+            {badge}
+          </span>
+        )}
+        {/* The corner marks go on last, over the badge rather than under
+            it. The badge is a strip the full width of the foot, so drawn
+            after them it covered the bottom-right corner — and „możesz" on
+            a Karta the console conjured hid the wrench that says so. A
+            wrench overlapping the end of the strip is legible; a wrench
+            painted out is not. */}
         {/* Conjured rather than dealt, marked on the tile and not only on the
             Karta it opens into: a tile is what a player actually scans, and a
             mark you have to hover to find is a mark that is not there.
@@ -317,14 +331,6 @@ export function CardTile({
               {numeralOf(card.cardId)}
             </span>
           </Corner>
-        )}
-        {/* Bottom edge, not the top: the top of every card in this game is its
-            printed title, and covering that is covering the one thing a player
-            scans for. */}
-        {badge && (
-          <span className="absolute inset-x-0 bottom-0 bg-night/85 px-1 py-0.5 text-center text-[9px] leading-tight text-ochre">
-            {badge}
-          </span>
         )}
       </Root>
       {preview}

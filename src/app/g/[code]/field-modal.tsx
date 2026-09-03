@@ -408,7 +408,12 @@ export function FieldModal({
    */
   const offers = offersHere(
     fieldId,
-    cards.map((card) => ({ cardId: card.cardId, pool: card.pool, granted: card.granted })),
+    cards.map((card) => ({
+      id: card.id,
+      cardId: card.cardId,
+      pool: card.pool,
+      granted: card.granted,
+    })),
   );
   const open = offers.find((offer) => offer.key === openOffer) ?? null;
 

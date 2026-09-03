@@ -82,7 +82,7 @@ export interface Offer {
 export function offersHere(
   fieldId: FieldId,
   /** The Karty lying here, with what is left beside a well. */
-  fieldCards: readonly { cardId: string; pool?: number; granted?: boolean }[],
+  fieldCards: readonly { id: string; cardId: string; pool?: number; granted?: boolean }[],
 ): Offer[] {
   const script = fieldScriptFor(fieldId);
   const printed: Offer[] = script?.obowiazkowe
@@ -97,7 +97,7 @@ export function offersHere(
         effect: offer.effect,
       }));
 
-  const settled = fieldCards.flatMap(({ cardId, pool, granted }) => {
+  const settled = fieldCards.flatMap(({ id, cardId, pool, granted }) => {
     const script = scriptFor(cardId);
     if (!script || !offersFromCard(cardId)) return [];
     /**
@@ -115,7 +115,17 @@ export function offersHere(
         : `${left} ${plural(left, "punkt", "punkty", "punktów")} ${POOL_OF[script.disposition.stat]}`;
     return [
       {
-        key: cardName(cardId),
+        /**
+         * The row's own id, not the card's name.
+         *
+         * Two copies of one Karta can lie on a square — nothing stops a second
+         * CUDOTWÓRCA reaching the same Obszar, and the test console deals
+         * whatever it is asked for — and keyed by name they were one offer as
+         * far as React was concerned, which it says out loud: „Encountered two
+         * children with the same key". This key is also what `openOffer`
+         * remembers, so a name would have opened both or neither.
+         */
+        key: id,
         label: beside === null ? cardName(cardId) : `${cardName(cardId)} — ${beside}`,
         cardId,
         granted,
