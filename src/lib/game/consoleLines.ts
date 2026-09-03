@@ -12,7 +12,7 @@ import { trophyPointsOf } from "@/lib/engine/trophies";
 import { SPELL_BY_REF } from "./decks";
 import { TROPHY_RATE, offersFor } from "./commands/shop";
 import { fightsForYou, type Ability } from "@/lib/engine/abilities";
-import type { Ends, Modifier } from "@/lib/engine/status";
+import { TEST_SOURCE, fromTestMode, type Ends, type Modifier } from "@/lib/engine/status";
 import { type StatusRow } from "@/lib/engine/statusRows";
 import { nameOfSeat } from "./commands/lobby";
 import { activeStore } from "./gameStore";
@@ -36,10 +36,14 @@ import { fold } from "@/lib/engine/search";
  * exactly like the card's.
  */
 export const EFFECTS: Record<EffectName, { label: string; modifier: Modifier; ends?: Ends }> = {
-  fog: { label: "Mgła (tryb testowy)", modifier: { kind: "move-max", fields: 1 } },
-  frozen: { label: "Bez ruchu (tryb testowy)", modifier: { kind: "frozen" } },
+  // No „(tryb testowy)" in any of these. The journal marks a manual row in
+  // gold and says it after the sentence, the effect list says it beside the
+  // label, and a name that says it too prints it twice — which is the note
+  // `journalText` already carries about a fight's own line.
+  fog: { label: "Mgła", modifier: { kind: "move-max", fields: 1 } },
+  frozen: { label: "Bez ruchu", modifier: { kind: "frozen" } },
   barred: {
-    label: "Most zamknięty (tryb testowy)",
+    label: "Most zamknięty",
     modifier: { kind: "barred", place: "most" },
   },
   /**
@@ -52,7 +56,7 @@ export const EFFECTS: Record<EffectName, { label: string; modifier: Modifier; en
    * `dispelled` never lapses on its own, which is what a switch means.
    */
   nolimit: {
-    label: "Bez limitu Zaklęć (tryb testowy)",
+    label: "Bez limitu Zaklęć",
     modifier: { kind: "bez-limitu-zaklec" },
     ends: { kind: "dispelled" },
   },
@@ -404,12 +408,22 @@ export const STACK_SAID: Record<StatusRow["stacking"], string> = {
   exclusive: "bez zmian",
 };
 
-/** One effect, as a line: what it is, how many landed, and when it lapses. */
+/**
+ * One effect, as a line: what it is, how many landed, and when it lapses.
+ *
+ * „tryb testowy" comes last and only where it is true — the console's half of
+ * the convention the journal keeps in gold. It used to be inside the *label*,
+ * which is the same mistake in two places at once: it read as part of the
+ * effect's name, it could not be told from a card that happened to be called
+ * that, and a row the journal had already badged said it twice. Asked of
+ * `source`, which is the field that knows.
+ */
 export function effectRow(row: StatusRow): string {
   return (
     `${row.mark.glyph} ${row.label}` +
     (row.count > 1 ? ` ×${row.count} (${STACK_SAID[row.stacking]})` : "") +
-    ` — ${row.when}`
+    ` — ${row.when}` +
+    (row.from.every((one) => fromTestMode(one.source)) ? ` — ${TEST_SOURCE}` : "")
   );
 }
 

@@ -83,6 +83,29 @@ export type EndingEvent =
   | "death";
 
 /** What being under this effect actually does. */
+/**
+ * What the console writes in `source` when it conjures an effect.
+ *
+ * One string, in one place, because two things read it and they had drifted:
+ * the journal decides from it whether a row is a manual override — gold, with
+ * „tryb testowy" after the sentence — and the seat's effect list decides from
+ * it whether to say the same. Everything else in `source` is a Karta.
+ */
+export const TEST_SOURCE = "tryb testowy";
+
+/**
+ * Whether an effect came from the console rather than from something printed.
+ *
+ * The whole of the test-mode convention is: *say it once, in the badge*. The
+ * labels used to carry „(tryb testowy)" in their own text, so a row that was
+ * marked printed it twice — which is the mistake `journalText` already names
+ * where a fight's own line stopped saying it. This is the question both
+ * surfaces ask instead.
+ */
+export function fromTestMode(source: string): boolean {
+  return source === TEST_SOURCE;
+}
+
 export type Modifier =
   /** Added to the total at read time, never written to own points (1.2-1.5). */
   | { kind: "points"; miecz?: number; magia?: number }

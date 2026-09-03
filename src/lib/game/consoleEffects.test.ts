@@ -132,9 +132,16 @@ describe("`me` says what is on a character and when it lapses", () => {
     expect(said).toContain("×2 (bez zmian)");
 
     await runCommand(gameId, actor, { kind: "effect", effect: "barred", who: null });
-    expect(await runCommand(gameId, actor, { kind: "me", who: null })).toContain(
-      "Most zamknięty (tryb testowy) — do końca tej tury",
-    );
+    const both = await runCommand(gameId, actor, { kind: "me", who: null });
+    // The name first and clean: „(tryb testowy)" used to be inside the label,
+    // where it read as part of the effect's own name and could not be told
+    // from a Karta that happened to be called that.
+    expect(both).toContain("Most zamknięty — do końca tej tury");
+    // And where it came from, last and exactly once on the line — the
+    // console's half of the badge the journal draws in gold.
+    const barred = both.split("\n").find((one) => one.includes("Most zamknięty"))!;
+    expect(barred.endsWith("— tryb testowy")).toBe(true);
+    expect(barred.match(/tryb testowy/g)).toHaveLength(1);
   });
 });
 

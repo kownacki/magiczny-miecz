@@ -55,7 +55,12 @@ export function TileCaption({
         {name}
       </figcaption>
       {children ? (
-        <div className="absolute inset-x-0 top-0 z-10 hidden flex-col items-center group-hover/tile:flex group-focus-within/tile:flex">
+        // The caption's own typography, because these two take turns on one
+        // line: `text-[9px] leading-tight` is what the name is set in, and
+        // without it the controls inherited the panel's 24px line-height and
+        // sat a few pixels lower than the word they replace. The swap should
+        // look like the same line saying something else.
+        <div className="absolute inset-x-0 top-0 z-10 hidden flex-col items-center text-[9px] leading-tight group-hover/tile:flex group-focus-within/tile:flex">
           {children}
         </div>
       ) : null}

@@ -20,6 +20,7 @@
  */
 
 import { type Seat } from "./table";
+import { TEST_SOURCE, fromTestMode } from "@/lib/engine/status";
 
 type Effect = Seat["effects"][number];
 
@@ -72,6 +73,19 @@ export function EffectList({ effects }: { effects: readonly Effect[] }) {
             </span>
             <span className="min-w-0 flex-1">
               <span className={TONE_TEXT[effect.tone]}>{effect.label}</span>
+              {/* Where it came from, where the journal puts it and in the same
+                  ochre: after the sentence, small, and only when it is true.
+                  The labels used to carry „(tryb testowy)" themselves, which
+                  read as part of the effect's own name and could not be told
+                  from a Karta that happened to be called that.
+
+                  The tone is left alone. The glyph beside it says whether this
+                  is good or bad for the holder, and that is still true of an
+                  effect the console conjured — the badge answers a different
+                  question and should not repaint the answer to the first. */}
+              {fromTestMode(effect.source) && (
+                <span className="ml-1.5 text-[10px] text-ochre/70">{TEST_SOURCE}</span>
+              )}
               {effect.count > 1 && (
                 // Two of them, and what the second one did. Never a bare "×2",
                 // which says only that something happened twice and leaves the

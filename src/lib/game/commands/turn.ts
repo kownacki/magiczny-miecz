@@ -1,7 +1,7 @@
 /** Passing the turn on: what expires, what is left lying on the Obszar, and whose turn is next (10.1, 16.8). */
 
 import { nextSeat, startTurn } from "@/lib/engine/turn";
-import { afterAnyTurn, afterTurn, playsAgain, type Status } from "@/lib/engine/status";
+import { afterAnyTurn, afterTurn, fromTestMode, playsAgain, type Status } from "@/lib/engine/status";
 import { drawsFromPool, poolRemains, startingPool } from "@/lib/engine/pools";
 import { leavesWhenResolved, mayWalkPast } from "@/lib/engine/kolejka";
 import { whyQueuedHere } from "@/lib/engine/holdings";
@@ -570,6 +570,12 @@ export function addEffect(
         seatId: command.seatId,
         round: snapshot.game.round,
         kind: "effect",
+        // Gold, with „tryb testowy" after it, for anything the console
+        // conjured — the same badge every other override wears, decided from
+        // the one field that says where the effect came from rather than from
+        // the caller remembering to pass a flag. A Karta's effect is not an
+        // override and says nothing.
+        manual: fromTestMode(source),
         payload: { source, label, ends },
       },
     ],

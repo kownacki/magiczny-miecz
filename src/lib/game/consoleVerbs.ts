@@ -118,6 +118,7 @@ import { eqModeOf, seatView, trophyModeOf, turnQueueOf } from "./commands/seat";
 import { SLOT_LABEL, STORAGE, inPlayAt } from "@/lib/engine/slots";
 import { DEALABLE, PLACEABLE } from "@/lib/engine/console";
 import { figuresText } from "@/lib/engine/figures";
+import { TEST_SOURCE } from "@/lib/engine/status";
 import { fitsIn, slotsFor, SLOTS, type Slot } from "@/lib/engine/slots";
 
 /**
@@ -674,7 +675,7 @@ export const VERBS: { [K in Command["kind"]]: VerbRun<K> } = {
     const seat = seatOf(command.who);
     const { label, modifier, ends } = EFFECTS[command.effect];
     await addEffect(gameId, seat.id, {
-      source: "tryb testowy",
+      source: TEST_SOURCE,
       label,
       modifier,
       // A turn, unless the effect says otherwise — which only a *switch* does.
