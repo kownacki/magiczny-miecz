@@ -12,7 +12,7 @@ import {
   faceFor,
 } from "@/lib/view/cardImages";
 import { useCardPreview } from "./card-preview";
-import { CardMark, Corner, MARK_SIZE, StruckOut, WornMark } from "./card-mark";
+import { CardMark, Corner, MARK_SIZE, markText, StruckOut, WornMark } from "./card-mark";
 import { LAYER } from "./layers";
 import { Overlay } from "./overlay";
 import { CloseButton } from "./chrome";
@@ -311,7 +311,8 @@ export function CardTile({
           <Corner at="top-right">
             <span
               aria-hidden
-              className="block font-[family-name:var(--font-display)] text-[10px] leading-none text-ochre/80"
+              style={{ fontSize: markText(MARK_SIZE.tile) }}
+              className="block font-[family-name:var(--font-display)] leading-none text-ochre/80"
             >
               {numeralOf(card.cardId)}
             </span>

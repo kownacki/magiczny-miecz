@@ -109,6 +109,23 @@ export const MARK_SIZE = {
   picture: 26,
 } as const;
 
+/**
+ * Type in a corner chip, sized to stand beside an icon of the same class.
+ *
+ * A corner holds one of two things — a masked silhouette, whose size is its
+ * box, or a few characters, whose size is an em. Those two numbers are not
+ * comparable, which is how the class numeral came to be set at 10px in a chip
+ * whose neighbours are 20px icons: it was small enough to read as a footnote on
+ * the card rather than as a mark on the tile.
+ *
+ * The display face is a Didone and its cap height is close to 0.7 of the em, so
+ * a numeral set at 0.7 of the icon's box stands about as tall as the icon does.
+ * Derived rather than written down, so the two move together.
+ */
+export function markText(size: number): number {
+  return Math.round(size * 0.7);
+}
+
 export type SlotMark = "trofeum" | "granted";
 
 const MARK: Record<SlotMark, { icon: string; tone: string; title: string }> = {
