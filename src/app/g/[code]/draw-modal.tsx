@@ -4,7 +4,8 @@ import { type SheetChrome } from "./draw-sheet";
 import { MoveChoice, BridgeChoice } from "./move-choice";
 import { FightSheet, type SpellFloor } from "./fight-sheet";
 import { FieldOffer } from "./field-offer";
-import { DrawnCard, type DrawnEntry } from "./drawn-card";
+import { DrawnCard } from "./drawn-card";
+import type { TurnCard } from "@/lib/engine/state";
 import { BridgeControls } from "./crossing-controls";
 import { SpellHand, type HeldSpell } from "./spell-hand";
 import type { TileCard } from "./card-tile";
@@ -134,7 +135,7 @@ export function DrawModal({
   spellRing?: React.ComponentProps<typeof SpellHand>["ring"];
   onInspect: (card: TileCard) => void;
   /** In 15.2 order, which is the order they are dealt with. */
-  cards: DrawnEntry[];
+  cards: TurnCard[];
   resolved: string[];
   fought: string[];
   /** Wrogowie who died here (16.2). */

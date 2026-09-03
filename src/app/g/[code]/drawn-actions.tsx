@@ -44,20 +44,15 @@ import { ActionButton } from "./action-button";
 import { intentSaid, isIntentKind } from "@/lib/engine/intentText";
 import { scriptFor } from "@/lib/engine/cardScript";
 import { itemProfile, previewOf, requirementOf } from "@/lib/engine/abilityText";
-import { plural, sentence } from "@/lib/engine/polish";
+import { fieldName, plural, sentence } from "@/lib/engine/polish";
 import { mayWalkPast } from "@/lib/engine/kolejka";
-import { TheReader } from "./card-facts";
+import { TheReader, specialRows } from "./card-facts";
 import { pendingIn } from "@/lib/engine/resolve";
-import { FIELDS, type FieldId } from "@/lib/engine/board";
+import { asFieldId, type FieldId } from "@/lib/engine/board";
 import type { Confirmation } from "./confirm";
 import type { Nature } from "@/data/types";
 import type { EqMode } from "@/lib/engine/slots";
-/* Type-only, so the two files naming each other cannot become a cycle at
-   runtime. `DrawnEntry` describes a card in the turn's stack, which is the
-   sheet's vocabulary rather than this component's — `draw-modal.tsx` and
-   `page.tsx` both import it from there too, and moving it would move it away
-   from everything that reads it. */
-import type { DrawnEntry } from "./drawn-card";
+import type { TurnCard } from "@/lib/engine/state";
 
 const EVENTS = events as EventCard[];
 
@@ -70,9 +65,9 @@ export interface DrawnActionsProps {
   /** Whether this device may press anything. The sheet reads it off `chrome`. */
   canAct: boolean;
   /** The one being dealt with: first of the stack that is neither settled nor fought. */
-  card: DrawnEntry;
+  card: TurnCard;
   /** In 15.2 order, which is the order they are dealt with. */
-  cards: DrawnEntry[];
+  cards: TurnCard[];
   resolved: string[];
   fought: string[];
   /** Wrogowie who died here (16.2) — struck in the kolejka, gone from the Obszar. */
@@ -136,7 +131,51 @@ export interface DrawnActionsProps {
   /** Nothing to do with this one — it stays on the field (16.8). */
   onLeave: (cardId: string) => void;
   /** Raises the table's one „are you sure?" — see `ConfirmDialog`. */
-  onAsk: (question: Omit<Confirmation, "tone">) => void;}
+  onAsk: (question: Omit<Confirmation, "tone">) => void;
+}
+
+/**
+ * The one Obszar dropdown, in the three places a Karta asks for one.
+ *
+ * It was written out three times — same markup, same classes, same placeholder,
+ * differing only in which fields it offers — and had already started to drift,
+ * which is the argument `ActionButton` makes one file over about the buttons
+ * beside it. `action-button.tsx` even pins this control's padding from the
+ * outside ("Inline beside a `select`, whose own padding this matches"), so
+ * three copies were three chances to break a promise made somewhere else.
+ *
+ * Module-level rather than inline, or the `select` is a new element type on
+ * every render and loses focus mid-choice.
+ *
+ * `asFieldId` is the other half. A dropdown's value is a string from outside,
+ * and this is the one place in the sheet where one becomes a `FieldId` —
+ * narrowed once, at the boundary, the way CLAUDE.md's first non-negotiable asks
+ * rather than asserted at each of three call sites.
+ */
+function ObszarPicker({
+  among,
+  value,
+  onPick,
+}: {
+  among: readonly FieldId[];
+  value: FieldId | "";
+  onPick: (field: FieldId | "") => void;
+}) {
+  return (
+    <select
+      value={value}
+      onChange={(event) => onPick(asFieldId(event.target.value) ?? "")}
+      className="rounded border border-edge bg-night px-2 py-1.5 text-sm text-ink"
+    >
+      <option value="">— wybierz Obszar —</option>
+      {among.map((fieldId) => (
+        <option key={fieldId} value={fieldId}>
+          {fieldName(fieldId)}
+        </option>
+      ))}
+    </select>
+  );
+}
 
 export function DrawnActions({
   who,
@@ -161,14 +200,18 @@ export function DrawnActions({
   onLeave,
   onAsk,
 }: DrawnActionsProps) {
+  /**
+   * Whom these Karty are being read for — the Postać they were dealt to.
+   *
+   * Supplied by the provider `page.tsx` wraps the whole sheet in, not by
+   * anything here: the Karty on this Obszar were dealt to whoever is having the
+   * turn, so every condition inside reads for them and not for the watcher.
+   * See `TheReader`.
+   */
+  const reader = useContext(TheReader);
   // The choices made so far for the card on screen, as indices into its own
   // options. Sent back with the next attempt, so the server re-walks the card
   // and takes the branch rather than being handed an effect.
-  /**
-   * Whom these Karty are being read for — the Postać they were dealt to, which
-   * the sheet's own provider supplies. See `TheReader`.
-   */
-  const reader = useContext(TheReader);
   const [choices, setChoices] = useState<number[]>([]);
   const [going, setGoing] = useState<FieldId | "">("");
 
@@ -223,48 +266,17 @@ export function DrawnActions({
     standing.length > 1 && !standing.some((c) => roundsOf(c.id))
       ? attackAsOne(standing.map((c) => combatValueOf(c, mirror)!))
       : null;
-  const together = asOne ? standing : null;
   const keep = kindForCard(known);
 
   // What the card is still asking, walked down through the choices already
   // made. Null when there is nothing left to ask and the app can simply do it.
   const asking = script ? pendingIn(script.effect, choices, nature) : null;
 
-  /**
-   * Whether walking away is one of the answers.
-   *
-   * Never for a Nieznajomy. 16.5 is flat — „konieczne jest wykonanie zawartej w
-   * Karcie instrukcji" — and every one of them either gives you something or
-   * happens to you; there is nothing there a player would decline. A Miejsce is
-   * different, and says so itself: „**Jeżeli chcesz** do niej wejść, rzuć
-   * kostką" is the Grota's own sentence, and rolling it can cost a turn or
-   * start a fight.
-   *
-   * The exception is a Karta that has nothing for this character at all — the
-   * WRÓŻKA met by a Zła Postać. Resolving it is a no-op, so „Pomiń" says what
-   * is happening and „Rozpatrz, co się da" does not.
-   */
-  /**
-   * What this Karta asks of the character in front of it, and whether they pass.
-   *
-   * Printed on its own line unless the „czeka tu na pierwszą Dobrą Postać" line
-   * has already said it — „Pierwszej Dobrej Postaci" is one fact and was coming
-   * out as two, the second being the first with a word missing.
-   */
   /* Kept for `inert` below: the line itself is `CardFacts`'s now, drawn from
      the same `requirementOf` against the same reader. What is asked here is
      narrower — not what the condition says, only whether this Postać fails it. */
   const needs = requirementOf(known.id, reader ?? { nature, aggression });
 
-  /**
-   * Nothing here for this Postać at all — a `gdy natura` with no other branch,
-   * met by the wrong Natura. The WRÓŻKA and a Zła Postać.
-   *
-   * Resolving is still what clears it from the kolejka, so the one control is
-   * „Pomiń" wired to `onResolve`: nothing happens, and the Karta is done. The
-   * old pair — „Rozpatrz" beside „Pomiń" — offered a choice between two ways of
-   * doing nothing, one of which quietly did not finish the Karta.
-   */
   /**
    * Nothing here for this Postać at all.
    *
@@ -306,28 +318,26 @@ export function DrawnActions({
    * resolved — it is going either way, „bez względu na to, czy skorzystasz".
    */
   const leavingHere = (to: FieldId) => {
-    const settled = [...resolved, ...fought, ...(beaten ?? [])];
+    /* Asked through `listed`, like the pack above — `resolved` names a *copy*
+       and `fought`/`beaten` name a card, and a bare `.includes` on the id gets
+       the first of those wrong. Two Wilki on one Obszar are two Karty, and one
+       of them being dealt with does not leave the other behind. */
     const left = cards.filter(
-      (entry) => entry.cardId !== known.id && !settled.includes(entry.cardId),
+      (entry) =>
+        entry.cardId !== known.id &&
+        !listed(resolved, entry) &&
+        !listed(fought, entry) &&
+        !listed(beaten ?? [], entry),
     ).length;
     const stays =
       left > 0
         ? `Zostawiasz tu ${left} ${plural(left, "Kartę", "Karty", "Kart")} i wszystko, co na tym Obszarze leży — poczekają na następną Postać (16.8).`
         : "To, co na tym Obszarze leży, zostaje tu dla następnej Postaci (16.8).";
     return (
-      `Obszar: ${FIELDS.get(to)?.name ?? to}. ${stays} ` +
+      `Obszar: ${fieldName(to)}. ${stays} ` +
       "Tam zaczniesz tak, jakby twój ruch skończył się na nowym Obszarze."
     );
   };
-
-  /**
-   * What this Karta offers, in rows — for the people who cannot press it.
-   *
-   * `itemProfile`'s, so it is word for word the panel the hover draws and the
-   * buttons the acting player sees, rather than a third telling of the same
-   * card.
-   */
-  const offered = canAct ? [] : itemProfile(known.id, eqMode).special;
 
   /**
    * „Test (WIEDŹMA) wybiera: Tracisz 1 Sztukę Złota…"
@@ -352,6 +362,15 @@ export function DrawnActions({
       : null;
 
   /**
+   * No Wróg standing, nothing to pick up, and no question outstanding.
+   *
+   * Named because it is the condition two branches share and differ on only by
+   * `inert` — written out twice, a fifth term would have had to be remembered
+   * in both.
+   */
+  const nothingLeftToAsk = !foe && !keep && !asking;
+
+  /**
    * Whether walking away is one of the answers.
    *
    * Never for a Nieznajomy: 16.5 is flat and every one of them either gives you
@@ -361,46 +380,44 @@ export function DrawnActions({
    */
   const skippable = classOf(known.id) !== "stranger" && mayWalkPast(known.id);
 
-  return (
-    <div className="mt-auto flex flex-col gap-2 border-t border-edge pt-3">
-      {/* What the watchers get where the buttons are.
-
-          The choices themselves first, because that is what a table watching
-          somebody decide wants to see — the buttons are the acting player's
-          and everyone else was left with a picture and a name. The same rows
-          the hover panel draws, from the same `itemProfile`.
-
-          Then who is deciding: an empty panel under a Karta says the app is
-          thinking, and it is not. */}
-      {!canAct && offered.length > 0 && (
-        <ul className="flex flex-col gap-1 pb-1">
-          {offered.map((row, at) => (
-            <li key={at} className="text-[11px] leading-snug text-ochre/90">
-              {sentence(row)}
-            </li>
-          ))}
-        </ul>
-      )}
-      {/* One line, three things it can say: waiting for somebody, watching
-          them decide, and — when the Karta was never theirs to act on —
-          saying so.
-
-          One colour for all three. The middle one was ochre for a while, on
-          the reasoning that it is the only sentence here about something
-          that has not happened yet; on screen it read as a different kind of
-          notice arriving rather than as this one changing what it says, and
-          the sentence is doing that work by itself. A step up in size
-          instead, for all three at once — this is the only thing the rest of
-          the table has to read, and it was set smaller than the card's own
-          small print. */}
-      {!canAct && (
+  /**
+   * What the rest of the table gets, where the buttons are.
+   *
+   * Returned early rather than guarded eight times over. Everything below this
+   * line is one player's to press, and each branch used to say `canAct &&`
+   * again — so the answer to "can anybody here do anything" was re-read ten
+   * times down one component, and `offered` was written as a ternary whose job
+   * was to be empty half the time.
+   *
+   * The choices themselves first, because that is what a table watching
+   * somebody decide wants to see — the buttons are the acting player's and
+   * everyone else was left with a picture and a name. Drawn by `specialRows`,
+   * so they really are the rows the hover panel draws.
+   *
+   * Then who is deciding: an empty panel under a Karta says the app is
+   * thinking, and it is not. One colour for the line's three readings, and a
+   * step up in size — this is the only thing the rest of the table has to read,
+   * and it was set smaller than the card's own small print.
+   */
+  if (!canAct) {
+    const offered = itemProfile(known.id, eqMode).special;
+    return (
+      <div className="mt-auto flex flex-col gap-2 border-t border-edge pt-3">
+        {offered.length > 0 && (
+          <ul className="flex flex-col gap-1 pb-1">{specialRows(offered)}</ul>
+        )}
         <p className="text-xs text-muted">
           {said ?? (inert ? `${actor} nie spełnia warunków` : `Decyzję podejmuje ${actor}`)}
         </p>
-      )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-auto flex flex-col gap-2 border-t border-edge pt-3">
       {/* A Wróg attacks the moment it is turned over (16.2), so the two
           things you may do about it are the two the rules give you. */}
-      {canAct && foe && (
+      {foe && (
         <div className="flex flex-wrap gap-2">
           <ActionButton
             role="harm"
@@ -415,16 +432,16 @@ export function DrawnActions({
                 read off the card — and next turn it will be different. */}
             {foe.mirrors ? " — tyle co ty" : ""})
           </ActionButton>
-          {together && (
+          {asOne && (
             <ActionButton
               role="harm"
               size="lg"
               says={{ kind: "walczy" }}
               disabled={busy}
-              onClick={() => onFight(together.map((c) => c.id))}
-              title={together.map((c) => c.name).join(" + ")}
+              onClick={() => onFight(standing.map((c) => c.id))}
+              title={standing.map((c) => c.name).join(" + ")}
             >
-              Walcz ze wszystkimi naraz ({together.length}) — {asOne?.total}
+              Walcz ze wszystkimi naraz ({standing.length}) — {asOne.total}
             </ActionButton>
           )}
           <ActionButton
@@ -441,7 +458,7 @@ export function DrawnActions({
 
       {/* Picked up or left where it lies — 12.1 and 16.8, and the app
           refuses for 5.3, 5.4 or 21.2 if it must. */}
-      {canAct && !foe && keep && (
+      {!foe && keep && (
         <div className="flex flex-wrap gap-2">
           <ActionButton
             role="gain"
@@ -466,7 +483,7 @@ export function DrawnActions({
       )}
 
       {/* A choice the rules give the player: "wedle własnego wyboru". */}
-      {canAct && asking?.op === "wybor" && (
+      {asking?.op === "wybor" && (
         <div>
           <p className="mb-1 text-[11px] text-muted">Wybierz jedno:</p>
           <div className="flex flex-wrap items-center gap-2">
@@ -486,18 +503,7 @@ export function DrawnActions({
                */
               option.effect.op === "przenies" && option.effect.to.kind !== "pole" ? (
                 <span key={option.label} className="flex flex-wrap items-center gap-2">
-                  <select
-                    value={going}
-                    onChange={(event) => setGoing(event.target.value as FieldId)}
-                    className="rounded border border-edge bg-night px-2 py-1.5 text-sm text-ink"
-                  >
-                    <option value="">— wybierz Obszar —</option>
-                    {ring.map((fieldId) => (
-                      <option key={fieldId} value={fieldId}>
-                        {FIELDS.get(fieldId)?.name ?? fieldId}
-                      </option>
-                    ))}
-                  </select>
+                  <ObszarPicker among={ring} value={going} onPick={setGoing} />
                   <ActionButton
                     says={{
                       kind: "wybiera",
@@ -571,20 +577,9 @@ export function DrawnActions({
 
       {/* "przenieś się na dowolny Obszar w tym Kręgu" — the player points at
           the board, so the board is what is offered. */}
-      {canAct && asking?.op === "przenies" && asking.to.kind !== "pole" && (
+      {asking?.op === "przenies" && asking.to.kind !== "pole" && (
         <div className="flex flex-wrap items-center gap-2">
-          <select
-            value={going}
-            onChange={(event) => setGoing(event.target.value as FieldId)}
-            className="rounded border border-edge bg-night px-2 py-1.5 text-sm text-ink"
-          >
-            <option value="">— wybierz Obszar —</option>
-            {ring.map((fieldId) => (
-              <option key={fieldId} value={fieldId}>
-                {FIELDS.get(fieldId)?.name ?? fieldId}
-              </option>
-            ))}
-          </select>
+          <ObszarPicker among={ring} value={going} onPick={setGoing} />
           <ActionButton
             says={{ kind: "przenosi-sie" }}
             disabled={busy || !going}
@@ -599,22 +594,13 @@ export function DrawnActions({
           inną Postać" — the card names the list, and the ones somebody is
           standing on are struck off it here as well as on the server, so a
           player is not offered an answer that will be refused. */}
-      {canAct && asking?.op === "poloz-karte" && asking.gdzie.kind === "jedno-z" && (
+      {asking?.op === "poloz-karte" && asking.gdzie.kind === "jedno-z" && (
         <div className="flex flex-wrap items-center gap-2">
-          <select
+          <ObszarPicker
+            among={asking.gdzie.fieldIds.filter((fieldId) => !occupied.includes(fieldId))}
             value={going}
-            onChange={(event) => setGoing(event.target.value as FieldId)}
-            className="rounded border border-edge bg-night px-2 py-1.5 text-sm text-ink"
-          >
-            <option value="">— wybierz Obszar —</option>
-            {asking.gdzie.fieldIds
-              .filter((fieldId) => !occupied.includes(fieldId))
-              .map((fieldId) => (
-                <option key={fieldId} value={fieldId}>
-                  {FIELDS.get(fieldId)?.name ?? fieldId}
-                </option>
-              ))}
-          </select>
+            onPick={setGoing}
+          />
           <ActionButton
             says={{ kind: "kladzie" }}
             disabled={busy || !going}
@@ -625,8 +611,6 @@ export function DrawnActions({
         </div>
       )}
 
-      {/* Nothing left to ask: the app does it, and the notice says what it
-          did. A card with no script has nothing to do but be read. */}
       {/* Nothing here for this Postać, and one control that finishes it.
 
           Resolving is what clears a Karta from the kolejka, so „Pomiń" is
@@ -634,7 +618,7 @@ export function DrawnActions({
           the Karta is done. The pair that stood here before — „Rozpatrz"
           beside „Pomiń" — offered a choice between two ways of doing nothing,
           one of which quietly did not finish the Karta. */}
-      {canAct && !foe && !keep && !asking && inert && (
+      {nothingLeftToAsk && inert && (
         <div className="flex flex-col items-start gap-2">
           <p className="text-[11px] text-vermilion">Nie spełniasz warunków</p>
           <ActionButton
@@ -654,7 +638,7 @@ export function DrawnActions({
 
       {/* Nothing left to ask: the app does it, and the notice says what it
           did. A card with no script has nothing to do but be read. */}
-      {canAct && !foe && !keep && !asking && !inert && (
+      {nothingLeftToAsk && !inert && (
         <ActionButton
           weight="lead"
           size="lg"
@@ -679,7 +663,7 @@ export function DrawnActions({
           Nieznajomy is carried out at its place in the kolejka (16.5) and a
           Wróg is fought or fled (13.5), never shelved. What is left is a
           Miejsce whose own text asks first („Jeżeli chcesz do niej wejść"). */}
-      {canAct && !foe && !inert && skippable && (
+      {!foe && !inert && skippable && (
         <button
           disabled={busy}
           onClick={() => onLeave(known.id)}

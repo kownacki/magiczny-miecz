@@ -1,10 +1,15 @@
 "use client";
 
+/**
+ * The Karta you just turned over, at a size you can read, and what the app
+ * knows it is. What you may *do* about it is `drawn-actions.tsx`.
+ */
+
 import { useEffect } from "react";
 import { DrawSheet, type SheetChrome } from "./draw-sheet";
 import { dismissableOpen } from "./overlay";
 import events from "@/data/events.json";
-import { CARD_CLASS_LABEL, type CardClass, type EventCard } from "@/data/types";
+import { CARD_CLASS_LABEL, type EventCard } from "@/data/types";
 import { cardImageUrl } from "@/lib/view/cardImages";
 import { numeralMeaning, numeralOf } from "@/lib/engine/cards";
 import { KolejkaStrip, worthShowing } from "./kolejka-strip";
@@ -15,15 +20,6 @@ import { DrawnActions, type DrawnActionsProps } from "./drawn-actions";
 import { coverageOf, manualNote, NOT_HANDLED } from "@/lib/engine/coverage";
 
 const EVENTS = events as EventCard[];
-
-/** The Karta you just turned over, and exactly the things it lets you do. */
-
-export interface DrawnEntry {
-  cardId: string;
-  cardClass: string;
-  /** Staged by the test shortcut rather than drawn — see `TurnCard.granted`. */
-  granted?: boolean;
-}
 
 /**
  * The card you just turned over.
@@ -40,27 +36,21 @@ export interface DrawnEntry {
  * asked as the question the rules ask.
  */
 export function DrawnCard({
-  who,
   chrome,
-  card,
-  cards,
-  resolved,
-  fought,
-  beaten,
-  ring,
-  occupied = [],
-  mySword,
-  nature,
-  eqMode,
-  aggression,
-  busy,
-  intent,
-  onResolve,
-  onFight,
-  onEscape,
-  onTake,
-  onLeave,
-  onAsk,
+  /**
+   * Everything else, kept whole so it can be handed on whole.
+   *
+   * Eleven of these twenty were named here only to be written out again three
+   * lines from the bottom — `ring`, `occupied`, `mySword`, `aggression`,
+   * `busy`, `intent` and the five callbacks are not read in this file at all.
+   * Spelling each one three times (type, destructure, forward) is three chances
+   * to add a prop to `DrawnActions` and forget one of them here, for nothing:
+   * the type already says the two surfaces are the same surface minus `chrome`.
+   *
+   * `chrome` is the one thing this file owns, so it is the one thing lifted out
+   * of the rest — which makes the sentence below structural rather than prose.
+   */
+  ...props
 }: Omit<DrawnActionsProps, "canAct"> & {
   /**
    * The sheet's own frame: who is acting, whether this device may, the
@@ -72,6 +62,7 @@ export function DrawnCard({
    */
   chrome: SheetChrome;
 }) {
+  const { who, card, cards, resolved, fought, beaten, nature, eqMode, onLeave } = props;
   const { canAct } = chrome;
   useEffect(() => {
     if (!canAct) return;
@@ -96,7 +87,7 @@ export function DrawnCard({
 
   const art = cardImageUrl(known.id);
   const script = scriptFor(known.id);
-  const label = CARD_CLASS_LABEL[card.cardClass as CardClass] ?? card.cardClass;
+  const label = CARD_CLASS_LABEL[card.cardClass] ?? card.cardClass;
 
   /**
    * Everything the app knows this Karta does, read once.
@@ -138,12 +129,13 @@ export function DrawnCard({
       footer={
         worthShowing(cards) ? (
         <KolejkaStrip
-          /* The whole card, not two fields of it. Rebuilding it as `{ cardId,
-             cardClass }` dropped `granted`, so a Karta the console had conjured
-             wore its wrench on the sheet above and lost it in the row below —
-             the one place the two are side by side. `ref` and `pool` went the
-             same way. */
-          cards={cards.map((one) => ({ ...one, cardClass: one.cardClass as CardClass }))}
+          /* The whole card, straight through. It used to be rebuilt as
+             `{ cardId, cardClass }`, which dropped `granted` — so a Karta the
+             console had conjured wore its wrench on the sheet above and lost it
+             in the row below, the one place the two are side by side; `ref` and
+             `pool` went the same way. The sheet takes `TurnCard` now, so there
+             is nothing left to rebuild and nothing to drop. */
+          cards={cards}
           settled={[...resolved, ...fought]}
           /* The Karta this sheet is showing, so the row cannot light a
              different one. */
@@ -248,29 +240,7 @@ export function DrawnCard({
           now its own file. Every callback above lands in there and both
           pieces of decision state live there; nothing in the column above
           this line takes a handler at all. See `DrawnActions`. */}
-      <DrawnActions
-        who={who}
-        canAct={canAct}
-        card={card}
-        cards={cards}
-        resolved={resolved}
-        fought={fought}
-        beaten={beaten}
-        ring={ring}
-        occupied={occupied}
-        mySword={mySword}
-        nature={nature}
-        eqMode={eqMode}
-        aggression={aggression}
-        busy={busy}
-        intent={intent}
-        onResolve={onResolve}
-        onFight={onFight}
-        onEscape={onEscape}
-        onTake={onTake}
-        onLeave={onLeave}
-        onAsk={onAsk}
-      />
+      <DrawnActions {...props} canAct={canAct} />
     </DrawSheet>
   );
 }

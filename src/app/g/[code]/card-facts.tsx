@@ -54,6 +54,36 @@ export function hasFacts(profile: ItemProfile | null): boolean {
  */
 export const TheReader = createContext<Reader | null>(null);
 
+/**
+ * The rows of `profile.special`, as list items.
+ *
+ * Split out because the sheet shows the same list to everybody who is *not*
+ * pressing the buttons — "the same rows the hover panel draws", as it says —
+ * and was drawing them by hand, without either of the two things that happen
+ * here. A rule number came out as dead text instead of a link, and worse, stayed
+ * on screen for a reader who has rule references turned off (`withoutRefs`), so
+ * the hover said "zamiana w Kamień na 3 tury" while the sheet said "…(20.1)".
+ * And the empty string that `effectRows` pushes as a group break rendered as an
+ * empty ochre line rather than as the gap it is.
+ *
+ * One telling, so the two cannot say the same card differently again. The
+ * list itself stays with each caller, because its spacing is theirs.
+ */
+export function specialRows(lines: readonly string[]) {
+  return lines.map((line, at) =>
+    /* An empty row is a group break — see `effectRows`. Drawn as space rather
+       than as a rule, because the two groups are one card's doing and a divider
+       would read as a second card. */
+    line === "" ? (
+      <li key={at} className="h-1.5" aria-hidden />
+    ) : (
+      <li key={at} className="text-[11px] leading-snug text-ochre/90">
+        <WithRules text={sentence(line)} />
+      </li>
+    ),
+  );
+}
+
 export function CardFacts({
   cardId,
   profile,
@@ -153,18 +183,7 @@ export function CardFacts({
       {/* What using it does, once — as opposed to what holding it gives. */}
       {profile.special.length > 0 && (
         <ul className="flex flex-col gap-1 border-t border-edge/60 pt-2">
-          {profile.special.map((line, at) =>
-            /* An empty row is a group break — see `effectRows`. Drawn as space
-               rather than as a rule, because the two groups are one card's
-               doing and a divider would read as a second card. */
-            line === "" ? (
-              <li key={at} className="h-1.5" aria-hidden />
-            ) : (
-              <li key={at} className="text-[11px] leading-snug text-ochre/90">
-                <WithRules text={sentence(line)} />
-              </li>
-            ),
-          )}
+          {specialRows(profile.special)}
         </ul>
       )}
 

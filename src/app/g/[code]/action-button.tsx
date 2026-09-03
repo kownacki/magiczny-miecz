@@ -17,7 +17,7 @@ import {
  * There was never one. `BarButton` is the chrome bar's glyph opener — a tally,
  * `aria-pressed`, tone as a text colour — and has nothing to do with pressing
  * „Walcz". So every decision in the game was a raw `<button>` with its Tailwind
- * written out by hand: ten of them in `drawn-card.tsx` alone, and around eighty
+ * written out by hand: ten of them in `drawn-actions.tsx` alone, and around eighty
  * across the route. They were copies of each other, and like all copies they
  * had drifted — `disabled:opacity-50` beside `disabled:opacity-40`, `px-3 py-1.5`
  * beside `px-3 py-2`, and the same „one of several" outline appearing as
