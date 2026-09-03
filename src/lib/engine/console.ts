@@ -5,6 +5,7 @@ import { RANDOM_CHARACTER_NAME } from "./characters";
 import { STATS, availableIn, type Stage } from "./consoleSpec";
 import {
   CARDS,
+  CATEGORY_OFFERED,
   DEALABLE,
   EFFECTS,
   FIELD_KINDS,
@@ -183,12 +184,30 @@ export function complete(
           ? { pool: ["at"], at: parts.length - 1 }
           : { pool: [], at: parts.length - 1 };
       }
+      /**
+       * `clear` takes whole kinds, comma-separated, so what is being typed is
+       * whatever follows the last comma — `deal`'s rule, for the same grammar.
+       * `place` has no list and keeps the plain first argument.
+       */
+      if (verb === "clear") {
+        const comma = parts.reduce(
+          (found, part, index) => (index > 0 && part.endsWith(",") ? index : found),
+          0,
+        );
+        // Only after a comma is the line certainly a list of kinds; before one
+        // it could still become a Karta or an Obszar, so everything is offered.
+        if (comma > 0) return shelved([GOLD_OFFERED, CATEGORY_OFFERED], comma + 1);
+      }
       const names = PLACEABLE.flatMap((group) => group.cards.map((one) => one.name));
       if (finished(names)) return { pool: ["at"], at: parts.length - 1 };
       // Money first, the way 12.1 lists it — "zabrać leżące złoto, Przedmioty
       // lub Przyjaciół" — and because it is one word against a hundred and
       // sixty-five, which is the one a list this long can afford to lead with.
-      return shelved([GOLD_OFFERED, ...PLACEABLE], 1);
+      // The kinds sit with it: both are short words that stand for a lot of
+      // Karty, and `clear` is the verb that has them.
+      return verb === "clear"
+        ? shelved([GOLD_OFFERED, CATEGORY_OFFERED, ...PLACEABLE], 1)
+        : shelved([GOLD_OFFERED, ...PLACEABLE], 1);
     }
     /**
      * `take` names something lying on the Obszar or dealt into the turn, which

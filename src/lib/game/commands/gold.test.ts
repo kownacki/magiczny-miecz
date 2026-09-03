@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { apply } from "../change";
 import { aHolding, aSeat, aTable } from "../fixture";
-import { only } from "@/lib/engine/stack";
+import { only, top } from "@/lib/engine/stack";
 import { asFieldId } from "@/lib/engine/board";
 import type { TurnPhase } from "@/lib/engine/turn";
 import { killSeat } from "./life";
@@ -399,5 +399,138 @@ describe("sweeping an Obszar takes the gold with the Karty", () => {
     expect(() => clearField(table(), { seatId: "seat-a", fieldId: HERE })).toThrow(
       "Na tym Obszarze nic nie leży.",
     );
+  });
+});
+
+/**
+ * Whole kinds at a time — `clear strangers, places`.
+ *
+ * Dressing a test table puts six Karty on one Obszar, and „take the Nieznajomi
+ * off and leave the Wrogowie" was six lines and knowing every name on the
+ * square first.
+ */
+describe("sweeping an Obszar by kind", () => {
+  /** A Nieznajomy, a Miejsce, a Wróg II and a Wróg III, all lying on one square. */
+  const crowded = () =>
+    apply(table(), {
+      fieldCards: {
+        insert: ["cudotworca", "targowisko", "cyklop", "demon"].map((card_id) => ({
+          field_id: HERE,
+          card_id,
+          granted: true,
+        })),
+      },
+    });
+
+  const left = (before: ReturnType<typeof crowded>, command: Parameters<typeof clearField>[1]) =>
+    apply(before, clearField(before, command).writes).fieldCards.map((row) => row.card_id);
+
+  it("takes the named kind and leaves the rest", () => {
+    const before = crowded();
+    expect(left(before, { seatId: "seat-a", fieldId: HERE, classes: ["stranger"] })).toEqual([
+      "targowisko",
+      "cyklop",
+      "demon",
+    ]);
+  });
+
+  it("takes several kinds in one sweep", () => {
+    const before = crowded();
+    expect(left(before, { seatId: "seat-a", fieldId: HERE, classes: ["stranger", "place"] })).toEqual([
+      "cyklop",
+      "demon",
+    ]);
+  });
+
+  /**
+   * II and III are two resolution classes and one kind of thing — 16.2 and 16.3
+   * name them apart only to order them, while 1.4, 12.1a and 13.5 all say Wróg
+   * and mean both.
+   */
+  it("takes both numerals of Wróg under one word", () => {
+    const before = crowded();
+    expect(left(before, { seatId: "seat-a", fieldId: HERE, classes: ["foe", "demon"] })).toEqual([
+      "cudotworca",
+      "targowisko",
+    ]);
+  });
+
+  /**
+   * Every copy, unlike a named Karta, which takes one. „Take the Miejsca off"
+   * means all of them, and asking for one of a kind has no way to say which.
+   */
+  it("takes every copy of the kind, not one", () => {
+    const before = apply(table(), {
+      fieldCards: {
+        insert: ["targowisko", "targowisko", "cyklop"].map((card_id) => ({
+          field_id: HERE,
+          card_id,
+          granted: true,
+        })),
+      },
+    });
+    expect(left(before, { seatId: "seat-a", fieldId: HERE, classes: ["place"] })).toEqual(["cyklop"]);
+  });
+
+  /**
+   * The coins stay unless they were named beside it. `clear places` names Karty
+   * and nothing else, exactly as `clear TARGOWISKO` does; only bare `clear` and
+   * a list with `gold` in it take the money.
+   */
+  it("leaves the gold alone unless it was asked for", () => {
+    const before = apply(crowded(), {
+      fieldGold: { insert: [{ field_id: HERE, gold: 6 }] },
+    });
+    const kept = clearField(before, { seatId: "seat-a", fieldId: HERE, classes: ["place"] });
+    expect(kept.result.gold).toBe(0);
+    expect(apply(before, kept.writes).fieldGold.map((row) => row.gold)).toEqual([6]);
+
+    const swept = clearField(before, {
+      seatId: "seat-a",
+      fieldId: HERE,
+      classes: ["place"],
+      gold: "all",
+    });
+    expect(swept.result).toEqual({ cards: ["targowisko"], gold: 6 });
+    expect(apply(before, swept.writes).fieldGold).toEqual([]);
+  });
+
+  /** A kind that is not here is worth saying, the way a named Karta that is not here is. */
+  it("says so when nothing of that kind is lying here", () => {
+    const before = crowded();
+    expect(() =>
+      clearField(before, { seatId: "seat-a", fieldId: HERE, classes: ["friend"] }),
+    ).toThrow(/Przyjaciel — nic z tego tu nie leży/);
+  });
+
+  /**
+   * And the Karty the turn is holding face up, which are on the Obszar just as
+   * much (16.8) — the half `clear` had to learn about for a named card too.
+   */
+  it("reaches the Karty lifted into the turn's own frame", () => {
+    const before = table({
+      game: {
+        active_seat: 0,
+        turn_state: only({
+          phase: "field",
+          fieldId: HERE,
+          from: null,
+          draw: 0,
+          drawn: [
+            { cardId: "cudotworca", cardClass: "stranger" },
+            { cardId: "cyklop", cardClass: "foe" },
+          ],
+          fought: [],
+        } as never),
+      },
+    });
+    const { result, writes } = clearField(before, {
+      seatId: "seat-a",
+      fieldId: HERE,
+      classes: ["stranger"],
+    });
+    expect(result.cards).toEqual(["cudotworca"]);
+    const frame = top(apply(before, writes).game.turn_state) as { drawn: { cardId: string }[] };
+    expect(frame.drawn.map((one) => one.cardId)).toEqual(["cyklop"]);
   });
 });

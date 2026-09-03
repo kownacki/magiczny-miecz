@@ -1,7 +1,8 @@
 /** What a character is carrying: picking it up (12.1, 16.6, 21.1), putting it down (5.5, 6.4, 9.4), and the two test shortcuts that conjure a card. Where it is worn is ./wearing. */
 
 import items from "@/data/items.json";
-import type { EventCard, Item, Nature } from "@/data/types";
+import { CARD_CLASS_LABEL } from "@/data/types";
+import type { CardClass, EventCard, Item, Nature } from "@/data/types";
 import { forbiddenNatures } from "@/lib/engine/abilityText";
 import { abilitiesOf, carriesSpell, entryPrice, unavailableIn } from "@/lib/engine/abilities";
 import { barredFromFriends } from "@/lib/engine/status";
@@ -909,8 +910,24 @@ function sweepGold(
 
 export function clearField(
   snapshot: Snapshot,
-  command: { seatId: string; fieldId: FieldId; cardId?: string; gold?: number | "all" },
+  command: {
+    seatId: string;
+    fieldId: FieldId;
+    cardId?: string;
+    gold?: number | "all";
+    /**
+     * Whole kinds at a time — `clear strangers, places`, and `enemies` for both
+     * numerals of Wróg at once.
+     *
+     * A third way of saying *what*, beside one named Karta and the lot. Empty
+     * is "not asked", which is what the other two forms send.
+     */
+    classes?: readonly CardClass[];
+  },
 ): Outcome<{ cards: string[]; gold: number }> {
+  const classes = command.classes ?? [];
+  const byKind = classes.length > 0;
+
   /**
    * The money on its own, which is a different sweep and not a filter on this
    * one: it takes no Karty, so none of the turn-frame surgery below applies.
@@ -918,8 +935,14 @@ export function clearField(
    * "all" is what bare `clear gold` means, the way bare `take gold` does. A
    * number takes that much and leaves the rest, which is the only way to put a
    * square *back* to a particular amount — `place gold` can only add.
+   *
+   * Not when kinds were named beside it. `clear strangers, gold` is one sweep
+   * that takes both, and routing it here would have taken the coins and left
+   * the Nieznajomi standing — which is the command doing less than it said.
    */
-  if (command.gold !== undefined) return sweepGold(snapshot, command.fieldId, command.gold, command.seatId);
+  if (command.gold !== undefined && !byKind) {
+    return sweepGold(snapshot, command.fieldId, command.gold, command.seatId);
+  }
 
   const here = snapshot.fieldCards.filter((row) => row.field_id === command.fieldId);
 
@@ -952,13 +975,27 @@ export function clearField(
    * thing; sweeping the money along with it would be the command doing
    * something nobody typed, and the coins have no name to type.
    */
-  const coins = command.cardId
-    ? undefined
-    : snapshot.fieldGold.find((row) => row.field_id === command.fieldId);
+  const coins =
+    command.cardId || (byKind && command.gold === undefined)
+      ? undefined
+      : snapshot.fieldGold.find((row) => row.field_id === command.fieldId);
 
   if (here.length === 0 && inTurn.length === 0 && !coins) {
     throw new Error("Na tym Obszarze nic nie leży.");
   }
+
+  /**
+   * Which Karty a kind takes, asked of the class the card prints.
+   *
+   * The rows on the board carry only an id, so the class comes off the deck;
+   * the ones in the turn's frame carry `cardClass` already, because that is
+   * what 15.2 sorted them by. A card the deck has never heard of matches
+   * nothing, which is the same answer `scriptFor` gives about one.
+   */
+  const wanted = (cardId: string): boolean => {
+    const card = EVENTS.find((one) => one.id === cardId);
+    return card !== undefined && classes.includes(card.cardClass);
+  };
 
   /**
    * One Karta, or the lot.
@@ -976,13 +1013,37 @@ export function clearField(
    */
   const lying = command.cardId
     ? here.filter((row) => row.card_id === command.cardId).slice(0, 1)
-    : here;
+    : byKind
+      ? here.filter((row) => wanted(row.card_id))
+      : here;
   const takenFromTurn = ((): readonly number[] => {
-    if (!command.cardId) return inTurn.map((_, index) => index);
+    if (!command.cardId) {
+      // Every copy of the kind, unlike a named Karta: „take the Nieznajomi off"
+      // means all of them, and asking for one of a kind has no way to say which.
+      const indices = inTurn.map((_, index) => index);
+      return byKind ? indices.filter((index) => classes.includes(inTurn[index].cardClass)) : indices;
+    }
     if (lying.length > 0) return [];
     const found = inTurn.findIndex((card) => card.cardId === command.cardId);
     return found === -1 ? [] : [found];
   })();
+
+  /**
+   * A kind that is not here is worth saying, the way a named Karta that is not
+   * here is.
+   *
+   * Silent when the money was asked for too and there is some — `clear
+   * strangers, gold` on a square with coins and no Nieznajomi did what it could
+   * and there is a line to show for it.
+   */
+  if (byKind && lying.length === 0 && takenFromTurn.length === 0 && !coins) {
+    // The names the *cards* print, not the console's English keys: you typed
+    // `strangers` and the Karta says „Nieznajomy", and a refusal is where the
+    // two should be seen to be the same thing.
+    throw new Error(
+      `${classes.map((one) => CARD_CLASS_LABEL[one]).join(", ")} — nic z tego tu nie leży.`,
+    );
+  }
 
   // Only a named Karta can be missing. A bare sweep has already been let
   // through by the guard above, which knows about the gold — and this one did

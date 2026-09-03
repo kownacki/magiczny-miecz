@@ -199,6 +199,21 @@ are the verbs for those.
 lost `drop`. Both freed words belong to the lawful vocabulary, and neither can
 also mean its testmode namesake.
 
+`clear` takes a whole **kind** at a time — `clear strangers`, `clear places`,
+`clear enemies`, and a comma list of them, `deal`'s grammar. The words are
+English because a class is the engine's word and not the box's (the same
+reason `spoils gold` says gold), and they are derived from `CARD_CLASS`'s keys
+so a seventh class cannot arrive without its category word. **Plural**, because
+DEMON is a card: a singular keyword would be read before the name and make the
+creature untypeable. `enemies` is the one word that is not a class — it is both
+numerals of Wróg, through `isFoeClass`, because 16.2 and 16.3 name them apart
+only to order them while 1.4, 12.1a and 13.5 all say Wróg and mean both. `gold`
+may stand in the same list (`clear strangers, gold`), since bare `clear` has
+always swept the coins with the Karty; `clear gold N` keeps its own form,
+because an amount belongs to the money alone. A kind takes **every** copy,
+unlike a named Karta, which takes one — asking for one of a kind has no way to
+say which.
+
 `give` and `summon` are now one verb, `deal`. They were named after their
 *destinations* — a hand, a fight — which is why there had to be two, and why
 between them they covered ninety of the hundred and sixty-five Karty and left

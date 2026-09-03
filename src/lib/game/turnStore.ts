@@ -1361,12 +1361,15 @@ export async function clearField(
   fieldId: FieldId,
   cardId?: string | null,
   gold?: number | "all",
+  /** Whole kinds at a time — `clear strangers, places`. Empty is "not asked". */
+  classes?: readonly CardClass[],
 ): Promise<{ cards: string[]; gold: number }> {
   return change(gameId, clearFieldOn, {
     seatId,
     fieldId,
     ...(cardId ? { cardId } : {}),
     ...(gold !== undefined && gold !== null ? { gold } : {}),
+    ...(classes && classes.length > 0 ? { classes } : {}),
   });
 }
 

@@ -4,7 +4,7 @@ import characters from "@/data/characters.json";
 import events from "@/data/events.json";
 import itemCards from "@/data/items.json";
 import spells from "@/data/spells.json";
-import { isFoeClass } from "@/data/types";
+import { CARD_CLASS, CARD_CLASS_LABEL, isFoeClass } from "@/data/types";
 import type { CardClass, Character, EventCard, Item, Spell } from "@/data/types";
 import {
   DOLNY_KRAG,
@@ -137,6 +137,72 @@ function coins(said: string, verb: string): { gold: number } | { error: string }
     return { error: `\`${verb} gold\` wants a whole number of Sztuki Złota — \`${verb} gold 5\`.` };
   }
   return { gold: asked };
+}
+
+/**
+ * A whole kind of Karta, named in one word: `clear strangers`, `clear places`.
+ *
+ * Sweeping a square one name at a time is what `clear` was, and dressing a test
+ * table puts six Karty on one Obszar — so taking the Nieznajomi off and leaving
+ * the Wrogowie meant six lines and knowing every name on the square first.
+ *
+ * # English, and plural
+ *
+ * English because the class is the *engine's* word and not the box's — the same
+ * reason `spoils gold` says gold, and the same reason `CARD_CLASS`'s keys are
+ * English while `CARD_CLASS_LABEL` holds what the cards actually print. Derived
+ * from those keys rather than written out, so a seventh class cannot arrive
+ * without its category word arriving with it.
+ *
+ * Plural because **DEMON is a card**. It is the one class name the box also
+ * prints on a Karta, and a singular category would have made `clear demon`
+ * ambiguous between the kind and the creature — with the card unreachable,
+ * since a keyword is tried first. A plural is what you would say out loud
+ * anyway („weź stąd Nieznajomych"), it collides with nothing in the box, and it
+ * leaves every one of the hundred and sixty-five names still typeable.
+ */
+export const CATEGORIES: ReadonlyMap<string, readonly CardClass[]> = new Map([
+  ...(Object.keys(CARD_CLASS) as CardClass[]).map(
+    (one) => [`${one}s`, [one]] as [string, readonly CardClass[]],
+  ),
+  /**
+   * And the word for both kinds of Wróg at once.
+   *
+   * II and III are two resolution classes and one kind of thing — 16.2 and 16.3
+   * name them apart only to order them and to send one to 17.1-5 and the other
+   * to 18.1-2, while 1.4's trophy, 12.1a's block and 13.5's „muszą oni
+   * najpierw zostać pokonani" all say Wróg and mean both. `isFoeClass` is the
+   * door the rest of the engine asks, so it is the one asked here: „take the
+   * Wrogowie off this square" is one wish, and `clear foes, demons` is that
+   * wish spelled with the app's filing system showing.
+   */
+  [
+    "enemies",
+    (Object.keys(CARD_CLASS) as CardClass[]).filter(isFoeClass),
+  ] as [string, readonly CardClass[]],
+]);
+
+/**
+ * Whether a word names a kind — or the money, which stands in the same list.
+ *
+ * Folded the way every other name here is, so `Strangers` and `STRANGERS`
+ * answer too: nothing else in this grammar is case-sensitive and a keyword that
+ * were would be the one thing you had to hold your shift key for.
+ */
+export function isCategory(said: string): boolean {
+  const word = said.trim().toLowerCase();
+  return CATEGORIES.has(word) || GOLD_WORDS.has(word);
+}
+
+/** The same words for Tab, under a heading of their own. */
+export const CATEGORY_OFFERED: Catalogue = {
+  title: "Rodzaje",
+  cards: [...CATEGORIES.keys()].map((word) => ({ id: word, name: word })),
+};
+
+/** What a category is called in the box, for a line reporting what it swept. */
+export function categoryName(one: CardClass): string {
+  return CARD_CLASS_LABEL[one];
 }
 
 /** What Tab offers where the money word goes. The English one, which is the verb's own. */
@@ -474,7 +540,9 @@ export function parseCommand(line: string): { ok: Command } | { error: string } 
    * reason the field is optional.
    */
   if (word === "clear") {
-    if (tail === "") return { ok: { kind: "clear", fieldId: null, cardId: null, gold: null } };
+    if (tail === "") {
+      return { ok: { kind: "clear", fieldId: null, cardId: null, gold: null, classes: [] } };
+    }
     /**
      * `place`'s grammar backwards, and the same `at` between the two names.
      *
@@ -510,17 +578,59 @@ export function parseCommand(line: string): { ok: Command } | { error: string } 
     const asked = goldAsked(said);
     if (asked !== null) {
       if (asked === "" || asked.toLowerCase() === "all") {
-        return { ok: { kind: "clear", fieldId, cardId: null, gold: "all" } };
+        return { ok: { kind: "clear", fieldId, cardId: null, gold: "all", classes: [] } };
       }
       const amount = coins(asked, "clear");
       if ("error" in amount) return amount;
-      return { ok: { kind: "clear", fieldId, cardId: null, gold: amount.gold } };
+      return { ok: { kind: "clear", fieldId, cardId: null, gold: amount.gold, classes: [] } };
+    }
+
+    /**
+     * Whole kinds, separated by commas: `clear strangers, places`.
+     *
+     * The same list `deal` takes and for the same reason — one act at a table is
+     * one line here — and `gold` may stand in it, because bare `clear` has
+     * always swept the coins along with the Karty and „take the Nieznajomych
+     * and the money" is a thing somebody means. `clear gold N` keeps its own
+     * form: an amount belongs to the money alone.
+     *
+     * All or nothing. A list with one word the console does not know is a typo
+     * rather than a smaller sweep, and half-obeying it would take Karty off a
+     * square the typist meant to keep — so a miss here is an error, and it says
+     * which word, the way `deal` names the card it could not find.
+     */
+    const words = said.split(",").map((one) => one.trim()).filter(Boolean);
+    if (words.length > 0 && words.every((one) => isCategory(one))) {
+      const classes: CardClass[] = [];
+      let money = false;
+      for (const one of words) {
+        if (GOLD_WORDS.has(one.toLowerCase())) {
+          money = true;
+          continue;
+        }
+        for (const cardClass of CATEGORIES.get(one.toLowerCase()) ?? []) {
+          if (!classes.includes(cardClass)) classes.push(cardClass);
+        }
+      }
+      return money
+        ? { ok: { kind: "clear", fieldId, cardId: null, gold: "all", classes } }
+        : { ok: { kind: "clear", fieldId, cardId: null, gold: null, classes } };
+    }
+    /**
+     * One word out of several was a kind, so the line was meant as a list of
+     * them — said here rather than falling through to the card lookup, which
+     * would answer "No card called `strangers, palces`" about a typo in the
+     * second word.
+     */
+    if (words.length > 1 && words.some((one) => isCategory(one))) {
+      const missed = words.find((one) => !isCategory(one));
+      return { error: `No kind called \`${missed}\`.` };
     }
 
     if (cut === -1) {
       const where = findByName(PLACES, (field) => field.name, said);
       if ("found" in where) {
-        return { ok: { kind: "clear", fieldId: where.found.id, cardId: null, gold: null } };
+        return { ok: { kind: "clear", fieldId: where.found.id, cardId: null, gold: null, classes: [] } };
       }
     }
     return name(CARDS, (one) => one.name, said, "card", (one) => ({
@@ -528,6 +638,7 @@ export function parseCommand(line: string): { ok: Command } | { error: string } 
       fieldId,
       cardId: one.id,
       gold: null,
+      classes: [],
     }), "clear");
   }
 

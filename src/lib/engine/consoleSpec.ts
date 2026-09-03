@@ -1,6 +1,7 @@
 /** Which words the console knows, what each is for, and who is allowed to type it. */
 
 import { type FieldId } from "./board";
+import type { CardClass } from "@/data/types";
 import type { TurnPhase } from "./turn";
 
 /**
@@ -261,8 +262,21 @@ export type Command =
    */
   | { kind: "stack"; cardId: string; pile: null; at: null }
   | { kind: "stack"; cardId: null; pile: "events" | "spells"; at: number }
-  /** Test mode: everything lying on an Obszar, off it (`place`'s inverse). */
-  | { kind: "clear"; fieldId: FieldId | null; cardId: string | null; gold: null }
+  /**
+   * Test mode: everything lying on an Obszar, off it (`place`'s inverse).
+   *
+   * `classes` is the third way of saying *what* — a whole kind at a time,
+   * `clear strangers, places`. Empty on the other two forms rather than absent,
+   * the way `cardId: null` and `gold: null` already are, so the three ways of
+   * naming what to sweep read as three fields of one command.
+   */
+  | {
+      kind: "clear";
+      fieldId: FieldId | null;
+      cardId: string | null;
+      gold: null;
+      classes: CardClass[];
+    }
   /**
    * The money named on its own, which bare `clear` takes anyway and
    * `clear MIECZ` leaves alone — so there was no way to say "just the coins".
@@ -272,7 +286,13 @@ export type Command =
    * null` already means "everything on the square", so nothing about the two
    * card fields could have carried this.
    */
-  | { kind: "clear"; fieldId: FieldId | null; cardId: null; gold: number | "all" }
+  | {
+      kind: "clear";
+      fieldId: FieldId | null;
+      cardId: null;
+      gold: number | "all";
+      classes: CardClass[];
+    }
   /** Test mode: what is left in a pile, and what has been used (9.5, 16.8). */
   | { kind: "pile"; pile: "events" | "spells" | null }
   /**
@@ -962,8 +982,8 @@ export const COMMANDS: CommandSpec[] = [
     // a test table that dressed a field had no way to undress it.
     name: "clear",
     aliases: [],
-    usage: "clear [gold [N]|card] [at field]",
-    summary: "take Złoto or a Karta off an Obszar — bare, all of both; `gold` just the coins; `at` names another",
+    usage: "clear [gold [N]|card|kinds] [at field]",
+    summary: "take Złoto, a Karta or whole kinds off an Obszar — bare, the lot; `at` names another",
     needs: "testmode",
     group: "override",
   },

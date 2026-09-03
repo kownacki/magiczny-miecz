@@ -238,22 +238,92 @@ suite("naming a card, a field or a creature", () => {
    * since `place gold` can only add.
    */
   it("takes the gold off an Obszar, all of it unless a number says", () => {
-    expect(ok("clear gold")).toEqual({ kind: "clear", cardId: null, gold: "all", fieldId: null });
+    expect(ok("clear gold")).toEqual({ kind: "clear", cardId: null, gold: "all", fieldId: null, classes: [] });
     expect(ok("clear gold all")).toMatchObject({ gold: "all" });
-    expect(ok("clear gold 3")).toEqual({ kind: "clear", cardId: null, gold: 3, fieldId: null });
+    expect(ok("clear gold 3")).toEqual({ kind: "clear", cardId: null, gold: 3, fieldId: null, classes: [] });
     expect(ok("clear gold 3 at Karczma")).toEqual({
       kind: "clear",
       cardId: null,
       gold: 3,
       fieldId: "karczma",
+      classes: [],
     });
     expect(ok("clear złoto 2")).toMatchObject({ gold: 2 });
+  });
+
+  /**
+   * A whole kind at a time, which is what dressing a test table wants back.
+   *
+   * Six Karty on one Obszar and „take the Nieznajomi off" was six lines and
+   * knowing every name on the square first.
+   */
+  it("takes a whole kind off the Obszar", () => {
+    expect(ok("clear strangers")).toEqual({
+      kind: "clear",
+      fieldId: null,
+      cardId: null,
+      gold: null,
+      classes: ["stranger"],
+    });
+    expect(ok("clear places at Karczma")).toMatchObject({
+      fieldId: "karczma",
+      classes: ["place"],
+    });
+  });
+
+  /** Several, the way `deal` takes several, and in the order they were named. */
+  it("takes several kinds separated by commas", () => {
+    expect(ok("clear strangers, places")).toMatchObject({ classes: ["stranger", "place"] });
+  });
+
+  /**
+   * II and III are two resolution classes and one kind of thing — 16.2 and 16.3
+   * name them apart only to order them, and 1.4, 12.1a and 13.5 all say Wróg
+   * and mean both. `isFoeClass` is the door the engine already asks.
+   */
+  it("takes both numerals of Wróg under one word", () => {
+    expect(ok("clear enemies")).toMatchObject({ classes: ["foe", "demon"] });
+  });
+
+  /** The money stands in the same list, because bare `clear` sweeps it too. */
+  it("takes the coins along when they are named beside a kind", () => {
+    expect(ok("clear strangers, gold")).toMatchObject({
+      classes: ["stranger"],
+      gold: "all",
+    });
+  });
+
+  /**
+   * Plural, because DEMON is a card — the one class name the box also prints on
+   * a Karta. A singular keyword would have won against it, since keywords are
+   * read before names, and the creature would have become untypeable.
+   *
+   * The singular is left exactly as it was: `clear demon` prefix-matches the
+   * Obszar Demon Zagłady, which is what it meant before this and still does,
+   * and the Karta is reached the way it always was, past `at`.
+   */
+  it("leaves the singular alone, so the Karta and the Obszar are still reachable", () => {
+    expect(ok("clear demons")).toMatchObject({ cardId: null, classes: ["demon"] });
+    expect(ok("clear demon")).toMatchObject({ fieldId: "demon-zaglady", classes: [] });
+    expect(ok("clear demon at Karczma")).toMatchObject({ cardId: "demon", classes: [] });
+  });
+
+  it("does not mind the case or the spacing", () => {
+    expect(ok("clear STRANGERS ,places")).toMatchObject({ classes: ["stranger", "place"] });
+  });
+
+  /**
+   * All or nothing: a typo in the second word is a typo, not a smaller sweep,
+   * and half-obeying it would take Karty off a square nobody meant to touch.
+   */
+  it("names the word it did not know rather than sweeping the rest", () => {
+    expect(err("clear strangers, palces")).toContain("palces");
   });
 
   it("still means the Karta, and the Obszar, where those are what was named", () => {
     expect(ok("clear 1 SZTUKA ZŁOTA")).toMatchObject({ cardId: "1-sztuka-zlota", gold: null });
     expect(ok("clear Karczma")).toMatchObject({ fieldId: "karczma", cardId: null, gold: null });
-    expect(ok("clear")).toEqual({ kind: "clear", cardId: null, gold: null, fieldId: null });
+    expect(ok("clear")).toEqual({ kind: "clear", cardId: null, gold: null, fieldId: null, classes: [] });
   });
 
   it("names both halves of a place, and complains about the one that is wrong", () => {
@@ -464,6 +534,15 @@ suite("naming a card, a field or a creature", () => {
     expect(complete("deal MGŁA, ", []).options.length).toBeGreaterThan(50);
   });
 
+  /** Past a comma `clear` is certainly naming kinds, so that is all it offers. */
+  it("offers only kinds and the money after a comma", () => {
+    expect(complete("clear strangers, ", []).sections?.map((one) => one.title)).toEqual([
+      "Złoto",
+      "Rodzaje",
+    ]);
+    expect(complete("clear strangers, pla", []).line).toBe("clear strangers, places ");
+  });
+
   it("drops a heading the fragment has emptied", () => {
     // TARCZA TOLIMANA is a Przedmiot and TAJEMNE PRZEJŚCIE / TARGOWISKO are
     // Miejsca. No Przyjaciel, Wróg, Spotkanie, Nieznajomy or Zaklęcie begins
@@ -496,8 +575,9 @@ suite("naming a card, a field or a creature", () => {
     expect(titles("place ")).toEqual(["Złoto", ...KARTY]);
     expect(titles("take ")).toEqual(["Złoto", ...KARTY]);
     // `clear` grew one too: bare it sweeps the coins with the Karty, and named
-    // it takes the coins alone.
-    expect(titles("clear ")).toEqual(["Złoto", ...KARTY]);
+    // it takes the coins alone. And a shelf the other two have no use for —
+    // `clear` is the only verb that takes a whole kind at a time.
+    expect(titles("clear ")).toEqual(["Złoto", "Rodzaje", ...KARTY]);
     // A Hełm has no pile to sit on top of (21.2); a Zaklęcie has its own.
     expect(titles("stack ")).toContain("Zaklęcia");
     // And the one shelf that is not a Karta Zdarzeń class.
@@ -1435,7 +1515,7 @@ const USAGE: Record<string, { line: string; becomes: unknown }> = {
   pile: { line: "pile events", becomes: { kind: "pile", pile: "events" } },
   clear: {
     line: "clear Karczma",
-    becomes: { kind: "clear", fieldId: "karczma", cardId: null, gold: null },
+    becomes: { kind: "clear", fieldId: "karczma", cardId: null, gold: null, classes: [] },
   },
   endcast: { line: "endcast", becomes: { kind: "endcast" } },
   endfight: { line: "endfight", becomes: { kind: "endfight" } },

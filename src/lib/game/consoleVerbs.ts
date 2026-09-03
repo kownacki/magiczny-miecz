@@ -471,8 +471,25 @@ export const VERBS: { [K in Command["kind"]]: VerbRun<K> } = {
       requireFieldId(where),
       command.cardId,
       command.gold ?? undefined,
+      command.classes,
     );
     if (command.cardId) return `${cardName(command.cardId)} off ${fieldName(asFieldId(where))}.`;
+
+    /**
+     * A kind names what it swept, because you cannot see what was there.
+     *
+     * `clear TARGOWISKO` echoes a name you typed and the count is one; a kind is
+     * a wish rather than a list, and the answer to "did that do anything?" is
+     * which Karty went. The coins come after when they were asked for too.
+     */
+    if (command.classes.length > 0) {
+      const cards =
+        gone.cards.length === 0
+          ? "nothing"
+          : gone.cards.map((id) => cardName(id)).join(", ");
+      const coins = gone.gold > 0 ? `, and ${sztuki(gone.gold)}` : "";
+      return `Off ${fieldName(asFieldId(where))}: ${cards}${coins}.`;
+    }
     // Named on its own, the money is the whole answer: a line reporting "0 Kart
     // on the used pile" alongside would be counting something nobody asked
     // about.
