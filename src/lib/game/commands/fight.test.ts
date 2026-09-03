@@ -7,7 +7,8 @@ import { EVENT_COPIES } from "../decks";
 import { only, top, type TurnState } from "@/lib/engine/stack";
 import { aHolding, aSeat, aTable, aUser, NOW, ports } from "../fixture";
 import { pointsOf } from "./seat";
-import { hasAttacked } from "@/lib/engine/status";
+import { hasAttacked, lastAggression } from "@/lib/engine/status";
+import { nameOfSeat } from "./lobby";
 import { storedStatuses } from "./turn";
 import { apply } from "../change";
 import { attackSeat, beginFight, closeFightFrame, escape, fightRoll, setFightPlayerTotal, shieldSaves } from "./fight";
@@ -1186,9 +1187,9 @@ describe("pojedynek (13.1, 13.3, 17.7)", () => {
   /**
    * 13.3 is where the Dobre Bóstwo's question is answered — "jeśli podczas tej
    * rozgrywki zaatakowałeś inną Postać". The mark goes on at the moment of
-   * attacking rather than of winning, which is what the card asks about, and it
-   * goes on once: a second duel would otherwise read as twice the sinner for no
-   * reason the card gives.
+   * attacking rather than of winning, which is what the card asks about, and
+   * there is only ever one: a second duel replaces the mark rather than adding
+   * to it, so what the row carries is the latest act and never a tally.
    */
   it("remembers that the attacker raised a hand (13.3)", () => {
     const first = table();
@@ -1196,10 +1197,20 @@ describe("pojedynek (13.1, 13.3, 17.7)", () => {
     expect(hasAttacked(storedStatuses(marked, "seat-a"))).toBe(true);
     expect(hasAttacked(storedStatuses(marked, "seat-b"))).toBe(false);
 
-    // A later duel adds nothing. Only the mark is carried over — the first
-    // attack also opened a fight, and 13.1 refuses a second from inside one.
+    // Whom, where and when, so the accusation on the Karta can be checked.
+    const act = lastAggression(storedStatuses(marked, "seat-a"))!;
+    expect(act.how).toBe("atak");
+    expect(act.victim).toBe(nameOfSeat(marked.users, 1));
+    expect(act.round).toBe(marked.game.round);
+
+    // A later duel replaces rather than adds: one mark, holding the latest act.
     const later = apply(first, { effects: attackSeat(first, { targetSeatId: "seat-b" }).writes.effects });
-    expect(attackSeat(later, { targetSeatId: "seat-b" }).writes.effects?.insert ?? []).toHaveLength(0);
+    const again = attackSeat(later, { targetSeatId: "seat-b" }).writes.effects;
+    expect(again?.insert ?? []).toHaveLength(1);
+    expect(again?.delete ?? []).toHaveLength(1);
+    expect(storedStatuses(apply(later, { effects: again }), "seat-a").filter(
+      (status) => status.modifier.kind === "attacker",
+    )).toHaveLength(1);
   });
 
   it("refuses a Postać who is not standing here (13.1)", async () => {

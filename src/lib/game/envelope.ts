@@ -3,7 +3,8 @@
 import type { TurnState } from "@/lib/engine/stack";
 import { suppressesSpells, visibleTo } from "@/lib/engine/holdings";
 import { fightsForYou } from "@/lib/engine/abilities";
-import { spokenSpell } from "@/lib/engine/status";
+import { lastAggression, spokenSpell } from "@/lib/engine/status";
+import { describeAggression } from "@/lib/engine/abilityText";
 import { whyNoSpells } from "@/lib/engine/spells";
 import { FIELDS, type FieldId } from "@/lib/engine/board";
 import { foldStatuses } from "@/lib/engine/statusRows";
@@ -58,6 +59,8 @@ export interface EnvelopeSeat {
   spell_capacity: number;
   /** Why no Zaklęcie may be spoken at all right now — see `whyNoSpells`. */
   spells_blocked: string | null;
+  /** The last act of aggression, in words, or null — see `describeAggression`. */
+  aggression: string | null;
   sword_in_fight: number;
   magic_in_fight: number;
   effects: { id: string; source: string | null; label: string; when: string }[];
@@ -421,6 +424,19 @@ export function envelopeFor(
           statuses: view.statuses,
           abilities: view.abilities,
         }),
+        /**
+         * The last time this Postać raised a hand, in words, or null.
+         *
+         * Sent finished for the reason `spells_blocked` is: working it out
+         * needs seat rows and field names a device is not given for anybody but
+         * itself, and the Dobre Bóstwo's accusation has to read the same on
+         * every screen. Null is the answer the Bóstwo wants — it is also what
+         * makes the requirement line say „nie" rather than „nie wiadomo".
+         */
+        aggression: (() => {
+          const act = lastAggression(view.statuses);
+          return act ? describeAggression(act) : null;
+        })(),
         sword_in_fight: view.walka.miecz,
         magic_in_fight: view.walka.magia,
         /**

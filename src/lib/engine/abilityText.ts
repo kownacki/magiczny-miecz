@@ -3,7 +3,8 @@
 import type { Nature } from "@/data/types";
 import { FIELDS, type FieldId } from "./board";
 import { ABILITIES, CARD_NOTES, type Ability } from "./abilities";
-import { describeDisposition, scriptFor } from "./cardScript";
+import { describeDisposition, scriptFor, type Condition } from "./cardScript";
+import type { Status } from "./status";
 import { classOf } from "./cards";
 import { describeEffect, effectRows } from "./effectText";
 import { abilitiesOfCharacter, asCharacterId } from "./characters";
@@ -308,15 +309,72 @@ function servedNatures(cardId: string): readonly Nature[] | undefined {
  */
 export function requirementOf(
   cardId: string,
-  /** Who is reading it. Null outside a game, where the answer is nobody's. */
-  nature: Nature | null,
-): { text: string; met: boolean | null } | null {
+  /**
+   * Who is reading it, and what the Karta might have against them.
+   *
+   * `nature` is null outside a game, where the answer is nobody's. `aggression`
+   * is the sentence describing their last aggressive act, already built — the
+   * envelope sends it finished, because working it out needs seat rows and
+   * field names the browser is not given for other players.
+   */
+  reader: Nature | null | { nature: Nature | null; aggression?: string | null },
+): { text: string; met: boolean | null; detail?: string } | null {
+  const who = typeof reader === "object" && reader !== null ? reader : { nature: reader };
   const only = servedNatures(cardId);
-  if (!only) return null;
-  return {
-    text: `tylko Postać: ${only.map((one) => NATURE_LABEL[one] ?? one).join(" lub ")}`,
-    met: nature === null ? null : only.includes(nature),
-  };
+  if (only) {
+    return {
+      text: `tylko Postać: ${only.map((one) => NATURE_LABEL[one] ?? one).join(" lub ")}`,
+      met: who.nature === null ? null : only.includes(who.nature),
+    };
+  }
+  /**
+   * The Dobre Bóstwo, which asks what the reader has done rather than what they
+   * are — and is the only card in the box that does.
+   *
+   * Said as a requirement because that is what it is: the Karta has nothing for
+   * an innocent Postać and everything for a guilty one, which is the same shape
+   * as „tylko Postać: dobra" and reads better in the same place. The detail is
+   * the accusation's evidence, and it hangs off the line as a hover rather than
+   * standing on the panel — a player who wants to check gets it, and one who
+   * does not is not made to read a second sentence.
+   */
+  if (scriptFor(cardId)?.effect.op === "gdy" && conditionOf(cardId) === "attacker") {
+    return {
+      text: "tylko Postać: uznany agresor",
+      met: who.aggression === undefined ? null : who.aggression !== null,
+      ...(who.aggression ? { detail: who.aggression } : {}),
+    };
+  }
+  return null;
+}
+
+/** The kind of test a Karta's own `gdy` applies, when its whole effect is one. */
+function conditionOf(cardId: string): Condition["is"] | null {
+  const effect = scriptFor(cardId)?.effect;
+  return effect?.op === "gdy" ? effect.warunek.is : null;
+}
+
+/**
+ * One act of aggression, in the words a player can check against the journal.
+ *
+ * „Runda 3 — zaatakowałeś WIEDŹMĘ w Osadzie". Where the victim stood somewhere
+ * else it says both, which no base-game act does — 13.3 puts the two Postacie
+ * on one Obszar — and a Przyjaciel sent three Obszary out (POSZUKIWACZ PRZYGÓD)
+ * or a Zaklęcie cast across a Kraina both would.
+ */
+export function describeAggression(
+  act: Extract<Status["modifier"], { kind: "attacker" }>,
+): string {
+  const when = act.round === undefined ? "" : `Runda ${act.round} — `;
+  const did = act.how === "zdolnosc" ? "użyłeś zdolności przeciw" : "zaatakowałeś";
+  const whom = act.victim ?? "inną Postać";
+  const where =
+    act.where === undefined
+      ? ""
+      : act.victimWhere !== undefined && act.victimWhere !== act.where
+        ? ` — ty na Obszarze ${fieldName(act.where as FieldId)}, ofiara na Obszarze ${fieldName(act.victimWhere as FieldId)}`
+        : ` na Obszarze ${fieldName(act.where as FieldId)}`;
+  return `${when}${did} ${whom}${where}`;
 }
 
 /**

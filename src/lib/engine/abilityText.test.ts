@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  describeAggression,
   forbiddenNatures,
   itemProfile,
   requirementOf,
@@ -272,5 +273,61 @@ describe("what the summary beside the picture leaves out", () => {
   /** „Możesz je wybrać ze stosu" — the one Zaklęcie in the box that is chosen. */
   it("says the Półbóg's Zaklęcie is picked, not dealt", () => {
     expect(itemProfile("polbog").special.join(" ")).toContain("wybierasz 1 dowolne Zaklęcie ze stosu");
+  });
+});
+
+/**
+ * The Dobre Bóstwo, said as a requirement — the only Karta that asks what the
+ * reader has done rather than what they are.
+ */
+describe("a Karta that accuses", () => {
+  it("names the aggressor, and hangs the evidence off it", () => {
+    const guilty = requirementOf("dobre-bostwo", {
+      nature: "good",
+      aggression: "Runda 3 — zaatakowałeś WIEDŹMĘ na Obszarze Osada",
+    });
+    expect(guilty?.text).toBe("tylko Postać: uznany agresor");
+    expect(guilty?.met).toBe(true);
+    expect(guilty?.detail).toBe("Runda 3 — zaatakowałeś WIEDŹMĘ na Obszarze Osada");
+  });
+
+  it("clears a Postać with nothing against them", () => {
+    expect(requirementOf("dobre-bostwo", { nature: "good", aggression: null })?.met).toBe(false);
+  });
+
+  /** Outside a game nobody is reading it, so neither colour is earned. */
+  it("says nothing either way when the reader is unknown", () => {
+    expect(requirementOf("dobre-bostwo", { nature: null })?.met).toBeNull();
+  });
+
+  it("still reads a Natura off the cards that carry one", () => {
+    expect(requirementOf("wrozka", { nature: "evil" })?.met).toBe(false);
+  });
+});
+
+describe("describing one act of aggression", () => {
+  it("says when, what and whom", () => {
+    expect(
+      describeAggression({ kind: "attacker", victim: "WIEDŹMA", where: "osada", round: 3, how: "atak" }),
+    ).toBe("Runda 3 — zaatakowałeś WIEDŹMA na Obszarze Osada");
+  });
+
+  /** 13.3 puts both on one Obszar; a Przyjaciel sent out would not. */
+  it("names both Obszary when they differ", () => {
+    expect(
+      describeAggression({
+        kind: "attacker",
+        victim: "WIEDŹMA",
+        where: "osada",
+        victimWhere: "grod",
+        round: 3,
+        how: "atak",
+      }),
+    ).toContain("ofiara na Obszarze");
+  });
+
+  /** A mark written before any of this existed still says what it said. */
+  it("says what it can about a bare mark", () => {
+    expect(describeAggression({ kind: "attacker" })).toBe("zaatakowałeś inną Postać");
   });
 });

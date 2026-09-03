@@ -63,6 +63,7 @@ export function DrawModal({
   occupied,
   mySword,
   nature,
+  aggression,
   busy,
   onAction,
   onResolve,
@@ -148,6 +149,8 @@ export function DrawModal({
   mySword: number;
   /** The active character's Natura — see `DrawnCard`. */
   nature: Nature | null;
+  /** The active character's last aggressive act — see `DrawnCard`. */
+  aggression?: string | null;
   busy: boolean;
   onAction: OnAction;
   onResolve: (
@@ -248,6 +251,7 @@ export function DrawModal({
       occupied={occupied}
       mySword={mySword}
       nature={nature}
+      aggression={aggression}
       busy={busy}
       onResolve={onResolve}
       onFight={onFight}

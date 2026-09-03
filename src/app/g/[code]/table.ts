@@ -83,6 +83,8 @@ export interface Seat {
    * ordinary case. See `whyNoSpells`.
    */
   spells_blocked: string | null;
+  /** The last act of aggression, in words, or null — see `describeAggression`. */
+  aggression: string | null;
   /** The same, reckoned for a fight — 1.5's other figure. */
   sword_in_fight: number;
   magic_in_fight: number;

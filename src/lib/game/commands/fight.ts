@@ -61,7 +61,6 @@ import { activeSeat, eqModeOf, holdingsOf, pointsOf, seatById, seatView } from "
 import { refuseAgainstStone } from "./stone";
 import { slotsFor } from "@/lib/engine/slots";
 import { floorOf } from "./spellFloor";
-import { hasAttacked } from "@/lib/engine/status";
 import { addEffect, refuseAgainst13_2, refuseWhileUndrawn, storedStatuses } from "./turn";
 
 /**
@@ -988,20 +987,38 @@ export function attackSeat(
    * happens — the moment of *attacking*, not of winning, which is what the card
    * says and is why this is written whatever the fight then does.
    *
-   * Written once: a second duel adds nothing, and a character with two marks
-   * would read as twice the sinner for no reason the card gives.
+   * One mark, replaced rather than added to: „Jeśli podczas tej rozgrywki
+   * zaatakowałeś inną Postać" is asked once and answered yes or no, and a row
+   * per duel would read as a tally the card does not keep. What the row carries
+   * is the *latest* act — whom, where, when — which is what the accusation on
+   * the Karta has to be checkable against. The journal holds the rest.
    */
-  const marked = hasAttacked(storedStatuses(snapshot, attacker.id))
-    ? {}
-    : addEffect(snapshot, {
-        seatId: attacker.id,
-        effect: {
-          source: "13.3",
-          label: "Podniósł rękę na inną Postać",
-          modifier: { kind: "attacker" },
-          ends: { kind: "dispelled" },
+  const previous = storedStatuses(snapshot, attacker.id).find(
+    (status) => status.modifier.kind === "attacker",
+  );
+  const marked = mergeAll(
+    previous ? { effects: { delete: [previous.id] } } : {},
+    addEffect(snapshot, {
+      seatId: attacker.id,
+      effect: {
+        source: "13.3",
+        label: "Podniósł rękę na inną Postać",
+        modifier: {
+          kind: "attacker",
+          victim: nameOfSeat(snapshot.users, target.seat_index),
+          // 13.3 puts both Postacie on one Obszar, so these are the same today.
+          // `victimWhere` is written anyway, because the first thing that is not
+          // a duel — a Przyjaciel sent out, a Zaklęcie at range — will differ,
+          // and a field that appears later reads as a change of rule.
+          ...(attacker.field_id ? { where: attacker.field_id } : {}),
+          ...(target.field_id ? { victimWhere: target.field_id } : {}),
+          round: snapshot.game.round,
+          how: "atak",
         },
-      });
+        ends: { kind: "dispelled" },
+      },
+    }),
+  );
 
   return {
     writes: mergeAll(marked, {

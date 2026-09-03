@@ -56,6 +56,7 @@ export function DrawnCard({
   occupied = [],
   mySword,
   nature,
+  aggression,
   busy,
   onResolve,
   onFight,
@@ -96,6 +97,13 @@ export function DrawnCard({
    * only puts the sheet back where it was.
    */
   nature: Nature | null;
+  /**
+   * The active character's last act of aggression, in words, or null.
+   *
+   * Undefined where it is not known, which is what makes the Dobre Bóstwo's
+   * line say nothing rather than say „no" — see `requirementOf`.
+   */
+  aggression?: string | null;
   busy: boolean;
   onResolve: (
     cardId: string,
@@ -209,7 +217,7 @@ export function DrawnCard({
    * has already said it — „Pierwszej Dobrej Postaci" is one fact and was coming
    * out as two, the second being the first with a word missing.
    */
-  const needs = requirementOf(known.id, nature);
+  const needs = requirementOf(known.id, { nature, aggression });
   /** Green where the reader passes, red where they do not, neutral outside a game. */
   const passes =
     needs === null || needs.met === null
@@ -319,7 +327,11 @@ export function DrawnCard({
           Green or red rather than neutral, because the useful question is not
           „does this card have a restriction" but „does it shut me out", and on
           a turn being taken the answer is known. */}
-      {needs && <p className={`text-[11px] ${passes}`}>{sentence(needs.text)}</p>}
+      {needs && (
+        <p className={`text-[11px] ${passes}`} title={needs.detail}>
+          {sentence(needs.text)}
+        </p>
+      )}
 
       {coverageOf(known.id) === "brak" && (
         <p className="rounded border border-edge bg-night/50 px-2 py-1 text-[11px] text-muted">

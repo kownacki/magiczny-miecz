@@ -38,10 +38,13 @@ export function CardFacts({
   profile,
   /** Who is looking, so a requirement can say whether THEY meet it. */
   nature,
+  aggression,
 }: {
   cardId: string;
   profile: ItemProfile;
   nature: Nature | null;
+  /** The reader's last aggressive act, for the one Karta that accuses (Dobre Bóstwo). */
+  aggression?: string | null;
 }) {
   // 5.3, answered for the reader rather than stated in the abstract.
   const barred = nature !== null && (forbiddenNatures(cardId)?.includes(nature) ?? false);
@@ -54,7 +57,7 @@ export function CardFacts({
    * która tu zawita", said nothing here at all. One question for the reader,
    * one answer, and the same two colours as the Przedmioty.
    */
-  const needs = requirementOf(cardId, nature);
+  const needs = requirementOf(cardId, { nature, aggression });
   const passes =
     needs === null || needs.met === null
       ? "text-muted"
@@ -80,7 +83,10 @@ export function CardFacts({
       {/* The Karta's condition, where the line above has not already folded it
           in — „czeka tu na pierwszą Dobrą Postać" says both at once. */}
       {needs && (
-        <p className={`border-t border-edge/60 pt-2 text-[11px] leading-snug ${passes}`}>
+        <p
+          className={`border-t border-edge/60 pt-2 text-[11px] leading-snug ${passes}`}
+          title={needs.detail}
+        >
           {sentence(needs.text)}
         </p>
       )}

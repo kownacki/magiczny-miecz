@@ -263,7 +263,33 @@ export type Modifier =
    * last, and this one lasts the whole game: nothing lifts it, which is what
    * `Ends.dispelled` says when nothing dispels.
    */
-  | { kind: "attacker" };
+  | {
+      kind: "attacker";
+      /**
+       * Whom, where, when and how — the act itself, not merely that there was
+       * one.
+       *
+       * The Dobre Bóstwo only asks whether, and `hasAttacked` still answers
+       * that from the presence of the modifier alone. This is for the reader:
+       * a Karta that says „tylko Postać: uznany agresor" is making an
+       * accusation, and an accusation a player cannot check is one they have to
+       * take on trust from the app.
+       *
+       * All optional, because the row is stored JSON and a mark written before
+       * these existed must keep meaning what it meant — that a hand was raised.
+       * `describeAggression` says what it can and stays silent about the rest.
+       */
+      /** The name printed on the victim's Karta Postaci. */
+      victim?: string;
+      /** Where the aggressor stood. */
+      where?: string;
+      /** Where the victim stood, when that was somewhere else (a Przyjaciel sent out, a Zaklęcie at range). */
+      victimWhere?: string;
+      /** The round it happened in. */
+      round?: number;
+      /** 13.3's two forms: a fight, or an ability used in place of one. */
+      how?: "atak" | "zdolnosc";
+    };
 
 export interface Status {
   /** Unique per holder, so two of the same card can be told apart. */
@@ -423,6 +449,22 @@ export function afterBreakout(statuses: readonly Status[], die: number): Status[
 /** Whether this character has attacked another during the game (Dobre Bóstwo). */
 export function hasAttacked(statuses: readonly Status[]): boolean {
   return statuses.some((status) => status.modifier.kind === "attacker");
+}
+
+/**
+ * The most recent act of aggression, or null.
+ *
+ * Only one is kept: the mark is one mark whatever a character has done — „Jeśli
+ * podczas tej rozgrywki zaatakowałeś inną Postać" is asked once and answered
+ * yes or no — and a row per duel would read as a tally the card does not keep.
+ * The writer replaces rather than adds, so this is the latest and the journal
+ * holds the rest.
+ */
+export function lastAggression(
+  statuses: readonly Status[],
+): Extract<Modifier, { kind: "attacker" }> | null {
+  const found = statuses.find((status) => status.modifier.kind === "attacker");
+  return found && found.modifier.kind === "attacker" ? found.modifier : null;
 }
 
 /** Whether a status folds Magia into Miecz for a fight (Magia i Miecz). */
