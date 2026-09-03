@@ -36,27 +36,6 @@ import { WithRules } from "./rule-ref";
  * renders what comes back, so the two cannot disagree.
  */
 
-function whyOf(frame: KolejkaFrame): string {
-  switch (frame.kind) {
-    case "placed":
-      return "Trafia na wskazany Obszar — rozpatrywana w pierwszej kolejności (15.1)";
-    case "spotkanie":
-      return "Spotkanie I — należy wykonać instrukcję Karty (16.1)";
-    case "wrogowie-miecz":
-      return frame.cards.length > 1
-        ? "Wróg II — atakują razem, Miecze się sumują (17.5)"
-        : "Wróg II — atakuje natychmiast, walka Mieczem (16.2)";
-    case "wrogowie-magia":
-      return frame.cards.length > 1
-        ? "Wróg III — atakują razem, Magie się sumują (18.2)"
-        : "Wróg III (Demon) — walka magiczna (16.3, 18.1)";
-    case "nieznajomy":
-      return "Nieznajomy IV — konieczne jest wykonanie instrukcji Karty (16.5)";
-    case "miejsce":
-      return "Miejsce VI — należy wykonać instrukcję Karty (16.7)";
-  }
-}
-
 /**
  * Every Karta on the Obszar is a chip; only some of them stop the turn.
  *
@@ -188,19 +167,23 @@ export function KolejkaStrip({
       <ol className="flex items-start gap-2 overflow-x-auto pb-1">
         {chips.map((chip, index) => {
           const current = index === at;
+          /**
+           * No `title` on the row.
+           *
+           * It carried why the Karta is in the way — „konieczne jest wykonanie
+           * instrukcji Karty (16.5)" — which is worth saying and was said in
+           * the one way that cannot work: the tile inside opens the whole Karta
+           * on the same hover, so the OS tooltip landed on top of the panel it
+           * was meant to add to. `card-tile.tsx` and `effect-mark.tsx` both
+           * already refuse a tooltip for exactly this, and this row was the
+           * third place to learn it.
+           *
+           * The badge says the same thing where it fits: „możesz" is on every
+           * optional Karta, so a tile without one is a Karta the turn is
+           * waiting on.
+           */
           return (
-            <li
-              key={`${index}-${chip.card.cardId}`}
-              className="shrink-0"
-              /* Why this Karta is in the way, with its rule. The tile's own
-                 hover opens the whole Karta, which says what it *is*; this says
-                 what the turn is doing about it, which the Karta cannot. */
-              title={
-                chip.frame
-                  ? whyOf(chip.frame)
-                  : "Możesz, ale nie musisz — w każdej chwili do końca tury (12.1)"
-              }
-            >
+            <li key={`${index}-${chip.card.cardId}`} className="shrink-0">
               <CardTile
                 card={tileFor({
                   cardId: chip.card.cardId as CardId,
