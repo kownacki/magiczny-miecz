@@ -117,7 +117,7 @@ export function staysAs(cardId: string): string | null {
     case "odloz":
       return "jednorazowa — potem wraca na stos";
     case "do-pierwszej":
-      return "czeka tu na pierwszą Postać — potem wraca na stos";
+      return "czeka na Obszarze na pierwszą Postać — potem wraca na stos";
     case "zostaje":
       return "zostaje na Obszarze do końca gry";
     case "zostaje-z-pula":

@@ -30,7 +30,7 @@ export const NIEZNAJOMI: Readonly<Record<string, CardScript>> = {
       op: "wybor",
       options: [
         {
-          label: "Przenieś się",
+          label: "Przenieś się na dowolny Obszar w tym Kręgu",
           effect: { op: "przenies", to: { kind: "dowolne-w-kregu" } },
         },
         { label: "Pomiń", effect: { op: "nic" } },
