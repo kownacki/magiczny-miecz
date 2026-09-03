@@ -185,7 +185,6 @@ export function FieldModal({
   pickedSeat = null,
   asked = [],
   onClose,
-  notice,
   phase,
   simulated = true,
   typedRolls = false,
@@ -240,14 +239,6 @@ export function FieldModal({
    * on the map — reading about somewhere you are not standing is the other half
    * of what it is for, and none of these belong there.
    */
-  /**
-   * What the app just decided by itself, said where it was decided.
-   *
-   * The die for an Obszar's table is thrown in here, so the answer belongs in
-   * here. It used to land in a bordered line behind this window, which meant
-   * closing the window to read the result of what you did in it.
-   */
-  notice?: string | null;
   phase?: string;
   simulated?: boolean;
   typedRolls?: boolean;
@@ -675,15 +666,21 @@ export function FieldModal({
         ) : undefined
       }
     >
-        <div className="flex flex-col gap-4 px-4 py-3">
-          {/* Above the fork, so a die thrown inside an offer is answered inside
-              it — the throw happens in here and the result belongs in here. */}
-          {notice && (
-            <p className="rounded border-l-2 border-ochre bg-ochre/5 px-3 py-2 text-sm text-ochre">
-              <WithRules text={notice} />
-            </p>
-          )}
+        {/* No notice here.
 
+            It said what the app had just decided — „DOBRE BÓSTWO: nic się nie
+            dzieje" — in a bordered line at the top of the drawer, on the
+            argument that a die thrown in this window should be answered in it.
+            That holds for the *answer* and not for the announcement: what the
+            die did lands on the thing it did it to — a number that changes, a
+            Karta struck through in the kolejka, a figure that moves — and the
+            sentence above them was a second copy of it, in the one place a
+            reader has to scroll past to reach the square.
+
+            A running account of what happened is the Dziennik's, which is a
+            feed built for it and reads in the order things occurred. This
+            drawer is what the Obszar *is*; it is not a log of what it did. */}
+        <div className="flex flex-col gap-4 px-4 py-3">
           {open ? (
             <FieldService offer={open} ctx={offerCtx} />
           ) : (

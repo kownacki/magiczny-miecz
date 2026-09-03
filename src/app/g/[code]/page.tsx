@@ -165,7 +165,6 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
     pendingCharacter,
     announcement,
     setAnnouncement,
-    notice,
     setNotice,
     failure,
     setFailure,
@@ -1318,7 +1317,6 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                   post("holdings", { ...body, seatId: active.id }),
               }
             : {})}
-          notice={error ? null : notice}
           onClose={() => {
             // Shutting the window counts as having looked: the reveal holds the
             // sheet back, so leaving it un-answered would close the one window

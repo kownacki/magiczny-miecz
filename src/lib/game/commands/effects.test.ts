@@ -668,6 +668,42 @@ describe("a Karta that draws three more (SKALNE WROTA)", () => {
   });
 });
 
+/**
+ * A Karta that turns out to do nothing still says so.
+ *
+ * `no-effect` was written for a `gdy` whose condition fails and has no other
+ * branch. A card that spells the branch out reaches the same nothing by the
+ * other road — DOBRE BÓSTWO's `inaczej: { op: "nic" }`, which is what it does
+ * for anybody who has attacked nobody — and said it nowhere, so the turn walked
+ * past in silence and that is indistinguishable from the app losing the Karta.
+ */
+describe("a Karta whose instruction comes to nothing", () => {
+  const walk = (over: { cardId?: string } = {}) =>
+    applyEffect(
+      aTable({ seats: [aSeat({ id: "seat-a", seat_index: 0 })] }),
+      { seatId: "seat-a", effect: { op: "nic" }, reason: "KARTA", shuffle: asIs, ...over },
+      ports(),
+    );
+
+  it("writes the same line the other road writes", async () => {
+    const { writes, result } = await walk({ cardId: "dobre-bostwo" });
+    expect(result.did).toEqual(["nic się nie dzieje"]);
+    expect(writes.journal).toEqual([
+      expect.objectContaining({ kind: "no-effect", payload: { cardId: "dobre-bostwo" } }),
+    ]);
+  });
+
+  /**
+   * And only for a Karta. `nic` is also a face of a die table and a branch of a
+   * `wybor`, which have lines of their own; with nothing to name there is
+   * nothing to write.
+   */
+  it("says nothing when there is no Karta to name", async () => {
+    const { writes } = await walk();
+    expect(writes.journal).toBeUndefined();
+  });
+});
+
 describe("the rest of the vocabulary", () => {
   it("heals up to the starting level, and says so when there is nothing to heal", async () => {
     const hurt = aTable({ seats: [aSeat({ id: "seat-a", life: 2 })] });
