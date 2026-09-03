@@ -51,12 +51,21 @@ export const TILE_GAP_PX = 8;
  * either side, + 1 for the border, + the scrollbar. That last term is
  * the one that cannot be a measurement: a scrollbar is reserved in *device*
  * pixels, so its size in the CSS pixels this sum is written in grows as the
- * reader zooms out — 15 at 100%, 16.7 at 90%, 18.75 at 80%, 22.4 at 67%. A
- * width that just cleared it at 100% would be one tile too narrow at 90%, which
- * is not a width so much as arithmetic that holds at one zoom level. 23 covers
- * it down to about 65%, and what is left at 100% is 8px — the row's own gap,
- * once, past the last tile, which is the least it can be while still being a
- * margin.
+ * reader zooms out. A width that just cleared it at 100% would be one tile too
+ * narrow at 90%, which is not a width so much as arithmetic that holds at one
+ * zoom level. So the term is the bar at 100% plus a margin, and it is the
+ * margin that absorbs the zoom.
+ *
+ * It was 23 while the panels wore the platform's default bar. They wear a thin
+ * one now (`globals.css`), and thin is 11 rather than 15 — measured in Chrome
+ * 152 as `offsetWidth - clientWidth` on a scrolling box carrying the app's own
+ * rules, against 15 for the same box forced back to `scrollbar-width: auto`.
+ * Four pixels back on every drawer, on both sides of the board.
+ *
+ * 19, so what is left at 100% is the same 8px the row's own gap is — once, past
+ * the last tile, which is the least it can be while still being a margin. It
+ * covers further down the zoom range than 23 did, not less: 11/z clears 19
+ * until about 58%, where 15/z cleared 23 at about 65%.
  *
  * The padding is a parameter because not every drawer wraps its row in the same
  * chrome. Most put the tiles straight inside `px-4` and 32 is the whole of it;
@@ -64,7 +73,7 @@ export const TILE_GAP_PX = 8;
  * deep by the time it is drawn.
  */
 export function shelfWidth(tiles: number, sides = 32): number {
-  return tiles * TILE_WIDTH + (tiles - 1) * TILE_GAP_PX + sides + 1 + 23;
+  return tiles * TILE_WIDTH + (tiles - 1) * TILE_GAP_PX + sides + 1 + 19;
 }
 
 /**
@@ -110,7 +119,7 @@ export const OBSZAR_WIDTH = shelfWidth(OBSZAR_TILES);
  * lies over the board like the Obszar does.
  *
  * Measured rather than reasoned: the narrowest width that keeps three tiles on
- * one line through this chain is 317 plus the scrollbar's 23.
+ * one line through this chain is 317 plus the scrollbar's 19.
  */
 export const PLAYERS_WIDTH = shelfWidth(OBSZAR_TILES, 2 * (12 + 1 + 8));
 

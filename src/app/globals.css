@@ -51,20 +51,20 @@ html {
      arithmetic and the reason each term is what it is live on `SHELF_WIDTH` in
      `cardImages.ts`, which is the source; `shelfWidth.test.ts` fails the build
      if this number and that one drift apart. */
-  --shelf-w: 518px;
+  --shelf-w: 514px;
 
   /* The same measurement for the Obszar, which is three tiles and not five —
      it holds a handful of Karty rather than a catalogue, and it lies over the
      board the whole time you are reading it. `OBSZAR_WIDTH` in `cardImages.ts`
      is the source, and `shelfWidth.test.ts` pins this to it as well. */
-  --obszar-w: 330px;
+  --obszar-w: 326px;
 
   /* And the roster, which is the same row of three and ten pixels wider: in
      here the tiles are not laid straight into the drawer but into a box per
      player, so the column's `p-3`, that box's border and the open panel's
      `px-2` come between them and the edge. `PLAYERS_WIDTH` in `cardImages.ts`
      is the source, and `shelfWidth.test.ts` pins this to it too. */
-  --gracze-w: 340px;
+  --gracze-w: 336px;
 }
 
 @theme {
@@ -173,24 +173,33 @@ body {
 
    `scrollbar-*` first, because that is the standard pair and what Chrome and
    Firefox both read now; the WebKit pseudo-elements are the same thing again
-   for the Safari versions that never learned them. Everything scrollable in
-   the app is inside a panel, so one rule serves the sheet, the drawers, the
-   Dziennik and the kolejka alike. */
-* {
+   for the Safari versions that never learned them. Where both are understood
+   the standard pair wins and the 8px below is never reached — measured at 11px
+   either way in Chrome 152, against 15 for the default. `shelfWidth` in
+   `cardImages.ts` budgets for the 11 and says so.
+
+   Not the window's own bar, which is why this is `:not(html, body)` and not
+   `*`. Everything the app draws is inside a panel and a thin edge-coloured
+   thumb is right in there; the page's scrollbar is the browser's furniture
+   rather than the app's, it is the one a reader reaches for without looking,
+   and a scroll of the whole window is a different gesture from a scroll of a
+   drawer. The viewport takes its scrollbar from `html`, so leaving those two
+   alone is the whole of it. */
+:not(html, body) {
   scrollbar-width: thin;
   scrollbar-color: var(--color-edge) transparent;
 }
 
-::-webkit-scrollbar {
+:not(html, body)::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 
-::-webkit-scrollbar-track {
+:not(html, body)::-webkit-scrollbar-track {
   background: transparent;
 }
 
-::-webkit-scrollbar-thumb {
+:not(html, body)::-webkit-scrollbar-thumb {
   background: var(--color-edge);
   border-radius: 4px;
 }
