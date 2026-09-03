@@ -166,14 +166,13 @@ export function ActionButton({
    *
    * The other side of the three seconds. While a button fills, the decision is
    * still the player's and the button is the way out of it; once it is sent
-   * there is no way out, and what the panel owes them instead is to say which
-   * of the buttons they pressed — the whole row is disabled by then, and a row
-   * of equally grey options is a panel that has forgotten what it was asked.
+   * there is no way out — so it goes out with the rest of the panel, and the
+   * only thing that separates it from them is the ring turning where its label
+   * was. Dimmed like every other control, because it is exactly as unpressable;
+   * spinning, because it is the one the table is waiting on.
    *
-   * So this one keeps its colour while the rest dim, and breathes. It is not a
-   * spinner: nothing here reports progress, because there is none to report —
-   * it says *this is the one that is happening*, and it stops when the turn
-   * state that carries it arrives and the panel moves on.
+   * The label keeps its place in the layout and only its ink, so the button
+   * does not resize and its accessible name stays the answer that was given.
    */
   sent?: boolean;
   onClick: () => void;
@@ -230,10 +229,7 @@ export function ActionButton({
       title={filling ? undefined : title}
       aria-label={filling ? "Anuluj" : undefined}
       className={[
-        "relative overflow-hidden rounded border transition",
-        // Everything else on the panel dims behind `busy`; the decision that is
-        // in flight is the one thing still true, so it does not.
-        sent ? "" : "disabled:opacity-50",
+        "relative overflow-hidden rounded border transition disabled:opacity-50",
         SIZE[size],
         LOOK[role][weight],
         align === "left" ? "text-left" : "",
@@ -243,18 +239,23 @@ export function ActionButton({
         .join(" ")}
     >
       {/* Kept in the layout and only hidden, so the button does not resize
-          under the cursor that is about to press it again. */}
-      <span className={filling ? "invisible block" : "block"}>
+          under the cursor that is about to press it again. `invisible` while it
+          fills, because the name is „Anuluj" then and there must not be two;
+          only faded once it is sent, so a screen reader still reads back the
+          answer the ring is turning for. */}
+      <span className={filling ? "invisible block" : sent ? "block opacity-0" : "block"}>
         {children}
         {note ? (
           <span className="mt-0.5 block text-[11px] leading-snug text-muted">{note}</span>
         ) : null}
       </span>
       {sent ? (
-        <span
-          aria-hidden
-          className={`pointer-events-none absolute inset-0 motion-safe:animate-pulse ${FILL[role]}`}
-        />
+        <span aria-hidden className="absolute inset-0 grid place-items-center">
+          {/* Its own text colour and its own size: the ring belongs to this
+              button rather than arriving on top of it, and a chip in a line of
+              prose cannot carry the same one a decision under a Karta does. */}
+          <span className="block h-[1em] w-[1em] rounded-full border-2 border-current border-t-transparent motion-safe:animate-spin" />
+        </span>
       ) : null}
       {filling ? (
         <>

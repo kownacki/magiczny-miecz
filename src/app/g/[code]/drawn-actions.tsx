@@ -163,17 +163,21 @@ export interface DrawnActionsProps {
 function ObszarPicker({
   among,
   value,
+  disabled,
   onPick,
 }: {
   among: readonly FieldId[];
   value: FieldId | "";
+  /** Shut with the buttons beside it: a decision in flight takes the panel. */
+  disabled: boolean;
   onPick: (field: FieldId | "") => void;
 }) {
   return (
     <select
       value={value}
+      disabled={disabled}
       onChange={(event) => onPick(asFieldId(event.target.value) ?? "")}
-      className="rounded border border-edge bg-night px-2 py-1.5 text-sm text-ink"
+      className="rounded border border-edge bg-night px-2 py-1.5 text-sm text-ink disabled:opacity-50"
     >
       <option value="">— wybierz Obszar —</option>
       {among.map((fieldId) => (
@@ -553,7 +557,7 @@ export function DrawnActions({
                */
               option.effect.op === "przenies" && option.effect.to.kind !== "pole" ? (
                 <span key={option.label} className="flex flex-wrap items-center gap-2">
-                  <ObszarPicker among={ring} value={going} onPick={setGoing} />
+                  <ObszarPicker among={ring} value={going} disabled={busy} onPick={setGoing} />
                   <ActionButton
                     says={{ kind: "wybiera", option: index }}
                     disabled={busy || !going}
@@ -623,7 +627,7 @@ export function DrawnActions({
           the board, so the board is what is offered. */}
       {asking?.op === "przenies" && asking.to.kind !== "pole" && (
         <div className="flex flex-wrap items-center gap-2">
-          <ObszarPicker among={ring} value={going} onPick={setGoing} />
+          <ObszarPicker among={ring} value={going} disabled={busy} onPick={setGoing} />
           <ActionButton
             says={{ kind: "przenosi-sie" }}
             disabled={busy || !going}
@@ -644,6 +648,7 @@ export function DrawnActions({
           <ObszarPicker
             among={asking.gdzie.fieldIds.filter((fieldId) => !occupied.includes(fieldId))}
             value={going}
+            disabled={busy}
             onPick={setGoing}
           />
           <ActionButton
