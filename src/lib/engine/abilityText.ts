@@ -3,7 +3,7 @@
 import type { Nature } from "@/data/types";
 import { FIELDS, type FieldId } from "./board";
 import { ABILITIES, CARD_NOTES, type Ability } from "./abilities";
-import { describeDisposition, scriptFor, type Condition } from "./cardScript";
+import { describeDisposition, scriptFor, type Condition, type Effect } from "./cardScript";
 import type { Status } from "./status";
 import { classOf } from "./cards";
 import { describeEffect, effectRows } from "./effectText";
@@ -345,6 +345,8 @@ export interface Reader {
   gender?: "m" | "f";
   /** Whether this is the reader's own Postać, which is then not named. */
   mine?: boolean;
+  /** What they have, for an offer that says what it would leave them with. */
+  points?: OwnPoints;
 }
 
 /**
@@ -436,6 +438,84 @@ function acquittal(reader: Reader): string {
     `ani nie użył${a} swoich zdolności na jej niekorzyść`
   );
 }
+
+/** What a Postać has, for an offer that says what it would leave them with. */
+export interface OwnPoints {
+  sword: number;
+  magic: number;
+  life: number;
+  gold: number;
+  /** 1.2–1.5: own points never fall below the starting values. */
+  swordFloor: number;
+  magicFloor: number;
+}
+
+/**
+ * What one option would leave you with — „Miecz 6 → 7".
+ *
+ * On the button, because a choice between two numbers is not a choice until you
+ * know the numbers. „Zamieniasz bazowe punkty Miecza na bazowe punkty Magii" is
+ * a rule; „Miecz 6 → 2 · Magia 2 → 6" is the decision, and the second is what a
+ * player is actually weighing.
+ *
+ * Clamped at the floor, so the sheet never promises what 1.2–1.5 would refuse:
+ * a Kuglarz cannot take a Barbarzyńca's Miecz below the 6 his Karta starts him
+ * on, and „6 → 2" over a swap that would land on 6 is worse than no number.
+ *
+ * Null for anything that does not move one of the four, which is most of the
+ * box — a relocation, a Zaklęcie, a fight.
+ */
+export function previewOf(effect: Effect, points: OwnPoints): string | null {
+  const shown = (label: string, from: number, to: number) =>
+    from === to ? `${label} ${from} — bez zmian` : `${label} ${from} → ${to}`;
+
+  if (effect.op === "punkty") {
+    const now = { sword: points.sword, magic: points.magic, life: points.life, gold: points.gold }[
+      effect.stat
+    ];
+    const floor =
+      effect.stat === "sword" ? points.swordFloor : effect.stat === "magic" ? points.magicFloor : 0;
+    const next = Math.max(floor, now + effect.delta);
+    return shown(STAT_OF[effect.stat], now, next);
+  }
+
+  if (effect.op === "zamien-punkty") {
+    /**
+     * „zamienić twoje punkty Miecza na punkty Magii lub odwrotnie" — the two
+     * trade places, whole. Clamping one side would not be a swap: it would
+     * hold a Miecz at its floor and hand the Magia the higher number anyway,
+     * inventing points out of a rule that exists to stop them being lost.
+     *
+     * So where 1.2–1.5 would refuse the trade, this says nothing rather than
+     * something. What the engine does about it is `zamien-punkty`'s to settle
+     * and it has not been written yet; a preview must not decide that here.
+     */
+    const [sword, magic] = [points.magic, points.sword];
+    if (sword < points.swordFloor || magic < points.magicFloor) return null;
+    return `${shown("Miecz", points.sword, sword)} · ${shown("Magia", points.magic, magic)}`;
+  }
+
+  if (effect.op === "uzdrow" && effect.upTo !== undefined) {
+    // „tylko do wysokości startowej — 4 punktów", which is 3.1's ceiling and the
+    // same for everybody.
+    const next = Math.min(4, points.life + effect.upTo);
+    return shown("Życie", points.life, next);
+  }
+
+  if (effect.op === "zaklecie" && effect.cena) {
+    return shown("Złoto", points.gold, Math.max(0, points.gold - effect.cena * effect.count));
+  }
+
+  return null;
+}
+
+/** The four in the nominative, for a sentence that puts them first. */
+const STAT_OF: Record<"sword" | "magic" | "life" | "gold", string> = {
+  sword: "Miecz",
+  magic: "Magia",
+  life: "Życie",
+  gold: "Złoto",
+};
 
 /** The kind of test a Karta's own `gdy` applies, when its whole effect is one. */
 function conditionOf(cardId: string): Condition["is"] | null {

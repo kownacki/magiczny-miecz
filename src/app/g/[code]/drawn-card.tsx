@@ -11,7 +11,7 @@ import { attackAsOne } from "@/lib/engine/combat";
 import { kindForCard } from "@/lib/engine/holdings";
 import { KolejkaStrip, worthShowing } from "./kolejka-strip";
 import { scriptFor, describeDisposition } from "@/lib/engine/cardScript";
-import { itemProfile, requirementOf, staysAs } from "@/lib/engine/abilityText";
+import { itemProfile, previewOf, requirementOf, staysAs } from "@/lib/engine/abilityText";
 import { sentence } from "@/lib/engine/polish";
 import { mayWalkPast } from "@/lib/engine/kolejka";
 import { TheReader } from "./card-facts";
@@ -515,7 +515,15 @@ export function DrawnCard({
                   }}
                   className="rounded border border-ochre/60 px-3 py-1.5 text-sm text-ochre transition hover:bg-edge disabled:opacity-50"
                 >
-                  {sentence(option.label)}
+                  <span className="block">{sentence(option.label)}</span>
+                  {/* What it would leave you with. A choice between two rules
+                      is not a choice until you know the numbers: „Miecz 6 → 2 ·
+                      Magia 2 → 6" is the decision the label only describes. */}
+                  {reader?.points && previewOf(option.effect, reader.points) && (
+                    <span className="mt-0.5 block text-[11px] text-muted">
+                      {previewOf(option.effect, reader.points)}
+                    </span>
+                  )}
                 </button>
               ))}
             </div>

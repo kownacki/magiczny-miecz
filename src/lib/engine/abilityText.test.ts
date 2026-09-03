@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   describeAggression,
+  previewOf,
   forbiddenNatures,
   itemProfile,
   requirementOf,
@@ -402,5 +403,60 @@ describe("describing one act of aggression", () => {
   /** A mark written before any of this existed still says what it said. */
   it("says what it can about a bare mark", () => {
     expect(describeAggression({ kind: "attacker" })).toBe("atak na inną Postać");
+  });
+});
+
+/**
+ * What an offer would leave you with. A choice between two rules is not a
+ * choice until you know the numbers.
+ */
+describe("what one option would do to the numbers", () => {
+  const barbarzynca = {
+    sword: 6,
+    magic: 2,
+    life: 3,
+    gold: 5,
+    swordFloor: 6,
+    magicFloor: 2,
+  };
+
+  it("says where a point lands", () => {
+    expect(previewOf({ op: "punkty", stat: "sword", delta: 1 }, barbarzynca)).toBe("Miecz 6 → 7");
+  });
+
+  /**
+   * 1.2–1.5: own points never fall below the starting values, so a swap that
+   * would take a Barbarzyńca's Miecz to 2 does not — and the sheet must not
+   * promise it would.
+   */
+  it("says nothing rather than promising what the floors refuse", () => {
+    // A Barbarzyńca starts on Miecz 6, so there is no swap to be had: holding
+    // one side at its floor and moving the other would invent points.
+    expect(previewOf({ op: "zamien-punkty", z: "sword" }, barbarzynca)).toBeNull();
+    // A character with room to move sees the trade it really is: a Mag starts
+    // on Miecz 2 and Magia 4, so both halves clear their floors.
+    expect(
+      previewOf(
+        { op: "zamien-punkty", z: "sword" },
+        { ...barbarzynca, sword: 5, magic: 4, swordFloor: 2, magicFloor: 4 },
+      ),
+    ).toBe("Miecz 5 → 4 · Magia 4 → 5");
+  });
+
+  /** „tylko do wysokości startowej — 4 punktów" is the Cudotwórca's ceiling. */
+  it("caps the Cudotwórca at four", () => {
+    expect(previewOf({ op: "uzdrow", upTo: 2 }, barbarzynca)).toBe("Życie 3 → 4");
+    expect(previewOf({ op: "uzdrow", upTo: 2 }, { ...barbarzynca, life: 4 })).toBe(
+      "Życie 4 — bez zmian",
+    );
+  });
+
+  it("prices the Sztukmistrz's Zaklęcie", () => {
+    expect(previewOf({ op: "zaklecie", count: 1, cena: 1 }, barbarzynca)).toBe("Złoto 5 → 4");
+  });
+
+  it("says nothing about what it cannot count", () => {
+    expect(previewOf({ op: "nic" }, barbarzynca)).toBeNull();
+    expect(previewOf({ op: "ruch-dodatkowy" }, barbarzynca)).toBeNull();
   });
 });

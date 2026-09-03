@@ -55,7 +55,7 @@ import events from "@/data/events.json";
 import spells from "@/data/spells.json";
 import type { EventCard, Spell } from "@/data/types";
 import { TheReader } from "./card-facts";
-import type { Reader } from "@/lib/engine/abilityText";
+import type { OwnPoints, Reader } from "@/lib/engine/abilityText";
 import { characterName } from "@/lib/engine/polish";
 import { genderOf } from "@/lib/engine/characters";
 import { FieldModal } from "./field-modal";
@@ -981,6 +981,23 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
   const reads = (seat: { player_name?: string | null; seat_index: number; character_id?: string | null }) =>
     `${seat.player_name ?? `Miejsce ${seat.seat_index + 1}`} (${characterName(seat.character_id ?? "")})`;
 
+  /** The four numbers an offer can move, plus the two floors it may not cross. */
+  const pointsOf = (seat: {
+    sword_own: number;
+    magic_own: number;
+    life: number;
+    gold: number;
+    sword_floor: number;
+    magic_floor: number;
+  }): OwnPoints => ({
+    sword: seat.sword_own,
+    magic: seat.magic_own,
+    life: seat.life,
+    gold: seat.gold,
+    swordFloor: seat.sword_floor,
+    magicFloor: seat.magic_floor,
+  });
+
   const viewer: Reader | null = mySeat
     ? {
         nature: asNature(mySeat.nature),
@@ -988,6 +1005,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
         name: reads(mySeat),
         gender: genderOf(mySeat.character_id),
         mine: true,
+        points: pointsOf(mySeat),
       }
     : null;
   const dealt: Reader | null = active
@@ -997,6 +1015,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
         name: reads(active),
         gender: genderOf(active.character_id),
         mine: active.id === mySeat?.id,
+        points: pointsOf(active),
       }
     : null;
 

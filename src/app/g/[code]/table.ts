@@ -63,6 +63,15 @@ export interface Seat {
   field_id: FieldId | null;
   sword_own: number;
   magic_own: number;
+  /**
+   * The lowest those two may fall to — a character's starting values (1.2–1.5).
+   *
+   * Sent because the sheet does arithmetic with them: „Miecz 6 → 2" under a
+   * Kuglarz's offer is a promise, and a promise the floor would have refused is
+   * worse than no number at all.
+   */
+  sword_floor: number;
+  magic_floor: number;
   /** Own points plus everything carried (1.5, 2.5), computed server-side. */
   sword_total: number;
   magic_total: number;
