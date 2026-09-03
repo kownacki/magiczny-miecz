@@ -262,6 +262,14 @@ describe("what the summary beside the picture leaves out", () => {
    * The requirement line has already said „tylko Postać: dobra"; saying it
    * again as „Jeśli dobra:" pushes the six gifts a clause further from the eye.
    */
+  /** Both conditions the requirement line states, and only those two. */
+  it("does not repeat the condition the requirement line states", () => {
+    // „Tylko Postać: uznany agresor" is already above it.
+    expect(itemProfile("dobre-bostwo").special[0]).toBe("do wyboru:");
+    // The Złodziej's second branch acts, so it is content and both halves stay.
+    expect(itemProfile("zlodziej-dobroczynca").special).toHaveLength(2);
+  });
+
   it("does not repeat the Natura the requirement line states", () => {
     const wrozka = itemProfile("wrozka").special;
     expect(wrozka.join(" ")).not.toContain("dobra:");

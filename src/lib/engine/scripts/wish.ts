@@ -19,7 +19,7 @@ export function WISH(): Effect {
       { label: "1 Zaklęcie", effect: { op: "zaklecie", count: 1 } },
       { label: "1 Sztuka Złota", effect: { op: "punkty", stat: "gold", delta: 1 } },
       {
-        label: "przeniesienie w tym Kręgu",
+        label: "Przenieś się na dowolny Obszar w tym Kręgu",
         effect: { op: "przenies", to: { kind: "dowolne-w-kregu" } },
       },
     ],

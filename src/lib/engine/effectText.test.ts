@@ -413,7 +413,7 @@ describe("a choice, described", () => {
   it("prints the labels and nothing else", () => {
     expect(describeEffect(SCRIPTS["krol-lasu"]!.effect)).toBe(
       "do wyboru: 1 punkt Miecza · 1 punkt Magii · 1 punkt Życia · " +
-        "1 Zaklęcie · 1 Sztuka Złota · przeniesienie w tym Kręgu",
+        "1 Zaklęcie · 1 Sztuka Złota · Przenieś się na dowolny Obszar w tym Kręgu",
     );
   });
 

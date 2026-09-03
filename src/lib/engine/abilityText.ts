@@ -231,18 +231,25 @@ function specialOf(cardId: string): string[] {
   const script = scriptFor(cardId);
   if (!script) return [];
   /**
-   * The Natura gate is not described here, because the requirement line above
-   * has just said it. „Tylko Postać: dobra" with „Jeśli dobra: do wyboru…"
-   * under it is the same condition twice, and the second copy pushes the six
-   * gifts a clause further from the eye. `servedNatures` reads exactly this
-   * shape — a `gdy natura` with no `inaczej` — so the two cannot come apart.
+   * The condition is not described here when the requirement line above has
+   * already said it — „Tylko Postać: dobra" over „Jeśli dobra: do wyboru…", or
+   * „Tylko Postać: uznany agresor" over „Jeśli zaatakowałeś inną Postać…". The
+   * second copy is the same test twice and pushes what the Karta actually does
+   * a clause further from the eye.
+   *
+   * The two kinds are exactly the two `requirementOf` states, and only where
+   * the other branch does nothing: a second branch that acts is content rather
+   * than a gate, and dropping the condition would leave two outcomes with
+   * nothing to tell them apart. An `inaczej` of „nic" is not one of those — it
+   * is the shape a card takes when it simply does not apply, which is what the
+   * requirement line is for.
    */
-  const body =
-    script.effect.op === "gdy" &&
-    script.effect.warunek.is === "natura" &&
-    script.effect.inaczej === undefined
-      ? script.effect.to
-      : script.effect;
+  const gate = script.effect;
+  const stated =
+    gate.op === "gdy" &&
+    (gate.inaczej === undefined || gate.inaczej.op === "nic") &&
+    (gate.warunek.is === "natura" || gate.warunek.is === "attacker");
+  const body = stated && gate.op === "gdy" ? gate.to : script.effect;
   const lines = effectRows(body) ?? [describeEffect(body)];
   /**
    * Only worth saying when the card does not simply stay with you — and not at

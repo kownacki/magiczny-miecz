@@ -376,7 +376,17 @@ export function describeEffect(effect: Effect): string {
       return "dobierasz Zaklęcia do swojego limitu (2.6)";
 
     case "przenies":
-      return `przenosisz się: ${where(effect.to)}`;
+      /**
+       * „Przenieś się na dowolny Obszar w tym Kręgu" — the Jednorożec's own
+       * offer, and the same words wherever the same thing is offered: the wish
+       * the WRÓŻKA, the KRÓL LASU and the KOSZMAR grant, the Świątynia's first
+       * face, the Tajemne Przejście. „przenosisz się: dowolny Obszar w Kręgu"
+       * was a field printed after a colon, which reads as data rather than as
+       * something a player may do.
+       */
+      return effect.to.kind === "dowolne-w-kregu"
+        ? "przenieś się na dowolny Obszar w tym Kręgu"
+        : `przenieś się na: ${where(effect.to)}`;
 
     case "wyciagnij":
       return `ciągniesz ${effect.count} ${plural(effect.count, "Kartę", "Karty", "Kart")}`;
