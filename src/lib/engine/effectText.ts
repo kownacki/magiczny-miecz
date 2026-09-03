@@ -155,15 +155,18 @@ export function effectRows(effect: Effect): string[] | null {
    * and goes. Spelling it out costs a line on a panel and tells the reader what
    * they had worked out from the shape of the first one.
    */
-  if (effect.op === "gdy" && effect.inaczej && effect.inaczej.op !== "nic") {
+  if (effect.op === "gdy") {
     const branch = (said: string, taken: Effect) => {
       const rows = effectRows(taken);
       return rows ? [`${said}:`, ...rows] : [`${said}: ${describeEffect(taken)}`];
     };
-    return [
-      ...branch(describeCondition(effect.warunek), effect.to),
-      ...branch(describeConditionNot(effect.warunek), effect.inaczej),
-    ];
+    const taken = branch(describeCondition(effect.warunek), effect.to);
+    if (!effect.inaczej || effect.inaczej.op === "nic") {
+      // One branch, and it is only worth rows of its own if the branch has any
+      // — otherwise it is a sentence and reads like one.
+      return effectRows(effect.to) ? taken : null;
+    }
+    return [...taken, ...branch(describeConditionNot(effect.warunek), effect.inaczej)];
   }
   if (effect.op === "po-kolei") {
     const steps = effect.steps.map((step) => effectRows(step));
