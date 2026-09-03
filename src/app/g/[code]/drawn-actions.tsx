@@ -659,19 +659,34 @@ export function DrawnActions({
             <LosableTile held={chosenCard} picked eqMode={eqMode} />
           </TileRow>
         )}
-        <p className="text-xs text-muted">
-          {said ??
-            (inert
-              ? `${actor} nie spełnia warunków`
-              : owing
-                ? `${actor} wybiera, co traci`
-                : rolls
-                ? /* Nothing is being decided, so „Decyzję podejmuje" was the
-                     wrong sentence: the app throws and the Karta says what the
-                     face means. What the table is waiting for is the die. */
-                    `${actor} rzuca kostką`
-                  : `Decyzję podejmuje ${actor}`)}
-        </p>
+        {/* Who the table is waiting for — and only while it is still waiting.
+            „Test (KRASNOLUD) rzuca kostką" is the present tense, and it stood
+            under „WYPADŁO 6" as though the die were still in the air: the one
+            line a watcher has to read said the opposite of the number above it.
+            The face is the answer to this sentence, so the sentence goes when
+            the face arrives. What is left to wait for then is the thrower's
+            „Dalej", which is theirs and needs no narration.
+
+            An announcement still speaks over it: `said` is somebody's three
+            seconds running (`channelling.ts`), and „Test (KRASNOLUD) — dalej"
+            is exactly the thing a watcher wants under a face that has landed.
+            Only the standing sentence goes. */}
+        {(said || !(rolls && said6)) && (
+          <p className="text-xs text-muted">
+            {said ??
+              (inert
+                ? `${actor} nie spełnia warunków`
+                : owing
+                  ? `${actor} wybiera, co traci`
+                  : rolls
+                    ? /* Nothing is being decided, so „Decyzję podejmuje" was the
+                         wrong sentence: the app throws and the Karta says what
+                         the face means. What the table is waiting for is the
+                         die. */
+                      `${actor} rzuca kostką`
+                    : `Decyzję podejmuje ${actor}`)}
+          </p>
+        )}
       </div>
     );
   }
