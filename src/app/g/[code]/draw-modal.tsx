@@ -10,6 +10,8 @@ import { SpellHand, type HeldSpell } from "./spell-hand";
 import type { TileCard } from "./card-tile";
 import type { OnAction, Simulated } from "./turn-controls";
 import type { Effect } from "@/lib/engine/cardScript";
+import { nextFrame } from "@/lib/engine/kolejka";
+import type { CardClass } from "@/data/types";
 import type { Nature } from "@/data/types";
 import type { FieldId } from "@/lib/engine/board";
 import type { SpellTiming } from "@/lib/engine/spells";
@@ -225,11 +227,35 @@ export function DrawModal({
     );
   }
 
-  // First card that is neither resolved, fought, nor waved past. 15.2 already
-  // put them in order, so "first" is "next".
-  const card = cards.find(
-    (entry) => !resolved.includes(entry.cardId) && !fought.includes(entry.cardId),
+  /**
+   * The Karta the turn is actually waiting on.
+   *
+   * This used to take the first one neither resolved nor fought, on the
+   * grounds that "15.2 already put them in order, so first is next". 15.2
+   * orders by *numeral*, and within one numeral the order is arrival — so a
+   * square holding an optional CUDOTWÓRCA and a compulsory DOBRE BÓSTWO, both
+   * Nieznajomi IV, opened on whichever was drawn first. If that was the
+   * Cudotwórca the sheet offered „Rozpatrz, co się da" for a Karta the server
+   * would always refuse: 16.4 makes the Bóstwo go first, `refuseWhileQueuedFor`
+   * enforces it, and the player met the rule by pressing a live button.
+   *
+   * So it asks the same function the refusal does. `nextFrame` is the kolejka's
+   * own answer to "what is in the way", and the sheet opens on that; only when
+   * nothing is in the way does it fall back to the first unsettled Karta, which
+   * is 12.1's window and where order stops mattering.
+   *
+   * `beaten` counts as settled here exactly as it does in `refuseWhileQueued` —
+   * 17.4 finishes a Wróg whether he was beaten or fled — or the sheet would
+   * keep opening on a creature the turn is done with.
+   */
+  const done = [...resolved, ...fought, ...(beaten ?? [])];
+  const inTheWay = nextFrame(
+    cards.map((entry) => ({ cardId: entry.cardId, cardClass: entry.cardClass as CardClass })),
+    done,
   );
+  const card = inTheWay
+    ? cards.find((entry) => entry.cardId === inTheWay.cards[0].cardId)
+    : cards.find((entry) => !done.includes(entry.cardId));
 
   // Nothing drawn to deal with, but the Obszar itself demands something.
   if (!card) {
