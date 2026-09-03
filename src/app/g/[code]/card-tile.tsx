@@ -20,6 +20,7 @@ import type { EqMode, Slot } from "@/lib/engine/slots";
 import type { Nature } from "@/data/types";
 import { manualNote, coverageOf, NOT_HANDLED } from "@/lib/engine/coverage";
 import { numeralOf } from "@/lib/engine/cards";
+import { TileCaption } from "./tile-caption";
 
 /**
  * One card, as a card.
@@ -197,7 +198,7 @@ export function CardTile({
   const Root = inControl ? "span" : "button";
 
   return (
-    <figure className="flex flex-col items-center gap-1">
+    <figure className="group/tile flex flex-col items-center gap-1">
       {/* A `<span>` where something around it is the control — see `inControl`.
           `Root` rather than two copies of the tile, so a mark, a badge or a
           strike-through cannot be added to one and forgotten on the other. */}
@@ -334,15 +335,16 @@ export function CardTile({
         )}
       </Root>
       {preview}
-      {!inControl && (
-        <figcaption
-          style={{ width }}
-          className="truncate text-center text-[9px] leading-tight text-muted"
-        >
-          {card.name}
-        </figcaption>
+      {/* The name and whatever may be done to the card share one line — see
+          `TileCaption`. `inControl` is the tile that *is* a button already, and
+          has no caption of its own to swap: whatever wraps it is the label. */}
+      {!inControl ? (
+        <TileCaption width={width} name={card.name} title={card.name}>
+          {children}
+        </TileCaption>
+      ) : (
+        children
       )}
-      {children}
     </figure>
   );
 }

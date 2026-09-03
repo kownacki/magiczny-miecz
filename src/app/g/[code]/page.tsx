@@ -755,16 +755,18 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
    * it — the seat card is long, the fold may be shut, and the refusal that
    * brought them here was written across the screen in the turn box.
    *
-   * `center` and not `start`, because the row of cards is the thing to land on
-   * and a fold pinned to the top of the viewport puts its heading there and its
-   * cards below the fold. Smooth, since this is a jump the player asked for and
-   * arriving without the movement leaves them wondering what changed.
+   * `start`, so the heading lands at the top and the hand fills the screen
+   * under it. `center` was tried and is wrong for a section this tall: it puts
+   * the middle of a twenty-card hand under the pointer and the „ZAKLĘCIA 29 / 3"
+   * that explains why you are there off the top of the window. Smooth, since
+   * this is a jump the player asked for and arriving without the movement
+   * leaves them wondering what changed.
    */
   function showSpells() {
     setOpenSpells((n) => n + 1);
     document
       .getElementById(SPELLS_ANCHOR)
-      ?.scrollIntoView({ behavior: "smooth", block: "center" });
+      ?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
   function askToDrop(holdingId: string) {
