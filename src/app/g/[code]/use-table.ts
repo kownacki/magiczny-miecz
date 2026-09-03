@@ -20,7 +20,7 @@ import type { TurnState } from "@/lib/engine/stack";
 import { fitsIn, isWearable, type Slot } from "@/lib/engine/slots";
 import { carriedCount, carryLimit } from "@/lib/engine/derive";
 import { announce, watch, type Announcement, type Watched } from "@/lib/engine/announcements";
-import type { Intent } from "@/lib/engine/intentText";
+import type { AnnouncedIntent, Intent } from "@/lib/engine/intentText";
 import { announcingWith, CHANNEL_MS } from "./channelling";
 import { watchIntent } from "@/lib/game/liveRevision";
 import { CARD_NAMES, asHoldings, asNature, type Seat } from "./table";
@@ -197,7 +197,7 @@ export interface Table {
    * arrives over Realtime, is stored nowhere, and is gone by the time the
    * revision that settles it is drawn.
    */
-  intent: { by: number; kind: string; option?: number } | null;
+  intent: AnnouncedIntent | null;
   refresh: () => Promise<void>;
   /** One request, with its body checked against what that route reads. */
   post: <R extends Route>(path: R, body?: Partial<Requests[R]>) => Promise<void>;
@@ -309,7 +309,7 @@ export function useTable(code: string): Table {
    * mid-window would otherwise leave the rest of the table looking at a
    * decision that is never coming.
    */
-  const [intent, setIntent] = useState<{ by: number; kind: string; option?: number } | null>(null);
+  const [intent, setIntent] = useState<AnnouncedIntent | null>(null);
   const [users, setUsers] = useState<Person[]>([]);
   /** Who this browser was at this table, if it can be them again. */
   const [wasHere, setWasHere] = useState<{ name: string; seatIndex: number | null } | null>(null);

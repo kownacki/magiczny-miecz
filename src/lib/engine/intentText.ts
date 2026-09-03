@@ -61,6 +61,20 @@ export interface Intent {
 }
 
 /**
+ * An intent as it reaches the rest of the table: whose it is, and what it is.
+ *
+ * `by` is a seat index, so a device can tell whether the decision filling is
+ * the one it has been waiting on. Named here rather than written out at each
+ * stop on the way down — it was spelled `{ by: number; kind: string; option?:
+ * number }` in the socket, in the hook's state, in the hook's return type and
+ * again in the sheet, four copies of one shape with `kind` widened to `string`
+ * in every one of them.
+ */
+export interface AnnouncedIntent extends Intent {
+  by: number;
+}
+
+/**
  * Third person, because it is being said *about* somebody to everybody else.
  *
  * The option keeps the second person the card is printed in — „Tracisz 1

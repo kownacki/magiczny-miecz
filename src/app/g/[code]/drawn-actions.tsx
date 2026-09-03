@@ -41,7 +41,7 @@ import { attackAsOne } from "@/lib/engine/combat";
 import { listed } from "@/lib/engine/state";
 import { kindForCard } from "@/lib/engine/holdings";
 import { ActionButton } from "./action-button";
-import { intentSaid, isIntentKind } from "@/lib/engine/intentText";
+import { intentSaid, type Intent } from "@/lib/engine/intentText";
 import { scriptFor } from "@/lib/engine/cardScript";
 import { itemProfile, previewOf, requirementOf } from "@/lib/engine/abilityText";
 import { fieldName, plural, sentence } from "@/lib/engine/polish";
@@ -119,7 +119,7 @@ export interface DrawnActionsProps {
    * only moment between „nothing yet" and „it is done" that anybody else at the
    * table has ever had, and this is what fills them.
    */
-  intent?: { kind: string; option?: number } | null;
+  intent?: Intent | null;
   onResolve: (
     cardId: string,
     decisions: { choices?: number[]; destination?: FieldId },
@@ -350,10 +350,9 @@ export function DrawnActions({
     intent?.option !== undefined && asking?.op === "wybor"
       ? (asking.options[intent.option]?.label ?? null)
       : null;
-  const said =
-    intent && isIntentKind(intent.kind)
-      ? intentSaid(actor, intent.kind, chosen ? sentence(chosen) : null)
-      : null;
+  const said = intent
+    ? intentSaid(actor, intent.kind, chosen ? sentence(chosen) : null)
+    : null;
 
   /**
    * No Wróg standing, nothing to pick up, and no question outstanding.

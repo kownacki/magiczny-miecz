@@ -1,6 +1,7 @@
 "use client";
 
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import { isIntentKind, type AnnouncedIntent } from "@/lib/engine/intentText";
 
 /**
  * Tells a device the moment the table changes, instead of it asking every two
@@ -116,7 +117,7 @@ export function watchRevision(joinCode: string, onChange: () => void): () => voi
  */
 export function watchIntent(
   joinCode: string,
-  onIntent: (intent: { by: number; kind: string; option?: number } | null) => void,
+  onIntent: (intent: AnnouncedIntent | null) => void,
 ): () => void {
   const supabase = browserClient();
   if (!supabase) return () => {};
@@ -126,9 +127,13 @@ export function watchIntent(
     .on("broadcast", { event: "zamiar" }, (message) => {
       const said = message.payload as { by?: unknown; kind?: unknown; option?: unknown } | null;
       // Off the wire and therefore not to be trusted, even though only the
-      // service role can have sent it: the shape is checked here and the *kind*
-      // is checked where it is turned into words.
-      if (!said || typeof said.by !== "number" || typeof said.kind !== "string") {
+      // service role can have sent it. Narrowed *here*, all of it — the kind
+      // included, which used to be left as a `string` and checked again four
+      // layers down where it was turned into words. A kind this build has never
+      // heard of is dropped rather than carried: it can only have come from a
+      // newer one, and "somebody is deciding something I cannot name" is what
+      // the panel already says when it is told nothing at all.
+      if (!said || typeof said.by !== "number" || !isIntentKind(said.kind)) {
         onIntent(null);
         return;
       }
