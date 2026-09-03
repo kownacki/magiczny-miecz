@@ -422,3 +422,16 @@ describe("a choice, described", () => {
     );
   });
 });
+
+describe("the Mędrzec's riddle", () => {
+  /**
+   * All three halves of it: the range, the order, and that it is said aloud —
+   * which is the card's own condition, not colour.
+   */
+  it("says what to guess, when, and how loudly", () => {
+    expect(describeEffect(SCRIPTS["medrzec"]!.effect)).toBe(
+      "wybierasz cyfrę od 1 do 6 i mówisz ją głośno, potem rzut kostką — " +
+        "jeśli wypadnie twoja: bierzesz 1 Zaklęcie",
+    );
+  });
+});

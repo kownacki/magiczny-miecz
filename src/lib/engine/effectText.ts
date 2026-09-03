@@ -302,8 +302,21 @@ export function describeEffect(effect: Effect): string {
     case "zamien-punkty":
       return "zamieniasz punkty Miecza i Magii";
 
+    /**
+     * The Mędrzec's riddle, said in full because every word of it is a rule.
+     *
+     * „Wybierz cyfrę od 1 do 6 (musisz ją głośno powiedzieć), a następnie rzuć
+     * kostką. Jeżeli wynikiem jest cyfra, którą wybrałeś, otrzymujesz 1
+     * Zaklęcie." „Zgadujesz" left out all three of the things a player needs:
+     * that it is a number from one to six, that it is named *before* the die,
+     * and that saying it aloud is the card's own condition — the whole of the
+     * riddle is that the table hears the guess first.
+     */
     case "zgadnij":
-      return `zgadujesz — jeśli trafisz: ${describeEffect(effect.nagroda)}`;
+      return (
+        "wybierasz cyfrę od 1 do 6 i mówisz ją głośno, potem rzut kostką — " +
+        `jeśli wypadnie twoja: ${describeEffect(effect.nagroda)}`
+      );
 
     case "natura":
       return `Natura: ${effect.na === "evil" ? "zła" : effect.na}`;
