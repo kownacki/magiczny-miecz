@@ -28,7 +28,7 @@ describe("intentText", () => {
   it("is a thing in progress rather than a report", () => {
     // The ellipsis is the whole difference. Three seconds later this is either
     // the journal or it never was, and the sentence has to be able to be both.
-    expect(intentSaid("Ania", "bierze")).toMatch(/…$/);
+    expect(intentSaid("Ania", "bierze-przedmiot")).toMatch(/…$/);
   });
 
   it("does not take a kind off the wire that it cannot say", () => {
@@ -55,8 +55,10 @@ describe("intentText", () => {
     const used: IntentKind[] = [
       "walczy",
       "wymyka-sie",
-      "bierze",
-      "zostawia",
+      "bierze-przedmiot",
+      "bierze-przyjaciela",
+      "zostawia-przedmiot",
+      "zostawia-przyjaciela",
       "wybiera",
       "przenosi-sie",
       "kladzie",

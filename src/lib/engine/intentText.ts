@@ -40,8 +40,10 @@
 export type IntentKind =
   | "walczy"
   | "wymyka-sie"
-  | "bierze"
-  | "zostawia"
+  | "bierze-przedmiot"
+  | "bierze-przyjaciela"
+  | "zostawia-przedmiot"
+  | "zostawia-przyjaciela"
   | "wybiera"
   | "przenosi-sie"
   | "kladzie"
@@ -71,8 +73,15 @@ export interface Intent {
 const SAYS: Record<IntentKind, string> = {
   walczy: "walczy",
   "wymyka-sie": "próbuje się wymknąć",
-  bierze: "bierze Kartę",
-  zostawia: "zostawia Kartę",
+  // „Kartę" for both of these was one word covering two things a player cares
+  // about differently — a Przedmiot is points and a Przyjaciel is a Postać that
+  // walks with you (6.2), and the button right above them has always said which.
+  // „bierze" rather than „zabiera": nobody is being taken from. A Karta just
+  // turned over belongs to nobody, and „zabiera" is the word for the Złodziej.
+  "bierze-przedmiot": "bierze Przedmiot",
+  "bierze-przyjaciela": "bierze Przyjaciela",
+  "zostawia-przedmiot": "zostawia Przedmiot",
+  "zostawia-przyjaciela": "zostawia Przyjaciela",
   wybiera: "wybiera",
   "przenosi-sie": "przenosi się",
   kladzie: "kładzie Kartę",
