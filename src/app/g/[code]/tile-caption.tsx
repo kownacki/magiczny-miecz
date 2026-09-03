@@ -54,6 +54,20 @@ export function TileCaption({
       >
         {name}
       </figcaption>
+      {/* A little more room underneath to be pointing at.
+      
+          The controls sit on the name's own line, which is eleven pixels tall,
+          and a pointer drifting a hair below it lost them mid-reach — the
+          shorter the target the more often that is the pointer on its way *to*
+          the target. This is that line's apron: transparent, inside the figure
+          so it keeps `group-hover` alive, and exactly the row's own `gap-2`
+          tall so it fills the space between this tile and the one below
+          without ever reaching it. Nothing is laid out by it, so no tile moves.
+
+          Only where there is something to reach for. An apron under a card
+          with no controls would be eight pixels of nothing, quietly answering
+          for its neighbour. */}
+      {children ? <span aria-hidden className="absolute inset-x-0 top-full h-2" /> : null}
       {children ? (
         // The caption's own typography, because these two take turns on one
         // line: `text-[9px] leading-tight` is what the name is set in, and
