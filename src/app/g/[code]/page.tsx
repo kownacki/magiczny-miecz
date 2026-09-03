@@ -69,7 +69,7 @@ import { AnnouncementModal } from "./announcement";
 import { ConfirmDialog, type Confirmation } from "./confirm";
 import { askAbout, usageOf } from "@/lib/engine/uses";
 import { compulsoryOffer, offerNamed } from "@/lib/engine/fieldScript";
-import { faceAt, nodeAt } from "@/lib/engine/resolve";
+import { nodeAt } from "@/lib/engine/resolve";
 import { reachableBy } from "@/lib/engine/losses";
 import { MAX_SEATS } from "@/lib/game/modes";
 import { stillStone } from "@/lib/engine/status";
@@ -439,14 +439,19 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
    */
   const [rolled, setRolled] = useState<Rolled | null>(null);
   /**
-   * Raises that notice, for a reply that has a die in it.
+   * Keeps the lines a reply carried about a die, for the device that got one.
+   *
+   * The face itself is on the frame and reaches every device (see
+   * `shownRoll`); what the frame does not carry is what the app *did* with it —
+   * „Zaklęcie: KAMIEŃ FILOZOFICZNY" is the card a 1 turned out to be. That is
+   * in the reply to the request that threw it and nowhere else, so the thrower
+   * keeps it here and everybody else reads the marked row.
    *
    * Everything goes through here and most of it falls straight through: a
    * `wybor` answered, a Przedmiot taken, a Karta with no table — none of them
-   * roll, so none of them have a `face` and nothing is shown. What is left is
-   * exactly the acts the app decided on somebody's behalf.
+   * roll, so none of them have a `face`.
    */
-  const showDie = useCallback((cardId: string | null, said: Said | null) => {
+  const showDie = useCallback((cardId: string, said: Said | null) => {
     if (!said || typeof said.face !== "number") return;
     setRolled({
       cardId,
@@ -1033,6 +1038,35 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
   const turnWindows = active ? windowsFor(factsIn(turnState, active.field_id)) : [];
 
   /**
+   * The die on the Obszar's frame, which every device holds its sheet on.
+   *
+   * The face used to reach the player who threw it on the reply to their own
+   * request and nobody else at all — see `rolled` on the field frame, which is
+   * where it lives now. Read from under whatever is on top: a Karta suspended
+   * mid-walk has pushed a `script` frame over the Obszar, and that Karta's die
+   * is exactly the one worth showing.
+   *
+   * The lines under it stay the reply's, and only for the device that got one:
+   * „Zaklęcie: KAMIEŃ FILOZOFICZNY" is the card a 1 turned out to be, which no
+   * frame carries. Matched on the face as well as the Karta, so a second throw
+   * of the same card cannot wear the first one's outcome.
+   */
+  const onTheFrame = [...game.turn_state.stack]
+    .reverse()
+    .find((frame) => frame.phase === "field");
+  const shownRoll =
+    onTheFrame?.phase === "field" && onTheFrame.rolled
+      ? {
+          ...onTheFrame.rolled,
+          title: "",
+          did:
+            rolled?.cardId === onTheFrame.rolled.cardId && rolled.face === onTheFrame.rolled.face
+              ? rolled.did
+              : [],
+        }
+      : null;
+
+  /**
    * A loss the Karta is waiting on, asked on the Karta rather than over it.
    *
    * „Tracisz 1 Przedmiot" leaves which one to the holder, so the walk stops and
@@ -1065,17 +1099,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
     const seat = seats.find((one) => one.id === turnState.seatId);
     if (!seat || (kind === "spell" && seat.hidden_count > 0)) return null;
     const cards = seat.holdings.filter((held) => held.kind === kind);
-    return cards.length > 0
-      ? {
-          cardId: turnState.cardId,
-          kind,
-          cards,
-          /* What came up, off the cursor rather than off the reply: the player
-             who threw it has the face already, and this is how everybody else
-             gets it — see `faceAt`. */
-          face: faceAt(turnState.effect, turnState.cursor),
-        }
-      : null;
+    return cards.length > 0 ? { cardId: turnState.cardId, kind, cards } : null;
   })();
 
   /**
@@ -1098,7 +1122,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
        * whose face has not been read, and a loss being chosen against the pack.
        * Both belong on the Karta they happened to, so the Karta stays up.
        */
-      rolled !== null ||
+      shownRoll !== null ||
       losing !== null ||
       (panel.sheet === "when-drawn" &&
         turnState.phase === "field" &&
@@ -1730,8 +1754,12 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                stand there long enough to say what came up. */
             fieldOffer={
               turnState.phase === "field"
-                ? (offerNamed(active.field_id, rolled?.cardId === null ? rolled.title : null) ??
-                  compulsoryOffer(active.field_id, turnState.resolved ?? []))
+                ? (offerNamed(
+                    active.field_id,
+                    shownRoll?.cardId.startsWith("pole:")
+                      ? shownRoll.cardId.slice("pole:".length)
+                      : null,
+                  ) ?? compulsoryOffer(active.field_id, turnState.resolved ?? []))
                 : null
             }
             simulated={game.mode === "simulation"}
@@ -1852,19 +1880,15 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
             aggression={active.aggression}
             busy={busy}
             error={error}
-            /* The die this device threw and has not read yet. It holds the
-               sheet on the Karta it belongs to — see `RollSaid`. */
-            rolled={rolled}
-            onRollRead={() => setRolled(null)}
+            /* The die on the frame, which is everybody's — see `shownRoll`. */
+            rolled={shownRoll}
+            onRollRead={() => {
+              setRolled(null);
+              void post("turn", { action: "rzut-przeczytany" });
+            }}
             /* The Karta's own question, asked in the Karta's own panel. */
             losing={losing}
-            onLose={async (index) => {
-              await post("turn", { action: "answer", choices: [index] });
-              /* The answer is the „Dalej" — the face was read while choosing
-                 against it, and holding the Karta a second time would be one
-                 acknowledgement too many. */
-              setRolled(null);
-            }}
+            onLose={(index) => post("turn", { action: "answer", choices: [index] })}
             onAction={(body) => post("turn", body)}
             onResolve={async (cardId, decisions) => {
               showDie(cardId, await post("turn", { action: "karta-efekt", cardId, ...decisions }));
@@ -1878,7 +1902,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                  pressed until this settles, and the die comes back on it. */
               if (!offer) return;
               showDie(
-                null,
+                `pole:${offer.name}`,
                 await post("turn", { action: "pole-tabela", offer: offer.name, choices }),
               );
             }}

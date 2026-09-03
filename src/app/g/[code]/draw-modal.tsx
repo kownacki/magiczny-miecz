@@ -178,7 +178,16 @@ export function DrawModal({
    * fight in the same commit, and the fight sheet arriving over the unread
    * result would leave the player fighting something they never saw arrive.
    */
-  const holding = rolled?.cardId ?? losing?.cardId ?? null;
+  /**
+   * A Karta held on screen: one whose die is unread, or one owing a loss.
+   *
+   * An Obszar's own die is on the same mark and is named `pole:<offer>` for it
+   * (see `markRolled`), which no Karta answers to — so it falls through to the
+   * offer's own panel below, which is where that face belongs.
+   */
+  const holding = rolled?.cardId.startsWith("pole:")
+    ? (losing?.cardId ?? null)
+    : (rolled?.cardId ?? losing?.cardId ?? null);
   if (holding) {
     const known = EVENTS.find((one) => one.id === holding);
     const held =
@@ -306,7 +315,7 @@ export function DrawModal({
         chrome={chrome}
         offer={fieldOffer}
         busy={busy}
-        rolled={rolled?.cardId === null ? rolled : null}
+        rolled={rolled?.cardId.startsWith("pole:") ? rolled : null}
         onRollRead={onRollRead}
         onResolveField={onResolveField}
       />

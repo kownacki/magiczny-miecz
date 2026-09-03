@@ -137,13 +137,7 @@ export interface DrawnActionsProps {
    * one. Null where there is no such question, or where this device cannot
    * vouch for the list.
    */
-  losing?: {
-    cardId: string;
-    kind: Held["kind"];
-    cards: Held[];
-    /** The face that asked for it, for the devices that did not throw it. */
-    face: number | null;
-  } | null;
+  losing?: { cardId: string; kind: Held["kind"]; cards: Held[] } | null;
   /** Which of them goes, by its place in that list. */
   onLose?: (index: number) => void;
   /**
@@ -651,18 +645,15 @@ export function DrawnActions({
             person. For every other Karta this is `itemProfile`'s rows, which is
             what a watcher has always had. */}
         {rolls ? (
-          dieTable(owing?.face ?? null)
+          dieTable(said6?.face ?? null)
         ) : offered.length > 0 ? (
           <ul className="flex flex-col gap-1 pb-1">{specialRows(offered)}</ul>
         ) : null}
-        {/* The face, for the players who did not press the button. It is not
-            in the reply they never received — it is on the frame, which is the
-            same thing said to everybody at once (`faceAt`). What it *did* is
-            the actor's own line and the Dziennik's; the marked row above is
-            what a 4 means. */}
-        {owing?.face !== null && owing?.face !== undefined && (
-          <RollSaid face={owing.face} did={[]} />
-        )}
+        {/* The face, for the players who did not press the button — the same
+            one they are looking at, off the frame everybody polls. No „Dalej":
+            the throw is the thrower's to acknowledge, and a second way past it
+            would move one device's sheet on while the rest stayed. */}
+        {said6 && <RollSaid face={said6.face} did={said6.did} />}
         {chosenCard && (
           <TileRow frame={false}>
             <LosableTile held={chosenCard} picked eqMode={eqMode} />
@@ -702,7 +693,7 @@ export function DrawnActions({
     const chosen = giving !== null ? (owing.cards[giving] ?? null) : null;
     return (
       <div className="mt-auto flex flex-col gap-2 border-t border-edge pt-3">
-        {dieTable(owing.face)}
+        {dieTable(said6?.face ?? null)}
         {said6 && (
           <RollSaid
             face={said6.face}

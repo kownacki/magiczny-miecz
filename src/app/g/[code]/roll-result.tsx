@@ -15,8 +15,11 @@ import { WithRules } from "./rule-ref";
  * that placed itself (15.1) is out of the frame altogether.
  */
 export interface Rolled {
-  /** The Karta it was thrown for. Null for an Obszar's own table. */
-  cardId: string | null;
+  /**
+   * What it was thrown for: a Karta's id, or `pole:<nazwa>` for an Obszar's own
+   * table — the same naming a fight against a square's guardian uses.
+   */
+  cardId: string;
   /** What it was thrown for, in its own words — the Karta's name, or the offer's. */
   title: string;
   face: number;

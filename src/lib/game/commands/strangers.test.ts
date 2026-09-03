@@ -1,10 +1,10 @@
-import { only } from "@/lib/engine/stack";
+import { only, top } from "@/lib/engine/stack";
 import { describe, expect, it } from "vitest";
 import { apply } from "../change";
 import { aSeat, aTable, ports } from "../fixture";
 import { scriptedRandom } from "@/lib/engine/ports";
 import { buildDeck } from "@/lib/engine/deck";
-import { resolveDrawnCard } from "./resolving";
+import { readRoll, resolveDrawnCard } from "./resolving";
 import { attackSeat } from "./fight";
 import { storedStatuses } from "./turn";
 import { hasAttacked, movementCap } from "@/lib/engine/status";
@@ -282,5 +282,48 @@ describe("the Jednorożec's ride, in the journal", () => {
       to: "karczma",
       cardId: "jednorozec",
     });
+  });
+});
+
+/**
+ * The die, on the frame the whole table polls.
+ *
+ * A roll used to reach the device that asked for it and nobody else: the face
+ * was on the reply to that one request, so the player who threw it saw a number
+ * that no watcher ever did. It is written onto the Obszar's own frame instead
+ * — see `rolled` in `turn.ts` — and stays there until „Dalej".
+ */
+describe("the die the rest of the table can see", () => {
+  const threw = async (dice: number[]) => {
+    const table = meeting("urocza-diablica", 0);
+    const out = await resolveDrawnCard(
+      table,
+      { cardId: "urocza-diablica", decided: {}, shuffle: asIs },
+      ports({ random: scriptedRandom(dice) }),
+    );
+    return apply(table, out.writes);
+  };
+
+  it("stands on the Obszar until somebody reads it", async () => {
+    const after = await threw([2]);
+    expect(top(after.game.turn_state)).toMatchObject({
+      rolled: { cardId: "urocza-diablica", face: 2 },
+    });
+
+    const read = apply(after, readRoll(after).writes);
+    expect(top(read.game.turn_state)).not.toHaveProperty("rolled");
+  });
+
+  /**
+   * And under whatever the throw put on top of it. A 4 costs a Przedmiot and
+   * 5.6 leaves the choice to the holder, so the card suspends — with the face
+   * still on the Obszar's frame beneath, which is the one the panel showing the
+   * question reads.
+   */
+  it("survives the frame the throw pushed over it", async () => {
+    const after = await threw([4]);
+    const stack = after.game.turn_state.stack;
+    expect(stack[stack.length - 1].phase).toBe("script");
+    expect(stack[0]).toMatchObject({ phase: "field", rolled: { face: 4 } });
   });
 });

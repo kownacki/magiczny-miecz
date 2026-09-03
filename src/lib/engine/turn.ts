@@ -94,6 +94,25 @@ export type TurnPhase =
        * nothing behind saying it happened.
        */
       met?: true;
+      /**
+       * The die thrown for a Karta here, until the player who threw it says go on.
+       *
+       * A roll is the one act in the game its own player has no part in: they
+       * press „Rzuć kostką", the app throws, the effect lands, and the turn
+       * moves on. The face was on the reply to that one request — so the
+       * thrower saw it and nobody else did, and even they lost it the moment
+       * the kolejka advanced.
+       *
+       * Here it is on the frame, which is the same thing said to everybody at
+       * once: the sheet holds the Karta up with „WYPADŁO 4" and the row it
+       * landed in marked, on every device, until „Dalej" clears it. Cleared by
+       * the next resolve as well, so a Karta with no die does not leave the one
+       * before it standing.
+       *
+       * A face and a card, and nothing about what it *did* — that is the
+       * Dziennik's, and the six rows above are what a 4 means.
+       */
+      rolled?: { cardId: string; face: number };
     }
   | { phase: "fight"; fight: Fight }
   /** Standing at a bridge entrance with its guardian in the way (11.9-11.11). */

@@ -252,9 +252,63 @@ export async function resolveFieldOffer(
       ? {}
       : markResolved(apply(snapshot, soFar), offerKey(offer.name));
 
+  /* The Obszar's own die is shown the way a Karta's is — see `markRolled`. The
+     square has no card id, so it is named the way a fight against an Obszar's
+     own guardian is: `pole:` and the offer's own name. */
+  const shown = markRolled(
+    apply(snapshot, merge(soFar, noted)),
+    face !== undefined ? { cardId: `pole:${offer.name}`, face } : null,
+  );
+
   return {
-    writes: merge(soFar, noted),
+    writes: mergeAll(soFar, noted, shown),
     result: { offer: offer.name, ...(face !== undefined ? { face } : {}), ...done.result },
+  };
+}
+
+/**
+ * „Dalej": the face has been read, and the sheet may move on.
+ *
+ * Its own command because it is its own act — the only one in the app whose
+ * whole content is *somebody looked at this*. It writes nothing but the
+ * erasure, and it is deliberately not gated on the die having been thrown by
+ * the caller: the turn's player is who the sheet waits for, and a table screen
+ * pressing it for them is the same press.
+ */
+export function readRoll(snapshot: Snapshot): Outcome<void> {
+  return { writes: markRolled(snapshot, null), result: undefined };
+}
+
+/**
+ * Puts the die that was just thrown onto the Obszar's own frame, or takes the
+ * last one off it.
+ *
+ * The frame it belongs to is the `field` one, which is not always the top: a
+ * card that suspended mid-walk is sitting above it, and that card's die is
+ * exactly the one worth showing. So the stack is walked from the top down for
+ * the first `field` frame, the same way a `walka` step finds the Obszar its
+ * fight belongs to.
+ */
+function markRolled(
+  snapshot: Snapshot,
+  face: { cardId: string; face: number } | null,
+): Changeset {
+  const stack = snapshot.game.turn_state.stack;
+  const at = stack.map((frame) => frame.phase).lastIndexOf("field");
+  if (at === -1) return {};
+  const field = stack[at];
+  if (field.phase !== "field") return {};
+  // Nothing to say when there was no die and none was standing.
+  if (!face && !field.rolled) return {};
+  const { rolled: _was, ...rest } = field;
+  return {
+    game: {
+      turn_state: {
+        stack: stack.map((frame, index) =>
+          index === at ? (face ? { ...rest, rolled: face } : rest) : frame,
+        ),
+      },
+    },
   };
 }
 
@@ -416,8 +470,27 @@ export async function resolveDrawnCard(
       ? {}
       : markResolved(apply(snapshot, soFar), keyOf(being));
 
+  /**
+   * The face, onto the frame, so the whole table sees the throw and not just
+   * the device that asked for it (see `rolled` on the field frame).
+   *
+   * Written against the snapshot as it stands *after* everything above, and
+   * into the field frame wherever it now is: a die that suspended the card has
+   * pushed a `script` frame on top of it, and a die that emptied a Drzewo
+   * Życia has already rewritten the field frame once. Both would be lost by
+   * replacing the top of the original stack.
+   *
+   * Set even where there was no die, as an erasure: the mark says „this is the
+   * throw you have not read", and a Karta resolved without one leaves the
+   * Karta before it standing otherwise.
+   */
+  const shown = markRolled(
+    apply(snapshot, merge(soFar, noted)),
+    face !== undefined ? { cardId: command.cardId, face } : null,
+  );
+
   return {
-    writes: merge(soFar, noted),
+    writes: mergeAll(soFar, noted, shown),
     result: {
       card: cardName(command.cardId),
       ...(face !== undefined ? { face } : {}),

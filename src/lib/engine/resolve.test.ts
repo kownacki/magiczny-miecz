@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { faceAt, inertFor, nodeAt, isSettled, pendingIn } from "./resolve";
+import { inertFor, nodeAt, isSettled, pendingIn } from "./resolve";
 import { FIELD_SCRIPTS } from "./fieldScript";
 import { SCRIPTS } from "./cardScript";
 import type { Effect } from "./cardScript";
@@ -391,19 +391,3 @@ describe("a Karta that has nothing for this Postać", () => {
   });
 });
 
-/**
- * A suspended walk carries the face it came through, which is how a watching
- * device shows a roll it did not press — see `faceAt`.
- */
-describe("the die a cursor came through", () => {
-  it("is the step the table was indexed with", () => {
-    const diablica = SCRIPTS["urocza-diablica"]!.effect;
-    expect(faceAt(diablica, [4])).toBe(4);
-    expect(nodeAt(diablica, [4])).toMatchObject({ op: "strata" });
-  });
-
-  it("is null where no die was thrown", () => {
-    expect(faceAt(SCRIPTS["krol-lasu"]!.effect, [0])).toBeNull();
-    expect(faceAt(SCRIPTS["urocza-diablica"]!.effect, [])).toBeNull();
-  });
-});

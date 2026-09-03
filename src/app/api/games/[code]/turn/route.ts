@@ -31,6 +31,7 @@ import {
   rollForMove,
   setFightPlayerTotal,
   resolveBridgeOrdeal,
+  readRoll,
   resolveDrawnCard,
   resolveFieldOffer,
   claimSpellFloor,
@@ -278,6 +279,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
             decisionsFrom(body),
           ),
         );
+      case "rzut-przeczytany":
+        // „Dalej" under a die: the face is off the frame and the sheet moves
+        // on. Nothing about the game changes — see `readRoll`.
+        await readRoll(game.id);
+        break;
       case "karta-efekt":
         // The card's own script, applied by the app for the same reason the
         // field's table is.
