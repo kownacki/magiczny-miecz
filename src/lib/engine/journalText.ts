@@ -306,6 +306,23 @@ export function describe(
   const field = (id: unknown) => remember("field", id, fieldName(id));
 
   /**
+   * Where from and where to, with an arrow between them.
+   *
+   * „przenosi się na Karczma" said half of it and said that half in the
+   * nominative, because a journal that declines the names it is handed gets
+   * „na Ruiny Twierdzy" right and „na Kurhan" wrong. The arrow needs no case at
+   * all and is already the app's mark for a value moving — „Miecz 6 → 9" on the
+   * Kuglarz's own button.
+   *
+   * One end where there is only one: a character placed on the board for the
+   * first time has come from nowhere, and „→ Osada" is the truth about that.
+   */
+  const travelled = (data: Record<string, unknown>) =>
+    typeof data.from === "string" && data.from
+      ? `${field(data.from)} → ${field(data.to)}`
+      : `→ ${field(data.to)}`;
+
+  /**
    * Where a transaction happened, tacked onto the end of its line.
    *
    * „kupuje: MIECZ za 2 Sztuki Złota" is a fact about a purse and leaves out
@@ -389,15 +406,18 @@ export function describe(
      * anybody reading this line has.
      */
     case "moved-by-card":
+      // The Karta named in the reason, remembered so it can be looked up — the
+      // same half `points` was missing. The text does not change.
+      if (typeof data.cardId === "string") card(data.cardId);
       return line(
-        `${who} przenosi się na ${field(data.to)}${data.reason ? ` — ${data.reason}` : ""}.`,
+        `${who} przenosi się: ${travelled(data)}${data.reason ? ` — ${data.reason}` : ""}.`,
       );
     // A figure picked up and put down: the console's `teleport`, or the
     // position override. „Przestawienie" is a piece being moved, not a
     // character travelling.
     case "moved-by-hand":
       return line(
-        `${who} — przestawienie na ${field(data.to)}${data.reason ? `, ${data.reason}` : ""}.`,
+        `${who} — przestawienie: ${travelled(data)}${data.reason ? `, ${data.reason}` : ""}.`,
       );
     case "crossing":
       return line(`${who} przeprawia się przez ${String(data.obstacle ?? "przeszkodę")}.`);

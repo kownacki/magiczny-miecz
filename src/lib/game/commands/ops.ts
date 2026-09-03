@@ -1011,6 +1011,7 @@ const OPS: { [K in LeafOp]: OpRun<K> } = {
       target: effect.to.fieldId,
       reason,
       by: "karta",
+      byCard: ctx.cardId ?? undefined,
     });
     return {
       writes: moved.writes,

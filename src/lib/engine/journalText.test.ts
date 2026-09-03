@@ -366,12 +366,43 @@ suite("Polish agreement", () => {
    * Traw", and a hand przestawia a figure.
    */
   it("tells a Karta moving somebody from a hand moving a figure", () => {
-    expect(text("moved-by-card", { to: "rownina-traw", reason: "ZAKLĘTA ŚCIEŻKA" })).toBe(
-      "Michał (GOBLIN) przenosi się na Równina Traw — ZAKLĘTA ŚCIEŻKA.",
+    expect(
+      text("moved-by-card", {
+        from: "osada",
+        to: "rownina-traw",
+        reason: "ZAKLĘTA ŚCIEŻKA",
+      }),
+    ).toBe("Michał (GOBLIN) przenosi się: Osada → Równina Traw — ZAKLĘTA ŚCIEŻKA.");
+    expect(text("moved-by-hand", { from: "osada", to: "rownina-traw", reason: null })).toBe(
+      "Michał (GOBLIN) — przestawienie: Osada → Równina Traw.",
     );
-    expect(text("moved-by-hand", { to: "rownina-traw", reason: null })).toBe(
-      "Michał (GOBLIN) — przestawienie na Równina Traw.",
+  });
+
+  /**
+   * Both ends, because where a figure came from is half of what a reader is
+   * checking — and an arrow rather than a preposition, because a journal that
+   * declines the names it is handed gets „na Ruiny Twierdzy" right and „na
+   * Kurhan" wrong. One end where there is only one: a Postać placed on the
+   * board for the first time has come from nowhere.
+   */
+  it("says where from as well as where to", () => {
+    expect(text("moved-by-card", { to: "osada", reason: null })).toContain("→ Osada");
+    expect(text("moved-by-card", { to: "osada", reason: null })).not.toContain("undefined");
+  });
+
+  /** The Karta named in the reason, remembered so it can be looked up. */
+  it("hands back the Karta that did the moving", () => {
+    const said = describe(
+      entry("moved-by-card", {
+        from: "osada",
+        to: "karczma",
+        reason: "JEDNOROŻEC: przenosisz się na dowolny Obszar w tym Kręgu",
+        cardId: "jednorozec",
+      }),
+      SEATS,
+      null,
     );
+    expect(said?.refs?.some((ref) => ref.id === "jednorozec" && ref.kind === "card")).toBe(true);
   });
 
   /**

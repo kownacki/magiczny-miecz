@@ -304,7 +304,20 @@ export type MovedBy = "karta" | "konsola" | "korekta";
  */
 export function placeSeat(
   snapshot: Snapshot,
-  command: { seatId: string; target: string; reason: string | null; by: MovedBy },
+  command: {
+    seatId: string;
+    target: string;
+    reason: string | null;
+    by: MovedBy;
+    /**
+     * The Karta that did it, so the journal can make its name a link.
+     *
+     * `reason` already carries the name in its text — „JEDNOROŻEC: przenosisz
+     * się…" — but a name in a sentence is only lookupable when the line hands
+     * back a reference for it, and a reference needs the id.
+     */
+    byCard?: string;
+  },
 ): Outcome<void> {
   const seat = seatById(snapshot, command.seatId);
   const fieldId = requireFieldId(command.target, "Przestawienie");
@@ -417,6 +430,7 @@ export function placeSeat(
               from: seat.field_id,
               to: fieldId,
               reason: command.reason,
+              ...(command.byCard ? { cardId: command.byCard } : {}),
             },
             manual: command.by !== "karta",
           },
