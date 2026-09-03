@@ -825,6 +825,32 @@ and that is the part worth keeping.
 
 ## Still open
 
+- [ ] **Split `drawn-card.tsx` at line 488.** 819 lines, the fourth-largest
+      `.tsx` in the repo, and the seam is a single JSX element: the
+      `<div className="mt-auto …">` that opens the button area runs 332 lines —
+      40% of the file — and is a different responsibility from everything above
+      it. Above is what the Karta *is* (`known`, `art`, `profile`, `label`, the
+      header, `CardFacts`, the coverage notes); below is what you may *do* about
+      it, in ten mutually exclusive `{canAct && …}` branches.
+
+      The seam was checked rather than eyeballed. All six callbacks —
+      `onResolve`, `onFight`, `onEscape`, `onTake`, `onLeave`, `onAsk` — and
+      both pieces of state, `choices` and `going`, have no use above 488 except
+      their own declarations and the effect that resets them, which move down
+      too. So do the derivations that feed only the buttons: `asking`, `gate`,
+      `inert`, `needs`, `chosen`, `said`, `offered`, `foe`, `keep`, `skippable`.
+      The new component derives those itself rather than taking them as props,
+      which keeps the surface to the card, the script, the label, the Natura,
+      `busy`, `ring`, `occupied`, `mySword` and the callbacks. About 480 lines
+      left and 350 moved.
+
+      **Deliberately not done yet.** This is the hottest file in the repo and
+      the other agent has been in it all session; at the time this was written
+      its three uncommitted edits were all *inside* the block that would move.
+      Moving 332 lines out from under somebody is the one merge nobody can do by
+      hand. Do it when the file is clean, not before.
+
+
 **Companion mode** (`COMPANION_PARKED`) is the only thing left, and this work
 went through it. `no_device` is gone: a chair the host filled in by hand is now
 simply one nobody is driving, which `mayChooseFor`, `dealCharacters` and the
