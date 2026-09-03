@@ -129,13 +129,6 @@ const SIZE: Record<ActionSize, string> = {
   xs: "px-2 py-0.5 text-[11px]",
 };
 
-/**
- * Starts one button's three seconds from outside it — see `confirm`.
- *
- * The id is the button's own `useId`, which is why this is handed back rather
- * than called: only the button knows which one it is, and only the caller knows
- * when the question was answered.
- */
 export function ActionButton({
   role = "act",
   weight = "outline",
@@ -186,8 +179,13 @@ export function ActionButton({
    * nobody can see. So the button asks, and the answer starts the fill — which
    * is still cancellable, so „są pewni?" and „ostatnia szansa" stay two
    * different offers rather than the same one twice.
+   *
+   * Handed the starter rather than expected to find it: the three seconds
+   * belong to *this* button, and only the button knows which one it is — `id`
+   * is its own `useId`. The caller knows when the question was answered and
+   * nothing else.
    */
-  confirm?: () => void;
+  confirm?: (proceed: () => void) => void;
   /** Layout the parent owns — `self-start`, `w-full`. Never appearance. */
   className?: string;
   children: React.ReactNode;
@@ -207,7 +205,7 @@ export function ActionButton({
         filling
           ? cancelChannelling
           : confirm
-            ? confirm
+            ? () => confirm(() => beginChannelling(id, onClick, says ?? null))
             : () => beginChannelling(id, onClick, says ?? null)
       }
       // The label's own title would be answering a question the button has
