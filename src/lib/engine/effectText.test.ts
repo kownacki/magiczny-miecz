@@ -445,7 +445,9 @@ describe("a sequence beside a picture", () => {
     // draws him (15.1), the gift belongs to whoever stops there afterwards.
     expect(rows[0]).toBe("gdy wyciągnięta — rzuć kostką:");
     expect(rows[1]).toBe("1 — kładziesz Kartę: Bezdroża");
-    expect(rows).toContain("pierwszej Postaci, która tu trafi — do wyboru:");
+    expect(rows).toContain("gdy odwiedzony — do wyboru:");
+    // A blank row between the two groups, which the panel draws as a gap.
+    expect(rows).toContain("");
     expect(rows).toContain("— Magiczny Miecz");
   });
 

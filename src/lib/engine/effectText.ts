@@ -195,7 +195,12 @@ export function effectRows(effect: Effect): string[] | null {
         rows[0] = `gdy wyciągnięta — ${rows[0]}`;
         placed = true;
       } else if (placed) {
-        rows[0] = `pierwszej Postaci, która tu trafi — ${rows[0]}`;
+        rows[0] = `gdy odwiedzony — ${rows[0]}`;
+        // A blank row, which the panel draws as a gap: the placement happened
+        // to whoever drew the Karta and this happens to whoever finds it, and
+        // running the two groups together is the ambiguity the headings were
+        // added to end.
+        out.push("");
       }
       out.push(...rows);
     });

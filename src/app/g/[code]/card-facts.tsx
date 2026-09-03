@@ -132,11 +132,18 @@ export function CardFacts({
       {/* What using it does, once — as opposed to what holding it gives. */}
       {profile.special.length > 0 && (
         <ul className="flex flex-col gap-1 border-t border-edge/60 pt-2">
-          {profile.special.map((line, at) => (
-            <li key={at} className="text-[11px] leading-snug text-ochre/90">
-              <WithRules text={sentence(line)} />
-            </li>
-          ))}
+          {profile.special.map((line, at) =>
+            /* An empty row is a group break — see `effectRows`. Drawn as space
+               rather than as a rule, because the two groups are one card's
+               doing and a divider would read as a second card. */
+            line === "" ? (
+              <li key={at} className="h-1.5" aria-hidden />
+            ) : (
+              <li key={at} className="text-[11px] leading-snug text-ochre/90">
+                <WithRules text={sentence(line)} />
+              </li>
+            ),
+          )}
         </ul>
       )}
 
