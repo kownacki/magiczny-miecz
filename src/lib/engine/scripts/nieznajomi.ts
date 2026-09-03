@@ -132,9 +132,24 @@ export const NIEZNAJOMI: Readonly<Record<string, CardScript>> = {
    * until the kolejka did, so being wrong cost nothing and showed nothing; it
    * costs a frame now, and a healer who heals you whether or not you asked.
    */
+  /**
+   * The three that offer rather than happen, each asked as a question.
+   *
+   * `optional` said so and nothing on the sheet did: their whole effect was one
+   * node, so the only control was „Rozpatrz" and a player who did not want what
+   * was on offer had no way to say so. Wrapped in a `wybor` they read like the
+   * Jednorożec and the Kuglarz, which is what they are — „Pomiń" is one of the
+   * answers, not a way out of the Karta.
+   */
   cudotworca: {
     optional: true,
-    effect: { op: "uzdrow", upTo: 2 },
+    effect: {
+      op: "wybor",
+      options: [
+        { label: "odzyskujesz 2 punkty Życia (najwyżej do 4)", effect: { op: "uzdrow", upTo: 2 } },
+        { label: "Pomiń", effect: { op: "nic" } },
+      ],
+    },
     disposition: { kind: "zostaje" },
   },
   /** "Każda Dobra Postać, która tu **zawita**, otrzyma 1 Zaklęcie." */
@@ -143,7 +158,13 @@ export const NIEZNAJOMI: Readonly<Record<string, CardScript>> = {
     effect: {
       op: "gdy",
       warunek: { is: "natura", jedna_z: ["good"] },
-      to: { op: "zaklecie", count: 1 },
+      to: {
+        op: "wybor",
+        options: [
+          { label: "zyskujesz 1 Zaklęcie", effect: { op: "zaklecie", count: 1 } },
+          { label: "Pomiń", effect: { op: "nic" } },
+        ],
+      },
     },
     disposition: { kind: "zostaje" },
   },
@@ -162,7 +183,16 @@ export const NIEZNAJOMI: Readonly<Record<string, CardScript>> = {
    */
   sztukmistrz: {
     optional: true,
-    effect: { op: "zaklecie", count: 1, cena: 1 },
+    effect: {
+      op: "wybor",
+      options: [
+        {
+          label: "kupujesz 1 Zaklęcie za 1 Sztukę Złota",
+          effect: { op: "zaklecie", count: 1, cena: 1 },
+        },
+        { label: "Pomiń", effect: { op: "nic" } },
+      ],
+    },
     disposition: { kind: "zostaje" },
   },
   // Two rolls' worth of card in one: where he settles, and what he hands the

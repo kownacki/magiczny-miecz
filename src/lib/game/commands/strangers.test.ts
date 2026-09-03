@@ -70,17 +70,23 @@ const visit = async (
   return { after: apply(table, out.writes), said: out.result.did.join("; ") };
 };
 
+/**
+ * All three of these now ask before they act — „Pomiń" is one of their answers
+ * — so a visit that means "yes" picks option 0. The Czarodziej's question is
+ * inside his `gdy`, which is why his choice comes after the branch rather than
+ * before it: the walk spends the pick where `applyEffect` reaches it.
+ */
 describe("the Sztukmistrz, who sells Zaklęcia", () => {
   /** "kupić u niego 1 Zaklęcie za 1 Sztukę Złota" */
   it("takes the coin and hands over the card", async () => {
-    const { after, said } = await visit(meeting("sztukmistrz", 3), "sztukmistrz");
+    const { after, said } = await visit(meeting("sztukmistrz", 3), "sztukmistrz", [0]);
     expect(after.seats[0].gold).toBe(2);
     expect(after.holdings.filter((h) => h.kind === "spell")).toHaveLength(1);
     expect(said).toMatch(/za 1 Sz\. Z\./);
   });
 
   it("refuses an empty purse before touching the pile", async () => {
-    const { after, said } = await visit(meeting("sztukmistrz", 0), "sztukmistrz");
+    const { after, said } = await visit(meeting("sztukmistrz", 0), "sztukmistrz", [0]);
     expect(after.holdings).toHaveLength(0);
     expect(said).toMatch(/Za mało złota/);
   });
@@ -90,7 +96,7 @@ describe("the Sztukmistrz, who sells Zaklęcia", () => {
    * hold no Zaklęcia must not pay to be told so.
    */
   it("charges nothing when the Magia allows no Zaklęcia (2.6)", async () => {
-    const { after, said } = await visit(meeting("sztukmistrz", 3, 0), "sztukmistrz");
+    const { after, said } = await visit(meeting("sztukmistrz", 3, 0), "sztukmistrz", [0]);
     expect(after.seats[0].gold).toBe(3);
     expect(said).toMatch(/2\.6/);
   });
