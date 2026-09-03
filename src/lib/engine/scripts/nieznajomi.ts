@@ -203,12 +203,34 @@ export const NIEZNAJOMI: Readonly<Record<string, CardScript>> = {
    * still hold — neither can go below where the character started — and that is
    * what makes the trade a real decision rather than free.
    */
+  /**
+   * „Jeśli chcesz, Kuglarz może zamienić twoje punkty Miecza na punkty Magii
+   * lub odwrotnie."
+   *
+   * Three offers and not two. „Lub odwrotnie" is a whole second option, and the
+   * card used to read „Zamień punkty · Pomiń" — which put the one decision the
+   * Kuglarz actually asks for, *which way round*, behind a label that did not
+   * mention it. A player weighing this is choosing between two quite different
+   * characters, and the panel was showing them one.
+   *
+   * The labels name both sides in the card's own order rather than saying
+   * „Miecz" and „Magia" alone: what is being chosen is a trade, and half a
+   * trade named on a button is the half you are giving up or the half you are
+   * getting depending on how you read it.
+   */
   kuglarz: {
     effect: {
       op: "wybor",
       options: [
-        { label: "Zamień punkty", effect: { op: "zamien-punkty" } },
-        { label: "Pomiń", effect: { op: "nic" } },
+        {
+          label: "Zamień punkty Miecza na punkty Magii",
+          effect: { op: "zamien-punkty", z: "sword" },
+        },
+        {
+          label: "Zamień punkty Magii na punkty Miecza",
+          effect: { op: "zamien-punkty", z: "magic" },
+        },
+        { label: "Pomiń — nic nie zamieniasz", effect: { op: "nic" } },
       ],
     },
     disposition: { kind: "odloz" },

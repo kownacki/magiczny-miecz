@@ -331,8 +331,15 @@ export type Effect =
    * about. Not two `punkty` steps — the number swapped is the player's choice
    * and the two halves must move together or a character could take the gain
    * and refuse the cost.
+   *
+   * `z` is the side being spent, and it is part of the op rather than a second
+   * question asked afterwards. „Zamienić twoje punkty Miecza na punkty Magii
+   * **lub odwrotnie**" is two offers, and a card that showed one „Zamień
+   * punkty" was hiding the only part of it a player actually decides — which
+   * way round. There is no third direction and no „either", so the op cannot
+   * be built without saying.
    */
-  | { op: "zamien-punkty" }
+  | { op: "zamien-punkty"; z: "sword" | "magic" }
   /**
    * The Mędrzec's riddle: name a face aloud, then roll. Distinct from `rzut`
    * because the guess comes first and is the whole game of it — a die table

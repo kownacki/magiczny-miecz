@@ -168,7 +168,7 @@ const ONE_OF_EACH: Record<Effect["op"], Effect> = {
   "zaklecia-do-limitu": { op: "zaklecia-do-limitu" },
   wyciagnij: { op: "wyciagnij", count: 1 },
   strata: { op: "strata", co: "przedmiot" },
-  "zamien-punkty": { op: "zamien-punkty" },
+  "zamien-punkty": { op: "zamien-punkty", z: "sword" },
   zgadnij: { op: "zgadnij", nagroda: { op: "zaklecie", count: 1 } },
   natura: { op: "natura", na: "good" },
   kup: { op: "kup", towar: [{ co: "Tarcza", cena: 2 }] },

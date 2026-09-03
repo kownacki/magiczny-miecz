@@ -179,8 +179,14 @@ export function EffectControls({
       return stated("Zamiana w Kamień (20.1)");
     case "zamien-punkty":
       // 1.3 and 2.3 still hold on both sides of the swap, which is what makes
-      // it a decision rather than a free re-roll of the character sheet.
-      return stated("zamiana punktów Miecza na Magię albo odwrotnie (nie poniżej wartości początkowych)");
+      // it a decision rather than a free re-roll of the character sheet. The
+      // direction is settled by now — it is what the player chose off the
+      // Kuglarz's three — so this states one trade rather than offering both.
+      return stated(
+        effect.z === "sword"
+          ? "zamiana punktów Miecza na punkty Magii (nie poniżej wartości początkowych)"
+          : "zamiana punktów Magii na punkty Miecza (nie poniżej wartości początkowych)",
+      );
     case "zgadnij":
       return (
         <div>

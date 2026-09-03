@@ -412,7 +412,9 @@ export function describeEffect(effect: Effect): string {
       return "zamiana w Kamień na 3 tury (20.1)";
 
     case "zamien-punkty":
-      return "zamieniasz punkty Miecza i Magii";
+      return effect.z === "sword"
+        ? "zamieniasz punkty Miecza na punkty Magii"
+        : "zamieniasz punkty Magii na punkty Miecza";
 
     /**
      * The Mędrzec's riddle, said in full because every word of it is a rule.
