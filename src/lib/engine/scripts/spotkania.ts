@@ -139,10 +139,47 @@ export const SPOTKANIA: Readonly<Record<string, CardScript>> = {
     },
     disposition: { kind: "odloz" },
   },
+  /**
+   * "Z Płaskowyżu zeszła gęsta Mgła, okrywając nieprzeniknioną bielą wszystkie
+   * Krainy. Przez 2 tury Postacie mogą przebywać tylko 2 Obszary (1 Obszar na
+   * turę). Potem Mgła rozpływa się - odłóż jej Kartę."
+   *
+   * The cap the console has been able to conjure since `EFFECTS.fog` was
+   * written — „Mgła", `move-max` 1 — arriving from the Karta it is named after.
+   * It was `{ op: "nic" }`, so the app told the table that the storm which
+   * halves everybody's walk for two turns does nothing at all, and the engine
+   * had every piece of it: the modifier by name, and the Południca two entries
+   * down using the identical shape for one Postać.
+   *
+   * „Wszystkie Krainy" is `wszyscy`, the drawer included, and every seat wears
+   * it through two of their own turns — which is what „przez 2 tury (1 Obszar
+   * na turę)" says, without a clock. The disposition is the same two turns
+   * counted at the Karta rather than at a Postać.
+   */
   mgla: {
-    effect: { op: "nic" },
+    effect: {
+      op: "efekt",
+      label: "Mgła — najwyżej 1 Obszar na turę",
+      modifier: { kind: "move-max", fields: 1 },
+      ends: { kind: "turns", turns: 2 },
+      target: "wszyscy",
+    },
     disposition: { kind: "po-turach", turns: 2 },
   },
+  /**
+   * "Przy tym szczególnym układzie planet, na czas 1 tury podwojona zostaje
+   * Magia wszystkich Demonów."
+   *
+   * Only the clock, and the note in `coverage.ts` says why: the doubling is a
+   * number that has to live on a Karta lying on an Obszar, and `seat_effects`
+   * hangs every status off a seat. It is the Wampir's wall and the Krąg
+   * Płomieni's, met from the other side — a Modifier with nobody to carry it.
+   *
+   * The entry earns its place all the same: „na czas 1 tury" is a fact the
+   * table gets wrong without a referee, and the Karta being here is what says
+   * so. What it must not do is claim the rest, which is what „nic się nie
+   * dzieje" was doing on the panel.
+   */
   "uklad-planet": {
     effect: { op: "nic" },
     disposition: { kind: "po-turach", turns: 1 },

@@ -150,3 +150,58 @@ describe("the Zły Duch, who empties the room", () => {
     expect(out.result.did.join(" ")).toMatch(/nic cię nie trzyma/);
   });
 });
+
+/**
+ * The third Spotkanie that lasts, and the only one that lands on everybody.
+ *
+ * It was `{ op: "nic" }` with a two-turn disposition, so the app counted the
+ * turns and told the table the storm did nothing — while `EFFECTS.fog` in the
+ * console had been able to conjure the very same cap under this Karta's own
+ * name the whole time.
+ */
+describe("the Mgła, which slows the whole board", () => {
+  const twoSeats = () =>
+    aTable({
+      game: {
+        active_seat: 0,
+        turn_state: {
+          phase: "field",
+          fieldId: "uroczysko",
+          from: null,
+          draw: 0,
+          drawn: [{ cardId: "mgla", cardClass: "encounter" }],
+          resolved: [],
+        } as TurnPhase,
+      },
+      seats: [
+        aSeat({
+          id: "seat-a",
+          seat_index: 0,
+          character_id: asSeatCharacter("awanturnik"),
+          field_id: "uroczysko",
+        }),
+        aSeat({
+          id: "seat-b",
+          seat_index: 1,
+          character_id: asSeatCharacter("wojownik"),
+          field_id: "osada",
+        }),
+      ],
+    });
+
+  /** „Wszystkie Krainy" — the drawer included, which is what `wszyscy` means. */
+  it("caps every Postać at one Obszar, the one who drew it too", async () => {
+    const after = await meet(twoSeats(), "mgla");
+    expect(movementCap(storedStatuses(after, "seat-a"))).toBe(1);
+    expect(movementCap(storedStatuses(after, "seat-b"))).toBe(1);
+  });
+
+  /** „Przez 2 tury… (1 Obszar na turę)" — two of each seat's own turns. */
+  it("lasts the two turns the Karta names", async () => {
+    const after = await meet(twoSeats(), "mgla");
+    for (const seat of ["seat-a", "seat-b"]) {
+      const fog = storedStatuses(after, seat).find((one) => one.label.startsWith("Mgła"));
+      expect(fog?.ends, seat).toEqual({ kind: "turns", turns: 2 });
+    }
+  });
+});

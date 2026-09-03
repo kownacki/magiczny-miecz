@@ -74,6 +74,13 @@ const MANUAL: Readonly<Partial<Record<CardId, string>>> = {
 
   // --- cards whose disposition is handled but whose body is not -------------
   //
+  // The MGŁA was the other one, and is no longer: „przez 2 tury… 1 Obszar na
+  // turę" is a `move-max` of 1 on every seat, which is the modifier the console
+  // has been able to conjure under that Karta's own name since `EFFECTS.fog`
+  // was written.
+  "uklad-planet":
+    "Magia wszystkich Demonów jest przez tę turę podwojona — aplikacja liczy tury, ale nie podwaja: liczba na Karcie leżącej na Obszarze nie ma gdzie mieszkać.",
+
 
   // --- Zaklęcia the app carries out in part ---------------------------------
   //
