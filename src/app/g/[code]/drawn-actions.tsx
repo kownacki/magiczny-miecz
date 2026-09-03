@@ -47,7 +47,7 @@ import { itemProfile, previewOf, requirementOf } from "@/lib/engine/abilityText"
 import { fieldName, plural, sentence } from "@/lib/engine/polish";
 import { mayWalkPast } from "@/lib/engine/kolejka";
 import { TheReader, specialRows } from "./card-facts";
-import { pendingIn } from "@/lib/engine/resolve";
+import { inertFor, pendingIn } from "@/lib/engine/resolve";
 import { asFieldId, type FieldId } from "@/lib/engine/board";
 import type { Confirmation } from "./confirm";
 import type { Nature } from "@/data/types";
@@ -280,18 +280,12 @@ export function DrawnActions({
   /**
    * Nothing here for this Postać at all.
    *
-   * A `gdy` whose condition they fail and whose other branch does nothing —
-   * the WRÓŻKA met by a Zła Postać, the DOBRE BÓSTWO met by somebody who has
-   * raised no hand. Read off `requirementOf`, so it covers every condition the
-   * requirement line can state rather than only a Natura: `inertFor` knew about
-   * `gdy natura` and left the Bóstwo to fall through to a button promising to
-   * do what it could, which was nothing.
+   * A `gdy` whose condition they fail and whose other branch does nothing — the
+   * WRÓŻKA met by a Zła Postać, the DOBRE BÓSTWO met by somebody who has raised
+   * no hand. The shape is `inertFor`'s question and the verdict is
+   * `requirementOf`'s; this only puts the two together.
    */
-  const gate = script?.effect;
-  const inert =
-    gate?.op === "gdy" &&
-    (gate.inaczej === undefined || gate.inaczej.op === "nic") &&
-    needs?.met === false;
+  const inert = inertFor(script?.effect, needs?.met === false);
 
   /**
    * Whose decision this is, as the table knows them — „Test (WIEDŹMA)".

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { nodeAt, isSettled, pendingIn } from "./resolve";
+import { inertFor, nodeAt, isSettled, pendingIn } from "./resolve";
 import { FIELD_SCRIPTS } from "./fieldScript";
 import { SCRIPTS } from "./cardScript";
 import type { Effect } from "./cardScript";
@@ -308,5 +308,85 @@ describe("a condition the browser can test for itself", () => {
   /** The pick is spent inside the branch, the way the server spends it. */
   it("walks past a choice already made", () => {
     expect(pendingIn(wrozka, [0], "good")).toBeNull();
+  });
+});
+
+/**
+ * A Karta with nothing in it for the Postać standing in front of it.
+ *
+ * Untested until now, and wrong until now, which is not a coincidence: the
+ * function lived in the engine with no caller while the rule the sheet actually
+ * used was written out in JSX. The old version asked the `gdy` whether it tested
+ * a Natura — so a condition of any other kind fell through, and the DOBRE
+ * BÓSTWO offered a button that promised to do what it could and then did
+ * nothing. It takes the verdict now, from `requirementOf`, which knows every
+ * form the condition comes in.
+ */
+describe("a Karta that has nothing for this Postać", () => {
+  /** The WRÓŻKA's shape: serve one Natura, and say nothing to anyone else. */
+  const wrozkaShape: Effect = {
+    op: "gdy",
+    warunek: { is: "natura", jedna_z: ["good"] },
+    to: { op: "punkty", stat: "sword", delta: 1 },
+  };
+
+  it("is inert for somebody who fails the condition", () => {
+    expect(inertFor(wrozkaShape, true)).toBe(true);
+  });
+
+  it("is not inert for somebody who meets it", () => {
+    expect(inertFor(wrozkaShape, false)).toBe(false);
+  });
+
+  /**
+   * The DOBRE BÓSTWO, which is why this takes a verdict rather than a Natura.
+   *
+   * Its condition is `attacker` — „Jeśli podczas tej rozgrywki zaatakowałeś
+   * inną Postać" — and not a Natura at all, so the version that looked for
+   * `warunek.is === "natura"` answered false and the sheet drew „Rozpatrz, co
+   * się da" over a card that would visibly do nothing. Every kind of condition
+   * `Condition` has is one this can be asked about, because it is no longer the
+   * one asking.
+   */
+  it("is inert whatever kind of condition was failed", () => {
+    const bostwo: Effect = {
+      op: "gdy",
+      warunek: { is: "attacker" },
+      to: { op: "punkty", stat: "life", delta: 1 },
+    };
+    expect(inertFor(bostwo, true)).toBe(true);
+
+    // And the other two the box uses, for the same reason.
+    const prog: Effect = {
+      op: "gdy",
+      warunek: { is: "prog", stat: "sword", ponizej: 4 },
+      to: { op: "punkty", stat: "sword", delta: 1 },
+    };
+    const zloto: Effect = {
+      op: "gdy",
+      warunek: { is: "ma-zloto" },
+      to: { op: "punkty", stat: "gold", delta: -1 },
+    };
+    expect(inertFor(prog, true)).toBe(true);
+    expect(inertFor(zloto, true)).toBe(true);
+  });
+
+  /** „Otherwise nothing" and „no otherwise" are the same card to the player. */
+  it("counts an `inaczej` that does nothing as no branch at all", () => {
+    expect(inertFor({ ...wrozkaShape, inaczej: { op: "nic" } }, true)).toBe(true);
+  });
+
+  it("is not inert when the other branch does something", () => {
+    const either: Effect = { ...wrozkaShape, inaczej: { op: "punkty", stat: "life", delta: -1 } };
+    expect(inertFor(either, true)).toBe(false);
+  });
+
+  it("says nothing about a Karta that is not a `gdy` at all", () => {
+    expect(inertFor({ op: "punkty", stat: "gold", delta: 1 }, true)).toBe(false);
+  });
+
+  /** A Karta with no script — most of the Przedmioty. */
+  it("says nothing about a Karta with no effect", () => {
+    expect(inertFor(undefined, true)).toBe(false);
   });
 });

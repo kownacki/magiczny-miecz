@@ -243,10 +243,25 @@ export function pendingIn(
  *
  * The sheet needs to know, because the button it draws otherwise says "Rozpatrz,
  * co się da" over a card that will visibly do nothing when pressed.
+ *
+ * # Why the condition arrives as an answer rather than as a Natura
+ *
+ * This used to read the `gdy` itself — `warunek.is === "natura"`, and is the
+ * Postać's one of `jedna_z`. That is narrower than the rule: a `gdy` can test
+ * things that are not a Natura, and the DOBRE BÓSTWO tests whether you have
+ * raised a hand against anybody. It fell straight through to a button promising
+ * to do what it could, which was nothing.
+ *
+ * So the question is asked once, by `requirementOf`, which knows every form the
+ * condition takes and reads it for a particular Postać — and what comes back
+ * here is the verdict. The shape stays this function's business; who fails it is
+ * the caller's. `inaczej.op === "nic"` counts as no branch at all, because a
+ * card that says "otherwise nothing" and a card that says nothing are the same
+ * card to the player in front of it.
  */
-export function inertFor(effect: Effect, natura: Nature | null): boolean {
-  if (effect.op !== "gdy" || effect.warunek.is !== "natura" || !natura) return false;
-  return !effect.warunek.jedna_z.includes(natura) && effect.inaczej === undefined;
+export function inertFor(effect: Effect | undefined, failsCondition: boolean): boolean {
+  if (!effect || effect.op !== "gdy") return false;
+  return failsCondition && (effect.inaczej === undefined || effect.inaczej.op === "nic");
 }
 
 /**
