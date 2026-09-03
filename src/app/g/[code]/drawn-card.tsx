@@ -334,11 +334,18 @@ export function DrawnCard({
           every one of them. Said as a fact about the Karta rather than in the
           disposition's own words, which are an instruction to the table
           („Odłóż Kartę na stos użytych"). */}
+      {/* Ruled off from the name above it and from each other, the way the
+          hover panel already does it (`CardFacts`). These are three different
+          kinds of statement — what the Karta is, how long it lasts, whom it is
+          for — and stacked without a rule they read as one paragraph in three
+          colours. */}
       {staysAs(known.id) ? (
-        <p className="text-[11px] text-magia/80">{sentence(staysAs(known.id)!)}</p>
+        <p className="border-t border-edge/60 pt-2 text-[11px] text-magia/80">
+          {sentence(staysAs(known.id)!)}
+        </p>
       ) : (
         script && (
-          <p className="text-[11px] text-ochre/80">
+          <p className="border-t border-edge/60 pt-2 text-[11px] text-ochre/80">
             {describeDisposition(script.disposition)}
           </p>
         )
@@ -353,7 +360,7 @@ export function DrawnCard({
           „does this card have a restriction" but „does it shut me out", and on
           a turn being taken the answer is known. */}
       {needs && (
-        <p className={`text-[11px] ${passes}`}>
+        <p className={`border-t border-edge/60 pt-2 text-[11px] ${passes}`}>
           {/* Only the answer is hoverable: „tylko Postać" is the question and
               has nothing to explain, and dotting the whole line offers a
               tooltip on the half that does not have one. Dotted only where
