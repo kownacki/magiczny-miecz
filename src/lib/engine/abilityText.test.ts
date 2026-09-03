@@ -262,11 +262,19 @@ describe("what a Karta asks of the character in front of it", () => {
 
   it("still reads 5.3 off a Przedmiot", () => {
     const talizman = requirementOf("relikwiarz", "good");
-    if (talizman) expect(talizman.label).toBe("tylko Postać");
+    if (talizman) {
+      expect(talizman.label).toBe("tylko Postać");
+      // 5.3 is about holding a card, so a Przedmiot cites it and its number is
+      // kept apart from the value: one is a hover, the other is a link.
+      expect(talizman.rule).toBe("(5.3)");
+      expect(talizman.value).not.toContain("5.3");
+    }
   });
 
   it("says nothing where the Karta serves anybody", () => {
     expect(requirementOf("cudotworca", "evil")).toBeNull();
+    // A Nieznajomy's condition is its Karta's, not the Instrukcja's.
+    expect(requirementOf("wrozka", "good")?.rule).toBeUndefined();
     expect(requirementOf("wilk", "good")).toBeNull();
   });
 

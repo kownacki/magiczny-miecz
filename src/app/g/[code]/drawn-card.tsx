@@ -15,6 +15,7 @@ import { requirementOf, staysAs } from "@/lib/engine/abilityText";
 import { sentence } from "@/lib/engine/polish";
 import { mayWalkPast } from "@/lib/engine/kolejka";
 import { TheReader } from "./card-facts";
+import { WithRules } from "./rule-ref";
 import type { Nature } from "@/data/types";
 import { inertFor, isSettled, pendingIn } from "@/lib/engine/resolve";
 import { coverageOf, manualNote, NOT_HANDLED } from "@/lib/engine/coverage";
@@ -347,6 +348,12 @@ export function DrawnCard({
           >
             {needs.value}
           </span>
+          {needs.rule && (
+            <>
+              {" "}
+              <WithRules text={needs.rule} />
+            </>
+          )}
         </p>
       )}
 

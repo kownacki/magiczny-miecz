@@ -113,6 +113,12 @@ export function CardFacts({
           >
             {needs.value}
           </span>
+          {needs.rule && (
+            <>
+              {" "}
+              <WithRules text={needs.rule} />
+            </>
+          )}
         </p>
       )}
 

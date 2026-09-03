@@ -358,16 +358,26 @@ function subject(reader: Reader): { who: string; a: string; feminine: boolean } 
 export function requirementOf(
   cardId: string,
   reader: Nature | null | Reader,
-): { label: string; value: string; met: boolean | null; detail?: string } | null {
+): {
+  label: string;
+  value: string;
+  /** The rule the condition comes from, where one does — „(5.3)". */
+  rule?: string;
+  met: boolean | null;
+  detail?: string;
+} | null {
   const who: Reader = typeof reader === "object" && reader !== null ? reader : { nature: reader };
   const only = servedNatures(cardId);
   if (only) {
     const met = who.nature === null ? null : only.natures.includes(who.nature);
     return {
       label: "tylko Postać",
-      value:
-        only.natures.map((one) => NATURE_LABEL[one] ?? one).join(" lub ") +
-        (only.rule ? ` ${only.rule}` : ""),
+      value: only.natures.map((one) => NATURE_LABEL[one] ?? one).join(" lub "),
+      // Kept apart from the value, because they are two different things to
+      // point at: the value has a hover saying whether the reader passes, and
+      // the number is a link into the Instrukcja. Run together under one dotted
+      // underline they read as one word with two behaviours.
+      ...(only.rule ? { rule: only.rule } : {}),
       met,
       /**
        * Their Natura, said outright.
