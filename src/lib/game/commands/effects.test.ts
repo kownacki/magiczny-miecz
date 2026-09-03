@@ -932,6 +932,84 @@ describe("a Karta drawn onto the Obszar (16.1)", () => {
  * `endturn` refused as well — „Najpierw dokończ: TARGOWISKO". One drawn Karta
  * wedged the table.
  */
+/**
+ * 12.1's window, now closed against resolving as well as against taking.
+ *
+ * `owesAFrame` splits an Obszar's Karty in two: what stops the turn, and what
+ * merely offers itself. Taking out of the second half has waited for the first
+ * since the window was built; resolving out of it did not, so a Targowisko
+ * could be shopped at with a Wilkołak standing over it — which 16.4 forbids in
+ * as many words.
+ */
+describe("resolving a Karta that only offers itself (12.1)", () => {
+  const lying = (drawn: { cardId: string; cardClass: string }[], resolved: string[] = []) =>
+    aTable({
+      game: {
+        active_seat: 0,
+        turn_state: only({
+          phase: "field",
+          fieldId: "wrzosowiska",
+          from: null,
+          draw: 0,
+          drawn,
+          resolved,
+          fought: [],
+        } as never),
+      },
+      seats: [aSeat({ id: "seat-a", seat_index: 0, field_id: asFieldId("wrzosowiska") })],
+    });
+
+  const wrogFirst = [
+    { cardId: "targowisko", cardClass: "place" },
+    { cardId: "cyklop", cardClass: "foe" },
+  ];
+
+  it("waits for the kolejka, and says what is in the way", async () => {
+    await expect(
+      resolveDrawnCard(lying(wrogFirst), { cardId: "targowisko", shuffle: asIs }, ports()),
+    ).rejects.toThrow(/Najpierw CYKLOP/);
+  });
+
+  it("opens once the kolejka is worked through", async () => {
+    const { result } = await resolveDrawnCard(
+      lying(wrogFirst, ["cyklop"]),
+      { cardId: "targowisko", shuffle: asIs },
+      ports(),
+    );
+    expect(result.card).toBe("TARGOWISKO");
+  });
+
+  /**
+   * And a Karta that *is* the kolejka is not gated on the kolejka, or resolving
+   * the Cyklop would be refused with „Najpierw CYKLOP". `mayWalkPast` is what
+   * tells the two apart, off the card's own verb.
+   */
+  it("does not hold back the Karta the turn is actually stopped at", async () => {
+    const { result } = await resolveDrawnCard(
+      lying(wrogFirst),
+      { cardId: "cyklop", shuffle: asIs },
+      ports({ random: scriptedRandom([6, 1]) }),
+    );
+    expect(result.card).toBe("CYKLOP");
+  });
+
+  /**
+   * The case the gate was built for. `reopensTheDrawing` orders the Wrota last
+   * but cannot hold it there — a player may name any Karta in `drawn`. This is
+   * what holds it, and with it the reading that makes its three a fresh
+   * badanie rather than three cards shuffled into a queue half worked through.
+   */
+  it("keeps the SKALNE WROTA behind everything else on the Obszar", async () => {
+    const table = lying([
+      { cardId: "skalne-wrota", cardClass: "place" },
+      { cardId: "cyklop", cardClass: "foe" },
+    ]);
+    await expect(
+      resolveDrawnCard(table, { cardId: "skalne-wrota", shuffle: asIs }, ports()),
+    ).rejects.toThrow(/Najpierw CYKLOP/);
+  });
+});
+
 describe("a shop on a Karta (16.7, 21.1)", () => {
   it("resolves rather than asking, and names what is for sale", async () => {
     const shop = SCRIPTS["targowisko"];

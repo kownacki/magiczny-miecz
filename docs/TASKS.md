@@ -1133,16 +1133,23 @@ shape appending by this route: ODMIANA LOSU, which takes one out of a running
 
 The Wrota is a Miejsce (VI), the highest numeral, so 15.2 already put it behind
 everything except another Miejsce drawn beside it; the key closes that case.
-What it cannot do on its own is stop a player naming it early —
-`resolveDrawnCard` resolves any Karta in `drawn`, for every card — which is the
-12.1 gate below.
+Ordering alone cannot *hold* it there, because a player may name any Karta in
+`drawn`; `refuseWhileQueuedFor` does, and that is the second half. The Wrota is
+`optional`, so it lives in 12.1's window rather than in the kolejka, and the
+window opens „dopiero po rozpatrzeniu wszystkich Kart Zdarzeń znajdujących się
+lub wyciągniętych na danym Obszarze". Taking out of that window already waited
+(`refuseWhileQueued`, in `takeCard` since the window was built); resolving out
+of it did not, so a Targowisko could be shopped at with a Wilkołak standing
+over it, against 16.4. One gate now, asked of the cards `mayWalkPast` — never
+of a Karta that *is* the kolejka, or resolving the Wilkołak would be refused
+with „Najpierw WILKOŁAK".
 
-Two other things about this card are unsettled with it. Its disposition is
+One thing about this card is still unsettled. Its disposition is
 **conditional** — `odloz` only if you go through, otherwise it stays — and it
-is typed as a plain `odloz` today. In practice that comes out right, because
-the card is `optional` and declining it means never resolving it, so the
-`odloz` never runs; it is right by accident rather than by saying so. And it is
-the only card whose frame's answer decides whether the Karta leaves the Obszar.
+is typed as a plain `odloz`. In practice that comes out right, because the card
+is `optional` and declining it means never resolving it, so the `odloz` never
+runs; it is right by accident rather than by saying so, and it is the only card
+whose frame's answer decides whether the Karta leaves the Obszar.
 
 One thing found while checking, which is not this card's: the three drawn
 included a second SKALNE WROTA off the real pile, and `resolved` keys on

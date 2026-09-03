@@ -5,7 +5,7 @@ import type { EventCard, Item, Nature } from "@/data/types";
 import { forbiddenNatures } from "@/lib/engine/abilityText";
 import { abilitiesOf, carriesSpell, entryPrice, unavailableIn } from "@/lib/engine/abilities";
 import { barredFromFriends } from "@/lib/engine/status";
-import { storedStatuses } from "./turn";
+import { refuseWhileQueued, storedStatuses } from "./turn";
 import { FIELDS, requireFieldId, type FieldId } from "@/lib/engine/board";
 import { drawFrom } from "@/lib/engine/deck";
 import { isConsumedOnResolve, scriptFor, type Effect } from "@/lib/engine/cardScript";
@@ -16,7 +16,6 @@ import {
   slotOnArrival,
   whyFoeStandsHere,
   whyNotCollectHere,
-  whyQueuedHere,
   whyPackIsFull,
 } from "@/lib/engine/holdings";
 import { type Slot } from "@/lib/engine/slots";
@@ -307,34 +306,6 @@ function refuseOverAFoe(snapshot: Snapshot, seatId: string, exempt?: string): vo
  * effect that hands you something are not somebody collecting off a square,
  * and none of them has a field frame on top to be owed anything.
  */
-/**
- * The uzupełnienie under 12.1: nothing off the square while the kolejka runs.
- *
- * „Zasada ta działa dopiero po rozpatrzeniu wszystkich Kart Zdarzeń
- * znajdujących się lub wyciągniętych na danym Obszarze (15.2)." One pass
- * through the Obszar, then the free window — docs/OBSZAR.md has the argument.
- *
- * Both lists, for the reason every other rule here reads both. Silent outside a
- * field frame like `refuseWhileOwing`, and for the same reason: a card handed
- * over by a script, spoils after a fight and a starting kit are not somebody
- * collecting off a square, and none of them has an Obszar to be queued on.
- */
-function refuseWhileQueued(snapshot: Snapshot, seatId: string): void {
-  const state = top(snapshot.game.turn_state);
-  if (state.phase !== "field") return;
-  const seat = snapshot.seats.find((one) => one.id === seatId);
-  const why = whyQueuedHere(
-    [
-      ...state.drawn,
-      ...snapshot.fieldCards
-        .filter((row) => row.field_id === seat?.field_id)
-        .map((row) => ({ cardId: row.card_id })),
-    ],
-    [...(state.resolved ?? []), ...(state.fought ?? []), ...(state.beaten ?? [])],
-  );
-  if (why) throw new Error(why);
-}
-
 function refuseWhileOwing(snapshot: Snapshot): void {
   const state = top(snapshot.game.turn_state);
   if (state.phase !== "field") return;

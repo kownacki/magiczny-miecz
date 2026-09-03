@@ -21,7 +21,7 @@ import { putOnPile } from "./piles";
 import { replaceTop, requireTop, topIf } from "@/lib/engine/stack";
 import { activeSeat, seatView } from "./seat";
 import { skipsRollAt } from "@/lib/engine/abilities";
-import { addEffect, refuseWhileUndrawn } from "./turn";
+import { addEffect, refuseWhileQueuedFor, refuseWhileUndrawn } from "./turn";
 import type { Decisions } from "./ops";
 import { applyEffect, markResolved } from "./effects";
 
@@ -274,6 +274,16 @@ export async function resolveDrawnCard(
   if (!state.drawn.some((entry) => entry.cardId === command.cardId)) {
     throw new Error("Tej Karty tu nie ma.");
   }
+
+  /**
+   * 12.1's window, for a Karta that offers itself rather than stopping the turn.
+   *
+   * Silent for everything the kolejka holds — see `refuseWhileQueuedFor`, which
+   * asks `mayWalkPast` first, because a Karta that *is* the kolejka must not be
+   * gated on it. This is what keeps the SKALNE WROTA last, and with it the one
+   * reading of the card that makes its three a fresh badanie.
+   */
+  refuseWhileQueuedFor(snapshot, seat.id, command.cardId);
 
   const script = scriptFor(command.cardId);
   if (!script) throw new Error(`${cardName(command.cardId)} — tę Kartę rozpatrzcie sami.`);

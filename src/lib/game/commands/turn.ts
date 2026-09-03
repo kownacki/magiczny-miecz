@@ -3,7 +3,8 @@
 import { nextSeat, startTurn } from "@/lib/engine/turn";
 import { afterAnyTurn, afterTurn, playsAgain, type Status } from "@/lib/engine/status";
 import { drawsFromPool, poolRemains, startingPool } from "@/lib/engine/pools";
-import { leavesWhenResolved } from "@/lib/engine/kolejka";
+import { leavesWhenResolved, mayWalkPast } from "@/lib/engine/kolejka";
+import { whyQueuedHere } from "@/lib/engine/holdings";
 import { abilitiesOf, entryPrice } from "@/lib/engine/abilities";
 import type { TurnCard } from "@/lib/engine/state";
 import { only, top, topIf } from "@/lib/engine/stack";
@@ -79,6 +80,73 @@ export function refuseAgainst13_2(snapshot: Snapshot, doing: "meet" | "explore")
  * Płaskowyż Mgieł found this: two Karty lying, one still owed, and the Wilk was
  * already offering "Walcz".
  */
+/**
+ * The uzupełnienie under 12.1: nothing out of the window while the kolejka runs.
+ *
+ * „Zasada ta działa dopiero po rozpatrzeniu wszystkich Kart Zdarzeń
+ * znajdujących się lub wyciągniętych na danym Obszarze (15.2)." One pass
+ * through the Obszar, then the free window — docs/OBSZAR.md has the argument.
+ *
+ * Both lists, for the reason every other rule here reads both. Silent outside a
+ * field frame, which is deliberate: a card handed over by a script, spoils
+ * after a fight and a starting kit are not somebody working through a square,
+ * and none of them has an Obszar to be queued on.
+ *
+ * Here rather than in `holdings.ts`, where it was written, because taking is
+ * not the only thing 12.1's window holds. It also holds every Karta that offers
+ * itself rather than stopping the turn — see `refuseWhileQueuedFor` — and two
+ * copies of this would be two readings of one rule to keep in step.
+ */
+export function refuseWhileQueued(snapshot: Snapshot, seatId: string): void {
+  const state = top(snapshot.game.turn_state);
+  if (state.phase !== "field") return;
+  const seat = snapshot.seats.find((one) => one.id === seatId);
+  const why = whyQueuedHere(
+    [
+      ...state.drawn,
+      ...snapshot.fieldCards
+        .filter((row) => row.field_id === seat?.field_id)
+        .map((row) => ({ cardId: row.card_id })),
+    ],
+    [...(state.resolved ?? []), ...(state.fought ?? []), ...(state.beaten ?? [])],
+  );
+  if (why) throw new Error(why);
+}
+
+/**
+ * The same gate, asked about one Karta being resolved.
+ *
+ * # Why resolving needs it at all
+ *
+ * `owesAFrame` splits the Karty on an Obszar in two: what stops the turn, which
+ * is the kolejka, and what merely offers itself, which is 12.1's window. Taking
+ * out of that window already waits for the kolejka — `takeCard` has called
+ * `refuseWhileQueued` since the window was built — but *resolving* a Karta in
+ * it did not, so a Targowisko could be shopped at with a Wilkołak standing
+ * over it. 16.4 is plain that it cannot: „każde Spotkanie i każdy Wróg … muszą
+ * zostać rozpatrzone zanim pozostałe zostaną obejrzane."
+ *
+ * # Only the optional ones
+ *
+ * A Karta that *is* the kolejka must not be gated on the kolejka, or resolving
+ * the Wilkołak would be refused with „Najpierw WILKOŁAK". So the question is
+ * asked of exactly the cards the window holds, which is `mayWalkPast` — the
+ * card's own verb, „jeżeli chcesz" against „każdy, kto tu trafi", not a list
+ * written out here.
+ *
+ * # What it settles
+ *
+ * The SKALNE WROTA, whose three Karty join the kolejka they were drawn into.
+ * That is only the fresh badanie the community reads the card as if the Wrota
+ * is resolved last, and `reopensTheDrawing` orders it last without being able
+ * to *hold* it there. This is what holds it: the Wrota is optional, so it lives
+ * in the window, and the window opens when the Obszar is worked through.
+ */
+export function refuseWhileQueuedFor(snapshot: Snapshot, seatId: string, cardId: string): void {
+  if (!mayWalkPast(cardId)) return;
+  refuseWhileQueued(snapshot, seatId);
+}
+
 export function refuseWhileUndrawn(snapshot: Snapshot): void {
   const state = topIf(snapshot.game.turn_state, "field");
   if (!state || state.draw <= 0) return;

@@ -207,6 +207,7 @@ loss on death are the same either way, so nothing above this line changes.
 | 12.1a | …but only after any Wrogowie are dealt with | ✅ | `refuseOverAFoe`, reading the board **and** the turn's frame — it read only one for a while, so the rule fired for a Przedmiot and not for the gold beside it |
 | 12.1b | …and only once the Obszar has drawn what it owes | ✅ | `refuseWhileOwing`, on anything lying here (`lyingHere`) — a bought card, the Władca's Tarcza and an `otrzymaj` grant are not "leżące" and pass |
 | 12.1 | …and visiting a Nieznajomy is under the same two exceptions | ✅ | one sentence grants visiting and taking together and a) and b) except the whole of it, so buying, selling and healing go through the same `refuseUnlessSettledHere` as taking |
+| 12.1 | …and the window is shut while the kolejka runs, for resolving as well as taking | ✅ | `refuseWhileQueued` had gated `takeCard` since the window was built and nothing gated `resolveDrawnCard`, so a Targowisko could be shopped at with a Wilkołak standing over it — which 16.4 forbids. `refuseWhileQueuedFor` asks it of exactly the Karty that offer rather than stop (`mayWalkPast`), never of one that *is* the kolejka. It is also what keeps the SKALNE WROTA last, and with it the reading that makes its three a fresh badanie |
 
 ## 13. Spotkania i badanie Obszarów
 
