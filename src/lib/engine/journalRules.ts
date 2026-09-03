@@ -93,6 +93,19 @@ export const RULE_FOR: Record<JournalKind, string | null> = {
   discarded: "5.5",
   /** Zbieranie z planszy odkrytych Kart. */
   "left-behind": "12.1",
+  /** „Karty, które zgodnie z ich instrukcją powinny zostać położone na
+      konkretnym Obszarze… rozpatrywane są w pierwszej kolejności." */
+  placed: "15.1",
+  /**
+   * A Karta that did nothing.
+   *
+   * No rule covers it, and that is the honest answer: what happened is that the
+   * card's own condition was not met — „Pierwszej **Dobrej** Postaci" — and the
+   * condition is printed on the Karta, not in the Instrukcja. 16.5 makes the
+   * instruction binding, which is why the Karta was resolved at all; it says
+   * nothing about an instruction that turns out to be for somebody else.
+   */
+  "no-effect": null,
   /**
    * Using a Karta you are holding is that Karta's instruction and nothing
    * else's — chapter 15 is about the order drawn cards are resolved in, and 16

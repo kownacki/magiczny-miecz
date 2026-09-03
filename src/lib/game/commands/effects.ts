@@ -31,6 +31,7 @@ import {
   type TurnState,
 } from "@/lib/engine/stack";
 import { storedStatuses } from "./turn";
+import { describeCondition } from "@/lib/engine/effectText";
 import { hasAttacked } from "@/lib/engine/status";
 import { pointsOf } from "./seat";
 import { asFieldId, ringFields } from "@/lib/engine/board";
@@ -673,7 +674,33 @@ async function walk(
           [...path, taken ? 0 : 1],
           following ? follow.slice(1) : null,
         )
-      : nothing(["warunek niespełniony — nic się nie dzieje"]);
+      : /**
+         * The condition was not met and the Karta has no other branch, so
+         * nothing happened at all — the WRÓŻKA met by a Zła Postać.
+         *
+         * Said in the journal, because a turn that moves on in silence is
+         * indistinguishable from one where the app lost the Karta. It is the
+         * only outcome in the game that leaves no trace of its own: every other
+         * one moves a figure, a number or a card.
+         */
+        {
+          writes: command.cardId
+            ? {
+                journal: [
+                  {
+                    seatId,
+                    round: snapshot.game.round,
+                    kind: "no-effect",
+                    payload: {
+                      cardId: command.cardId,
+                      why: describeCondition(effect.warunek),
+                    },
+                  },
+                ],
+              }
+            : {},
+          result: { did: ["warunek niespełniony — nic się nie dzieje"], pending: null },
+        };
   }
 
   /**

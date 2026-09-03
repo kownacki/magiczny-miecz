@@ -72,6 +72,8 @@ export const JOURNAL_KINDS = [
   /** Somebody left the table, or was put out of it. Not the same as `left-behind`. */
   "left-table",
   "left-behind",
+  "placed",
+  "no-effect",
   "lost-card",
   "move",
   /**

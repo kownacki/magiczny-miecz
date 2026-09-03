@@ -451,8 +451,8 @@ const OPS: { [K in LeafOp]: OpRun<K> } = {
           {
             seatId,
             round: snapshot.game.round,
-            kind: "left-behind",
-            payload: { cardId: ctx.cardId, field: chosen },
+            kind: "placed",
+            payload: { cardId: ctx.cardId, fieldId: chosen },
           },
         ],
       }),

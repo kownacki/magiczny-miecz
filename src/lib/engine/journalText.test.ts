@@ -87,6 +87,29 @@ suite("journal vocabulary", () => {
     expect(text("left-behind", { fieldId: "kurhan", cardIds: [] })).toBeNull();
   });
 
+  /**
+   * 15.1's placement, which is not leaving something behind at the end of a
+   * turn: the Karta walks off to a named Obszar the moment it is drawn. It had
+   * no case at all, and `poloz-karte` wrote it as a `left-behind` whose
+   * renderer reads a different payload — so the row went in, came back, was
+   * found empty and dropped, and the Upiór moved to the Osada in silence.
+   */
+  it("says where a Karta that places itself went (15.1)", () => {
+    expect(text("placed", { cardId: "upior", fieldId: "osada" })).toContain("UPIÓR");
+    expect(text("placed", { cardId: "upior", fieldId: "osada" })).toContain("Osada");
+  });
+
+  /**
+   * The one outcome that leaves no trace of its own. Every other moves a
+   * figure, a number or a card; this one moves nothing, and a turn that goes
+   * quiet is indistinguishable from an app that lost the Karta.
+   */
+  it("says when a Karta did nothing, and why", () => {
+    const said = text("no-effect", { cardId: "wrozka", why: "jeśli dobra" });
+    expect(said).toContain("WRÓŻKA");
+    expect(said).toContain("jeśli dobra");
+  });
+
   it("records the field and cards it named, so they can be looked up", () => {
     const line = describe(
       entry("left-behind", { fieldId: "kurhan", cardIds: ["magiczny-miecz", "upior"] }),

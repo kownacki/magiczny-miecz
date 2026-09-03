@@ -584,6 +584,25 @@ export function describe(
     }
     // 16.8: what was not taken stays where it fell, face up. Saying where is the
     // whole point — a card on a field two turns later is otherwise unexplained.
+    /**
+     * 15.1's own placement, which is not the same event as leaving something
+     * behind at the end of a turn — the Karta walks off to a named Obszar the
+     * moment it is drawn, and does nothing to whoever drew it.
+     *
+     * It had no line at all: `poloz-karte` wrote its payload as `cardId` and
+     * `field` while `left-behind` reads `cardIds` and `fieldId`, so the row was
+     * stored, read back, found empty and dropped. The UPIÓR moved to the Osada
+     * in silence.
+     */
+    case "placed":
+      return line(`${who} odkłada ${card(data.cardId)} na pole ${field(data.fieldId)}.`);
+
+    /** A Karta resolved with nothing to show for it — see `RULE_FOR`. */
+    case "no-effect": {
+      const why = typeof data.why === "string" && data.why ? ` — ${data.why}` : "";
+      return line(`${who}: ${card(data.cardId)} nic nie daje${why}.`);
+    }
+
     case "left-behind": {
       const left = Array.isArray(data.cardIds) ? data.cardIds : [];
       if (left.length === 0) return null;
