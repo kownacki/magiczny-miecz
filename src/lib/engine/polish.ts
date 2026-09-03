@@ -218,6 +218,16 @@ export const TARGET_SHORT: Record<Target, string> = {
 };
 
 /**
+ * The two targets `TARGET_SHORT` names in the singular.
+ *
+ * Polish conjugates, so a sentence built round one of these takes „traci" and
+ * the rest take „tracą" — „każdy, kto tu trafi **traci** 1 turę" against
+ * „wszyscy **tracą** 1 turę". Two entries and a default is the whole of it, and
+ * it lives here beside the words it is about.
+ */
+export const TARGET_SINGULAR = new Set<Target>(["kazdy-kto-tu-trafi", "inna-postac"]);
+
+/**
  * The same eleven, spelled out.
  *
  * Deliberately a second wording rather than a second copy. The turn panel is

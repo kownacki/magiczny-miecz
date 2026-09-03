@@ -102,7 +102,7 @@ describe("who an effect passes over", () => {
     // along was moved somewhere the engine could reach it.
     expect(
       describeEffect({ op: "tura-stracona", turns: 1, target: "wszyscy", oprocz: ["elf"] }),
-    ).toBe("tracisz 1 turę — wszyscy (oprócz: ELF)");
+    ).toBe("wszyscy tracą 1 turę (oprócz: ELF)");
   });
 
   it("still falls back to the id for a character out of this box", () => {
@@ -110,7 +110,7 @@ describe("who an effect passes over", () => {
     // `CharacterId`s and never will be while the scope is the base game.
     expect(
       describeEffect({ op: "tura-stracona", turns: 1, target: "wszyscy", oprocz: ["szczesciarz"] }),
-    ).toBe("tracisz 1 turę — wszyscy (oprócz: SZCZĘŚCIARZ)");
+    ).toBe("wszyscy tracą 1 turę (oprócz: SZCZĘŚCIARZ)");
   });
 });
 

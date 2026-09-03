@@ -12,6 +12,7 @@ import {
   STAT_LABEL,
   TARGET_FULL,
   TARGET_SHORT,
+  TARGET_SINGULAR,
 } from "./polish";
 
 /** Anyone but you is worth naming; "ty" is the default and saying it is noise. */
@@ -263,7 +264,20 @@ export function describeEffect(effect: Effect): string {
       const spared = effect.oprocz?.length
         ? ` (oprócz: ${effect.oprocz.map(characterName).join(", ")})`
         : "";
-      return `tracisz ${turns}${forWhom(effect.target)}${spared}`;
+      /**
+       * Who loses it, said as the subject rather than tacked on afterwards.
+       *
+       * „tracisz 1 turę — wszyscy" is second person about everybody: the reader
+       * is told they lose a turn and then, in an aside, that so does the table.
+       * The Zaklinacz Czasu does not single anybody out — „Wszystkie Postacie…
+       * tracą 1 turę" — and neither does the Burza. Anything aimed at one
+       * person keeps the direct address, which is right and shorter.
+       */
+      if (effect.target && effect.target !== "ty") {
+        const verb = TARGET_SINGULAR.has(effect.target) ? "traci" : "tracą";
+        return `${TARGET_SHORT[effect.target]} ${verb} ${turns}${spared}`;
+      }
+      return `tracisz ${turns}${spared}`;
     }
 
     case "ruch-dodatkowy":
