@@ -56,14 +56,20 @@ export const TILE_GAP_PX = 8;
  * zoom level. So the term is the bar at 100% plus a margin, and it is the
  * margin that absorbs the zoom.
  *
- * It went to 19 for a while, when the panels wore a thin bar: thin measures 11
- * in Chrome 152 against the platform's 15, and 11 + 8 is 19. The bars are the
- * platform's width again — a bar you have to aim at is a bar you fight — so the
- * term is 15 + 8, which is 23 and where it started.
+ * 15 for the bar — the platform's width, measured in Chrome 152 as
+ * `offsetWidth - clientWidth` on a scrolling box — and 1 for the margin.
  *
- * 8 is the margin, and it is the row's own gap: the least a margin can be here
- * while still being one. 15/z clears 23 down to about 65% zoom, which is the
- * range this has to hold over.
+ * The margin was 8 for a long time, and the reasoning was the zoom: a bar is
+ * reserved in *device* pixels, so at 90% it is 16.7 of the CSS pixels this sum
+ * is written in, and a margin is what absorbs that. What it also does is show,
+ * as a gap past the last tile that a reader can measure by eye — which is what
+ * a shelf laid out to hold exactly five looks wrong for. 1 keeps the arithmetic
+ * from landing exactly on the bar and nothing else.
+ *
+ * What that costs is the zoom, and it costs less than it looks: the rows are
+ * `columns` of `1fr` rather than a wrapping flex row (see `TileRow`), so a
+ * drawer a pixel or two short of its five tiles draws five slightly closer
+ * together rather than four and a hole.
  *
  * The padding is a parameter because not every drawer wraps its row in the same
  * chrome. Most put the tiles straight inside `px-4` and 32 is the whole of it;
@@ -71,7 +77,7 @@ export const TILE_GAP_PX = 8;
  * deep by the time it is drawn.
  */
 export function shelfWidth(tiles: number, sides = 32): number {
-  return tiles * TILE_WIDTH + (tiles - 1) * TILE_GAP_PX + sides + 1 + 23;
+  return tiles * TILE_WIDTH + (tiles - 1) * TILE_GAP_PX + sides + 1 + 16;
 }
 
 /**
@@ -117,7 +123,7 @@ export const OBSZAR_WIDTH = shelfWidth(OBSZAR_TILES);
  * lies over the board like the Obszar does.
  *
  * Measured rather than reasoned: the narrowest width that keeps three tiles on
- * one line through this chain is 317 plus the scrollbar's 23.
+ * one line through this chain is 317 plus the scrollbar's 16.
  */
 export const PLAYERS_WIDTH = shelfWidth(OBSZAR_TILES, 2 * (12 + 1 + 8));
 

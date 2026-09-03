@@ -51,20 +51,20 @@ html {
      arithmetic and the reason each term is what it is live on `SHELF_WIDTH` in
      `cardImages.ts`, which is the source; `shelfWidth.test.ts` fails the build
      if this number and that one drift apart. */
-  --shelf-w: 518px;
+  --shelf-w: 511px;
 
   /* The same measurement for the Obszar, which is three tiles and not five —
      it holds a handful of Karty rather than a catalogue, and it lies over the
      board the whole time you are reading it. `OBSZAR_WIDTH` in `cardImages.ts`
      is the source, and `shelfWidth.test.ts` pins this to it as well. */
-  --obszar-w: 330px;
+  --obszar-w: 323px;
 
   /* And the roster, which is the same row of three and ten pixels wider: in
      here the tiles are not laid straight into the drawer but into a box per
      player, so the column's `p-3`, that box's border and the open panel's
      `px-2` come between them and the edge. `PLAYERS_WIDTH` in `cardImages.ts`
      is the source, and `shelfWidth.test.ts` pins this to it too. */
-  --gracze-w: 340px;
+  --gracze-w: 333px;
 }
 
 @theme {
