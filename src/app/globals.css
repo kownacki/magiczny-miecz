@@ -128,3 +128,30 @@ body {
 @theme {
   --animate-seat-breath: seat-breath 2.4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
+
+/* The three seconds an irreversible decision waits before it is sent, drawn
+   across the button that is holding it — see `channelling.ts`. Linear, because
+   it is a clock, and a clock that eases is lying about how much time is left.
+
+   Registered the same way as `seat-breath` above, and used the same way:
+   `motion-safe:animate-channel-fill`. Under `prefers-reduced-motion` nothing
+   runs, which leaves the bar at its untransformed `scaleX(1)` — a steady tint
+   over the whole button rather than a sweep across it. That is the right
+   fallback and not a degraded one: the button still says „Anuluj", and what
+   the motion was carrying is *how long is left*, which is exactly the part a
+   reader who asked for no motion has asked not to be told with movement.
+
+   The duration is set inline from `CHANNEL_MS`, so the number lives in one
+   place and this rule cannot drift away from it. */
+@keyframes channel-fill {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@theme {
+  --animate-channel-fill: channel-fill 3s linear forwards;
+}

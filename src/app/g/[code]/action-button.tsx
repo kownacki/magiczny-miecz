@@ -1,5 +1,15 @@
 "use client";
 
+import { useId, useSyncExternalStore } from "react";
+import {
+  beginChannelling,
+  cancelChannelling,
+  channelled,
+  CHANNEL_MS,
+  noChannelling,
+  watchChannelling,
+} from "./channelling";
+
 /**
  * The button that decides something in the game.
  *
@@ -34,6 +44,14 @@
  * `className` is a deliberate keyhole for *layout the parent owns* — `self-start`,
  * `w-full`, `flex-1` — and not for appearance. Anything that changes how the
  * button looks belongs in the grammar above, or the grammar is wrong.
+ *
+ * **Every one of these channels.** Pressing it schedules the decision instead
+ * of making it, fills left to right for three seconds, and says „Anuluj" for as
+ * long as it fills; every other button on the page is disabled meanwhile. The
+ * call sites did not have to ask for this and cannot switch it off, which is
+ * the point — a way out that some irreversible buttons have and others do not
+ * is worse than none, because it teaches a player to expect it. `channelling.ts`
+ * has the reasoning and the one place the three seconds is written down.
  */
 
 /** What kind of act it is. The colour follows from this, never from the caller. */
@@ -77,6 +95,20 @@ const LOOK: Record<ActionRole, Record<ActionWeight, string>> = {
     quiet: "border-edge text-ink hover:border-magia",
     decline: "border-edge text-muted hover:border-magia hover:text-ink",
   },
+};
+
+/**
+ * The sweep, in the button's own colour.
+ *
+ * Its own, rather than one channelling colour for all of them: the bar is not
+ * an event happening *to* the button, it is the button doing what it says, and
+ * an ochre wash across „Walcz" would read as a different control arriving.
+ */
+const FILL: Record<ActionRole, string> = {
+  act: "bg-ochre/25",
+  gain: "bg-verdigris/25",
+  harm: "bg-vermilion/25",
+  spell: "bg-magia/25",
 };
 
 const SIZE: Record<ActionSize, string> = {
@@ -124,14 +156,24 @@ export function ActionButton({
   className?: string;
   children: React.ReactNode;
 }) {
+  const id = useId();
+  const pending = useSyncExternalStore(watchChannelling, channelled, noChannelling);
+  /** This button is the one holding a decision, so it is the way out of it. */
+  const filling = pending?.id === id;
+  /** Somebody else's decision is in flight. One at a time — `channelling.ts`. */
+  const waiting = pending !== null && !filling;
+
   return (
     <button
       type="button"
-      disabled={disabled}
-      onClick={onClick}
-      title={title}
+      disabled={disabled || waiting}
+      onClick={filling ? cancelChannelling : () => beginChannelling(id, onClick)}
+      // The label's own title would be answering a question the button has
+      // stopped asking.
+      title={filling ? undefined : title}
+      aria-label={filling ? "Anuluj" : undefined}
       className={[
-        "rounded border transition disabled:opacity-50",
+        "relative overflow-hidden rounded border transition disabled:opacity-50",
         SIZE[size],
         LOOK[role][weight],
         align === "left" ? "text-left" : "",
@@ -140,9 +182,23 @@ export function ActionButton({
         .filter(Boolean)
         .join(" ")}
     >
-      {note ? <span className="block">{children}</span> : children}
-      {note ? (
-        <span className="mt-0.5 block text-[11px] leading-snug text-muted">{note}</span>
+      {/* Kept in the layout and only hidden, so the button does not resize
+          under the cursor that is about to press it again. */}
+      <span className={filling ? "invisible block" : "block"}>
+        {children}
+        {note ? (
+          <span className="mt-0.5 block text-[11px] leading-snug text-muted">{note}</span>
+        ) : null}
+      </span>
+      {filling ? (
+        <>
+          <span
+            aria-hidden
+            className={`absolute inset-0 origin-left motion-safe:animate-channel-fill ${FILL[role]}`}
+            style={{ animationDuration: `${CHANNEL_MS}ms` }}
+          />
+          <span className="absolute inset-0 grid place-items-center text-ink">Anuluj</span>
+        </>
       ) : null}
     </button>
   );
