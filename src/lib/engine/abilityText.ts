@@ -3,12 +3,25 @@
 import type { Nature } from "@/data/types";
 import { FIELDS, type FieldId } from "./board";
 import { ABILITIES, CARD_NOTES, type Ability } from "./abilities";
-import { describeDisposition, scriptFor, type Condition, type Effect } from "./cardScript";
+import {
+  describeDisposition,
+  scriptFor,
+  valenceOf,
+  type Effect,
+  type Valence,
+} from "./cardScript";
 import type { Status } from "./status";
 import { classOf } from "./cards";
 import { describeEffect, effectRows } from "./effectText";
 import { abilitiesOfCharacter, asCharacterId } from "./characters";
-import { NATURE_LABEL, NATURE_LABEL_M, cardName, fieldName, plural } from "./polish";
+import {
+  NATURE_LABEL,
+  NATURE_LABEL_G,
+  NATURE_LABEL_M,
+  cardName,
+  fieldName,
+  plural,
+} from "./polish";
 import { slotsFor, SLOT_LABEL, isWearable, type EqMode, type Slot } from "./slots";
 
 function fieldNames(fieldIds: readonly FieldId[]): string {
@@ -253,12 +266,10 @@ function specialOf(cardId: string): string[] {
    * is the shape a card takes when it simply does not apply, which is what the
    * requirement line is for.
    */
-  const gate = script.effect;
+  const gate = wholeCardGate(cardId);
   const stated =
-    gate.op === "gdy" &&
-    (gate.inaczej === undefined || gate.inaczej.op === "nic") &&
-    (gate.warunek.is === "natura" || gate.warunek.is === "attacker");
-  const body = stated && gate.op === "gdy" ? gate.to : script.effect;
+    gate !== null && (gate.warunek.is === "natura" || gate.warunek.is === "attacker");
+  const body = stated && gate !== null ? gate.to : script.effect;
   const lines = effectRows(body) ?? [describeEffect(body)];
   /**
    * Only worth saying when the card does not simply stay with you — and not at
@@ -304,18 +315,43 @@ export function forbiddenNatures(cardId: string): readonly Nature[] | undefined 
  * answer has to come from one place or the sheet says „tylko Dobra Postać" for
  * the Talizman and nothing for the Wróżka.
  */
+/**
+ * The `gdy` that IS the card, rather than one branch of what it does.
+ *
+ * Two places were asking this question with two different answers. The
+ * requirement line wanted `inaczej === undefined`; `specialOf`, which drops the
+ * condition from the rows *because* the requirement line is saying it, also
+ * accepted an `inaczej` of „nic". The GODZINA DUCHÓW is written the second way
+ * — „Może je wezwać każda **Zła** Postać", with nothing at all for anybody else
+ * — so `specialOf` struck the condition out on the strength of a line that was
+ * never drawn, and the one thing the card is about vanished from the sheet.
+ *
+ * One predicate, so the two cannot disagree again. An `inaczej` that *acts* is
+ * still not a gate: two live arms are content, and the SABAT would otherwise
+ * claim to be for Złe Postacie only while changing the Natura of everyone else.
+ */
+function wholeCardGate(cardId: string): Extract<Effect, { op: "gdy" }> | null {
+  const effect = scriptFor(cardId)?.effect;
+  if (effect?.op !== "gdy") return null;
+  return effect.inaczej === undefined || effect.inaczej.op === "nic" ? effect : null;
+}
+
 function servedNatures(
   cardId: string,
-): { natures: readonly Nature[]; rule: string | null } | undefined {
+): { natures: readonly Nature[]; rule: string | null; valence: Valence | null } | undefined {
   const abilities = ABILITIES[cardId as keyof typeof ABILITIES] ?? [];
   const only = abilities.find((ability) => ability.kind === "tylko-natura");
   // 5.3 is a rule about *holding* a card, so it is cited on the cards it is
   // about. A Nieznajomy serving one Natura is not 5.3 and cites nothing: no
   // rule in the book says the Wróżka waits for a Dobra Postać — her Karta does.
-  if (only && only.kind === "tylko-natura") return { natures: only.natury, rule: "(5.3)" };
-  const gate = scriptFor(cardId)?.effect;
-  if (gate?.op === "gdy" && gate.warunek.is === "natura" && gate.inaczej === undefined) {
-    return { natures: gate.warunek.jedna_z, rule: null };
+  if (only && only.kind === "tylko-natura") {
+    // 5.3 is a rule about *holding* a Karta, so meeting it is by definition in
+    // the reader's favour: what it gates is the card being theirs at all.
+    return { natures: only.natury, rule: "(5.3)", valence: "korzysc" };
+  }
+  const gate = wholeCardGate(cardId);
+  if (gate && gate.warunek.is === "natura") {
+    return { natures: gate.warunek.jedna_z, rule: null, valence: valenceOf(gate.to) };
   }
   return undefined;
 }
@@ -375,15 +411,35 @@ export function requirementOf(
   /** The rule the condition comes from, where one does — „(5.3)". */
   rule?: string;
   met: boolean | null;
+  /**
+   * Whether meeting the condition is in the reader's favour — see `valenceOf`.
+   *
+   * The panel colours this line green where the reader passes, which is the
+   * right answer on a Przedmiot and a Nieznajomy and backwards on a Spotkanie:
+   * ZAĆMIENIE SŁOŃC told a Dobra Postać in green that she qualified, for a turn
+   * taken off her. Null where the card does not settle it, and the line is then
+   * drawn muted rather than guessed at.
+   */
+  valence: Valence | null;
   detail?: string;
 } | null {
   const who: Reader = typeof reader === "object" && reader !== null ? reader : { nature: reader };
   const only = servedNatures(cardId);
   if (only) {
     const met = who.nature === null ? null : only.natures.includes(who.nature);
+    /**
+     * „tylko Postać: dobra" is a permission and „dotyczy Postaci: dobrej" is a
+     * reach, and the difference is the card's, not the panel's. ZAĆMIENIE SŁOŃC
+     * does not admit Dobre i Chaotyczne Postacie to anything — it takes a turn
+     * off them, and „tylko" said the opposite of what the Karta says.
+     */
+    const hurts = only.valence === "strata";
+    const label = hurts ? "dotyczy Postaci" : "tylko Postać";
+    const words = hurts ? NATURE_LABEL_G : NATURE_LABEL;
     return {
-      label: "tylko Postać",
-      value: only.natures.map((one) => NATURE_LABEL[one] ?? one).join(" lub "),
+      label,
+      value: only.natures.map((one) => words[one] ?? one).join(" lub "),
+      valence: only.valence,
       // Kept apart from the value, because they are two different things to
       // point at: the value has a hover saying whether the reader passes, and
       // the number is a link into the Instrukcja. Run together under one dotted
@@ -411,8 +467,19 @@ export function requirementOf(
    * card's own two limbs: „zaatakowałeś inną Postać lub użyłeś swoich zdolności
    * na jej niekorzyść".
    */
-  if (conditionOf(cardId) === "attacker") {
-    const line = { label: "tylko Postać", value: "uznany agresor" };
+  const gate = wholeCardGate(cardId);
+  if (gate?.warunek.is === "attacker") {
+    /**
+     * „dotyczy Postaci", like a Spotkanie that hits a Natura, because that is
+     * what the Karta does: the Bóstwo judges a guilty Postać and the judgement
+     * costs a Sztuka Złota or a turn spent standing here. It was „tylko Postać:
+     * uznany agresor" in green, which read as a qualification for something.
+     */
+    const line = {
+      label: "dotyczy Postaci",
+      value: "uznanej za agresora",
+      valence: valenceOf(gate.to),
+    };
     if (who.aggression === undefined) return { ...line, met: null };
     return {
       ...line,
@@ -513,12 +580,6 @@ const STAT_OF: Record<"sword" | "magic" | "life" | "gold", string> = {
   life: "Życie",
   gold: "Złoto",
 };
-
-/** The kind of test a Karta's own `gdy` applies, when its whole effect is one. */
-function conditionOf(cardId: string): Condition["is"] | null {
-  const effect = scriptFor(cardId)?.effect;
-  return effect?.op === "gdy" ? effect.warunek.is : null;
-}
 
 /**
  * One act of aggression, in the words a player can check against the journal.

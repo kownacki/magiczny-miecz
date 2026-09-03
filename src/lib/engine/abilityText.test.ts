@@ -244,6 +244,9 @@ describe("what a Karta asks of the character in front of it", () => {
     expect(requirementOf("wrozka", "good")).toEqual({
       label: "tylko Postać",
       value: "dobra",
+      // A wish is a gift, so meeting the condition is the good answer and the
+      // panel colours the line green.
+      valence: "korzysc",
       met: true,
       detail: "Twoja Postać jest dobra",
     });
@@ -292,6 +295,65 @@ describe("what a Karta asks of the character in front of it", () => {
   });
 });
 
+/**
+ * The same line on a Spotkanie, where meeting the condition is usually the bad
+ * news — which is the half the panel had wrong on every card that has one.
+ */
+describe("a Spotkanie's condition", () => {
+  /**
+   * „Może je wezwać każda **Zła** Postać", and the app said nothing at all.
+   *
+   * The requirement line wanted an absent `inaczej`; this card writes it as
+   * „nic". `specialOf` accepted both and struck the condition out of the rows
+   * on the strength of a line that was never drawn, so the one thing the card
+   * is about appeared in neither place.
+   */
+  it("reads a gate written with an explicit do-nothing branch", () => {
+    const evil = requirementOf("godzina-duchow", "evil");
+    expect(evil?.label).toBe("tylko Postać");
+    expect(evil?.value).toBe("zła");
+    expect(evil?.met).toBe(true);
+    // Said once: the rows below do not repeat it.
+    expect(itemProfile("godzina-duchow").special.join(" ")).not.toContain("jeśli zła");
+  });
+
+  /**
+   * A Natura on a Spotkanie names who suffers far more often than who may
+   * help themselves, and „tylko" said the opposite of what the Karta says.
+   */
+  it("says a Karta reaches a Natura rather than admitting it", () => {
+    const hit = requirementOf("zacmienie-slonc", "good");
+    expect(hit?.label).toBe("dotyczy Postaci");
+    // Genitive, because „dotyczy" governs one — „dotyczy Postaci: dobra" is the
+    // word in the wrong shape.
+    expect(hit?.value).toBe("dobrej lub chaotycznej");
+    expect(hit?.met).toBe(true);
+    expect(hit?.valence).toBe("strata");
+  });
+
+  /**
+   * Which is what the colour is read off. A Dobra Postać meets ZAĆMIENIE's
+   * condition and loses a turn for it; a Zła Postać fails it and keeps hers.
+   * Green on the first was the panel congratulating her.
+   */
+  it("hands the panel the two answers it needs to colour the line", () => {
+    const good = requirementOf("zacmienie-slonc", "good");
+    const evil = requirementOf("zacmienie-slonc", "evil");
+    expect([good?.met, good?.valence]).toEqual([true, "strata"]);
+    expect([evil?.met, evil?.valence]).toEqual([false, "strata"]);
+    // A Nieznajomy's gift is the other way round, in the same two fields.
+    expect([requirementOf("wrozka", "good")?.met, requirementOf("wrozka", "good")?.valence]) //
+      .toEqual([true, "korzysc"]);
+  });
+
+  /** Two live arms are content, not a gate: neither one is „tylko". */
+  it("says nothing where both branches act", () => {
+    for (const id of ["sabat-czarownic", "slup-ognia", "poslancy-bogow", "zatrute-ziola"]) {
+      expect(requirementOf(id, "good"), id).toBeNull();
+    }
+  });
+});
+
 describe("what the summary beside the picture leaves out", () => {
   /**
    * The requirement line has already said „tylko Postać: dobra"; saying it
@@ -331,7 +393,11 @@ describe("a Karta that accuses", () => {
       nature: "good",
       aggression: "Runda 3 — atak na Postać WIEDŹMA, Obszar Osada",
     });
-    expect(guilty?.value).toBe("uznany agresor");
+    // „dotyczy Postaci uznanej za agresora" and not „tylko Postać", which read
+    // as a qualification for something: the judgement costs a coin or a turn.
+    expect(guilty?.label).toBe("dotyczy Postaci");
+    expect(guilty?.value).toBe("uznanej za agresora");
+    expect(guilty?.valence).toBe("strata");
     expect(guilty?.met).toBe(true);
     expect(guilty?.detail).toBe("Twoja Postać: Runda 3 — atak na Postać WIEDŹMA, Obszar Osada");
   });

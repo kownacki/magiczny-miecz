@@ -7,6 +7,7 @@ import {
   describeDisposition,
   fieldsNamedBy,
   scriptFor,
+  valenceOf,
   type Effect,
 } from "./cardScript";
 
@@ -130,5 +131,60 @@ describe("cards that turn on Nature", () => {
     if (otherwise.op !== "gdy") throw new Error("expected a second condition");
     expect(otherwise.warunek).toEqual({ is: "natura", jedna_z: ["good"] });
     expect(otherwise.inaczej).toBeUndefined();
+  });
+});
+
+/**
+ * Whether a card's arm helps or hurts, for the one line that colours itself on
+ * the answer. Deliberately partial: most of the box is neither, and a colour
+ * claimed over a `walka` or a `przenies` would be a guess.
+ */
+describe("whether an effect is in the reader's favour", () => {
+  it("reads the two ops a card gives and takes with", () => {
+    expect(valenceOf({ op: "punkty", stat: "life", delta: 1 })).toBe("korzysc");
+    expect(valenceOf({ op: "punkty", stat: "life", delta: -1 })).toBe("strata");
+    expect(valenceOf({ op: "strata", co: "przedmiot" })).toBe("strata");
+    expect(valenceOf({ op: "tura-stracona", turns: 1 })).toBe("strata");
+    expect(valenceOf({ op: "kamien" })).toBe("strata");
+    expect(valenceOf({ op: "zaklecie", count: 1 })).toBe("korzysc");
+  });
+
+  /** A price makes it a trade, and a trade is the reader's to judge. */
+  it("declines to call a purchase a gift", () => {
+    expect(valenceOf({ op: "zaklecie", count: 1, cena: 1 })).toBeNull();
+    expect(valenceOf({ op: "uzdrow", upTo: 1, cena: 1 })).toBeNull();
+    expect(valenceOf({ op: "uzdrow", upTo: 1 })).toBe("korzysc");
+  });
+
+  it("says nothing about the ops that are neither", () => {
+    expect(valenceOf({ op: "walka", nazwa: "GOLEM", miecz: 3 })).toBeNull();
+    expect(valenceOf({ op: "przenies", to: { kind: "dowolne-w-kregu" } })).toBeNull();
+    expect(valenceOf({ op: "nic" })).toBeNull();
+  });
+
+  /**
+   * A Karta you may walk away from has cost you nothing, whatever else is on
+   * it — the GODZINA DUCHÓW's „Nie wzywaj". The DOBRE BÓSTWO has no such arm.
+   */
+  it("counts a way out as worth as much as anything on offer", () => {
+    expect(valenceOf(SCRIPTS["godzina-duchow"]!.effect)).toBe("korzysc");
+    expect(valenceOf(SCRIPTS["dobre-bostwo"]!.effect)).toBe("strata");
+  });
+
+  /** A sequence costs you if any step does; the gift does not offset it. */
+  it("lets one loss decide a sequence", () => {
+    expect(
+      valenceOf({
+        op: "po-kolei",
+        steps: [{ op: "zaklecie", count: 1 }, { op: "kamien" }],
+      }),
+    ).toBe("strata");
+  });
+
+  /** The cards the requirement line actually asks about. */
+  it("reads the arm behind a Spotkanie's condition", () => {
+    expect(valenceOf(SCRIPTS["zacmienie-slonc"]!.effect)).toBe("strata");
+    expect(valenceOf(SCRIPTS["wrozka"]!.effect)).toBe("korzysc");
+    expect(valenceOf(SCRIPTS["czarodziej"]!.effect)).toBe("korzysc");
   });
 });

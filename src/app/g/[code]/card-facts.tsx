@@ -105,10 +105,24 @@ export function CardFacts({
    */
   const reader = useContext(TheReader);
   const needs = requirementOf(cardId, reader ?? { nature });
+  /**
+   * Green where the line is good news for this reader, which is not the same
+   * question as whether they meet it.
+   *
+   * On a Przedmiot and a Nieznajomy the two coincide — the condition gates a
+   * gift, so passing it is what you want. On a Spotkanie a Natura usually names
+   * who *suffers*, and meeting it is the bad answer: ZAĆMIENIE SŁOŃC told a
+   * Dobra Postać in green that she qualified, for a turn taken off her, and a
+   * Zła Postać in red that she did not, for the turn she keeps.
+   *
+   * So the colour is the two answers read against each other, and where the
+   * card does not settle whether its arm helps or hurts (`valence` null) there
+   * is no colour to claim.
+   */
   const passes =
-    needs === null || needs.met === null
+    needs === null || needs.met === null || needs.valence === null
       ? "text-muted"
-      : needs.met
+      : needs.met === (needs.valence === "korzysc")
         ? "text-verdigris"
         : "text-vermilion";
 

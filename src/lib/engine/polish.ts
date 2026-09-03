@@ -174,6 +174,21 @@ export const NATURE_LABEL_M: Record<string, string> = {
   any: "dowolny",
 };
 
+/**
+ * The same four in the genitive, for „dotyczy Postaci: dobrej lub chaotycznej".
+ *
+ * A Karta whose condition names who it *hits* rather than who may hold it reads
+ * „dotyczy Postaci", which the Instrukcja's own „dotyczy" governs with a
+ * genitive; the nominative that fits „tylko Postać" gives „dotyczy Postaci:
+ * dobra", which is the word in the wrong shape.
+ */
+export const NATURE_LABEL_G: Record<string, string> = {
+  good: "dobrej",
+  evil: "złej",
+  chaotic: "chaotycznej",
+  any: "dowolnej",
+};
+
 /** What a `strata` takes off you. */
 export type Loss = Extract<Effect, { op: "strata" }>["co"];
 
