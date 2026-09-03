@@ -8,6 +8,7 @@ import type { TileCard } from "./card-tile";
 import { Fold } from "./fold";
 import { TileRow } from "./tile-row";
 import { Rules } from "./rule-ref";
+import { plural } from "@/lib/engine/polish";
 import { useRack } from "./rack";
 import { ItemSlot, SLOT_WIDTH } from "./item-slot";
 import type { SpellId } from "@/data/ids";
@@ -222,6 +223,21 @@ export function SpellHand({
     ) : (
       <span className={held.length >= capacity ? "text-vermilion" : "text-muted/70"}>
         {held.length} / {capacity}
+        {/* „29 / 3" is the fact and not the instruction. A player reading it
+            knows the hand is over and not what the table is waiting for — and
+            while a surplus is on the stack, every other verb is being refused,
+            so this is the only thing anybody can usefully do. The number is the
+            same one `refuseWhileOverflow` says out loud, in the same words: not
+            how many you hold, but how many have to go.
+            Only past the cap, never at it: a full hand is legal and „29 / 3"
+            already reds itself at the ceiling. */}
+        {surplus && (
+          <span className="ml-1 normal-case tracking-normal">
+            · musisz odrzucić {held.length - capacity}{" "}
+            {plural(held.length - capacity, "Zaklęcie", "Zaklęcia", "Zaklęć")}, żeby gra ruszyła
+            dalej
+          </span>
+        )}
       </span>
     );
 
@@ -695,16 +711,31 @@ export function SpellHand({
                    is shut. Why it is greyed is on the hover, where the rest of
                    what the app knows about the card is. */
                 <span className="flex items-center gap-2">
-                  <button
-                    disabled={busy || !now || blocked !== null || nowhere}
-                    onClick={() =>
-                      mustAim ? setAiming(entry.holdingId) : onCast(entry.holdingId, {})
-                    }
-                    title={whyNot ?? script?.effect}
-                    className="text-[9px] text-magia underline transition hover:text-ink disabled:text-muted/50 disabled:no-underline"
-                  >
-                    {CAST_VERB}
-                  </button>
+                  {/* Gone rather than greyed while the hand is over 2.6.
+                  
+                      Everything else this app cannot do right now is drawn and
+                      dimmed, with the reason on the hover — a shut window, a
+                      Kamień, a Wojna Żywiołów — because those are states the
+                      turn moves through and the shape of the offer is worth
+                      keeping still. This is not one of those. The table is
+                      stopped until the surplus goes, `castSpell` refuses (2.6's
+                      *natychmiast*, and 9.6 putting a Zaklęcie on somebody
+                      else's Postać), and the only thing that ends it is the
+                      „odrzuć" beside this. Two offers where one of them cannot
+                      be taken is how a player spends the wait pressing the
+                      wrong one. */}
+                  {!surplus && (
+                    <button
+                      disabled={busy || !now || blocked !== null || nowhere}
+                      onClick={() =>
+                        mustAim ? setAiming(entry.holdingId) : onCast(entry.holdingId, {})
+                      }
+                      title={whyNot ?? script?.effect}
+                      className="text-[9px] text-magia underline transition hover:text-ink disabled:text-muted/50 disabled:no-underline"
+                    >
+                      {CAST_VERB}
+                    </button>
+                  )}
                   {/* „odrzuć" and not „upuść", which is what the Plecak and the
                       Przyjaciele say. The two words are two destinations: a
                       Przedmiot is *put down* on the Obszar you are standing on

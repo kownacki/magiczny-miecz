@@ -622,6 +622,10 @@ export function SeatCard({
                   onEquip(holdingId, null);
                 }}
                 onUse={onUse}
+                /* The same question a card in the Plecak gets, from the same
+                   place: „upuść" here skips the stop in the pack, and the
+                   Karta lands on the Obszar either way (5.5, 12.1). */
+                onDrop={onDrop}
                 // A drag carries an id; a click carries nothing and means
                 // "put down what I am holding".
                 onDropInto={(holdingId, slot) =>

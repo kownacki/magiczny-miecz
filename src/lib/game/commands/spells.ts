@@ -37,6 +37,7 @@ import { FLOOR_MS, floorOf } from "./spellFloor";
 import { storedStatuses } from "./turn";
 import type { SeatRow } from "../store";
 import { shutFight } from "./fight";
+import { refuseWhileOverflow } from "./overflow";
 
 /* --------------------------------------------------------------------------
  * Speaking into one.
@@ -477,6 +478,28 @@ export async function castSpell(
   const target = command.target ?? {};
   const caster = snapshot.seats.find((s) => s.id === command.seatId);
   if (!caster) throw new Error("Nie ma takiego gracza.");
+
+  /**
+   * A surplus on the stack stops this too, and it was the one verb it did not.
+   *
+   * Every other act in the game already owes the frame this sentence — `deal`,
+   * a move, anything in `holdings` — and casting was left out, so a hand over
+   * 2.6 could go on speaking Zaklęcia while the whole table sat on „Gra czeka".
+   * That was an omission rather than a decision: nothing in 9.4 or 2.6 carves
+   * casting out.
+   *
+   * It reads as a rule too, and the right one. 2.6 says the nadwyżka goes
+   * *natychmiast* — before anything else happens — and a Zaklęcie is not
+   * housekeeping. It lands on another player wherever they are standing (9.6),
+   * so allowing it here would let somebody over the limit take an act against
+   * the table while the table is stopped waiting for them. Putting a Karta on
+   * the stos is not an act in the game; speaking one is.
+   *
+   * Which leaves exactly one way back under, and `waysUnder` has always said so
+   * — it offers `odrzuc` for a spell and nothing else. The refusal's own
+   * sentence used to offer both and now agrees with the list.
+   */
+  refuseWhileOverflow(snapshot, command.seatId);
 
   const held = snapshot.holdings.find(
     (h) =>

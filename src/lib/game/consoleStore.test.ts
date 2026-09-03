@@ -195,7 +195,25 @@ describe("handing the turn on over a surplus", () => {
     // under — none of which "trzeba odłożyć nadmiar Kart" said.
     await expect(
       runCommand(gameId, actor, { kind: "deal", cardIds: ["cudotworca"] }),
-    ).rejects.toThrow(/Gra czeka: masz o 1 Zaklęcie za dużo \(2\.6\)\. Możesz odrzucić Zaklęcie albo je rzucić \(9\.4\)/);
+    ).rejects.toThrow(/Gra czeka: masz o 1 Zaklęcie za dużo \(2\.6\)\. Możesz odrzucić Zaklęcie \(9\.4\)/);
+  });
+
+  /**
+   * The one act that used to walk past the frame.
+   *
+   * Every other verb owed `refuseWhileOverflow` its sentence and casting did
+   * not, so a hand over 2.6 could go on speaking Zaklęcia while the table sat
+   * waiting for that same hand to come down. 2.6's *natychmiast* is the rule,
+   * and 9.6 is why it matters: a Zaklęcie reaches its victim wherever they
+   * stand, so this was an act against the table taken while the table was
+   * stopped.
+   */
+  it("refuses a Zaklęcie spoken over the limit", async () => {
+    const { gameId, actor } = await playing();
+    await overSpelled(gameId, actor);
+    await expect(
+      runCommand(gameId, actor, { kind: "cast", name: "OCALONY", who: null, to: null }),
+    ).rejects.toThrow(/Gra czeka: masz o 1 Zaklęcie za dużo \(2\.6\)/);
   });
 
   it("deals again once the surplus is gone", async () => {

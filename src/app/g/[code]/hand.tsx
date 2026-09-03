@@ -9,7 +9,7 @@ import { useState } from "react";
 import { orderWith } from "./pack-order";
 import { asCharacterId, mayHaveFriends, startingKit } from "@/lib/engine/characters";
 import { carriedCount, carryLimit, wandRefills } from "@/lib/engine/derive";
-import { slotsFor, type Slot } from "@/lib/engine/slots";
+import { SLOT_LABEL, slotsFor, type Slot } from "@/lib/engine/slots";
 import { USE_VERB, isUsable, usageOf } from "@/lib/engine/uses";
 import { CardBack, type TileCard } from "./card-tile";
 import { type Carried } from "./carry";
@@ -176,6 +176,30 @@ export function Hand({
     onEquip(holdingId, null);
     if (!onReorder) return;
     ask(orderWith(arranged, holdingId, beforeId));
+  };
+
+  /**
+   * The other direction: out of the pack and onto the body, in its one place.
+   *
+   * Written once and reached two ways — the arrow in the card's corner, and the
+   * word „załóż" under it. They were the same twenty lines twice over before
+   * the word existed, which is exactly how the corner arrow and the
+   * double-click had already come to disagree about the Sakwa.
+   */
+  const wear = (holdingId: string, cardId: string, index: number) => {
+    const slot = placeFor(cardId);
+    if (!slot) return;
+    onCarry(null);
+    // Where the two change places, say where the displaced one is going before
+    // the server does: it takes this card's square, and waiting to be told that
+    // means watching it arrive at the back of the pack and then jump.
+    const displaced = wornBySlot(seat)[slot];
+    if (displaced && onReorder) {
+      const order = arranged.map((card) => card.id).filter((id) => id !== holdingId);
+      order.splice(index, 0, displaced.holdingId);
+      ask(order);
+    }
+    onEquip(holdingId, slot);
   };
 
   /**
@@ -374,21 +398,7 @@ export function Hand({
                   type="button"
                   onClick={(event) => {
                     event.stopPropagation();
-                    onCarry(null);
-                    const slot = placeFor(held.cardId)!;
-                    // Where the two change places, say where the displaced one
-                    // is going before the server does: it takes this card's
-                    // square, and waiting to be told that means watching it
-                    // arrive at the back of the pack and then jump.
-                    const displaced = wornBySlot(seat)[slot];
-                    if (displaced && onReorder) {
-                      const order = arranged
-                        .map((card) => card.id)
-                        .filter((id) => id !== held.id);
-                      order.splice(index, 0, displaced.holdingId);
-                      ask(order);
-                    }
-                    onEquip(held.id, slot);
+                    wear(held.id, held.cardId, index);
                   }}
                   title={
                     wornBySlot(seat)[placeFor(held.cardId)!]
@@ -561,6 +571,35 @@ export function Hand({
                     className="text-[9px] text-ochre underline hover:text-ink"
                   >
                     {USE_VERB}
+                  </button>
+                )}
+                {/* „załóż", spelled out, for the journey the corner arrow and
+                    the double-click already make.
+                    
+                    The arrow is a good gesture and a bad advertisement: it is
+                    two glyphs in opposite corners of a picture, and the rule it
+                    carries — every wearable has exactly one place — is not
+                    something an arrow can say. The word is here with the other
+                    two so that what a card lets you do is one row to read
+                    rather than a hunt around its edges.
+                    
+                    Nothing for the Tajemna Sakwa, and nothing needed to exclude
+                    it: `placeFor` reads `slotsFor`, which lists places on the
+                    *body*, and the Sakwa is a place a card is put **into** —
+                    „w Sakwie możesz umieścić 1 Przedmiot". You do not załóż a
+                    pocket, and asking the right question means never having to
+                    say so. */}
+                {slotted && placeFor(held.cardId) && (
+                  <button
+                    onClick={() => wear(held.id, held.cardId, index)}
+                    title={
+                      wornBySlot(seat)[placeFor(held.cardId)!]
+                        ? `Na miejsce: ${SLOT_LABEL[placeFor(held.cardId)!]} — to, co tam jest, wraca do plecaka`
+                        : `Na miejsce: ${SLOT_LABEL[placeFor(held.cardId)!]}`
+                    }
+                    className="text-[9px] text-verdigris underline hover:text-ink"
+                  >
+                    załóż
                   </button>
                 )}
                 {/* The Różdżka's refill, on the Różdżka. Drawn whenever the

@@ -175,7 +175,14 @@ function tooMany(what: OverflowFrame["what"], over: number): string {
 function waysBack(what: OverflowFrame["what"]): string {
   return what === "przedmioty"
     ? "Możesz odrzucić Kartę, użyć jej albo założyć (5.4)."
-    : "Możesz odrzucić Zaklęcie albo je rzucić (9.4).";
+    : // „albo je rzucić" was here and was wrong twice over. `waysUnder` has
+      // never offered casting as a way under — it returns `odrzuc` for a spell
+      // and nothing else — and `castSpell` now refuses while the frame is up,
+      // for the reason written there: 2.6's *natychmiast* comes before an act
+      // that lands on somebody else's Postać (9.6). A hand over the limit has
+      // exactly one thing it can do, and saying so is what makes the refusal
+      // one a player acts on rather than argues with.
+      "Możesz odrzucić Zaklęcie (9.4).";
 }
 
 export function refuseWhileOverflow(snapshot: Snapshot, seatId: string | null): void {

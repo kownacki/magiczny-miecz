@@ -121,6 +121,7 @@ export function SlotPanel({
   onPickUp,
   onTakeOff,
   onUse,
+  onDrop,
   onDropInto,
   places,
   layout = "doll",
@@ -163,6 +164,8 @@ export function SlotPanel({
    */
   onUse?: (holdingId: string, cardId: string) => void;
   /** Something was put into a place — dropped, or carried there and clicked. */
+  /** Straight from the body to the Obszar, without the stop in the plecak. */
+  onDrop?: (holdingId: string) => void;
   onDropInto: (holdingId: string, slot: Slot) => void;
   /**
    * Which places to draw. Every one of them, unless told otherwise.
@@ -306,7 +309,7 @@ export function SlotPanel({
                     type="button"
                     onClick={() => onTakeOff(item.holdingId)}
                     disabled={busy}
-                    title="Zdejmij — wraca do plecaka"
+                    title="Ściągnij — wraca do plecaka"
                     /* The corner box from `card-mark.tsx`, on the control
                        itself rather than round it: wrapping a button in a
                        positioned span moves the padding off the control and
@@ -325,16 +328,63 @@ export function SlotPanel({
                 ) : null
               }
             >
-              {item && canAct && onUse && isUsable(item.cardId) ? (
-                <button
-                  type="button"
-                  onClick={() => onUse(item.holdingId, item.cardId)}
-                  disabled={busy}
-                  title={usageOf(item.cardId)?.co}
-                  className="text-[9px] text-ochre underline transition hover:text-ink disabled:opacity-40"
-                >
-                  {USE_VERB}
-                </button>
+              {/* The words for what the corner arrow and a drag already do.
+              
+                  „Nine places each with a button underneath is a form, and this
+                  is a paper doll" is why taking a card off was a corner in the
+                  first place, and that is still true of the *arrow*. It is not
+                  true of the two acts themselves: an arrow can say „off" and
+                  cannot say *where to*, and the difference between the two
+                  destinations is the whole thing a player is deciding. So the
+                  words go where the Plecak's words are, in the same size and
+                  the same order — what it does, then where it goes.
+                  
+                  „ściągnij" and not „zdejmij", which was the tooltip's word:
+                  one verb for one act, and this is the one the button says.
+
+                  `gap-x-1` and not the `gap-2` the Plecak uses, which is the
+                  whole difference between an even doll and a ragged one.
+                  Measured rather than guessed: at 8px between them „użyj
+                  ściągnij upuść" is 95px against an 86px square and wraps to
+                  two lines — 29px tall where every other square is 15.5px, so
+                  the one row holding a usable worn card grows and the grid
+                  stops lining up. At 4px the three fit on one line. The Plecak
+                  keeps its 8px because „użyj załóż upuść" is 87px and already
+                  fits. */}
+              {item && canAct ? (
+                <span className="flex flex-wrap items-center justify-center gap-x-1">
+                  {onUse && isUsable(item.cardId) ? (
+                    <button
+                      type="button"
+                      onClick={() => onUse(item.holdingId, item.cardId)}
+                      disabled={busy}
+                      title={usageOf(item.cardId)?.co}
+                      className="text-[9px] text-ochre underline transition hover:text-ink disabled:opacity-40"
+                    >
+                      {USE_VERB}
+                    </button>
+                  ) : null}
+                  <button
+                    type="button"
+                    onClick={() => onTakeOff(item.holdingId)}
+                    disabled={busy}
+                    title="Wraca do plecaka — nic nie tracisz"
+                    className="text-[9px] text-muted underline transition hover:text-ochre disabled:opacity-40"
+                  >
+                    ściągnij
+                  </button>
+                  {onDrop ? (
+                    <button
+                      type="button"
+                      onClick={() => onDrop(item.holdingId)}
+                      disabled={busy}
+                      title="Zostaje na Obszarze, odkryta — kto się tu zatrzyma, może ją wziąć (5.5, 12.1)"
+                      className="text-[9px] text-muted underline transition hover:text-vermilion disabled:opacity-40"
+                    >
+                      upuść
+                    </button>
+                  ) : null}
+                </span>
               ) : null}
             </ItemSlot>
           </div>
