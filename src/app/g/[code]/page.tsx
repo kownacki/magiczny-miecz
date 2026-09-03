@@ -1657,6 +1657,9 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
             /* The ACTIVE seat's, not the reader's: the card is being resolved
                for whoever is having the turn. */
             nature={asNature(active.nature)}
+            /* Which variant this table plays, so the sheet says what a
+               Przedmiot's bonus is conditional on *here* — see `DrawnCard`. */
+            eqMode={eqMode}
             aggression={active.aggression}
             busy={busy}
             error={error}

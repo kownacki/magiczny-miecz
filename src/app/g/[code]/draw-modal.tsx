@@ -16,6 +16,7 @@ import type { Nature } from "@/data/types";
 import type { Confirmation } from "./confirm";
 import type { FieldId } from "@/lib/engine/board";
 import type { SpellTiming } from "@/lib/engine/spells";
+import type { EqMode } from "@/lib/engine/slots";
 import type { Fight, TurnMoveOption } from "@/lib/engine/turn";
 
 /**
@@ -66,6 +67,7 @@ export function DrawModal({
   occupied,
   mySword,
   nature,
+  eqMode,
   seatIndex,
   actor,
   aggression,
@@ -160,6 +162,8 @@ export function DrawModal({
   actor?: SheetChrome["actor"];
   /** The active character's Natura — see `DrawnCard`. */
   nature: Nature | null;
+  /** Which equipment variant this table plays, for what a Przedmiot's bonus is conditional on. */
+  eqMode: EqMode;
   /** The active character's last aggressive act — see `DrawnCard`. */
   aggression?: string | null;
   busy: boolean;
@@ -290,6 +294,7 @@ export function DrawModal({
       occupied={occupied}
       mySword={mySword}
       nature={nature}
+      eqMode={eqMode}
       aggression={aggression}
       busy={busy}
       intent={intent}

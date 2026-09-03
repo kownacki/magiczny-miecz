@@ -17,13 +17,13 @@ import { scriptFor, describeDisposition } from "@/lib/engine/cardScript";
 import { itemProfile, previewOf, requirementOf, staysAs } from "@/lib/engine/abilityText";
 import { sentence } from "@/lib/engine/polish";
 import { mayWalkPast } from "@/lib/engine/kolejka";
-import { TheReader } from "./card-facts";
-import { WithRules } from "./rule-ref";
+import { CardFacts, TheReader } from "./card-facts";
 import type { Confirmation } from "./confirm";
 import type { Nature } from "@/data/types";
 import { pendingIn } from "@/lib/engine/resolve";
 import { coverageOf, manualNote, NOT_HANDLED } from "@/lib/engine/coverage";
 import { FIELDS, type FieldId } from "@/lib/engine/board";
+import type { EqMode } from "@/lib/engine/slots";
 
 const EVENTS = events as EventCard[];
 
@@ -62,6 +62,7 @@ export function DrawnCard({
   occupied = [],
   mySword,
   nature,
+  eqMode,
   aggression,
   busy,
   intent,
@@ -105,6 +106,16 @@ export function DrawnCard({
    * only puts the sheet back where it was.
    */
   nature: Nature | null;
+  /**
+   * Which equipment variant this table plays.
+   *
+   * Not decoration on a panel that only describes: what a Przedmiot's bonus is
+   * *conditional* on differs between the two — klasyczny counts a MIECZ that is
+   * anywhere on you, slotowy only one that is in a hand — and `whenApplies` is
+   * where that is decided. Reading the profile with the default would have this
+   * sheet quietly describing the other table's rules.
+   */
+  eqMode: EqMode;
   /**
    * The active character's last act of aggression, in words, or null.
    *
@@ -245,14 +256,10 @@ export function DrawnCard({
    * has already said it — „Pierwszej Dobrej Postaci" is one fact and was coming
    * out as two, the second being the first with a word missing.
    */
+  /* Kept for `inert` below: the line itself is `CardFacts`'s now, drawn from
+     the same `requirementOf` against the same reader. What is asked here is
+     narrower — not what the condition says, only whether this Postać fails it. */
   const needs = requirementOf(known.id, reader ?? { nature, aggression });
-  /** Green where the reader passes, red where they do not, neutral outside a game. */
-  const passes =
-    needs === null || needs.met === null
-      ? "text-muted"
-      : needs.met
-        ? "text-verdigris"
-        : "text-vermilion";
 
   /**
    * Nothing here for this Postać at all — a `gdy natura` with no other branch,
@@ -291,13 +298,25 @@ export function DrawnCard({
   const actor = reader?.name ?? who;
 
   /**
+   * Everything the app knows this Karta does, read once.
+   *
+   * The same `itemProfile` the hover panel is drawn from, so the sheet and the
+   * hover cannot come to describe one card two ways — which they had, by the
+   * sheet describing nothing. A Nieznajomy's whole content is how long it stays
+   * and whom it is for, and the sheet drew both by hand; a Przedmiot's is its
+   * slot and its bonuses, and the sheet drew neither, so KOŃ was a picture, a
+   * name and an empty column.
+   */
+  const profile = itemProfile(known.id, eqMode);
+
+  /**
    * What this Karta offers, in rows — for the people who cannot press it.
    *
    * `itemProfile`'s, so it is word for word the panel the hover draws and the
    * buttons the acting player sees, rather than a third telling of the same
    * card.
    */
-  const offered = canAct ? [] : itemProfile(known.id).special;
+  const offered = canAct ? [] : profile.special;
 
   /**
    * „Test (WIEDŹMA) wybiera: Tracisz 1 Sztukę Złota…"
@@ -380,10 +399,11 @@ export function DrawnCard({
           all of it again beside the picture was two of everything and pushed
           the buttons off the bottom. What is left is this app's reading of the
           card and the things you can do about it. */}
-      {/* One stack, spaced the way `CardFacts` spaces the same three lines in
-          the hover: the sheet's own column is `gap-3`, which is right between
-          the card and the buttons and half again too much between three
-          statements that belong together. */}
+      {/* One stack, spaced the way `CardFacts` spaces these lines in the hover:
+          the sheet's own column is `gap-3`, which is right between the card and
+          the buttons and half again too much between statements that belong
+          together. `CardFacts` is now literally what draws most of them — the
+          spacing agreeing was the first sign the two panels wanted to be one. */}
       <div className="flex flex-col gap-1.5">
       {/* Whose Karta this is, at the head of the column — with or without a
           scan. It used to be here only when there was no picture, on the
@@ -413,58 +433,44 @@ export function DrawnCard({
         )}
       </header>
 
-      {/* How long the Karta is here — for a Nieznajomy and a Miejsce the whole
-          of what varies, since 16.5 and 16.7 make the instruction binding on
-          every one of them. Said as a fact about the Karta rather than in the
-          disposition's own words, which are an instruction to the table
-          („Odłóż Kartę na stos użytych"). */}
-      {/* Ruled off from the name above it and from each other, the way the
-          hover panel already does it (`CardFacts`). These are three different
-          kinds of statement — what the Karta is, how long it lasts, whom it is
-          for — and stacked without a rule they read as one paragraph in three
-          colours. */}
-      {staysAs(known.id) ? (
-        <p className="border-t border-edge/60 pt-2 text-[11px] text-magia/80">
-          {sentence(staysAs(known.id)!)}
-        </p>
-      ) : (
-        script && (
-          <p className="border-t border-edge/60 pt-2 text-[11px] text-ochre/80">
-            {describeDisposition(script.disposition)}
-          </p>
-        )
-      )}
-
-      {/* And whom it is for, under it: the same line and the same two colours a
-          Przedmiot uses for 5.3. It answers what the sheet was silent about —
-          a Zła Postać standing before the WRÓŻKA saw six gift buttons she could
-          not press.
-
-          Green or red rather than neutral, because the useful question is not
-          „does this card have a restriction" but „does it shut me out", and on
-          a turn being taken the answer is known. */}
-      {needs && (
-        <p className={`border-t border-edge/60 pt-2 text-[11px] ${passes}`}>
-          {/* Only the answer is hoverable: „tylko Postać" is the question and
-              has nothing to explain, and dotting the whole line offers a
-              tooltip on the half that does not have one. Dotted only where
-              there is something under it, since a line that looks hoverable and
-              answers nothing is worse than a plain one. */}
-          {sentence(needs.label)}:{" "}
-          <span
-            className={needs.detail ? "cursor-help underline decoration-dotted underline-offset-2" : ""}
-            title={needs.detail}
-          >
-            {needs.value}
-          </span>
-          {needs.rule && (
-            <>
-              {" "}
-              <WithRules text={needs.rule} />
-            </>
-          )}
+      {/* What happens to the Karta afterwards, and only where it does not say
+          how long it stays: `CardFacts` draws `visit` — which *is* `staysAs` —
+          and this is the other half of the same question, in the disposition's
+          own words. Both would be one card answering twice. */}
+      {!staysAs(known.id) && script && (
+        <p className="border-t border-edge/60 pt-2 text-[11px] text-ochre/80">
+          {describeDisposition(script.disposition)}
         </p>
       )}
+
+      {/* Where it goes, in the same place and the same words the hover panel
+          puts it: above the bonuses, because „may I even wear this" is answered
+          before „what does it give me". */}
+      {profile.slotLabel && (
+        <p className="border-t border-edge/60 pt-2 text-[11px] text-muted">
+          Slot: <span className="text-ink">{profile.slotLabel}</span>
+        </p>
+      )}
+
+      {/* And the rest of it, from the component the hover is built out of.
+
+          This column used to draw two of these lines by hand — how long the
+          Karta stays, and whom it is for — which is exactly the two a
+          Nieznajomy has, and is why nobody noticed that a Przedmiot had none.
+          KOŃ carries „+8 Przedmiotów ponad limit (5.4)" and a slot, and the
+          sheet showed a picture, a name and eight centimetres of nothing while
+          the hover over the same card said both. One telling now, so the two
+          cannot drift apart again.
+
+          `special` is emptied rather than drawn. What using a Karta does is
+          what the buttons under this column *are* for the player whose turn it
+          is, and `offered` lists them for everybody else — a third copy between
+          the two would be the card telling you the same thing three ways. */}
+      <CardFacts
+        cardId={known.id}
+        profile={{ ...profile, special: [] }}
+        nature={nature}
+      />
 
       </div>
 
