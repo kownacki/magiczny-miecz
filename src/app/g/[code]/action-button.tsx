@@ -135,8 +135,11 @@ export function ActionButton({
   size = "md",
   align = "center",
   note,
+  before,
+  after,
   title,
   disabled = false,
+  immediate = false,
   sent = false,
   onClick,
   says,
@@ -158,9 +161,33 @@ export function ActionButton({
    * by hand, in two different sizes.
    */
   note?: React.ReactNode;
+  /**
+   * A glyph beside the label, on one side or the other.
+   *
+   * For the thing the button *is* rather than for decoration: a die on „Rzuć
+   * kostką" says the app is about to throw one, which is the difference between
+   * this button and every other button under a Karta. The label still says it
+   * in words — an icon that is the only telling is a rebus.
+   */
+  before?: React.ReactNode;
+  after?: React.ReactNode;
   /** Only where a glyph or an abbreviation cannot say it. Never a rule number. */
   title?: string;
   disabled?: boolean;
+  /**
+   * Press it and it happens: no three seconds, no „Anuluj".
+   *
+   * The window exists to take back a *decision* — „Weź Przedmiot" cannot be
+   * un-taken, a `wybor` answered is answered — and a die is not one. Nothing is
+   * being chosen: the Karta is compulsory, the app throws for you, and there is
+   * no other answer to have preferred. A countdown in front of that is a delay
+   * with a cancel on it, and what the player is waiting to see is the face.
+   *
+   * Such a button tells the table nothing while it is pressed, because there is
+   * no window to tell them in. What the table gets is the result, which lands
+   * in the Dziennik the moment the roll does.
+   */
+  immediate?: boolean;
   /**
    * This button's decision has gone to the server and has not come back.
    *
@@ -220,9 +247,16 @@ export function ActionButton({
       onClick={
         filling
           ? cancelChannelling
-          : confirm
-            ? () => confirm(() => beginChannelling(id, onClick, says ?? null))
-            : () => beginChannelling(id, onClick, says ?? null)
+          : immediate
+            ? // Nothing to take back — see `immediate`. The confirm still
+              // stands where a call site asked for one: „are you sure" and
+              // „you have three seconds" are different offers.
+              confirm
+              ? () => confirm(onClick)
+              : onClick
+            : confirm
+              ? () => confirm(() => beginChannelling(id, onClick, says ?? null))
+              : () => beginChannelling(id, onClick, says ?? null)
       }
       // The label's own title would be answering a question the button has
       // stopped asking.
@@ -244,10 +278,29 @@ export function ActionButton({
           only faded once it is sent, so a screen reader still reads back the
           answer the ring is turning for. */}
       <span className={filling ? "invisible block" : sent ? "block opacity-0" : "block"}>
-        {children}
-        {note ? (
-          <span className="mt-0.5 block text-[11px] leading-snug text-muted">{note}</span>
-        ) : null}
+        {before || after ? (
+          /* A row only where there is something to put beside the label, so no
+             button that never asked for one changes shape. */
+          <span
+            className={`flex items-center gap-2 ${align === "left" ? "" : "justify-center"}`}
+          >
+            {before}
+            <span className={align === "left" ? "min-w-0 flex-1" : "min-w-0"}>
+              {children}
+              {note ? (
+                <span className="mt-0.5 block text-[11px] leading-snug text-muted">{note}</span>
+              ) : null}
+            </span>
+            {after}
+          </span>
+        ) : (
+          <>
+            {children}
+            {note ? (
+              <span className="mt-0.5 block text-[11px] leading-snug text-muted">{note}</span>
+            ) : null}
+          </>
+        )}
       </span>
       {sent ? (
         <span aria-hidden className="absolute inset-0 grid place-items-center">

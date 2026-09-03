@@ -47,6 +47,8 @@ import { itemProfile, previewOf, requirementOf } from "@/lib/engine/abilityText"
 import { fieldName, plural, sentence } from "@/lib/engine/polish";
 import { mayWalkPast } from "@/lib/engine/kolejka";
 import { TheReader, specialRows } from "./card-facts";
+import { DieMark } from "./die-mark";
+import { effectRows } from "@/lib/engine/effectText";
 import { inertFor, pendingIn } from "@/lib/engine/resolve";
 import { asFieldId, type FieldId } from "@/lib/engine/board";
 import type { Confirmation } from "./confirm";
@@ -438,6 +440,30 @@ export function DrawnActions({
   const nothingLeftToAsk = !foe && !keep && !asking;
 
   /**
+   * The Karta the app throws a die for, rather than one anybody decides.
+   *
+   * Three things hang off it and each is the same argument from a different
+   * side: the button says „Rzuć kostką" and carries a die, because that is what
+   * pressing it does; the six outcomes are listed above it, because the player
+   * is about to have one of them applied to them and the buttons — which are
+   * what usually says what a Karta can do — say only „throw"; and the line the
+   * rest of the table reads says he is rolling rather than deciding, since
+   * there is nothing here to decide.
+   */
+  const rolls = nothingLeftToAsk && !inert && instruction?.op === "rzut";
+
+  /**
+   * What can come up, in the rows the hover panel and the watchers already get.
+   *
+   * `DrawnCard` empties `special` for the player whose turn it is, on the
+   * grounds that what a Karta does is what the buttons under it are — true of a
+   * `wybor`, whose options are the buttons, and false of a die: one button and
+   * six outcomes, none of them written anywhere the actor could read. The label
+   * row goes, because the button beneath is that row.
+   */
+  const faces = rolls ? (effectRows(instruction) ?? []).slice(1) : [];
+
+  /**
    * Whether walking away is one of the answers.
    *
    * Never for a Nieznajomy: 16.5 is flat and every one of them either gives you
@@ -474,7 +500,15 @@ export function DrawnActions({
           <ul className="flex flex-col gap-1 pb-1">{specialRows(offered)}</ul>
         )}
         <p className="text-xs text-muted">
-          {said ?? (inert ? `${actor} nie spełnia warunków` : `Decyzję podejmuje ${actor}`)}
+          {said ??
+            (inert
+              ? `${actor} nie spełnia warunków`
+              : rolls
+                ? /* Nothing is being decided, so „Decyzję podejmuje" was the
+                     wrong sentence: the app throws and the Karta says what the
+                     face means. What the table is waiting for is the die. */
+                  `${actor} rzuca kostką`
+                : `Decyzję podejmuje ${actor}`)}
         </p>
       </div>
     );
@@ -704,22 +738,36 @@ export function DrawnActions({
       {/* Nothing left to ask: the app does it, and the notice says what it
           did. A card with no script has nothing to do but be read. */}
       {nothingLeftToAsk && !inert && (
-        <ActionButton
-          weight="lead"
-          size="lg"
-          className="self-start"
-          says={{ kind: "rozpatruje" }}
-          disabled={busy}
-          sent={sent !== null}
-          onClick={() => (script ? void answer({ option: null }, {}) : onLeave(known.id))}
-        >
-          {/* „Rozpatrz, co się da" is gone. It was the label for an effect
-              the browser could not fully predict, and it read as a shrug —
-              a button that promises to try. What the app actually does is
-              resolve the Karta; how much of it applies is the card's business
-              and the server's, and either way the player pressed one thing. */}
-          {!instruction ? "Rozumiem" : instruction.op === "rzut" ? "Rzuć i rozpatrz" : "Rozpatrz"}
-        </ActionButton>
+        <div className="flex flex-col items-start gap-2">
+          {/* What the die can do, read before it is thrown. */}
+          {faces.length > 0 && <ul className="flex flex-col gap-1">{specialRows(faces)}</ul>}
+          <ActionButton
+            weight="lead"
+            size="lg"
+            /* A die is not a decision: there is nothing to prefer and nothing
+               to take back, so the three seconds are a delay — see `immediate`
+               on `ActionButton`. The deliberation such a window is for happens
+               on the Karta before this button, not after it. */
+            immediate={rolls}
+            says={rolls ? undefined : { kind: "rozpatruje" }}
+            after={rolls ? <DieMark /> : undefined}
+            disabled={busy}
+            sent={sent !== null}
+            onClick={() => (script ? void answer({ option: null }, {}) : onLeave(known.id))}
+          >
+            {/* „Rozpatrz, co się da" is gone. It was the label for an effect
+                the browser could not fully predict, and it read as a shrug —
+                a button that promises to try. What the app actually does is
+                resolve the Karta; how much of it applies is the card's business
+                and the server's, and either way the player pressed one thing.
+
+                „Rzuć kostką" and not „Rzuć i rozpatrz", because rozpatrzenie is
+                not a second act the player takes: the die decides and the app
+                applies what it decided. The card's own words are „rzuć
+                kostką". */}
+            {!instruction ? "Rozumiem" : rolls ? "Rzuć kostką" : "Rozpatrz"}
+          </ActionButton>
+        </div>
       )}
 
       {/* Walking away, where the Karta itself allows it.

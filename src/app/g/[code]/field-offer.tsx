@@ -7,6 +7,7 @@ import { sentence } from "@/lib/engine/polish";
 import { pendingIn } from "@/lib/engine/resolve";
 import type { Effect } from "@/lib/engine/cardScript";
 import { ActionButton } from "./action-button";
+import { DieMark } from "./die-mark";
 
 /** A field's compulsory table (16.5) — the thing an Obszar does to you for arriving. */
 
@@ -53,6 +54,8 @@ export function FieldOffer({
    */
   const [sent, setSent] = useState<{ option: number | null } | null>(null);
   const owed = pendingIn(offer.effect, []);
+  /** The app throws for this one, so the button says so and carries a die. */
+  const rolls = !owed && offer.effect.op === "rzut";
 
   /** Sends one answer and holds it on screen until the server has answered. */
   const answer = async (was: { option: number | null }, choices: number[]) => {
@@ -89,11 +92,15 @@ export function FieldOffer({
             <ActionButton
               weight="lead"
               size="lg"
+              /* The Obszar's die is the Karta's die: pressed and thrown, with
+                 no window to take back a throw nobody chose — see `immediate`. */
+              immediate={rolls}
+              after={rolls ? <DieMark /> : undefined}
               disabled={busy}
               sent={sent !== null}
               onClick={() => void answer({ option: null }, [])}
             >
-              {offer.effect.op === "rzut" ? "Rzuć i rozpatrz" : "Rozpatrz"}
+              {rolls ? "Rzuć kostką" : "Rozpatrz"}
             </ActionButton>
           )}
         </div>
