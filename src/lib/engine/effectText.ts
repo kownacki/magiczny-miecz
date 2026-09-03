@@ -160,7 +160,35 @@ export function effectRows(effect: Effect): string[] | null {
   if (effect.op === "po-kolei") {
     const steps = effect.steps.map((step) => effectRows(step));
     if (!steps.some((rows) => rows !== null)) return null;
-    return steps.flatMap((rows, at) => rows ?? [describeEffect(effect.steps[at])]);
+    /**
+     * 15.1's placement and what the Karta then offers are two different
+     * occasions, and the rows ran together as though both happened now.
+     *
+     * The EREMITA is the card: „Rzuć kostką i umieść Kartę Eremity na
+     * odpowiednim Obszarze… Pierwszej Postaci, Eremita ofiaruje do wyboru:
+     * Magiczny Miecz lub Tarczę Tolimana". The die is thrown by whoever draws
+     * him and does nothing to them (15.1); the choice belongs to whoever stops
+     * on the Obszar he lands on, which may be somebody else, several turns
+     * later. Six placements and two gifts in one undifferentiated list read as
+     * eight things happening to the reader.
+     *
+     * So each half says whose occasion it is, and the test is the placement
+     * itself — the same string `goesToAField` looks for, asked of a step rather
+     * than of a card id.
+     */
+    const out: string[] = [];
+    let placed = false;
+    effect.steps.forEach((step, at) => {
+      const rows = [...(steps[at] ?? [describeEffect(step)])];
+      if (JSON.stringify(step).includes('"poloz-karte"')) {
+        rows[0] = `gdy wyciągnięta — ${rows[0]}`;
+        placed = true;
+      } else if (placed) {
+        rows[0] = `pierwszej Postaci, która tu trafi — ${rows[0]}`;
+      }
+      out.push(...rows);
+    });
+    return out;
   }
   return null;
 }
