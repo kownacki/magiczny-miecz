@@ -5,7 +5,7 @@ import { MoveChoice, BridgeChoice } from "./move-choice";
 import { FightSheet, type SpellFloor } from "./fight-sheet";
 import { FieldOffer } from "./field-offer";
 import { DrawnCard } from "./drawn-card";
-import type { TurnCard } from "@/lib/engine/state";
+import type { DrawnActionsProps } from "./drawn-actions";
 import { BridgeControls } from "./crossing-controls";
 import { SpellHand, type HeldSpell } from "./spell-hand";
 import type { TileCard } from "./card-tile";
@@ -13,11 +13,7 @@ import type { OnAction, Simulated } from "./turn-controls";
 import type { Effect } from "@/lib/engine/cardScript";
 import { nextFrame } from "@/lib/engine/kolejka";
 import type { CardClass } from "@/data/types";
-import type { Nature } from "@/data/types";
-import type { Confirmation } from "./confirm";
-import type { FieldId } from "@/lib/engine/board";
 import type { SpellTiming } from "@/lib/engine/spells";
-import type { EqMode } from "@/lib/engine/slots";
 import type { Fight, TurnMoveOption } from "@/lib/engine/turn";
 
 /**
@@ -82,110 +78,78 @@ export function DrawModal({
   onTake,
   onLeave,
   onAsk,
-}: {
-  /** Whose turn this is, for everybody who is only watching it. */
-  who: string;
-  /**
-   * Whether this device may press anything.
-   *
-   * False for everyone but the player whose turn it is — including a player
-   * whose own character has died and is watching the rest of the game. They see
-   * the card, the dice as they land and the verdict; what they do not get is a
-   * say in somebody else's turn.
-   */
-  canAct: boolean;
-  /** Whether whoever is looking at this has folded it away — anybody may. */
-  minimized: boolean;
-  onMinimize: () => void;
-  /** A refusal from the last thing pressed, said inside the sheet that hides it. */
-  error: string | null;
-  /**
-   * This device's own hand, and everything a fight needs to let it speak.
-   *
-   * Shown to whoever is looking, fighting or watching: a Zaklęcie that says
-   * "w dowolnej chwili" belongs to its holder wherever they are sitting, and
-   * thirteen of the twenty-seven say exactly that.
-   */
-  spells: HeldSpell[];
-  moment: readonly SpellTiming[];
-  opponents: React.ComponentProps<typeof SpellHand>["opponents"];
-  /** Who has claimed the moment before the dice, and until when. */
-  floor: SpellFloor | null;
-  mySeatIndex: number | null;
-  seatName: (index: number) => string;
-  onClaimFloor: () => void;
-  onReleaseFloor: () => void;
-  onCastSpell: (
-    holdingId: string,
-    target: {
-      seatIndex?: number;
-      fieldCardId?: string;
-      fieldId?: string;
-      destination?: string;
-    },
-  ) => void;
-  /**
-   * What a Zaklęcie aimed at a Karta or an Obszar may be aimed at.
-   *
-   * `spellRing` and not `ring`: the Krąg a spell may be thrown into is the
-   * caster's, and the caster is whoever is holding the card rather than
-   * whoever is moving.
-   */
-  boardCards?: React.ComponentProps<typeof SpellHand>["boardCards"];
-  spellRing?: React.ComponentProps<typeof SpellHand>["ring"];
-  onInspect: (card: TileCard) => void;
-  /** In 15.2 order, which is the order they are dealt with. */
-  cards: TurnCard[];
-  resolved: string[];
-  fought: string[];
-  /** Wrogowie who died here (16.2). */
-  beaten?: string[];
-  /** The fight in progress, which is fought here rather than behind the sheet. */
-  fight: Fight | null;
-  /** The die has been thrown and the character is standing between two roads. */
-  move: { roll: number; options: TurnMoveOption[] } | null;
-  /** The Kamienny Most's entrance (11.9-11.11). */
-  bridge: React.ComponentProps<typeof BridgeControls>["bridge"] | null;
-  /** A field's compulsory table (16.5), when the character is standing on one. */
-  fieldOffer: { name: string; effect: Effect } | null;
-  simulated: Simulated;
-  /** Whether this device is the character being attacked in a duel (17.6). */
-  myEscape: boolean;
-  /** Fields the character could be sent to, for the cards that let it choose. */
-  ring: FieldId[];
-  /** Where the other Postacie stand, for the Karta that may not land on one. */
-  occupied?: FieldId[];
-  /** What the character fights with (1.5) — the Sobowtór's own strength. */
-  mySword: number;
-  /** Whose turn is being played, for the sheet's edge. */
-  seatIndex: number;
-  /** Who is acting, for the column down the left — see `SheetChrome`. */
-  actor?: SheetChrome["actor"];
-  /** The active character's Natura — see `DrawnCard`. */
-  nature: Nature | null;
-  /** Which equipment variant this table plays, for what a Przedmiot's bonus is conditional on. */
-  eqMode: EqMode;
-  /** The active character's last aggressive act — see `DrawnCard`. */
-  aggression?: string | null;
-  busy: boolean;
-  /** What the acting player is about to do, passed straight through to `DrawnCard`. */
-  intent?: { kind: string; option?: number } | null;
-  onAction: OnAction;
-  onResolve: (
-    cardId: string,
-    decisions: { choices?: number[]; destination?: FieldId },
-  ) => void;
-  /** Throws the field's own table and applies the row. */
-  onResolveField: (choices: number[]) => void;
-  /** One creature, or several at once when 17.5 lets them attack together. */
-  onFight: (cardIds: string[]) => void;
-  onEscape: () => void;
-  onTake: (cardId: string) => void;
-  /** Nothing to do with this one — it stays on the field (16.8). */
-  onLeave: (cardId: string) => void;
-  /** Raises the table's one confirmation — see `ConfirmDialog`. */
-  onAsk: (question: Omit<Confirmation, "tone">) => void;
-}) {
+}: SheetChrome &
+  Omit<DrawnActionsProps, "card"> & {
+    /**
+     * Why two of these are derived rather than written out.
+     *
+     * This component's job is to pick one of five sheets and hand it what it
+     * needs, so most of its props are not its own — they are the sheet's,
+     * passing through. They used to be declared here from scratch anyway, with
+     * their own copies of the doc comments, three of which said "see
+     * `DrawnCard`": a comment pointing at where the truth lives is the
+     * confession that it does not live here.
+     *
+     * `SheetChrome` is the six fields `chrome` is built from below, and
+     * `DrawnActionsProps` is everything the card sheet takes. Minus `card`,
+     * which is the one thing this component works out itself — `nextFrame`
+     * picks it out of the stack, and nobody upstream knows which it will be.
+     *
+     * What is left below is what genuinely belongs to *this* layer: the other
+     * four sheets' inputs, and the hand that is shown beside all of them.
+     */
+    /** The seat whose turn it is. Required here, though the chrome takes it or leaves it. */
+    seatIndex: number;
+    /**
+     * This device's own hand, and everything a fight needs to let it speak.
+     *
+     * Shown to whoever is looking, fighting or watching: a Zaklęcie that says
+     * "w dowolnej chwili" belongs to its holder wherever they are sitting, and
+     * thirteen of the twenty-seven say exactly that.
+     */
+    spells: HeldSpell[];
+    moment: readonly SpellTiming[];
+    opponents: React.ComponentProps<typeof SpellHand>["opponents"];
+    /** Who has claimed the moment before the dice, and until when. */
+    floor: SpellFloor | null;
+    mySeatIndex: number | null;
+    seatName: (index: number) => string;
+    onClaimFloor: () => void;
+    onReleaseFloor: () => void;
+    onCastSpell: (
+      holdingId: string,
+      target: {
+        seatIndex?: number;
+        fieldCardId?: string;
+        fieldId?: string;
+        destination?: string;
+      },
+    ) => void;
+    /**
+     * What a Zaklęcie aimed at a Karta or an Obszar may be aimed at.
+     *
+     * `spellRing` and not `ring`: the Krąg a spell may be thrown into is the
+     * caster's, and the caster is whoever is holding the card rather than
+     * whoever is moving.
+     */
+    boardCards?: React.ComponentProps<typeof SpellHand>["boardCards"];
+    spellRing?: React.ComponentProps<typeof SpellHand>["ring"];
+    onInspect: (card: TileCard) => void;
+    /** The fight in progress, which is fought here rather than behind the sheet. */
+    fight: Fight | null;
+    /** The die has been thrown and the character is standing between two roads. */
+    move: { roll: number; options: TurnMoveOption[] } | null;
+    /** The Kamienny Most's entrance (11.9-11.11). */
+    bridge: React.ComponentProps<typeof BridgeControls>["bridge"] | null;
+    /** A field's compulsory table (16.5), when the character is standing on one. */
+    fieldOffer: { name: string; effect: Effect } | null;
+    simulated: Simulated;
+    /** Whether this device is the character being attacked in a duel (17.6). */
+    myEscape: boolean;
+    onAction: OnAction;
+    /** Throws the field's own table and applies the row. */
+    onResolveField: (choices: number[]) => void;
+  }) {
   const chrome: SheetChrome = { canAct, minimized, onMinimize, error, seatIndex, actor };
 
   if (move) {
