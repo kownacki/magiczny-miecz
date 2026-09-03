@@ -214,6 +214,13 @@ because an amount belongs to the money alone. A kind takes **every** copy,
 unlike a named Karta, which takes one — asking for one of a kind has no way to
 say which.
 
+Tab shelves all nine together under **`By type`**, the money at their head. One
+shelf rather than two because they are one answer to one question — what can I
+name instead of a card? — and the heading is the grid's only English one, on
+purpose: every other shelf names what the *box* prints (Przedmioty, Wrogowie,
+Nieznajomi) and is Polish because the cards are, while these are the engine's
+own words, which is the whole reason you type them in English.
+
 `give` and `summon` are now one verb, `deal`. They were named after their
 *destinations* — a hand, a fight — which is why there had to be two, and why
 between them they covered ninety of the hundred and sixty-five Karty and left

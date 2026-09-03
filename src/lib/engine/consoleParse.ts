@@ -194,10 +194,27 @@ export function isCategory(said: string): boolean {
   return CATEGORIES.has(word) || GOLD_WORDS.has(word);
 }
 
-/** The same words for Tab, under a heading of their own. */
-export const CATEGORY_OFFERED: Catalogue = {
-  title: "Rodzaje",
-  cards: [...CATEGORIES.keys()].map((word) => ({ id: word, name: word })),
+/**
+ * The same words for Tab, with the money at their head and under one heading.
+ *
+ * **One shelf, not two.** `gold` reads as a kind here even though it is not a
+ * class: it stands in the same comma list, it is swept by the same sweep, and
+ * the only thing separating it from `items` on the line you type is that one of
+ * them is a Karta. Two headings over nine words was the app's filing system on
+ * screen rather than the player's question, which is "what can I name instead
+ * of a card?"
+ *
+ * **And the heading is English**, unlike every other one on this grid. Those
+ * name what the *box* prints — Przedmioty, Wrogowie, Nieznajomi — and are
+ * Polish because the cards are. These are the engine's own words, which is the
+ * whole reason they are English to type; a Polish label over them would be
+ * naming them in a language you cannot type them in.
+ */
+export const BY_TYPE: Catalogue = {
+  // Money first, the way 12.1 lists it — „zabrać leżące złoto, Przedmioty lub
+  // Przyjaciół".
+  title: "By type",
+  cards: ["gold", ...CATEGORIES.keys()].map((word) => ({ id: word, name: word })),
 };
 
 /** What a category is called in the box, for a line reporting what it swept. */

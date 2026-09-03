@@ -537,8 +537,20 @@ suite("naming a card, a field or a creature", () => {
   /** Past a comma `clear` is certainly naming kinds, so that is all it offers. */
   it("offers only kinds and the money after a comma", () => {
     expect(complete("clear strangers, ", []).sections?.map((one) => one.title)).toEqual([
-      "Złoto",
-      "Rodzaje",
+      "By type",
+    ]);
+    // Money at the head of them, the way 12.1 lists it, and the classes in the
+    // order the numeral prints them.
+    expect(complete("clear strangers, ", []).options).toEqual([
+      "gold",
+      "encounters",
+      "foes",
+      "demons",
+      "strangers",
+      "friends",
+      "items",
+      "places",
+      "enemies",
     ]);
     expect(complete("clear strangers, pla", []).line).toBe("clear strangers, places ");
   });
@@ -574,10 +586,13 @@ suite("naming a card, a field or a creature", () => {
     // and the money, which is not a Karta and leads them the way 12.1 lists it.
     expect(titles("place ")).toEqual(["Złoto", ...KARTY]);
     expect(titles("take ")).toEqual(["Złoto", ...KARTY]);
-    // `clear` grew one too: bare it sweeps the coins with the Karty, and named
-    // it takes the coins alone. And a shelf the other two have no use for —
-    // `clear` is the only verb that takes a whole kind at a time.
-    expect(titles("clear ")).toEqual(["Złoto", "Rodzaje", ...KARTY]);
+    /**
+     * `clear` is the odd one: it is the only verb that takes a whole kind at a
+     * time, so its money and its kinds are one shelf — everything you can name
+     * instead of a card — and that shelf is headed in English, because these
+     * are the engine's own words and not what the box prints.
+     */
+    expect(titles("clear ")).toEqual(["By type", ...KARTY]);
     // A Hełm has no pile to sit on top of (21.2); a Zaklęcie has its own.
     expect(titles("stack ")).toContain("Zaklęcia");
     // And the one shelf that is not a Karta Zdarzeń class.

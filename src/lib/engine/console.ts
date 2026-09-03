@@ -4,8 +4,8 @@ import { fold } from "./search";
 import { RANDOM_CHARACTER_NAME } from "./characters";
 import { STATS, availableIn, type Stage } from "./consoleSpec";
 import {
+  BY_TYPE,
   CARDS,
-  CATEGORY_OFFERED,
   DEALABLE,
   EFFECTS,
   FIELD_KINDS,
@@ -196,17 +196,17 @@ export function complete(
         );
         // Only after a comma is the line certainly a list of kinds; before one
         // it could still become a Karta or an Obszar, so everything is offered.
-        if (comma > 0) return shelved([GOLD_OFFERED, CATEGORY_OFFERED], comma + 1);
+        if (comma > 0) return shelved([BY_TYPE], comma + 1);
       }
       const names = PLACEABLE.flatMap((group) => group.cards.map((one) => one.name));
       if (finished(names)) return { pool: ["at"], at: parts.length - 1 };
       // Money first, the way 12.1 lists it — "zabrać leżące złoto, Przedmioty
       // lub Przyjaciół" — and because it is one word against a hundred and
       // sixty-five, which is the one a list this long can afford to lead with.
-      // The kinds sit with it: both are short words that stand for a lot of
-      // Karty, and `clear` is the verb that has them.
+      // For `clear` it leads the kinds instead of standing alone, because there
+      // the two are one answer: everything you can name instead of a card.
       return verb === "clear"
-        ? shelved([GOLD_OFFERED, CATEGORY_OFFERED, ...PLACEABLE], 1)
+        ? shelved([BY_TYPE, ...PLACEABLE], 1)
         : shelved([GOLD_OFFERED, ...PLACEABLE], 1);
     }
     /**
