@@ -121,6 +121,10 @@ body {
   }
 }
 
-.animate-seat-breath {
-  animation: seat-breath 2.4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+/* Registered as a Tailwind animation rather than left as a plain class, which
+   is what `motion-safe:animate-seat-breath` needs to exist at all: the variant
+   only composes with utilities the framework knows about, so a hand-written
+   class under it compiled to nothing and the ring sat perfectly still. */
+@theme {
+  --animate-seat-breath: seat-breath 2.4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }

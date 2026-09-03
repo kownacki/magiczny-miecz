@@ -51,7 +51,13 @@ export interface SheetChrome {
    * „me" — „Karty, na których znajduje się tylko ilustracja" — and it is what
    * a player points at on the board.
    */
-  actor?: { name: string; characterName: string; characterId: string | null };
+  actor?: {
+    name: string;
+    characterName: string;
+    characterId: string | null;
+    /** Opens the roster — the standee is the way in. */
+    onOpen?: () => void;
+  };
   /**
    * Whether this has been folded away.
    *
@@ -219,20 +225,41 @@ export function DrawSheet({
           {actor && (
             <div className="hidden w-[86px] shrink-0 flex-col gap-1.5 self-start sm:flex">
               {actor.characterId && characterStandeeUrl(actor.characterId) && (
-                <Image
-                  src={characterStandeeUrl(actor.characterId)!}
-                  alt={actor.characterName}
-                  width={86}
-                  height={Math.round(86 / CHARACTER_ART_RATIO)}
-                  style={{ width: 86, borderColor: seatColour(seatIndex ?? 0) }}
-                  className="block h-auto rounded border"
-                  unoptimized
-                />
+                /* The standee is a way in to the roster, which is where
+                   everything else about a player is — their Postać, their
+                   points, whether they are still at the table. A picture of
+                   somebody is the obvious thing to press to ask about them. */
+                <button
+                  type="button"
+                  onClick={actor.onOpen}
+                  title={`${actor.name} — otwórz Graczy`}
+                  className="block cursor-pointer rounded border transition hover:brightness-110"
+                  style={{ borderColor: seatColour(seatIndex ?? 0) }}
+                >
+                  <Image
+                    src={characterStandeeUrl(actor.characterId)!}
+                    alt={actor.characterName}
+                    width={86}
+                    height={Math.round(86 / CHARACTER_ART_RATIO)}
+                    style={{ width: 86 }}
+                    className="block h-auto rounded"
+                    unoptimized
+                  />
+                </button>
               )}
-              <p className="truncate text-[11px] text-ink" title={actor.name}>
-                {actor.name}
+              {/* The roster's own two rows, in the roster's own type: the
+                  seat's dot beside the player in the display face, the Postać
+                  under it. Said the same way in both places, so a player
+                  recognises themselves. */}
+              <p className="flex items-center gap-1.5 truncate font-[family-name:var(--font-display)] text-base text-ink">
+                <span
+                  className="h-2.5 w-2.5 shrink-0 rounded-full"
+                  style={{ background: seatColour(seatIndex ?? 0) }}
+                  aria-hidden
+                />
+                <span className="truncate">{actor.name}</span>
               </p>
-              <p className="truncate font-[family-name:var(--font-display)] text-[11px] tracking-wide text-ochre">
+              <p className="truncate text-[12px] leading-none text-muted">
                 {actor.characterName}
               </p>
             </div>
