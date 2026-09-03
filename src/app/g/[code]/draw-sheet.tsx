@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { CardMark } from "./card-mark";
+import { CardMark, Corner, MARK_SIZE } from "./card-mark";
 import { Overlay } from "./overlay";
 import { ChromeButton } from "./chrome";
 import { CARD_RATIO, PICTURE_WIDTH } from "./card-preview";
@@ -193,9 +193,9 @@ export function DrawSheet({
                   card you are looking at while you decide whether to run from
                   it. On the picture, where every other view puts it. */}
               {granted && (
-                <span className="absolute bottom-1 right-1 rounded bg-night/85 px-1 py-0.5">
-                  <CardMark mark="granted" size={26} />
-                </span>
+                <Corner at="bottom-right" on="picture">
+                  <CardMark mark="granted" size={MARK_SIZE.picture} />
+                </Corner>
               )}
             </div>
           )}

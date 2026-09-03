@@ -26,7 +26,7 @@ import { characterProfile, itemProfile } from "@/lib/engine/abilityText";
 import { CardFacts, hasFacts } from "./card-facts";
 import { numeralMeaning, numeralOf } from "@/lib/engine/cards";
 import type { Nature } from "@/data/types";
-import { CardMark } from "./card-mark";
+import { CardMark, Corner, MARK_SIZE } from "./card-mark";
 import { LAYER } from "./layers";
 import type { EqMode } from "@/lib/engine/slots";
 import { CardBack, CardTile, type TileCard } from "./card-tile";
@@ -505,9 +505,9 @@ export function CardPreview({
           {/* On the card, where the tile puts it, so the hover and the thing
               being hovered agree about where to look. */}
           {card.granted && (
-            <span className="absolute bottom-1 right-1 rounded bg-night/85 px-1 py-0.5">
-              <CardMark mark="granted" size={22} />
-            </span>
+            <Corner at="bottom-right" on="picture">
+              <CardMark mark="granted" size={MARK_SIZE.hover} />
+            </Corner>
           )}
         </div>
       )}

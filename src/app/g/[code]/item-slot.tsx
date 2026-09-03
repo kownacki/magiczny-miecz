@@ -20,7 +20,7 @@ import { useCardPreview } from "./card-preview";
 import type { EqMode } from "@/lib/engine/slots";
 import type { Nature } from "@/data/types";
 import type { TileCard } from "./card-tile";
-import { CardMark, StruckOut, type SlotMark } from "./card-mark";
+import { CardMark, Corner, StruckOut, type SlotMark } from "./card-mark";
 import { ART_BORDER, PICKABLE } from "./pickable";
 
 /**
@@ -501,11 +501,15 @@ export function ItemSlot({
               a player scanning a pack should only have to look in one place.
               Clear of the corner button opposite and of the name below. */}
           {corners.length > 0 && !lifted && (
-            <span className="absolute bottom-0 right-0 flex items-center gap-0.5 rounded-tl bg-night/85 px-1 py-0.5">
-              {corners.map((mark) => (
-                <CardMark key={mark} mark={mark} />
-              ))}
-            </span>
+            <Corner at="bottom-right">
+              {/* Side by side inside the one chip, because they answer the same
+                  question and two chips in one corner is two answers. */}
+              <span className="flex items-center gap-0.5">
+                {corners.map((mark) => (
+                  <CardMark key={mark} mark={mark} />
+                ))}
+              </span>
+            </Corner>
           )}
           {corner}
         </div>

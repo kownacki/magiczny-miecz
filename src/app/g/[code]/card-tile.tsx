@@ -12,7 +12,7 @@ import {
   faceFor,
 } from "@/lib/view/cardImages";
 import { useCardPreview } from "./card-preview";
-import { CardMark, StruckOut, WornMark } from "./card-mark";
+import { CardMark, Corner, MARK_SIZE, StruckOut, WornMark } from "./card-mark";
 import { LAYER } from "./layers";
 import { Overlay } from "./overlay";
 import { CloseButton } from "./chrome";
@@ -282,18 +282,18 @@ export function CardTile({
             row of Karty on an Obszar and the row in the Plecak are the same
             kind of thing and had no business marking themselves differently. */}
         {card.granted && (
-          <span className="absolute bottom-0 right-0 rounded-tl bg-night/85 px-1 py-0.5">
+          <Corner at="bottom-right">
             <CardMark mark="granted" />
-          </span>
+          </Corner>
         )}
         {/* Which place on the body this one is in (5.6), where the pack's own
             arrow to put it there would be. Small, in the corner, and over the
             picture rather than under the name: the name is what the card is,
             and this is where it happens to be. */}
         {card.slot && (
-          <span className="absolute right-0 top-0 rounded-bl bg-night/85 px-1 py-0.5">
+          <Corner at="top-right">
             <WornMark slot={card.slot} />
-          </span>
+          </Corner>
         )}
         {/* The class numeral, in the corner the card prints it across the top
             of (15.2). Set in the display face, because it is a Roman numeral
@@ -308,12 +308,14 @@ export function CardTile({
             „can I take this off", and the numeral only explains an order the
             row it is missing from was not in anyway. */}
         {numeral && !card.slot && numeralOf(card.cardId) && (
-          <span
-            aria-hidden
-            className="absolute right-0 top-0 rounded-bl bg-night/85 px-1 font-[family-name:var(--font-display)] text-[10px] leading-tight text-ochre/80"
-          >
-            {numeralOf(card.cardId)}
-          </span>
+          <Corner at="top-right">
+            <span
+              aria-hidden
+              className="block font-[family-name:var(--font-display)] text-[10px] leading-none text-ochre/80"
+            >
+              {numeralOf(card.cardId)}
+            </span>
+          </Corner>
         )}
         {/* Bottom edge, not the top: the top of every card in this game is its
             printed title, and covering that is covering the one thing a player
@@ -535,9 +537,9 @@ export function CardDetail({ card, onClose }: { card: TileCard; onClose: () => v
             unoptimized={card.character}
           />
             {card.granted && (
-              <span className="absolute bottom-1 right-1 rounded bg-night/85 px-1 py-0.5">
-                <CardMark mark="granted" size={26} />
-              </span>
+              <Corner at="bottom-right" on="picture">
+                <CardMark mark="granted" size={MARK_SIZE.picture} />
+              </Corner>
             )}
           </div>
         )}

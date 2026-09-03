@@ -1,5 +1,6 @@
 "use client";
 
+import { cornerClass } from "./card-mark";
 import { Rules } from "./rule-ref";
 
 /** The pack: what a character is carrying, in the order its owner put it in. */
@@ -394,7 +395,9 @@ export function Hand({
                       ? "Załóż — to, co tam jest, wraca na to miejsce w plecaku"
                       : "Załóż"
                   }
-                  className="absolute right-0 top-0 z-10 rounded-bl bg-night/85 px-1.5 leading-none text-muted transition hover:text-ochre"
+                  /* The same corner box the take-off cross uses, and for the
+                     same reason it is on the button rather than round it. */
+                  className={`${cornerClass("top-right")} z-10 leading-none text-muted transition hover:text-ochre`}
                 >
                   <span className="block pb-0.5 text-[14px]">↑</span>
                 </button>

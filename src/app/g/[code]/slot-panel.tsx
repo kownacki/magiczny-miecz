@@ -4,6 +4,7 @@ import { useState } from "react";
 import { SLOT_LABEL, fitsIn, type Slot } from "@/lib/engine/slots";
 import { SLOT_ICON } from "@/lib/view/slotIcons";
 import { USE_VERB, isUsable, usageOf } from "@/lib/engine/uses";
+import { cornerClass } from "./card-mark";
 import { ItemSlot, SLOT_WIDTH, type SlotOccupant, type SlotTone } from "./item-slot";
 import { TILE_GAP } from "./tile-row";
 
@@ -306,7 +307,12 @@ export function SlotPanel({
                     onClick={() => onTakeOff(item.holdingId)}
                     disabled={busy}
                     title="Zdejmij — wraca do plecaka"
-                    className="absolute right-0 top-0 z-10 rounded-bl bg-night/85 px-1.5 text-[13px] leading-none text-muted transition hover:text-ochre disabled:opacity-40"
+                    /* The corner box from `card-mark.tsx`, on the control
+                       itself rather than round it: wrapping a button in a
+                       positioned span moves the padding off the control and
+                       shrinks what you can hit. `z-10` is this one's own — it
+                       sits over a picture that can be dragged. */
+                    className={`${cornerClass("top-right")} z-10 text-[13px] leading-none text-muted transition hover:text-ochre disabled:opacity-40`}
                   >
                     {/* Down into the pack, which is where it goes and where the
                         pack is drawn. A cross means "gone" everywhere else in
