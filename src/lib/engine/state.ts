@@ -77,6 +77,26 @@ export interface TurnCard {
    */
   granted?: boolean;
   /**
+   * Which copy this is, among the Karty on this Obszar.
+   *
+   * A square can hold two of one card — the deck prints fifteen 1 SZTUKA
+   * ZŁOTA and four TARCZA TOLIMANA, Płaskowyż Mgieł draws three at once, and
+   * `deal` will conjure as many as you ask for — and `resolved`, `fought` and
+   * `beaten` all name a Karta by its id. So resolving one copy marked both: the
+   * SKALNE WROTA drew a second SKALNE WROTA and it arrived already struck
+   * through, which is a Karta nobody ever saw.
+   *
+   * A number and not a uuid, because it only has to be unique *here*: one
+   * more than the highest on the frame when the card joins it, so it survives
+   * `resolutionOrder` re-sorting the list and cannot be reused by a card that
+   * arrives later.
+   *
+   * Optional, and absent means the old behaviour. A frame written before this
+   * — a game part-played, a fixture — keys by bare id exactly as it did, so
+   * nothing in flight has to be migrated to keep working. See `keyOf`.
+   */
+  nth?: number;
+  /**
    * What is left of a Miejsce's pool of points (16.7), for the three Karty
    * that lie on an Obszar with one.
    *
@@ -120,6 +140,55 @@ export interface TurnCard {
  * that also puts it behind another Miejsce drawn beside it. See
  * `reopensTheDrawing`, which carries the argument and the thread.
  */
+/**
+ * How `resolved`, `fought` and `beaten` name one Karta on this Obszar.
+ *
+ * Those three are lists of keys rather than of card ids, and always have been:
+ * `fieldScript` puts an `offerKey` in the same list for an Obszar's own printed
+ * offers, so the keyspace was never "the id of a card". This adds the other
+ * thing it has to be able to say — *which copy* — and the answer is the arrival
+ * number the frame gave it.
+ *
+ * A card with no `nth` keys as its bare id, which is what every one of them did
+ * before. That is what lets a game part-played keep working: the frame it is
+ * holding has no numbers on it, so it goes on behaving exactly as it did, one
+ * name for however many copies. New frames get the numbers and the fix.
+ */
+export function keyOf(card: Pick<TurnCard, "cardId" | "nth">): string {
+  return card.nth === undefined ? card.cardId : `${card.cardId}#${card.nth}`;
+}
+
+/**
+ * Whether one of these keys names this Karta.
+ *
+ * The three lists beside `drawn` are one keyspace with three writers, and they
+ * do not all say the same thing — deliberately.
+ *
+ * **`resolved` names a copy.** Reading a Karta is done to that Karta: two
+ * Targowiska on one square are two shops and dealing with one leaves the other
+ * standing.
+ *
+ * **`fought` and `beaten` name a card.** 17.5 is why — „Jeżeli Postać jest
+ * atakowana przez więcej niż jedną istotę, Miecze tych istot są sumowane" — so
+ * two WILKI on one Obszar are one fight and beating the pack beats both. A
+ * per-copy key there would split a fight the rulebook joins.
+ *
+ * And a frame written before any of this carries no numbers at all, so every
+ * list on it is names. One question, then, asked of the card rather than of the
+ * caller: is it in here under either name?
+ */
+export function listed(
+  keys: readonly string[],
+  card: Pick<TurnCard, "cardId" | "nth">,
+): boolean {
+  return keys.includes(card.cardId) || keys.includes(keyOf(card));
+}
+
+/** The number the next Karta to join this frame should carry. See `nth`. */
+export function nextNth(cards: readonly TurnCard[]): number {
+  return cards.reduce((top, card) => Math.max(top, card.nth ?? 0), 0) + 1;
+}
+
 export function resolutionOrder(cards: readonly TurnCard[]): TurnCard[] {
   const placed = (card: TurnCard) => (goesToAField(card.cardId) ? 0 : 1);
   const last = (card: TurnCard) => (reopensTheDrawing(card.cardId) ? 1 : 0);

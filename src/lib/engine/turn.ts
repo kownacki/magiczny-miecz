@@ -13,7 +13,7 @@ import {
   ringOf,
   type FieldId,
 } from "./board";
-import { resolutionOrder, type TurnCard } from "./state";
+import { nextNth, resolutionOrder, type TurnCard } from "./state";
 import { only, replaceTop, top, type TurnState } from "./stack";
 import type { Crossing } from "./rings";
 import { compareCombat, type CombatKind, type CombatResult } from "./combat";
@@ -615,7 +615,10 @@ export function afterMove(
      * anything the deck does by itself.
      */
     draw: Math.max(0, (field.draw ?? 0) - waiting.length),
-    drawn: resolutionOrder([...waiting]),
+    // Numbered on the way in, the way `afterDraw` numbers a card drawn later:
+    // two Targowiska left lying here are two Karty, and the turn has to be able
+    // to say which of them it has dealt with.
+    drawn: resolutionOrder(waiting.map((card, at) => ({ ...card, nth: at + 1 }))),
   };
 }
 
@@ -650,7 +653,18 @@ export function atBridge(bridge: BridgeEntrance): TurnPhase {
  */
 export function afterDraw(phase: TurnPhase, card: TurnCard): TurnPhase {
   if (phase.phase !== "field") return phase;
-  return { ...phase, drawn: resolutionOrder([...phase.drawn, card]) };
+  /**
+   * Numbered as it joins, so the three lists beside `drawn` can name *this*
+   * copy rather than every card of that name — see `nth`. One more than the
+   * highest already here, which survives the re-sort below and cannot be handed
+   * out twice.
+   *
+   * A card that arrives carrying one keeps it: `afterMove` numbers the Karty it
+   * lifts off the board before this ever sees them.
+   */
+  const numbered: TurnCard =
+    card.nth === undefined ? { ...card, nth: nextNth(phase.drawn) } : card;
+  return { ...phase, drawn: resolutionOrder([...phase.drawn, numbered]) };
 }
 
 /**

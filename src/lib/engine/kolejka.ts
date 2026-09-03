@@ -2,7 +2,7 @@
 
 import { CARD_CLASS, type CardClass } from "@/data/types";
 import { goesToAField, scriptFor } from "./cardScript";
-import type { TurnCard } from "./state";
+import { listed, type TurnCard } from "./state";
 
 /**
  * Two words that are not the same word.
@@ -145,8 +145,8 @@ export function isSpent(
   settled: readonly string[],
   beaten: readonly string[] = [],
 ): boolean {
-  if (beaten.includes(card.cardId)) return true;
-  return leavesWhenResolved(card) && settled.includes(card.cardId);
+  if (listed(beaten, card)) return true;
+  return leavesWhenResolved(card) && listed(settled, card);
 }
 
 /**
@@ -214,7 +214,7 @@ export function kolejkaFor(
 
   for (const card of cards) {
     if (!owesAFrame(card)) continue;
-    const done = resolved.includes(card.cardId);
+    const done = listed(resolved, card);
 
     // 15.1's Karty are each their own frame whatever numeral they print: each
     // rolls its own die for its own Obszar, so two of them are two questions.

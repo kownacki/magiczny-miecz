@@ -21,7 +21,7 @@ import {
   whyPackIsFull,
 } from "@/lib/engine/holdings";
 import { type Slot } from "@/lib/engine/slots";
-import type { TurnCard } from "@/lib/engine/state";
+import { keyOf, type TurnCard } from "@/lib/engine/state";
 import { fromTheShop, stockLeft } from "@/lib/engine/stock";
 import { EVENTS, SPELLS, SPELL_BY_REF, decksOf, shuffleFor } from "../decks";
 import { apply, merge, mergeAll, type Changeset, type Outcome, type Snapshot } from "../change";
@@ -1254,7 +1254,8 @@ export function clearField(
 
   const swept = new Set(takenFromTurn);
   const kept = inTurn.filter((_, index) => !swept.has(index));
-  const left = new Set(kept.map((card) => card.cardId));
+  const left = new Set(kept.map((card) => keyOf(card)));
+  const leftByName = new Set(kept.map((card) => card.cardId));
   /**
    * The lists beside `drawn` name cards by id, so a card that has gone must go
    * out of them too — a `resolved` id with no Karta behind it is a card the
@@ -1262,8 +1263,19 @@ export function clearField(
    *
    * Only where the last copy went: two Targowiska are one entry in `resolved`.
    */
-  const without = (ids: readonly string[] | undefined) =>
-    ids === undefined ? undefined : ids.filter((cardId) => left.has(cardId));
+  /**
+   * The three lists name what is gone as well as what is left, so a key with no
+   * Karta behind it has to go with it — a `resolved` entry the turn thinks it
+   * has dealt with and the reader cannot find.
+   *
+   * By key and by name, because the lists hold both: `resolved` names a copy
+   * and `fought` names a card (17.5 sums a pack), and a sweep has to be able to
+   * strike either. A name is kept while any copy of it is still lying here.
+   */
+  const without = (keys: readonly string[] | undefined) =>
+    keys === undefined
+      ? undefined
+      : keys.filter((key) => left.has(key) || leftByName.has(key));
   const edited: Changeset["game"] =
     frame?.phase === "field" && takenFromTurn.length > 0
       ? {

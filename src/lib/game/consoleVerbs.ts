@@ -111,7 +111,7 @@ import {
 import { activeStore } from "./gameStore";
 import { compulsoryOffer } from "@/lib/engine/fieldScript";
 import { copiesRanked } from "./commands/holdings";
-import type { TurnCard } from "@/lib/engine/state";
+import { listed, type TurnCard } from "@/lib/engine/state";
 import { only, replaceTop, requireTop, top, topIf } from "@/lib/engine/stack";
 import { askOnTop } from "@/lib/engine/ask";
 import { eqModeOf, seatView, trophyModeOf, turnQueueOf } from "./commands/seat";
@@ -1003,7 +1003,7 @@ export const VERBS: { [K in Command["kind"]]: VerbRun<K> } = {
     };
 
     const drawn = (state.drawn ?? []).filter(
-      (one) => !(state.resolved ?? []).includes(one.cardId),
+      (one) => !listed(state.resolved ?? [], one),
     );
     const here = snapshot.fieldCards.filter((one) => one.field_id === seat.field_id);
 
@@ -1097,7 +1097,7 @@ export const VERBS: { [K in Command["kind"]]: VerbRun<K> } = {
     const field = topIf(snapshot.game.turn_state, "field");
     if (field) {
       const waiting = (field.drawn ?? []).filter(
-        (one) => isFoeClass(one.cardClass) && !(field.resolved ?? []).includes(one.cardId),
+        (one) => isFoeClass(one.cardClass) && !listed(field.resolved ?? [], one),
       );
       if (waiting.length === 0) throw new Error("No Wróg here to fight.");
       const wanted = command.cardId
@@ -1547,7 +1547,7 @@ export const VERBS: { [K in Command["kind"]]: VerbRun<K> } = {
     }
 
     const waiting = (state.drawn ?? []).filter(
-      (one) => !(state.resolved ?? []).includes(one.cardId),
+      (one) => !listed(state.resolved ?? [], one),
     );
     if (waiting.length === 0) throw new Error("Nothing is waiting for an answer.");
 

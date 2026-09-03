@@ -15,6 +15,7 @@ const frameIn = (writes: { game?: { turn_state?: TurnState } }) =>
   top(writes.game!.turn_state!) as Extract<TurnPhase, { phase: "script" }>;
 import { aHolding, aSeat, aTable, aUser, ports } from "../fixture";
 import { apply } from "../change";
+import { listed } from "@/lib/engine/state";
 import { applyEffect } from "./effects";
 import { resolveDrawnCard, resolveFieldOffer, spendHolding } from "./resolving";
 import { EVENT_COPIES } from "../decks";
@@ -980,6 +981,69 @@ describe("an Obszar's own table (15.1)", () => {
       ports({ random: scriptedRandom([2]) }),
     );
     expect(typed.writes.journal?.[0]).toMatchObject({ manual: true });
+  });
+});
+
+/**
+ * Two of one card on one Obszar, which the deck deals often enough — fifteen
+ * 1 SZTUKA ZŁOTA, four TARCZA TOLIMANA, and Płaskowyż Mgieł draws three at a
+ * time.
+ *
+ * `resolved` named a Karta by its id, so dealing with one copy struck through
+ * every copy. I met it as the SKALNE WROTA drawing a second SKALNE WROTA, which
+ * arrived already settled — a Karta nobody ever saw.
+ */
+describe("settling one of two copies", () => {
+  const twice = (over: { nth?: boolean } = {}) => {
+    const drawn = [
+      { cardId: "targowisko", cardClass: "place", ...(over.nth === false ? {} : { nth: 1 }) },
+      { cardId: "targowisko", cardClass: "place", ...(over.nth === false ? {} : { nth: 2 }) },
+    ];
+    return aTable({
+      seats: [aSeat({ id: "seat-a", seat_index: 0, field_id: asFieldId("wrzosowiska") })],
+      game: {
+        active_seat: 0,
+        turn_state: only({
+          phase: "field", fieldId: "wrzosowiska", from: null, draw: 0,
+          drawn, fought: [], resolved: [],
+        } as never),
+      },
+    });
+  };
+
+  const settledEach = (table: ReturnType<typeof twice>, writes: Parameters<typeof apply>[1]) => {
+    const field = top(apply(table, writes).game.turn_state) as {
+      drawn: { cardId: string; nth?: number }[];
+      resolved?: string[];
+    };
+    return field.drawn.map((one) => listed(field.resolved ?? [], one));
+  };
+
+  it("strikes through the copy that was resolved and no other", async () => {
+    const before = twice();
+    const { writes } = await resolveDrawnCard(before, { cardId: "targowisko", shuffle: asIs }, ports());
+    expect(settledEach(before, writes)).toEqual([true, false]);
+  });
+
+  /** And the second call reaches the second copy, rather than refusing. */
+  it("reaches the other one next time", async () => {
+    const before = twice();
+    const first = await resolveDrawnCard(before, { cardId: "targowisko", shuffle: asIs }, ports());
+    const between = apply(before, first.writes);
+    const second = await resolveDrawnCard(between, { cardId: "targowisko", shuffle: asIs }, ports());
+    expect(settledEach(between, second.writes)).toEqual([true, true]);
+  });
+
+  /**
+   * A frame written before any of this has no numbers on it, and goes on
+   * behaving exactly as it did — one name for however many copies. That is what
+   * makes this safe to ship over a game somebody is part-way through: nothing
+   * in flight needs migrating, it simply does not get the fix.
+   */
+  it("leaves an old frame alone, keys and all", async () => {
+    const before = twice({ nth: false });
+    const { writes } = await resolveDrawnCard(before, { cardId: "targowisko", shuffle: asIs }, ports());
+    expect(settledEach(before, writes)).toEqual([true, true]);
   });
 });
 

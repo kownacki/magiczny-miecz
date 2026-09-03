@@ -1198,11 +1198,17 @@ is `optional` and declining it means never resolving it, so the `odloz` never
 runs; it is right by accident rather than by saying so, and it is the only card
 whose frame's answer decides whether the Karta leaves the Obszar.
 
-One thing found while checking, which is not this card's: the three drawn
+~~One thing found while checking, which is not this card's: the three drawn
 included a second SKALNE WROTA off the real pile, and `resolved` keys on
-`cardId`, so the copy nobody had seen arrived already marked resolved. Any
-Obszar that deals two of one name has this; the Wrota only makes it easy to
-reach.
+`cardId`, so the copy nobody had seen arrived already marked resolved.~~ Fixed.
+Every Karta joining a `field` frame carries an `nth` — one more than the highest
+already there, so it survives 15.2's re-sort and cannot be handed out twice —
+and `resolved` holds `keyOf(card)`, which is `cardId#nth`. `listed` is the one
+question every reader asks, and it answers to either form, which is what leaves
+`fought` and `beaten` keyed by *name*: 17.5 sums every Wróg attacking at once,
+so two WILKI are one fight and beating the pack beats both. A frame written
+before this has no numbers and goes on behaving as it did, so nothing part-played
+needed migrating.
 
 Parked at the point the Obszar's kolejka was designed (September 2026), not
 forgotten.

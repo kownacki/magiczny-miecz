@@ -8,9 +8,11 @@ import { CARD_CLASS_LABEL, type CardClass, type EventCard } from "@/data/types";
 import { cardImageUrl } from "@/lib/view/cardImages";
 import { classOf, combatValueOf, numeralMeaning, numeralOf, roundsOf } from "@/lib/engine/cards";
 import { attackAsOne } from "@/lib/engine/combat";
+import { listed } from "@/lib/engine/state";
 import { kindForCard } from "@/lib/engine/holdings";
 import { KolejkaStrip, worthShowing } from "./kolejka-strip";
 import { ActionButton } from "./action-button";
+import { intentSaid, isIntentKind } from "@/lib/engine/intentText";
 import { scriptFor, describeDisposition } from "@/lib/engine/cardScript";
 import { itemProfile, previewOf, requirementOf, staysAs } from "@/lib/engine/abilityText";
 import { sentence } from "@/lib/engine/polish";
@@ -61,6 +63,7 @@ export function DrawnCard({
   nature,
   aggression,
   busy,
+  intent,
   onResolve,
   onFight,
   onEscape,
@@ -108,6 +111,15 @@ export function DrawnCard({
    */
   aggression?: string | null;
   busy: boolean;
+  /**
+   * What the acting player's button is about to do, while it is still filling.
+   *
+   * Only ever set on a device that is *watching*: the three seconds an
+   * irreversible decision waits before it is sent (`channelling.ts`) are the
+   * only moment between „nothing yet" and „it is done" that anybody else at the
+   * table has ever had, and this is what fills them.
+   */
+  intent?: { kind: string; option?: number } | null;
   onResolve: (
     cardId: string,
     decisions: { choices?: number[]; destination?: FieldId },
@@ -179,14 +191,18 @@ export function DrawnCard({
   // and hopeless. Only when they are of a kind: an ordinary Wróg and a magical
   // one cannot be summed, because the sums are of different things.
   const standing = cards
-    .map((entry) => EVENTS.find((c) => c.id === entry.cardId))
+    /* The turn's own entry is kept beside the card, because `resolved` names a
+       *copy* — two Wilki on one Obszar are two entries, and asking the lists
+       with a bare id would settle both when one of them was dealt with. */
+    .map((entry) => ({ entry, card: EVENTS.find((c) => c.id === entry.cardId) }))
     .filter(
-      (c): c is EventCard =>
-        !!c &&
-        !!combatValueOf(c, mirror) &&
-        !fought.includes(c.id) &&
-        !resolved.includes(c.id),
-    );
+      (one): one is { entry: (typeof cards)[number]; card: EventCard } =>
+        !!one.card &&
+        !!combatValueOf(one.card, mirror) &&
+        !listed(fought, one.entry) &&
+        !listed(resolved, one.entry),
+    )
+    .map((one) => one.card);
   // 17.5 asked once, of the engine, rather than restated here — the server
   // refuses a mixed fight against this same answer. A creature that is several
   // fights rather than one cannot be in the pack either: his card asks for
@@ -278,6 +294,28 @@ export function DrawnCard({
    * card.
    */
   const offered = canAct ? [] : itemProfile(known.id).special;
+
+  /**
+   * „Test (WIEDŹMA) wybiera: Tracisz 1 Sztukę Złota…"
+   *
+   * The option arrives as a number and is turned back into words *here*, out of
+   * this device's own copy of the card — the same discipline as `Decisions`,
+   * and the reason the sentence quotes the `Do wyboru:` line above it word for
+   * word rather than approximately.
+   *
+   * The sender leaves the number out once it is already partway down a nested
+   * question, because this end re-walks the script with its own (empty)
+   * `choices` and would be pointing into a different list. „wybiera…" with no
+   * option is the honest answer there, and better than a confident wrong one.
+   */
+  const chosen =
+    intent?.option !== undefined && asking?.op === "wybor"
+      ? (asking.options[intent.option]?.label ?? null)
+      : null;
+  const said =
+    intent && isIntentKind(intent.kind)
+      ? intentSaid(actor, intent.kind, chosen ? sentence(chosen) : null)
+      : null;
 
   /**
    * Whether walking away is one of the answers.
@@ -456,9 +494,16 @@ export function DrawnCard({
             ))}
           </ul>
         )}
+        {/* One line, three things it can say. Waiting for somebody, watching
+            them decide, and — when the Karta was never theirs to act on —
+            saying so. The middle one is the only sentence in this panel about
+            something that has not happened yet, so it is the table's own
+            colour rather than the grey the other two are: what it describes is
+            live, and three seconds later it is either the Dziennik or it never
+            was. */}
         {!canAct && (
-          <p className="text-[11px] text-muted">
-            {inert ? `${actor} nie spełnia warunków` : `Decyzję podejmuje ${actor}`}
+          <p className={`text-[11px] ${said ? "text-ochre" : "text-muted"}`}>
+            {said ?? (inert ? `${actor} nie spełnia warunków` : `Decyzję podejmuje ${actor}`)}
           </p>
         )}
         {/* A Wróg attacks the moment it is turned over (16.2), so the two
@@ -469,6 +514,7 @@ export function DrawnCard({
               role="harm"
               weight="lead"
               size="lg"
+              says={{ kind: "walczy" }}
               disabled={busy}
               onClick={() => onFight([known.id])}
             >
@@ -481,6 +527,7 @@ export function DrawnCard({
               <ActionButton
                 role="harm"
                 size="lg"
+                says={{ kind: "walczy" }}
                 disabled={busy}
                 onClick={() => onFight(together.map((c) => c.id))}
                 title={together.map((c) => c.name).join(" + ")}
@@ -488,7 +535,13 @@ export function DrawnCard({
                 Walcz ze wszystkimi naraz ({together.length}) — {asOne?.total}
               </ActionButton>
             )}
-            <ActionButton weight="quiet" size="lg" disabled={busy} onClick={onEscape}>
+            <ActionButton
+              weight="quiet"
+              size="lg"
+              says={{ kind: "wymyka-sie" }}
+              disabled={busy}
+              onClick={onEscape}
+            >
               Spróbuj się wymknąć (19.1)
             </ActionButton>
           </div>
@@ -502,12 +555,19 @@ export function DrawnCard({
               role="gain"
               weight="lead"
               size="lg"
+              says={{ kind: "bierze" }}
               disabled={busy}
               onClick={() => onTake(known.id)}
             >
               {keep === "friend" ? "Weź Przyjaciela" : "Weź Przedmiot"}
             </ActionButton>
-            <ActionButton weight="decline" size="lg" disabled={busy} onClick={() => onLeave(known.id)}>
+            <ActionButton
+              weight="decline"
+              size="lg"
+              says={{ kind: "zostawia" }}
+              disabled={busy}
+              onClick={() => onLeave(known.id)}
+            >
               Zostaw
             </ActionButton>
           </div>
@@ -547,6 +607,10 @@ export function DrawnCard({
                       ))}
                     </select>
                     <ActionButton
+                      says={{
+                        kind: "wybiera",
+                        ...(choices.length === 0 ? { option: index } : {}),
+                      }}
                       disabled={busy || !going}
                       onClick={() =>
                         onResolve(known.id, {
@@ -561,6 +625,11 @@ export function DrawnCard({
                 ) : (
                   <ActionButton
                     key={option.label}
+                    // The index goes only while this is still the first
+                    // question asked. Past that, the watching device re-walks
+                    // the script with its own empty `choices` and would read
+                    // the number against a different list — see `chosen`.
+                    says={{ kind: "wybiera", ...(choices.length === 0 ? { option: index } : {}) }}
                     disabled={busy}
                     onClick={() => {
                       const next = [...choices, index];
@@ -597,6 +666,7 @@ export function DrawnCard({
               ))}
             </select>
             <ActionButton
+              says={{ kind: "przenosi-sie" }}
               disabled={busy || !going}
               onClick={() => onResolve(known.id, { choices, destination: going as FieldId })}
             >
@@ -626,6 +696,7 @@ export function DrawnCard({
                 ))}
             </select>
             <ActionButton
+              says={{ kind: "kladzie" }}
               disabled={busy || !going}
               onClick={() => onResolve(known.id, { choices, destination: going as FieldId })}
             >
@@ -649,6 +720,7 @@ export function DrawnCard({
             <ActionButton
               weight="lead"
               size="lg"
+              says={{ kind: "pomija" }}
               disabled={busy}
               onClick={() => onResolve(known.id, { choices })}
             >
@@ -667,6 +739,7 @@ export function DrawnCard({
             weight="lead"
             size="lg"
             className="self-start"
+            says={{ kind: "rozpatruje" }}
             disabled={busy}
             onClick={() => (script ? onResolve(known.id, { choices }) : onLeave(known.id))}
           >

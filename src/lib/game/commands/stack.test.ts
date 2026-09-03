@@ -5,6 +5,7 @@ import { top, type TurnState } from "@/lib/engine/stack";
 import type { TurnPhase } from "@/lib/engine/turn";
 import { EVENT_COPIES } from "../decks";
 import { aHolding, aSeat, aTable, at as driving, aUser, ports, rolling } from "../fixture";
+import { listed } from "@/lib/engine/state";
 import { apply, type Snapshot } from "../change";
 import { drawCard } from "./draw";
 import { beginFight, fightRoll } from "./fight";
@@ -206,7 +207,17 @@ describe("the resolution stack (docs/STACK.md)", () => {
     // „Jeżeli jesteś Złą Postacią, spełni jedno z twoich życzeń" — the
     // Barbarzyńca is not, so nothing is granted and the Karta is dealt with.
     const field = fieldOn(at.game.turn_state);
-    expect(field.resolved).toContain(KOSZMAR);
+    /**
+     * Asked the way every reader asks, not of the raw list.
+     *
+     * `resolved` is a keyspace rather than a list of card ids — it has always
+     * held `offerKey`s beside them, and it now holds *which copy* of a Karta was
+     * dealt with, so a square with two Targowiska can have one of them settled.
+     * `listed` is the one question, and a test that reaches past it is a test
+     * pinning the encoding instead of the fact.
+     */
+    const koszmar = field.drawn.find((one) => one.cardId === KOSZMAR)!;
+    expect(listed(field.resolved ?? [], koszmar)).toBe(true);
     expect(field.drawn.map((one) => one.cardId)).toContain(KOSZMAR);
     expect(at.seats[0].field_id).toBe("plaskowyz-mgiel");
   });

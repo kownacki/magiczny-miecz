@@ -9,6 +9,7 @@ import {
   ringOf,
 } from "./board";
 import { crossingFrom } from "./rings";
+import { FIELDS } from "./board";
 import { only, top } from "./stack";
 import type { TurnCard } from "./state";
 import {
@@ -29,7 +30,7 @@ import {
   type TurnOrderSeat,
   type TurnPhase,
 } from "./turn";
-import { resolutionOrder } from "./state";
+import { keyOf, resolutionOrder } from "./state";
 
 const seat = (index: number, over: Partial<TurnOrderSeat> = {}): TurnOrderSeat => ({
   index,
@@ -585,5 +586,60 @@ describe("dealing a Karta into a turn", () => {
   /** Whatever the top happens to be: something is waiting underneath it. */
   it("refuses any stack deeper than one frame", () => {
     expect(dealtInto({ stack: [field(), field()] }, card, HERE)).toBeNull();
+  });
+});
+
+/**
+ * Every Karta joining a frame gets a number, so the lists beside `drawn` can
+ * name one copy of a card rather than every card of that name.
+ *
+ * `resolved` used to hold bare ids, so a square with two Targowiska settled
+ * both when one was dealt with — which is how the SKALNE WROTA drew a second
+ * SKALNE WROTA that arrived already struck through.
+ */
+describe("numbering the Karty on one Obszar", () => {
+  const field = (): TurnPhase =>
+    ({ phase: "field", fieldId: "wrzosowiska", from: null, draw: 0, drawn: [], fought: [] }) as TurnPhase;
+
+  const nths = (phase: TurnPhase) =>
+    phase.phase === "field" ? phase.drawn.map((one) => one.nth) : [];
+
+  it("hands out a number per Karta, and never the same one twice", () => {
+    let phase = field();
+    for (const cardId of ["targowisko", "targowisko", "targowisko"]) {
+      phase = afterDraw(phase, { cardId, cardClass: "place" });
+    }
+    expect(nths(phase)).toEqual([1, 2, 3]);
+    expect(phase.phase === "field" && keyOf(phase.drawn[1])).toBe("targowisko#2");
+  });
+
+  /**
+   * One more than the highest, not the length: 15.2 re-sorts the list on every
+   * insert and `clear` takes Karty out of the middle of it, so a count would
+   * hand a number out twice.
+   */
+  it("counts from the highest already there, not from the length", () => {
+    let phase = field();
+    phase = afterDraw(phase, { cardId: "mgla", cardClass: "encounter" });
+    phase = afterDraw(phase, { cardId: "wilk", cardClass: "foe" });
+    // The Spotkanie goes, as a sweep or a disposition would take it.
+    phase = phase.phase === "field" ? { ...phase, drawn: phase.drawn.slice(1) } : phase;
+    phase = afterDraw(phase, { cardId: "targowisko", cardClass: "place" });
+    expect(nths(phase)).toEqual([2, 3]);
+  });
+
+  /** A card that already carries one keeps it — `afterMove` numbers on the way in. */
+  it("leaves a number a Karta arrives with", () => {
+    const phase = afterDraw(field(), { cardId: "mgla", cardClass: "encounter", nth: 7 });
+    expect(nths(phase)).toEqual([7]);
+  });
+
+  /** And the Karty lifted off the board are numbered too, or they could not be told apart. */
+  it("numbers what was already lying on the Obszar", () => {
+    const moved = afterMove(FIELDS.get("wrzosowiska")!, null, [
+      { cardId: "targowisko", cardClass: "place" },
+      { cardId: "targowisko", cardClass: "place" },
+    ]);
+    expect(nths(moved)).toEqual([1, 2]);
   });
 });

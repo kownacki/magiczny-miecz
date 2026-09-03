@@ -22,6 +22,7 @@ import { replaceTop, requireTop, topIf } from "@/lib/engine/stack";
 import { activeSeat, seatView } from "./seat";
 import { skipsRollAt } from "@/lib/engine/abilities";
 import { addEffect, refuseWhileQueuedFor, refuseWhileUndrawn } from "./turn";
+import { keyOf, listed } from "@/lib/engine/state";
 import type { Decisions } from "./ops";
 import { applyEffect, markResolved } from "./effects";
 
@@ -271,9 +272,19 @@ export async function resolveDrawnCard(
   const state = requireTop(snapshot.game.turn_state, "field");
   // The whole deal before any of the reading (13.4) — see `refuseWhileUndrawn`.
   refuseWhileUndrawn(snapshot);
-  if (!state.drawn.some((entry) => entry.cardId === command.cardId)) {
-    throw new Error("Tej Karty tu nie ma.");
-  }
+  /**
+   * Which copy is being resolved, when the square holds two of one card.
+   *
+   * The first that is not settled already, which is the only reading that makes
+   * "resolve the Targowisko" mean anything on a square with two: the second one
+   * is still there afterwards and the next call reaches it. Named rather than
+   * left to `markResolved` because both halves have to agree — the copy that is
+   * struck through must be the copy whose script just ran.
+   */
+  const being =
+    state.drawn.find((entry) => entry.cardId === command.cardId && !listed(state.resolved ?? [], entry)) ??
+    state.drawn.find((entry) => entry.cardId === command.cardId);
+  if (!being) throw new Error("Tej Karty tu nie ma.");
 
   /**
    * 12.1's window, for a Karta that offers itself rather than stopping the turn.
@@ -317,7 +328,10 @@ export async function resolveDrawnCard(
       cardId: command.cardId,
       // The debts a suspension carries across commits: crossing the card off
       // when it finally completes, and keeping the two Spotkania that stay.
-      mark: command.cardId,
+      // The copy, not the name — the same key `markResolved` gets below, so a
+      // Karta that suspends and finishes two commits later strikes through the
+      // one that ran rather than every card of its name.
+      mark: keyOf(being),
       ...(script.disposition.kind === "bierzesz" ? { keep: true } : {}),
       reason:
         face !== undefined ? `${cardName(command.cardId)} (${face})` : cardName(command.cardId),
@@ -390,7 +404,7 @@ export async function resolveDrawnCard(
   const noted =
     done.result.pending || done.result.suspended
       ? {}
-      : markResolved(apply(snapshot, soFar), command.cardId);
+      : markResolved(apply(snapshot, soFar), keyOf(being));
 
   return {
     writes: merge(soFar, noted),
