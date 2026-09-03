@@ -20,6 +20,9 @@ import type { TurnState } from "@/lib/engine/stack";
 import { fitsIn, isWearable, type Slot } from "@/lib/engine/slots";
 import { carriedCount, carryLimit } from "@/lib/engine/derive";
 import { announce, watch, type Announcement, type Watched } from "@/lib/engine/announcements";
+import type { Intent } from "@/lib/engine/intentText";
+import { announcingWith, CHANNEL_MS } from "./channelling";
+import { watchIntent } from "@/lib/game/liveRevision";
 import { CARD_NAMES, asHoldings, asNature, type Seat } from "./table";
 import { forbiddenIn, forbiddenSaid } from "@/lib/engine/holdings";
 import { isStale, standingMoves, standingPicks, standingRules } from "./reconcile";
@@ -186,6 +189,15 @@ export interface Table {
   /** Moves one of the table's house rules — the host's, and instant. */
   setHouseRule: (patch: Partial<Pick<Game, "eq_mode" | "endless_stock" | "trophy_mode">>) => void;
   busy: boolean;
+  /**
+   * What the acting player's button is about to do, while it is still filling.
+   *
+   * The one thing on this object that is not a fact about the game: it may be
+   * cancelled, and then it never happened. Ephemeral by construction — it
+   * arrives over Realtime, is stored nowhere, and is gone by the time the
+   * revision that settles it is drawn.
+   */
+  intent: { by: number; kind: string; option?: number } | null;
   refresh: () => Promise<void>;
   /** One request, with its body checked against what that route reads. */
   post: <R extends Route>(path: R, body?: Partial<Requests[R]>) => Promise<void>;
@@ -288,6 +300,16 @@ export function useTable(code: string): Table {
     setNotices((were) => were.filter((one) => one.id !== id));
   }, []);
   const [busy, setBusy] = useState(false);
+  /**
+   * What somebody else's button is about to do, for as long as it is filling.
+   *
+   * Held on this device and nowhere else. It arrives over Realtime, it is
+   * replaced by the truth the moment the revision carrying it lands, and it is
+   * dropped by the clock below if that never happens — a tab that closes
+   * mid-window would otherwise leave the rest of the table looking at a
+   * decision that is never coming.
+   */
+  const [intent, setIntent] = useState<{ by: number; kind: string; option?: number } | null>(null);
   const [users, setUsers] = useState<Person[]>([]);
   /** Who this browser was at this table, if it can be them again. */
   const [wasHere, setWasHere] = useState<{ name: string; seatIndex: number | null } | null>(null);
@@ -344,6 +366,10 @@ async function saidWrong(response: Response): Promise<string> {
     // three rules are `reconcile.ts`'s, and every one of them is there because
     // something was seen in the wrong place for a tick.
     if (isStale(data.game.revision, seenRevision.current)) return;
+    // A decision that has landed is not a decision any more. Whatever anybody
+    // was about to do, this is what they did — so the warning gives way to the
+    // thing it was warning about, rather than the two being on screen together.
+    if (data.game.revision !== seenRevision.current) setIntent(null);
     seenRevision.current = data.game.revision;
 
     /**
@@ -527,6 +553,56 @@ async function saidWrong(response: Response): Promise<string> {
       clearInterval(timer);
     };
   }, [code, refresh]);
+
+  /**
+   * What somebody is about to do, and the two ways it stops being true.
+   *
+   * The message says which — a decision, or `null` for a cancel — so a mind
+   * changed at 2.9 seconds is off the other screens at 2.9 seconds rather than
+   * when a clock here runs out. The clock is only for the case the sender
+   * cannot report: a tab closed mid-window, which would otherwise leave the
+   * table looking at a decision that is never coming. It is given a little more
+   * than the window itself, because the request that follows has to arrive and
+   * be believed before the line has anything truer to be replaced by.
+   *
+   * `refresh` clears it too — see below. Whichever comes first.
+   */
+  useEffect(() => watchIntent(code, setIntent), [code]);
+
+  useEffect(() => {
+    if (!intent) return;
+    const timer = setTimeout(() => setIntent(null), CHANNEL_MS + 2000);
+    return () => clearTimeout(timer);
+  }, [intent]);
+
+  /**
+   * This device's own way of saying it, handed to `channelling.ts`.
+   *
+   * Deliberately not `post`, which raises `busy` for the whole page and then
+   * refreshes: this changes nothing, so there is nothing to refresh, and
+   * greying out the table for three seconds is the opposite of what the window
+   * is for. `sendHouseRule` fetches directly for the same reason.
+   *
+   * Nothing is awaited and no failure is reported. The warning the other
+   * players get is a courtesy, and a courtesy must never be the reason a
+   * decision fails to be sent — nor a red banner on a table where nothing is
+   * wrong.
+   */
+  useEffect(
+    () =>
+      announcingWith((says: Intent | null) => {
+        void fetch(`/api/games/${code}/intent`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            token: readSeatToken(code),
+            kind: says?.kind ?? "",
+            ...(says?.option !== undefined ? { option: says.option } : {}),
+          }),
+        }).catch(() => {});
+      }),
+    [code],
+  );
 
   /**
    * Tells the table this page is going away, so the seat is freed in seconds
@@ -971,6 +1047,8 @@ async function saidWrong(response: Response): Promise<string> {
     dismissNotice,
     setHouseRule,
     busy,
+    /** Somebody else's decision, in the three seconds before it lands. */
+    intent,
     refresh,
     post,
     runConsole,
