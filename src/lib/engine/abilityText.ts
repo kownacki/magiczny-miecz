@@ -289,8 +289,6 @@ function specialOf(cardId: string): string[] {
   const stated =
     gate !== null && (gate.warunek.is === "natura" || gate.warunek.is === "attacker");
   const body = stated && gate !== null ? gate.to : script.effect;
-  // The whole Karta, which for the three of 15.1 is two occasions rather than
-  // one: where it goes when it is turned over, then what it says where it lies.
   /**
    * A script that is only a disposition has nothing to say in a list of what
    * the card does, and „nic się nie dzieje" is a claim rather than a blank.
