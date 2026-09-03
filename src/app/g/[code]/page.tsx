@@ -1588,6 +1588,11 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                opposite him and is therefore not on his Karta. */
             mySword={active.sword_in_fight}
             seatIndex={active.seat_index}
+            actor={{
+              name: active.player_name ?? `Miejsce ${active.seat_index + 1}`,
+              characterName: characterName(active.character_id ?? ""),
+              characterId: active.character_id ?? null,
+            }}
             /* The ACTIVE seat's, not the reader's: the card is being resolved
                for whoever is having the turn. */
             nature={asNature(active.nature)}

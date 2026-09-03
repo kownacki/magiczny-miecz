@@ -64,6 +64,7 @@ export function DrawModal({
   mySword,
   nature,
   seatIndex,
+  actor,
   aggression,
   busy,
   onAction,
@@ -150,6 +151,8 @@ export function DrawModal({
   mySword: number;
   /** Whose turn is being played, for the sheet's edge. */
   seatIndex: number;
+  /** Who is acting, for the column down the left — see `SheetChrome`. */
+  actor?: SheetChrome["actor"];
   /** The active character's Natura — see `DrawnCard`. */
   nature: Nature | null;
   /** The active character's last aggressive act — see `DrawnCard`. */
@@ -169,7 +172,7 @@ export function DrawModal({
   /** Nothing to do with this one — it stays on the field (16.8). */
   onLeave: (cardId: string) => void;
 }) {
-  const chrome: SheetChrome = { canAct, minimized, onMinimize, error, seatIndex };
+  const chrome: SheetChrome = { canAct, minimized, onMinimize, error, seatIndex, actor };
 
   if (move) {
     return (

@@ -6,6 +6,7 @@ import { Overlay } from "./overlay";
 import { ChromeButton } from "./chrome";
 import { seatColour } from "@/lib/view/boardMap";
 import { CARD_RATIO, PICTURE_WIDTH } from "./card-preview";
+import { CHARACTER_ART_RATIO, characterStandeeUrl } from "@/lib/view/cardImages";
 import { WithRules } from "./rule-ref";
 
 /**
@@ -42,6 +43,16 @@ export interface SheetChrome {
    */
   seatIndex?: number;
   /**
+   * Who is acting, drawn down the left of the sheet.
+   *
+   * The turn is a person as much as a Karta, and the sheet said so only in
+   * small print across the top („Test ciągnie Kartę — oglądasz"), which the
+   * player being asked never sees at all. A standee is what the box gives for
+   * „me" — „Karty, na których znajduje się tylko ilustracja" — and it is what
+   * a player points at on the board.
+   */
+  actor?: { name: string; characterName: string; characterId: string | null };
+  /**
    * Whether this has been folded away.
    *
    * It used to be a watcher's only — the player being asked could not put their
@@ -63,6 +74,7 @@ export function DrawSheet({
   label,
   heading,
   seatIndex,
+  actor,
   art,
   granted = false,
   canAct,
@@ -127,25 +139,23 @@ export function DrawSheet({
     // testing, and folding it away if you are only watching.
     <Overlay label={label} onDismiss={null}>
       <div
-        /* The seat's colour on the edge, and its own light around it. The glow
-           is the pill's dot enlarged — same colour, same reason — so a table
-           watching one player act can see whose from across the room. Static
-           and not a pulse: what is right for a dot the size of a full stop is a
-           strobe at the size of a dialog. */
-        style={
-          seatIndex === undefined
-            ? undefined
-            : {
-                borderColor: seatColour(seatIndex),
-                boxShadow: `0 8px 40px rgba(0,0,0,0.7), 0 0 24px -4px ${seatColour(seatIndex)}`,
-              }
-        }
-        className={`flex max-h-[90vh] w-full flex-col gap-3 overflow-hidden rounded-lg border bg-panel p-4 ${
-          seatIndex === undefined
-            ? "border-ochre/40 shadow-[0_8px_40px_rgba(0,0,0,0.7)]"
-            : ""
+        style={seatIndex === undefined ? undefined : { borderColor: seatColour(seatIndex) }}
+        className={`relative flex max-h-[90vh] w-full flex-col gap-3 overflow-hidden rounded-lg border bg-panel p-4 shadow-[0_8px_40px_rgba(0,0,0,0.7)] ${
+          seatIndex === undefined ? "border-ochre/40" : ""
         } ${wide ? "max-w-5xl" : "max-w-3xl"}`}
       >
+        {/* The edge breathing in the seat's colour — `animate-pulse`, the same
+            one the turn pill's dot uses and for the same reason: the table is
+            waiting on one person and the largest thing on the screen should say
+            whose. A ring of its own rather than the container's own border,
+            because pulsing the container fades everything inside it. */}
+        {seatIndex !== undefined && (
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0 rounded-lg border motion-safe:animate-pulse"
+            style={{ borderColor: seatColour(seatIndex) }}
+          />
+        )}
         {/*
           One header across the whole sheet.
 
@@ -199,6 +209,30 @@ export function DrawSheet({
         )}
 
         <div className="flex min-h-0 flex-1 gap-4">
+          {/* Whose turn this is, before the Karta it is about. Narrow on
+              purpose: it is a label, and the space it takes comes out of the
+              prose column rather than out of the sheet. */}
+          {actor && (
+            <div className="hidden w-[86px] shrink-0 flex-col gap-1.5 self-start sm:flex">
+              {actor.characterId && characterStandeeUrl(actor.characterId) && (
+                <Image
+                  src={characterStandeeUrl(actor.characterId)!}
+                  alt={actor.characterName}
+                  width={86}
+                  height={Math.round(86 / CHARACTER_ART_RATIO)}
+                  style={{ width: 86, borderColor: seatColour(seatIndex ?? 0) }}
+                  className="block h-auto rounded border"
+                  unoptimized
+                />
+              )}
+              <p className="truncate text-[11px] text-ink" title={actor.name}>
+                {actor.name}
+              </p>
+              <p className="truncate font-[family-name:var(--font-display)] text-[11px] tracking-wide text-ochre">
+                {actor.characterName}
+              </p>
+            </div>
+          )}
           {art && (
             <div className="relative hidden shrink-0 self-start sm:block">
               {/* The size the Księga and every hover read a Karta at.
