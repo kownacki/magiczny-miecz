@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { apply } from "../change";
-import { aHolding, aSeat, aTable } from "../fixture";
+import { aHolding, aSeat, aTable, ports } from "../fixture";
+import { scriptedRandom } from "@/lib/engine/ports";
+import { asSeatCharacter } from "@/lib/engine/characters";
+import { resolveDrawnCard } from "./resolving";
 import { asFieldId } from "@/lib/engine/board";
 import type { TurnPhase } from "@/lib/engine/turn";
 import {
@@ -282,3 +285,84 @@ describe("a Postać in the Krąg Płomieni", () => {
   });
 });
 
+
+/**
+ * A Karta is dealt with once, and so is an Obszar's own table.
+ *
+ * The copy lookup used to fall back to a settled one — „the first that is not
+ * resolved, or else any of them" — which reads as a safe default and is a way
+ * to resolve a Karta twice. The UROCZA DIABLICA showed it: a „Rzuć kostką"
+ * still standing on a screen that had not caught up threw a second die and
+ * applied a second row.
+ */
+describe("resolving something twice", () => {
+  /**
+   * `nth` on every copy, the way a frame written today has it: `resolved` names
+   * a *copy*, and a frame carrying no numbers cannot tell two of one Karta
+   * apart — which is why `listed` reads a bare id as naming all of them.
+   */
+  const onWrzosowiska = (drawn: string[], resolved: string[] = []) =>
+    aTable({
+      game: {
+        active_seat: 0,
+        turn_state: {
+          phase: "field",
+          fieldId: "wrzosowiska",
+          from: null,
+          draw: 0,
+          drawn: drawn.map((cardId, at) => ({
+            cardId,
+            cardClass: "stranger" as const,
+            nth: at + 1,
+          })),
+          resolved,
+        } as TurnPhase,
+      },
+      seats: [
+        aSeat({
+          id: "seat-a",
+          seat_index: 0,
+          character_id: asSeatCharacter("krasnolud"),
+          field_id: "wrzosowiska",
+        }),
+      ],
+    });
+
+  const asIs = <T,>(items: readonly T[]): T[] => [...items];
+
+  it("refuses a Karta already struck off this turn", async () => {
+    const table = onWrzosowiska(["urocza-diablica"], ["urocza-diablica#1"]);
+    await expect(
+      resolveDrawnCard(
+        table,
+        { cardId: "urocza-diablica", decided: {}, shuffle: asIs },
+        ports({ random: scriptedRandom([3]) }),
+      ),
+    ).rejects.toThrow(/już rozpatrzona/);
+  });
+
+  /** Two of one Karta are two Karty: settling one leaves the other. */
+  it("still reaches the second copy of a Karta drawn twice", async () => {
+    const table = onWrzosowiska(
+      ["urocza-diablica", "urocza-diablica"],
+      ["urocza-diablica#1"],
+    );
+    await expect(
+      resolveDrawnCard(
+        table,
+        { cardId: "urocza-diablica", decided: {}, shuffle: asIs },
+        ports({ random: scriptedRandom([3]) }),
+      ),
+    ).resolves.toMatchObject({ result: { face: 3 } });
+  });
+
+  it("says a Karta that is not here is not here", async () => {
+    await expect(
+      resolveDrawnCard(
+        onWrzosowiska([]),
+        { cardId: "urocza-diablica", decided: {}, shuffle: asIs },
+        ports(),
+      ),
+    ).rejects.toThrow(/Tej Karty tu nie ma/);
+  });
+});

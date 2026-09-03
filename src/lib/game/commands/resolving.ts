@@ -158,6 +158,15 @@ export async function resolveFieldOffer(
   const offer = script?.offers.find((o) => o.name === command.offerName);
   if (!offer) throw new Error(`Na tym Obszarze nie ma: ${command.offerName}`);
 
+  /* Once per visit, like a Karta — see the same refusal in `resolveDrawnCard`.
+     An Obszar's table that has already been thrown is struck off the frame's
+     resolved list, and a screen still offering it is a screen that has not
+     caught up rather than a second throw anybody is owed. */
+  const state = requireTop(snapshot.game.turn_state, "field");
+  if ((state.resolved ?? []).includes(offerKey(offer.name))) {
+    throw new Error(`${offer.name} — to już rozpatrzone.`);
+  }
+
   const table = offer.effect.op === "rzut";
 
   /**
@@ -289,10 +298,28 @@ export async function resolveDrawnCard(
    * left to `markResolved` because both halves have to agree — the copy that is
    * struck through must be the copy whose script just ran.
    */
-  const being =
-    state.drawn.find((entry) => entry.cardId === command.cardId && !listed(state.resolved ?? [], entry)) ??
-    state.drawn.find((entry) => entry.cardId === command.cardId);
-  if (!being) throw new Error("Tej Karty tu nie ma.");
+  const being = state.drawn.find(
+    (entry) => entry.cardId === command.cardId && !listed(state.resolved ?? [], entry),
+  );
+  if (!being) {
+    /**
+     * A Karta is dealt with once, and the difference is worth saying.
+     *
+     * This used to fall back to the settled copy — „the first that is not
+     * settled already, or else any of them" — which reads like a safe default
+     * and is a way to resolve a Karta twice. The UROCZA DIABLICA is the one
+     * that showed it: „Rzuć kostką" on a Karta that had already been rolled
+     * and struck through, and the app threw a second die for her and applied a
+     * second row. Nothing on this side is ever the reason a screen went stale,
+     * but everything on this side is the reason a stale screen can be pressed.
+     */
+    const here = state.drawn.some((entry) => entry.cardId === command.cardId);
+    throw new Error(
+      here
+        ? `${cardName(command.cardId)} — ta Karta jest już rozpatrzona.`
+        : "Tej Karty tu nie ma.",
+    );
+  }
 
   /**
    * 12.1's window, for a Karta that offers itself rather than stopping the turn.
