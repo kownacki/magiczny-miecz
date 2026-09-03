@@ -18,9 +18,7 @@ import { plural, roundShown } from "@/lib/engine/polish";
 import { SeatCard } from "./seat-card";
 import {
   CARD_NAMES,
-  CARD_TEXTS,
   CHARACTERS,
-  KIND_LABEL,
   asNature,
   type Seat,
 } from "./table";
@@ -32,14 +30,15 @@ import {
   tableScreenHolder as holderOfTableScreen,
 } from "./table-view";
 import { CardLibrary } from "./card-library";
-import { useTable, type Person, type Said } from "./use-table";
+import { useTable, type Said } from "./use-table";
 import { TestConsole, wakeConsole } from "./console";
 import { stageOf } from "@/lib/engine/console";
 import { TurnFab, owedLabel } from "./turn-fab";
 import { Lobby } from "./lobby";
 import { JoinGate, LeaveButton, ReturnGate, SecondTabNotice, TakeOverGate } from "./door";
-import { type LobbySeat } from "./lobby-view";
-import { TableLayout, type PublicSeat } from "./table-layout";
+import { TableLayout } from "./table-layout";
+import { asLobbySeat, asPublicSeat } from "./table-view";
+import { fieldName } from "@/lib/engine/polish";
 import { TurnQueue } from "./turn-queue";
 import { NowBox } from "./now-box";
 import { factsIn, turnSteps, windowsFor } from "@/lib/engine/turnWindows";
@@ -119,10 +118,6 @@ const BY_REF = new Map<string, TileCard>(
 const cardOfRef = (ref: string) => BY_REF.get(ref) ?? null;
 const PRINTED_SPELLS = (spells as Spell[]).length;
 
-const FIELD_NAMES = new Map(
-  [...FIELDS.values()].map((field) => [field.id, field.name]),
-);
-
 /**
  * What an Obszar is called, from an id that has not been narrowed yet.
  *
@@ -132,7 +127,7 @@ const FIELD_NAMES = new Map(
  */
 function fieldNamed(fieldId: string): string {
   const known = asFieldId(fieldId);
-  return (known === null ? undefined : FIELD_NAMES.get(known)) ?? fieldId;
+  return known === null ? fieldId : fieldName(known);
 }
 
 /** The shared table screen: the whole game state everyone is allowed to see. */
@@ -705,7 +700,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
     const held = seat?.holdings.find((candidate) => candidate.id === holdingId);
     if (!held) return;
     const name = CARD_NAMES.get(held.cardId) ?? held.cardId;
-    const here = seat?.field_id ? FIELD_NAMES.get(seat.field_id) : null;
+    const here = seat?.field_id ? fieldName(seat.field_id) : null;
     const where = here ? `na Obszarze ${here}` : "na Obszarze";
     /**
      * Two words for two destinations, and the dialog is where the difference
@@ -1730,7 +1725,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
               mine?.field_id
                 ? ringFields(mine.field_id).map((fieldId) => ({
                     fieldId,
-                    name: FIELD_NAMES.get(fieldId) ?? fieldId,
+                    name: fieldName(fieldId),
                   }))
                 : []
             }
@@ -1852,7 +1847,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
           canAct={mine?.id === turnState.seatId || isTableScreen}
           ring={ringFields(active.field_id).map((fieldId) => ({
             fieldId,
-            name: FIELD_NAMES.get(fieldId) ?? fieldId,
+            name: fieldName(fieldId),
           }))}
           busy={busy}
           onAnswer={(decided) => post("turn", { action: "answer", ...decided })}
@@ -2403,7 +2398,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                     (mySeatIndex !== null && active.seat_index === mySeatIndex) || isTableScreen
                   }
                   fieldName={
-                    active.field_id ? (FIELD_NAMES.get(active.field_id) ?? active.field_id) : "—"
+                    active.field_id ? fieldName(active.field_id) : "—"
                   }
                   fieldId={active.field_id}
                   windows={turnWindows}
@@ -2719,7 +2714,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                       mine.field_id
                         ? ringFields(mine.field_id).map((fieldId) => ({
                             fieldId,
-                            name: FIELD_NAMES.get(fieldId) ?? fieldId,
+                            name: fieldName(fieldId),
                           }))
                         : []
                     }
@@ -2801,68 +2796,6 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
  * of what changed: four of these fields used to be columns on the seat, and
  * every one of them is a fact about a person.
  */
-function asLobbySeat(seat: Seat, driver: Person | null): LobbySeat {
-  return {
-    id: seat.id,
-    seatIndex: seat.seat_index,
-    playerName: driver?.name ?? seat.player_name,
-    characterId: seat.character_id,
-    isHost: driver?.isHost ?? false,
-    driven: driver !== null,
-    driverId: driver?.id ?? null,
-    away: seat.away,
-    ready: driver?.ready ?? false,
-  };
-}
-
-/**
- * A seat as the rest of the table is allowed to see it.
- *
- * Everything the rulebook lays out face up (5.2, 6.2, and the tokens beside a
- * character card) is copied across in full. Concealed spells never reach the
- * browser at all — the server already replaced them with a count (9.3) — so
- * there is nothing here that could leak by being careless.
- */
-function asPublicSeat(seat: Seat, driver: Person | null): PublicSeat {
-  return {
-    id: seat.id,
-    seatIndex: seat.seat_index,
-    playerName: driver?.name ?? seat.player_name,
-    driverId: driver?.id ?? null,
-    characterId: seat.character_id,
-    fieldName: seat.field_id ? (FIELD_NAMES.get(seat.field_id) ?? seat.field_id) : "—",
-    fieldId: seat.field_id,
-    miecz: seat.sword_total,
-    swordOwn: seat.sword_own,
-    magia: seat.magic_total,
-    magicOwn: seat.magic_own,
-    mieczWWalce: seat.sword_in_fight,
-    magiaWWalce: seat.magic_in_fight,
-    life: seat.life,
-    gold: seat.gold,
-    nature: seat.nature,
-    eliminated: seat.eliminated,
-    driven: driver !== null,
-    away: seat.away,
-    isHost: driver?.isHost ?? false,
-    turnsLost: seat.turns_lost,
-    effects: seat.effects,
-    cards: seat.holdings
-      .filter((held) => held.kind !== "spell")
-      .map((held) => ({
-        cardId: held.cardId,
-        name: CARD_NAMES.get(held.cardId) ?? held.cardId,
-        text: CARD_TEXTS.get(held.cardId),
-        kindLabel: KIND_LABEL[held.kind],
-        // The roster is the one place a rival's Przedmioty are drawn with no
-        // body under them, so what is worn and what is merely carried is a
-        // mark on the tile — see `WornMark`.
-        slot: held.slot ?? null,
-      })),
-    hiddenSpells:
-      seat.hidden_count + seat.holdings.filter((held) => held.kind === "spell").length,
-  };
-}
 
 function Centered({ children }: { children: React.ReactNode }) {
   return (

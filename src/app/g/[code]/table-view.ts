@@ -1,11 +1,11 @@
 /** The questions the table screen asks of an Envelope, away from the component that draws the answers. */
 
-import { FIELDS, ringFields, type FieldId } from "@/lib/engine/board";
-import { CARD_NAMES, type Seat } from "./table";
+import { ringFields, type FieldId } from "@/lib/engine/board";
+import { fieldName } from "@/lib/engine/polish";
+import { CARD_NAMES, CARD_TEXTS, KIND_LABEL, type Seat } from "./table";
 import type { FieldCard, Person } from "./use-table";
-
-/** Every Obszar's printed name, by id. */
-const FIELD_NAMES = new Map([...FIELDS.values()].map((field) => [field.id, field.name]));
+import type { LobbySeat } from "./lobby-view";
+import type { PublicSeat } from "./table-layout";
 
 /**
  * The twin of `lobby-view.ts`, and here for the reason its own header gives:
@@ -98,13 +98,86 @@ export function boardCards(
   return fieldCards.map((row) => ({
     id: row.id,
     name: CARD_NAMES.get(row.cardId) ?? row.cardId,
-    where: FIELD_NAMES.get(row.fieldId) ?? row.fieldId,
+    where: fieldName(row.fieldId),
     moveTo: ringFields(row.fieldId)
       .filter(
         (fieldId) =>
           fieldId !== row.fieldId &&
           !seats.some((seat) => !seat.eliminated && seat.field_id === fieldId),
       )
-      .map((fieldId) => ({ fieldId, name: FIELD_NAMES.get(fieldId) ?? fieldId })),
+      .map((fieldId) => ({ fieldId, name: fieldName(fieldId) })),
   }));
+}
+
+/**
+ * A chair as the poczekalnia draws it, and as the table draws it.
+ *
+ * Both were inside the page component, which is exactly what this file's header
+ * says is the wrong place for them: they are questions asked of an Envelope,
+ * they have one right answer, and nothing could ask them. `asPublicSeat` is the
+ * bigger of the two and the one worth having reachable — it is where a rival's
+ * Postać becomes the numbers everybody at the table is allowed to see, and it
+ * decides what is *not* among them.
+ */
+export function asLobbySeat(seat: Seat, driver: Person | null): LobbySeat {
+  return {
+    id: seat.id,
+    seatIndex: seat.seat_index,
+    playerName: driver?.name ?? seat.player_name,
+    characterId: seat.character_id,
+    isHost: driver?.isHost ?? false,
+    driven: driver !== null,
+    driverId: driver?.id ?? null,
+    away: seat.away,
+    ready: driver?.ready ?? false,
+  };
+}
+
+/**
+ * A seat as the rest of the table is allowed to see it.
+ *
+ * Everything the rulebook lays out face up (5.2, 6.2, and the tokens beside a
+ * character card) is copied across in full. Concealed spells never reach the
+ * browser at all — the server already replaced them with a count (9.3) — so
+ * there is nothing here that could leak by being careless.
+ */
+export function asPublicSeat(seat: Seat, driver: Person | null): PublicSeat {
+  return {
+    id: seat.id,
+    seatIndex: seat.seat_index,
+    playerName: driver?.name ?? seat.player_name,
+    driverId: driver?.id ?? null,
+    characterId: seat.character_id,
+    fieldName: seat.field_id ? (fieldName(seat.field_id)) : "—",
+    fieldId: seat.field_id,
+    miecz: seat.sword_total,
+    swordOwn: seat.sword_own,
+    magia: seat.magic_total,
+    magicOwn: seat.magic_own,
+    mieczWWalce: seat.sword_in_fight,
+    magiaWWalce: seat.magic_in_fight,
+    life: seat.life,
+    gold: seat.gold,
+    nature: seat.nature,
+    eliminated: seat.eliminated,
+    driven: driver !== null,
+    away: seat.away,
+    isHost: driver?.isHost ?? false,
+    turnsLost: seat.turns_lost,
+    effects: seat.effects,
+    cards: seat.holdings
+      .filter((held) => held.kind !== "spell")
+      .map((held) => ({
+        cardId: held.cardId,
+        name: CARD_NAMES.get(held.cardId) ?? held.cardId,
+        text: CARD_TEXTS.get(held.cardId),
+        kindLabel: KIND_LABEL[held.kind],
+        // The roster is the one place a rival's Przedmioty are drawn with no
+        // body under them, so what is worn and what is merely carried is a
+        // mark on the tile — see `WornMark`.
+        slot: held.slot ?? null,
+      })),
+    hiddenSpells:
+      seat.hidden_count + seat.holdings.filter((held) => held.kind === "spell").length,
+  };
 }

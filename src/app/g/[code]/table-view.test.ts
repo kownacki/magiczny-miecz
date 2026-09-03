@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { asFieldId } from "@/lib/engine/board";
 import {
+  asPublicSeat,
   boardCards,
   driverOf,
   otherSeats,
@@ -129,5 +130,53 @@ describe("the Karty lying on the board", () => {
     const dead = seat({ field_id: asFieldId("swiatynia-bogini-nemed"), eliminated: true });
     const [card] = boardCards([lying()], [dead]);
     expect(card.moveTo.map((one) => one.fieldId)).toContain("swiatynia-bogini-nemed");
+  });
+});
+
+/**
+ * What the table is allowed to see of somebody else's Postać.
+ *
+ * The first thing asked of this since it stopped being a closure inside a
+ * 2900-line component, and the question worth asking first is the one about
+ * secrecy: 9.3 says a player's Zaklęcia are theirs, so what crosses to the
+ * roster is a *count* and never a card. That was decided in a `.map()` nobody
+ * could reach.
+ */
+describe("a rival's Postać, as everybody else may see it", () => {
+  const withCards = (over: Partial<Seat> = {}) =>
+    seat({
+      holdings: [
+        { id: "h-1", cardId: "miecz", kind: "item", slot: "hand-main" },
+        { id: "h-2", cardId: "zaklecie-a", kind: "spell", slot: null },
+        { id: "h-3", cardId: "zaklecie-b", kind: "spell", slot: null },
+      ],
+      hidden_count: 0,
+      ...over,
+    } as Partial<Seat>);
+
+  it("counts the Zaklęcia and names none of them (9.3)", () => {
+    const seen = asPublicSeat(withCards(), null);
+    expect(seen.hiddenSpells).toBe(2);
+    expect(seen.cards.map((one) => one.cardId)).toEqual(["miecz"]);
+  });
+
+  /**
+   * A Zaklęcie the server never sent and one it sent face down are the same
+   * secret, and the roster shows one number for both — otherwise the count
+   * itself would say which kind you were holding.
+   */
+  it("adds the ones the server withheld to the ones it sent", () => {
+    expect(asPublicSeat(withCards({ hidden_count: 3 } as Partial<Seat>), null).hiddenSpells).toBe(5);
+  });
+
+  it("prints the Obszar's name, and a dash for a Postać not yet on the board", () => {
+    expect(asPublicSeat(withCards(), null).fieldName).toBe("Mroczna Polana");
+    expect(asPublicSeat(withCards({ field_id: null } as Partial<Seat>), null).fieldName).toBe("—");
+  });
+
+  /** The chair carries the fallback name; a driver's own name wins over it. */
+  it("prefers the driver's name to the chair's", () => {
+    expect(asPublicSeat(withCards({ player_name: "krzesło" } as Partial<Seat>), null).playerName).toBe("krzesło");
+    expect(asPublicSeat(withCards(), person({ name: "Ola" })).playerName).toBe("Ola");
   });
 });
