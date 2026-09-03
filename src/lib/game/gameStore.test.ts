@@ -130,6 +130,43 @@ describe("a game kept somewhere that is not Postgres", () => {
     expect(tables.moves).toHaveLength(1);
   });
 
+  /**
+   * The other half of "or writes none of it", and the newer one.
+   *
+   * The compare-and-swap only ever covered a *loser*: somebody who read the
+   * table, was beaten to the games row, and went away with nothing. It said
+   * nothing about the winner failing at statement nine of nineteen — which is
+   * what happened on 2026-09-03, when a Tarcza Tolimana moved, the turn
+   * advanced, and the journal line was then refused by a check constraint the
+   * database had never been migrated to. The Karta had moved and nothing said
+   * so.
+   *
+   * Reproduced here with the one constraint the fake enforces: a journal line
+   * whose number is already taken. The seat patch is ordered before it and must
+   * go back with it.
+   */
+  it("takes back what it wrote when a later statement is refused", async () => {
+    const tables = seed();
+    // The mark says 12 and the journal already holds 13 — the shape a drifting
+    // counter leaves, and all this needs is for the insert to be refused.
+    tables.moves.push({ id: "m1", game_id: "g1", seq: 13, kind: "roll" });
+    const store = memoryStore(tables);
+    const snapshot = await store.load("g1");
+
+    await expect(
+      store.commit(snapshot, {
+        game: { round: 99 },
+        seats: [{ id: "s1", patch: { life: 1 } }],
+        journal: [{ seatId: "s1", round: 3, kind: "roll", payload: {} }],
+      }),
+    ).rejects.toThrow(/duplicate key/);
+
+    // Not a Conflict — nobody else moved — and not a half-written game either.
+    expect(tables.games[0]).toMatchObject({ round: 3, revision: 7, journal_seq: 12 });
+    expect(tables.seats[0]).toMatchObject({ life: 4 });
+    expect(tables.moves.map((row) => row.seq)).toEqual([12, 13]);
+  });
+
   it("writes nothing at all for a changeset that asks for nothing", async () => {
     const tables = seed();
     const store = memoryStore(tables);

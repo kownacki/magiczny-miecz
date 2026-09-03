@@ -3,7 +3,8 @@
 import { type DbHandle } from "@/lib/supabase";
 import { handleNow } from "./handle";
 import { activeStore, type GameStore } from "./gameStore";
-import { tablesFor } from "./tables";
+import { writeTo } from "./tables";
+import type { Statement } from "./statements";
 import {
   GAME_COLUMNS,
   fieldCardsFor,
@@ -574,21 +575,6 @@ export class Conflict extends Error {
 }
 
 /**
- * Writes the changeset, or writes none of it.
- *
- * The games row is taken first and taken conditionally — `revision` must still
- * be what the snapshot read — which makes it the lock for the whole change. If
- * somebody got there first the update matches no row, nothing else has been
- * written yet, and the caller can throw the decision away and make it again
- * against what is actually there. This is `joinGame`'s trick, which has been
- * the only correct concurrency in this codebase for a while, applied to
- * everything instead of to sitting down.
- *
- * What it does not survive is the process dying between the games row and the
- * last child write. Closing that needs a real transaction, which is a change of
- * commit and nothing else: no command knows how its changeset is written.
- */
-/**
  * Whether a changeset asks for anything at all.
  *
  * A command that decided to do nothing is not the same as a command that
@@ -622,15 +608,200 @@ export function isEmpty(writes: Changeset): boolean {
   );
 }
 
+/**
+ * Everything the changeset writes, in the order it has to happen, as data.
+ *
+ * Pulled out of `commit` and handed back rather than issued, because a change
+ * that lands whole or not at all has to be *one* thing before it can be handed
+ * to anything — see `statements.ts` for the failure that made that necessary,
+ * and for why the runner is generic instead of knowing what a Karta is.
+ *
+ * Being data also makes the order testable. "Removals before patches, so a
+ * changeset that does both to one seat lands the way `apply` folded it" used to
+ * be provable only by watching a fake database take nineteen calls in turn; it
+ * is now a list somebody can read.
+ */
+export function statementsFor(snapshot: Snapshot, writes: Changeset): Statement[] {
+  const gameId = snapshot.game.id;
+  const base = snapshot.game.revision;
+  const lines = writes.journal ?? [];
+  const out: Statement[] = [];
+
+  /**
+   * The games row, taken first and taken conditionally, which makes it the lock
+   * for the whole change — and now also the first statement of one transaction,
+   * so every writer at this table queues behind the same row in the same order.
+   *
+   * `expect: 1` is the compare-and-swap. If `revision` has moved the update
+   * matches nothing, the runner undoes the statements after it and answers
+   * false, and `commit` turns that into a `Conflict`: the caller throws its
+   * decision away and makes it again against what is actually there. This is
+   * `joinGame`'s trick, which was the only correct concurrency in this codebase
+   * for a while, applied to everything instead of to sitting down.
+   */
+  out.push(
+    writeTo.games.update(
+      { id: gameId, revision: base },
+      {
+        ...(writes.game ?? {}),
+        revision: base + 1,
+        /**
+         * The journal's line numbers, claimed in the same statement that wins
+         * the right to write anything.
+         *
+         * They used to be counted off `max(seq)` read at snapshot time and
+         * written last, after the seats and the holdings — so a second change
+         * could read the table, win this row, and reach the journal while the
+         * first was still working, both holding the same number. The constraint
+         * said so, out loud, to whoever was typing:
+         *
+         *   duplicate key value violates unique constraint "moves_game_id_seq_key"
+         *
+         * That was answered with a retry, which worked and left a race that
+         * merely had to be recovered from. Here the range is *claimed* rather
+         * than guessed: this update is the lock, only one writer can take it,
+         * and the numbers it takes are gone before anybody else reads the row.
+         */
+        journal_seq: snapshot.journalSeq + lines.length,
+        // Every change is a moment the table was being played, which is what a
+        // list of games needs to sort by — not when it was opened.
+        last_played_at: new Date().toISOString(),
+      },
+      1,
+    ),
+  );
+
+  // Removed before patched, in the order `apply` folds them, so that a change
+  // doing both to one seat lands the way it said it would.
+  //
+  // Scoped to this game, like every other delete below it. The ids come out of
+  // a snapshot of this table and cannot be anything else today — but this
+  // schema shares a Postgres instance with three other projects and the
+  // service-role key reaches all of them, so a delete whose only filter is a
+  // list of ids is one bad id away from being somebody else's problem.
+  if (writes.seatsRemoved?.length) {
+    out.push(writeTo.seats.remove({ game_id: gameId }, { column: "id", values: writes.seatsRemoved }));
+  }
+  for (const seat of writes.seats ?? []) {
+    // Passed whole rather than spread into a literal, so the excess-property
+    // check does not fire here — `SeatPatch` is what guards this one, and it is
+    // built off `SeatRow` for exactly that reason.
+    out.push(writeTo.seats.update({ id: seat.id }, seat.patch));
+  }
+
+  if (writes.usersRemoved?.length) {
+    out.push(writeTo.users.remove({ game_id: gameId }, { column: "id", values: writes.usersRemoved }));
+  }
+  if (writes.usersNew?.length) {
+    out.push(
+      // A spread suppresses the excess-property check, so what protects this is
+      // `NewUser` upstream rather than the door itself. One of the three writes
+      // in this file the compiler cannot see into — see `tables.ts`.
+      writeTo.users.insert(writes.usersNew.map((fresh) => ({ ...fresh, game_id: gameId }))),
+    );
+  }
+  for (const user of writes.users ?? []) {
+    out.push(writeTo.users.update({ id: user.id }, user.patch));
+  }
+
+  if (writes.holdings?.delete?.length) {
+    out.push(
+      writeTo.holdings.remove({ game_id: gameId }, { column: "id", values: writes.holdings.delete }),
+    );
+  }
+  for (const held of writes.holdings?.patch ?? []) {
+    out.push(writeTo.holdings.update({ id: held.id }, held.patch));
+  }
+  if (writes.holdings?.insert?.length) {
+    out.push(writeTo.holdings.insert(writes.holdings.insert.map((one) => ({ game_id: gameId, ...one }))));
+  }
+
+  if (writes.fieldCards?.delete?.length) {
+    out.push(
+      writeTo.fieldCards.remove({ game_id: gameId }, { column: "id", values: writes.fieldCards.delete }),
+    );
+  }
+  for (const card of writes.fieldCards?.patch ?? []) {
+    out.push(writeTo.fieldCards.update({ id: card.id }, card.patch));
+  }
+  if (writes.fieldCards?.insert?.length) {
+    out.push(
+      writeTo.fieldCards.insert(
+        writes.fieldCards.insert.map((one) => ({
+          game_id: gameId,
+          ...one,
+          // Spelled out rather than spread, exactly as the holdings insert above
+          // does it: the field is optional in a `Changeset` and `not null` in the
+          // table, and an omitted one spreads as `undefined`, which the runner
+          // drops and the column then refuses. It cost a half-written commit the
+          // first time a card went down that nobody had conjured.
+          granted: one.granted ?? false,
+          // Null rather than undefined for the same reason, though this column
+          // takes one: an omitted key and an explicit null are the same row here
+          // and it is worth them looking the same in the code too.
+          pool: one.pool ?? null,
+        })),
+      ),
+    );
+  }
+
+  if (writes.fieldGold?.delete?.length) {
+    out.push(
+      writeTo.fieldGold.remove({ game_id: gameId }, { column: "id", values: writes.fieldGold.delete }),
+    );
+  }
+  for (const row of writes.fieldGold?.patch ?? []) {
+    out.push(writeTo.fieldGold.update({ id: row.id }, row.patch));
+  }
+  if (writes.fieldGold?.insert?.length) {
+    out.push(writeTo.fieldGold.insert(writes.fieldGold.insert.map((one) => ({ game_id: gameId, ...one }))));
+  }
+
+  if (writes.effects?.delete?.length) {
+    out.push(
+      writeTo.seatEffects.remove({ game_id: gameId }, { column: "id", values: writes.effects.delete }),
+    );
+  }
+  for (const effect of writes.effects?.patch ?? []) {
+    out.push(writeTo.seatEffects.update({ id: effect.id }, effect.patch));
+  }
+  if (writes.effects?.insert?.length) {
+    out.push(writeTo.seatEffects.insert(writes.effects.insert.map((one) => ({ game_id: gameId, ...one }))));
+  }
+
+  // Numbered from the high-water mark the snapshot read, written in one insert,
+  // and — unlike every journal write before this — it can no longer be the odd
+  // one out. It used to be the nineteenth statement of nineteen, so a line the
+  // database refused arrived after the Karta had already moved; now a refusal
+  // here takes the Karta back with it.
+  if (lines.length > 0) out.push(journalStatement(gameId, snapshot.journalSeq, lines, snapshot));
+
+  return out;
+}
+
+/**
+ * Writes the changeset, or writes none of it.
+ *
+ * Both halves of that are now literal. The games row is taken first and taken
+ * conditionally — `revision` must still be what the snapshot read — which makes
+ * it the lock, so somebody who was beaten to it writes nothing and can throw
+ * the decision away and make it again against what is actually there. And the
+ * rest of the change goes with it: the whole list runs inside one transaction,
+ * so a statement the database refuses takes back the ones before it.
+ *
+ * The second half is new, and it is what the sentence used to promise without
+ * keeping. It used to say: "What it does not survive is the process dying
+ * between the games row and the last child write. Closing that needs a real
+ * transaction, which is a change of commit and nothing else: no command knows
+ * how its changeset is written." That turned out to be exactly right, including
+ * about the size of it.
+ */
 export async function commit(
   snapshot: Snapshot,
   writes: Changeset,
   on: DbHandle = handleNow(),
 ): Promise<number> {
-  const t = tablesFor(on);
-  const gameId = snapshot.game.id;
   const base = snapshot.game.revision;
-  const next = base + 1;
 
   /**
    * Nothing to write, so nothing is written — not even the revision.
@@ -647,181 +818,43 @@ export async function commit(
    */
   if (isEmpty(writes)) return base;
 
-  const lines = writes.journal ?? [];
-  const { data: won, error: gameError } = await on
-    .from("games")
-    .update({
-      ...(writes.game ?? {}),
-      revision: next,
-      /**
-       * The journal's line numbers, claimed in the same statement that wins
-       * the right to write anything.
-       *
-       * They used to be counted off `max(seq)` read at snapshot time and
-       * written last, after the seats and the holdings — so a second change
-       * could read the table, win this row, and reach the journal while the
-       * first was still working, both holding the same number. The constraint
-       * said so, out loud, to whoever was typing:
-       *
-       *   duplicate key value violates unique constraint "moves_game_id_seq_key"
-       *
-       * That was answered with a retry, which worked and left a race that
-       * merely had to be recovered from. Here the range is *claimed* rather
-       * than guessed: this update is the lock, only one writer can take it,
-       * and the numbers it takes are gone before anybody else reads the row.
-       */
-      journal_seq: snapshot.journalSeq + lines.length,
-      // Every change is a moment the table was being played, which is what a
-      // list of games needs to sort by — not when it was opened.
-      last_played_at: new Date().toISOString(),
-    })
-    .eq("id", gameId)
-    .eq("revision", base)
-    .select("revision");
-  if (gameError) throw new Failure(`commit(games): ${gameError.message}`);
-  if (!won || won.length === 0) throw new Conflict(gameId, base);
+  /**
+   * One call, and one transaction behind it.
+   *
+   * `apply_change` is generic — it runs a list of table writes and knows nothing
+   * about this game — so the decision above it is still the only one, made in
+   * one place, in TypeScript, by `statementsFor`. `fakeDb` answers the same call
+   * by applying the same list to a copy of its tables, which is what keeps
+   * `mm` and every save file on the commit path the browser uses rather than a
+   * cheaper one beside it. See `statements.ts`.
+   */
+  const { data: applied, error } = await on.rpc("apply_change", {
+    statements: statementsFor(snapshot, writes),
+  });
+  if (error) throw new Failure(`commit: ${error.message}`);
+  // False means the compare-and-swap matched no row: somebody else changed this
+  // game while we were deciding what to do to it, and everything after that
+  // first statement has been rolled back.
+  if (applied === false) throw new Conflict(snapshot.game.id, base);
 
-  // Removed before patched, in the order `apply` folds them, so that a change
-  // doing both to one seat lands the way it said it would.
-  //
-  // Scoped to this game, like every other delete below it. The ids come out of
-  // a snapshot of this table and cannot be anything else today — but this
-  // schema shares a Postgres instance with three other projects and the
-  // service-role key reaches all of them, so a delete whose only filter is a
-  // list of ids is one bad id away from being somebody else's problem.
-  if (writes.seatsRemoved?.length) {
-    const { error } = await on.from("seats").delete().eq("game_id", gameId).in("id", writes.seatsRemoved);
-    if (error) throw new Failure(`commit(seatsRemoved): ${error.message}`);
-  }
-  for (const seat of writes.seats ?? []) {
-    // Passed whole rather than spread into a literal, so the excess-property
-    // check does not fire here — `SeatPatch` is what guards this one, and it is
-    // built off `SeatRow` for exactly that reason.
-    const { error } = await t.seats.update(seat.patch).eq("id", seat.id);
-    if (error) throw new Failure(`commit(seats): ${error.message}`);
-  }
-
-  if (writes.usersRemoved?.length) {
-    const { error } = await on.from("users").delete().eq("game_id", gameId).in("id", writes.usersRemoved);
-    if (error) throw new Failure(`commit(usersRemoved): ${error.message}`);
-  }
-  if (writes.usersNew?.length) {
-    const { error } = await on
-      .from("users")
-      // A spread suppresses the excess-property check, so what protects this is
-      // `NewUser` upstream rather than the door itself. One of the three writes
-      // in this file the compiler cannot see into — see `t.ts`.
-      .insert(writes.usersNew.map((fresh) => ({ ...fresh, game_id: gameId })));
-    if (error) throw new Failure(`commit(usersNew): ${error.message}`);
-  }
-  for (const user of writes.users ?? []) {
-    const { error } = await t.users.update(user.patch).eq("id", user.id);
-    if (error) throw new Failure(`commit(users): ${error.message}`);
-  }
-
-  if (writes.holdings?.delete?.length) {
-    const { error } = await on.from("holdings").delete().eq("game_id", gameId).in("id", writes.holdings.delete);
-    if (error) throw new Failure(`commit(holdings.delete): ${error.message}`);
-  }
-  for (const held of writes.holdings?.patch ?? []) {
-    const { error } = await t.holdings.update(held.patch).eq("id", held.id);
-    if (error) throw new Failure(`commit(holdings.patch): ${error.message}`);
-  }
-  if (writes.holdings?.insert?.length) {
-    const { error } = await on
-      .from("holdings")
-      .insert(writes.holdings.insert.map((one) => ({ game_id: gameId, ...one })));
-    if (error) throw new Failure(`commit(holdings.insert): ${error.message}`);
-  }
-
-  if (writes.fieldCards?.delete?.length) {
-    const { error } = await on.from("field_cards").delete().eq("game_id", gameId).in("id", writes.fieldCards.delete);
-    if (error) throw new Failure(`commit(fieldCards.delete): ${error.message}`);
-  }
-  for (const card of writes.fieldCards?.patch ?? []) {
-    const { error } = await t.fieldCards.update(card.patch).eq("id", card.id);
-    if (error) throw new Failure(`commit(fieldCards.patch): ${error.message}`);
-  }
-  if (writes.fieldCards?.insert?.length) {
-    const { error } = await t.fieldCards.insert(
-      writes.fieldCards.insert.map((one) => ({
-        game_id: gameId,
-        ...one,
-        // Spelled out rather than spread, exactly as the holdings insert above
-        // does it: the field is optional in a `Changeset` and `not null` in the
-        // table, and an omitted one spreads as `undefined`, which PostgREST
-        // sends as null and the column refuses. It cost a half-written commit
-        // the first time a card went down that nobody had conjured.
-        granted: one.granted ?? false,
-        // Null rather than undefined for the same reason, though this column
-        // takes one: an omitted key and an explicit null are the same row here
-        // and it is worth them looking the same in the code too.
-        pool: one.pool ?? null,
-      })),
-    );
-    if (error) throw new Failure(`commit(fieldCards.insert): ${error.message}`);
-  }
-
-  if (writes.fieldGold?.delete?.length) {
-    const { error } = await on
-      .from("field_gold")
-      .delete()
-      .eq("game_id", gameId)
-      .in("id", writes.fieldGold.delete);
-    if (error) throw new Failure(`commit(fieldGold.delete): ${error.message}`);
-  }
-  for (const row of writes.fieldGold?.patch ?? []) {
-    const { error } = await t.fieldGold.update(row.patch).eq("id", row.id);
-    if (error) throw new Failure(`commit(fieldGold.patch): ${error.message}`);
-  }
-  if (writes.fieldGold?.insert?.length) {
-    const { error } = await t.fieldGold.insert(
-      writes.fieldGold.insert.map((one) => ({ game_id: gameId, ...one })),
-    );
-    if (error) throw new Failure(`commit(fieldGold.insert): ${error.message}`);
-  }
-
-  if (writes.effects?.delete?.length) {
-    const { error } = await on.from("seat_effects").delete().eq("game_id", gameId).in("id", writes.effects.delete);
-    if (error) throw new Failure(`commit(effects.delete): ${error.message}`);
-  }
-  for (const effect of writes.effects?.patch ?? []) {
-    const { error } = await t.seatEffects.update(effect.patch).eq("id", effect.id);
-    if (error) throw new Failure(`commit(effects.patch): ${error.message}`);
-  }
-  if (writes.effects?.insert?.length) {
-    const { error } = await on
-      .from("seat_effects")
-      .insert(writes.effects.insert.map((one) => ({ game_id: gameId, ...one })));
-    if (error) throw new Failure(`commit(effects.insert): ${error.message}`);
-  }
-
-  // Numbered from the high-water mark the snapshot read, written in one insert,
-  // and — unlike every journal write before this — the error is looked at. A
-  // line that could not be written was silently dropped, which is the one
-  // failure the journal must not have: it exists to be believed when the app
-  // and the board disagree.
-  if (lines.length > 0) await appendJournal(gameId, snapshot.journalSeq, lines, snapshot, on);
-
-  return next;
+  return base + 1;
 }
 
 /**
- * Writes the lines, numbered from the range this change has already claimed.
+ * The journal's lines, numbered from the range this change has already claimed.
  *
- * No retry and nothing to recover from: `commit` took these numbers in the
- * same statement that won the games row, so nobody else can be holding them.
- * The unique constraint on (game_id, seq) stays as the thing that would say so
- * if that ever stopped being true.
+ * No retry and nothing to recover from: the games update took these numbers in
+ * the same statement that won the row, so nobody else can be holding them. The
+ * unique constraint on (game_id, seq) stays as the thing that would say so if
+ * that ever stopped being true.
  */
-async function appendJournal(
+function journalStatement(
   gameId: string,
   from: number,
   lines: readonly JournalWrite[],
   /** Read for one thing: who was driving each seat at the moment this happened. */
   snapshot: Snapshot,
-  on: DbHandle,
-): Promise<void> {
+): Statement {
   /**
    * The name is frozen here rather than looked up when the line is read.
    *
@@ -843,8 +876,7 @@ async function appendJournal(
     return snapshot.users.find((one) => one.seat_index === seat.seat_index) ?? null;
   };
 
-  const t = tablesFor(on);
-  const { error } = await t.moves.insert(
+  return writeTo.moves.insert(
     lines.map((line, index) => ({
       game_id: gameId,
       seq: from + 1 + index,
@@ -857,10 +889,6 @@ async function appendJournal(
       manual: line.manual ?? false,
     })),
   );
-  // Looked at, unlike every journal write before this one: a line that could
-  // not be written was dropped in silence, which is the single failure the
-  // journal must not have.
-  if (error) throw new Failure(`commit(moves): ${error.message}`);
 }
 
 /**

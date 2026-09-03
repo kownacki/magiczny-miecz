@@ -2,6 +2,7 @@
 
 import { db, type DbHandle } from "@/lib/supabase";
 import type { EffectRow } from "./change";
+import type { Statement, TableName } from "./statements";
 import type { FieldCardRow, FieldGoldRow, GameRow, HoldingRow, SeatRow, UserRow } from "./store";
 
 /**
@@ -81,6 +82,63 @@ function table<Row, Extra = Record<never, never>>(on: DbHandle, name: string) {
 }
 
 /**
+ * The same table, for a write that is a value.
+ *
+ * A commit no longer issues its writes — it folds them into a list of
+ * `Statement`s and hands the list to whatever is holding the game, so that all
+ * of it lands or none of it does (see `statements.ts`). That moved every write
+ * in `commit` out of the builders above and into object literals, which is
+ * exactly where the check this file exists for would have been lost: a
+ * `Statement`'s `patch` is a `Record<string, unknown>` and would have taken a
+ * column dropped last week without a word.
+ *
+ * So the door is the same door, one step earlier. The types are the ones above,
+ * the check is the same excess-property check on the same object literals, and
+ * what comes out the far side is data rather than a call. No handle, because a
+ * value does not need one — which is also what lets `commit` build its whole
+ * list before anything has touched a database.
+ */
+function door<Row, Extra = Record<never, never>>(name: TableName) {
+  return {
+    insert: (rows: (Write<Row> & Extra) | (Write<Row> & Extra)[]): Statement => ({
+      op: "insert",
+      table: name,
+      rows: (Array.isArray(rows) ? rows : [rows]) as Record<string, unknown>[],
+    }),
+    /**
+     * `expect` is the compare-and-swap's, and only the `games` row uses it: the
+     * update names the revision the snapshot read and claims it must match one
+     * row. A runner that matches a different number writes nothing at all.
+     */
+    update: (
+      where: Write<Row> & Partial<Extra>,
+      patch: Write<Omit<Row, "id">> & Partial<Extra>,
+      expect?: number,
+    ): Statement => ({
+      op: "update",
+      table: name,
+      eq: where as Record<string, unknown>,
+      patch: patch as Record<string, unknown>,
+      ...(expect === undefined ? {} : { expect }),
+    }),
+    /**
+     * `anyOf` is spelled separately from `where` because it is the only filter
+     * here that is not equality, and because every caller uses it the same way:
+     * a list of ids, narrowed by the `game_id` beside it.
+     */
+    remove: (
+      where: Write<Row> & Partial<Extra>,
+      anyOf?: { column: keyof Row & string; values: readonly string[] },
+    ): Statement => ({
+      op: "delete",
+      table: name,
+      eq: where as Record<string, unknown>,
+      ...(anyOf ? { anyOf } : {}),
+    }),
+  };
+}
+
+/**
  * The write-only columns, which no `Row` carries.
  *
  * `claim_token` is the secret that proves a device is a person, and it is left
@@ -97,6 +155,21 @@ interface UserSecrets {
 
 interface Owned {
   game_id: string;
+}
+
+/**
+ * The games row's write-only columns.
+ *
+ * Written by every change and read by nothing that builds a `GameRow`, which is
+ * why neither is in `GAME_COLUMNS`: `last_played_at` is what the lobby's own
+ * list sorts by, and `started_at` is there for whoever opens this table in
+ * Postgres one day. `columns.test.ts` says so from the other side. Named here
+ * for the same reason `claim_token` is — writable, unreadable, and not smuggled
+ * through as a cast.
+ */
+interface GameStamps {
+  last_played_at: string;
+  started_at: string;
 }
 
 /**
@@ -133,7 +206,7 @@ export function tablesFor(on: DbHandle) {
   return {
     seats: table<SeatRow, Owned>(on, "seats"),
     users: table<UserRow, UserSecrets>(on, "users"),
-    games: table<GameRow>(on, "games"),
+    games: table<GameRow, GameStamps>(on, "games"),
     holdings: table<HoldingRow, Owned>(on, "holdings"),
     fieldCards: table<FieldCardRow, Owned>(on, "field_cards"),
     fieldGold: table<FieldGoldRow, Owned>(on, "field_gold"),
@@ -145,3 +218,23 @@ export function tablesFor(on: DbHandle) {
 /** The default handle's, for the reads and the two writes that are not a change. */
 export const { seats, users, games, holdings, fieldCards, fieldGold, seatEffects, moves } =
   tablesFor(db);
+
+/**
+ * Every typed door again, for the writes a commit turns into statements.
+ *
+ * A constant rather than a factory, because a statement is a value and there is
+ * no handle to hand it. The two sets name the same eight tables with the same
+ * eight row types, which is the point: `createGame` and `joinGame` still call
+ * PostgREST directly — a changeset can neither invent an id nor hand a token
+ * back — and everything else goes through here.
+ */
+export const writeTo = {
+  seats: door<SeatRow, Owned>("seats"),
+  users: door<UserRow, UserSecrets>("users"),
+  games: door<GameRow, GameStamps>("games"),
+  holdings: door<HoldingRow, Owned>("holdings"),
+  fieldCards: door<FieldCardRow, Owned>("field_cards"),
+  fieldGold: door<FieldGoldRow, Owned>("field_gold"),
+  seatEffects: door<EffectRow, Owned>("seat_effects"),
+  moves: door<MoveWrite, Owned>("moves"),
+};

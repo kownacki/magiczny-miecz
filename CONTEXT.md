@@ -28,6 +28,14 @@ Writing a **Changeset**, taking the game row first and conditionally so that the
 whole of it lands or none of it does.
 _Avoid_: save, persist, flush
 
+**Statement**:
+One write to one table, as a value: an insert, an update or a delete, with the
+rows it names. A **Commit** folds a **Changeset** into an ordered list of them
+and hands the list to whatever is holding the game, which runs all of it or none
+of it. The list is the only thing that crosses that seam — the decision above it
+is made once, in TypeScript.
+_Avoid_: query, operation, mutation
+
 **Conflict**:
 Somebody else changed the game between reading the **Snapshot** and committing.
 _Avoid_: race, collision, stale write
@@ -85,7 +93,9 @@ moment, which is the whole reason they are ports.
 - A **Command** reads exactly one **Snapshot** and returns exactly one **Changeset**
 - A **Command** that cascades calls another with `apply(snapshot, soFar)`
 - `change()` is the only thing that both reads a **Snapshot** and performs a **Commit**
-- A **Commit** either advances the game's `revision` by one or raises a **Conflict**
+- A **Commit** either advances the game's `revision` by one or writes nothing at
+  all — a **Conflict** when somebody moved first, an error when the database
+  refused one of its **Statement**s
 - A **Port** has one **Binding** per mode, plus a scripted one for tests
 - Commands live one per cluster under `src/lib/game/commands/`; three files above
   them are the edges — `turnStore.ts` for the game, `lobbyStore.ts` for the

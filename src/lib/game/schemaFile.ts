@@ -120,3 +120,22 @@ export function kindsInFile(sql: string): string[] {
   if (to === -1) return [];
   return [...block.slice(from, to).matchAll(/'([a-z0-9-]+)'/g)].map((one) => one[1]).sort();
 }
+
+/**
+ * Every function the file creates.
+ *
+ * The same reason as `tablesInFile`: applied by hand, so the only way to know
+ * the database has one is to look. This half matters more than it reads —
+ * `apply_change` is what every write in the game goes through, so a database
+ * that never got it does not fail at a corner, it fails at the first move
+ * anybody makes.
+ */
+export function functionsInFile(sql: string): Set<string> {
+  const found = new Set<string>();
+  for (const one of sql.matchAll(
+    /create\s+(?:or\s+replace\s+)?function\s+magiczny_miecz\.([a-z_][a-z0-9_]*)\s*\(/g,
+  )) {
+    found.add(one[1]);
+  }
+  return found;
+}

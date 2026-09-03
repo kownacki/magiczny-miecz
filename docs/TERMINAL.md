@@ -105,6 +105,19 @@ gets its own simpler rules there are two games to keep honest — which is the
 exact reason companion mode is parked (see `COMPANION_PARKED` and the note in
 docs/TASKS.md). One conformance suite runs against every implementation.
 
+That rule has since been paid for once, and it is worth reading how. Making a
+commit atomic wants a `commit_change(...)` function in SQL — and a function in
+SQL cannot be called by a `Map`, so the naive version hands the offline store a
+second commit path, which is the thing this section exists to forbid. What went
+in instead is a **generic** runner on both sides: `commit` folds a `Changeset`
+into a list of `Statement`s (`src/lib/game/statements.ts`), and the list is what
+crosses. `magiczny_miecz.apply_change` runs it in one transaction; `fakeDb` runs
+the same list against a copy of its tables. Neither knows what a Karta is, and
+the compare-and-swap goes over as a row count on the games update, so it is
+still written once, in `commit`. The rule to take from it: when something the
+database can do and a `Map` cannot has to be added, push the *result* of the
+decision across the seam, never the decision.
+
 ## Save files
 
 The format is already designed: `fakeDb`'s `Tables` **is** a saved game —

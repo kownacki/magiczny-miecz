@@ -46,7 +46,7 @@
 
 import { readFileSync } from "node:fs";
 import { createClient } from "@supabase/supabase-js";
-import { kindsInFile, tablesInFile } from "../src/lib/game/schemaFile";
+import { functionsInFile, kindsInFile, tablesInFile } from "../src/lib/game/schemaFile";
 import { JOURNAL_KINDS } from "../src/lib/engine/journal";
 
 /** What `schema_shape()` hands back. Mirrored here so a change to one fails the other. */
@@ -57,6 +57,8 @@ interface Shape {
   ungranted: string[];
   /** `moves.kind`'s closed list, as the live constraint has it. */
   move_kinds: string[];
+  /** The functions the schema owns, live. */
+  functions: string[];
 }
 
 /** Wrapped rather than run at the top level: tsx loads this as CJS, where a
@@ -174,6 +176,29 @@ async function main(): Promise<never> {
     );
   }
 
+  // --- functions ------------------------------------------------------------
+  /**
+   * The same both-directions comparison as the tables, and for a sharper reason.
+   *
+   * `apply_change` is the single call every write in the game makes: a database
+   * that never had the migration applied refuses the first move anybody tries,
+   * not some corner of the rules. Compared by name only — what a function *does*
+   * is not something this can read, and pretending otherwise is the false-alarm
+   * trap the note at the top is about.
+   */
+  const liveFunctions = new Set(live.functions ?? []);
+  const fileFunctions = functionsInFile(readFileSync("db/schema.sql", "utf8"));
+  for (const one of fileFunctions) {
+    if (!liveFunctions.has(one)) {
+      drift.push(`function ${one}(): in the file, not in the database — a migration nobody ran`);
+    }
+  }
+  for (const one of liveFunctions) {
+    if (!fileFunctions.has(one)) {
+      drift.push(`function ${one}(): in the database, not in the file`);
+    }
+  }
+
   if (live.ungranted.length > 0) {
     drift.push(
       `not granted to anon/authenticated/service_role: ${named(live.ungranted)}` +
@@ -184,7 +209,10 @@ async function main(): Promise<never> {
   // --- say so ---------------------------------------------------------------
   if (drift.length === 0) {
     const columns = [...file.values()].reduce((sum, one) => sum + one.size, 0);
-    console.log(`db/schema.sql matches the database — ${file.size} tables, ${columns} columns.`);
+    console.log(
+      `db/schema.sql matches the database — ${file.size} tables, ${columns} columns,` +
+        ` ${fileFunctions.size} function${fileFunctions.size === 1 ? "" : "s"}.`,
+    );
     console.log("RLS on everywhere, no policies, everything granted.");
     process.exit(0);
   }

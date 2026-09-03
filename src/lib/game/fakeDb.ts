@@ -1,27 +1,31 @@
 /** An in-memory stand-in for the Supabase handle, so a commit can be tested without one. */
 
+import { TABLE_NAMES, matches as within, type Statement, type TableName } from "./statements";
+
 interface Row {
   id: string;
   [column: string]: unknown;
 }
 
-export interface Tables {
-  games: Row[];
-  seats: Row[];
-  users: Row[];
-  holdings: Row[];
-  seat_effects: Row[];
-  field_cards: Row[];
-  field_gold: Row[];
-  moves: Row[];
-}
+/**
+ * One array per table, keyed off the same list the SQL runner checks against —
+ * so a table added to the game is a table both halves of the seam learn about
+ * at once, rather than one of them being told later.
+ */
+export type Tables = Record<TableName, Row[]>;
 
 /**
- * Enough PostgREST to commit against.
+ * Enough PostgREST to run a game against.
  *
- * Only the shapes `commit` and `loadSnapshot` actually use: a filtered read, an
- * update that reports how many rows it matched, an insert, and a delete. The
- * point is not to reimplement PostgREST — it is that `.eq("revision", base)`
+ * Two doors, because the app has two. `from()` is the reads that happen outside
+ * a change, plus `createGame` and `joinGame` — the only writes a `Changeset`
+ * cannot express, since it can neither invent an id nor hand a token back — and
+ * it is the shapes those use and no more: a filtered read, an update that
+ * reports how many rows it matched, an insert, a delete. `rpc()` is everything
+ * else: one call carrying a whole commit as a list of statements, run all at
+ * once or not at all, exactly as `magiczny_miecz.apply_change` runs it.
+ *
+ * The point is not to reimplement PostgREST — it is that `.eq("revision", base)`
  * matching nothing is the whole of the concurrency story, and that cannot be
  * tested against a fake that always says yes.
  *
@@ -101,6 +105,91 @@ export const STAMPED: Record<keyof Tables, readonly string[]> = {
   field_gold: ["created_at"],
   moves: ["created_at"],
 };
+
+/** What a refused write looks like coming back: PostgREST's shape, and Postgres's codes. */
+type DbError = { message: string; code?: string };
+
+/**
+ * Postgres would never see a key whose value is `undefined`.
+ *
+ * The statements go over the wire as JSON, and `JSON.stringify` drops those
+ * keys — so an omitted optional lands as "leave the column alone" there. A fake
+ * that assigned `undefined` instead would wipe the column, and the two halves of
+ * the seam would disagree about the one case nobody writes a test for.
+ */
+function named(cells: Record<string, unknown>): Record<string, unknown> {
+  return Object.fromEntries(Object.entries(cells).filter(([, value]) => value !== undefined));
+}
+
+/**
+ * The statement list, run against one set of tables.
+ *
+ * Answers null when all of it landed, `"stale"` when an `expect` was not met,
+ * and an error when the database would have refused one — and the caller only
+ * ever hands it a *copy*, so any of the last two leaves the game untouched. That
+ * copy is the whole of the transaction: `apply_change` gets one from Postgres,
+ * and this gets one from `structuredClone`.
+ */
+function runAll(tables: Tables, statements: readonly Statement[]): "stale" | DbError | null {
+  for (const statement of statements) {
+    const name = statement.table;
+    const rows = tables[name];
+
+    if (statement.op === "insert") {
+      /**
+       * `moves` has a unique constraint on (game_id, seq), and it is the only
+       * one in the schema that a race can trip. Without it here the fake accepts
+       * two lines numbered the same and the collision that reached a player at
+       * the table cannot be written down as a test.
+       *
+       * 23505 is a unique violation, because a fake that invents its own codes
+       * is a fake the real error handling has never been run against.
+       */
+      if (name === "moves") {
+        const clash = statement.rows.find((row) =>
+          rows.some((was) => was.game_id === row.game_id && was.seq === row.seq),
+        );
+        if (clash) {
+          return {
+            code: "23505",
+            message: 'duplicate key value violates unique constraint "moves_game_id_seq_key"',
+          };
+        }
+      }
+      let n = 0;
+      const now = new Date().toISOString();
+      const stamps = Object.fromEntries(STAMPED[name].map((column) => [column, now]));
+      for (const row of statement.rows) {
+        // Defaults first, so anything the caller named wins — which is what
+        // `default` means.
+        rows.push({
+          id: `${name}-${rows.length + ++n}`,
+          ...DEFAULTS[name],
+          ...stamps,
+          ...named(row),
+        } as Row);
+      }
+      continue;
+    }
+
+    if (statement.op === "update") {
+      const hit = rows.filter((row) => within(row, statement));
+      for (const row of hit) Object.assign(row, named(statement.patch));
+      /**
+       * The compare-and-swap, enforced and not decided.
+       *
+       * `commit` is the only place that knows the games row must match exactly
+       * one; all this does is count. That is what keeps one CAS in the codebase
+       * rather than one here and another in SQL.
+       */
+      if (statement.expect !== undefined && hit.length !== statement.expect) return "stale";
+      continue;
+    }
+
+    tables[name] = rows.filter((row) => !within(row, statement));
+  }
+  return null;
+}
 
 export function fakeDb(tables: Tables, onBeforeWrite?: () => void) {
   // Called before every write, not once: whether the interloper strikes a
@@ -243,6 +332,42 @@ export function fakeDb(tables: Tables, onBeforeWrite?: () => void) {
         },
       };
       return builder;
+    },
+    /**
+     * The one call a commit makes, and the reason this file is not only a test
+     * fixture any more.
+     *
+     * `commit` folds a changeset into a list of statements and hands the list to
+     * whatever is holding the game. Postgres runs it inside one transaction;
+     * this runs it against a copy and swaps the copy in only if all of it
+     * worked. The two agree because they are handed the same list — the decision
+     * that produced it was made once, in TypeScript, which is what "every
+     * implementation is `storeOver(handle)`" is protecting.
+     *
+     * The copy is deep, because a patch that lands and is then undone must leave
+     * no trace: the rows are the game.
+     */
+    rpc(name: string, args: { statements: readonly Statement[] }) {
+      return {
+        then<T>(resolve: (value: { data: unknown; error: DbError | null }) => T) {
+          if (name !== "apply_change") {
+            return resolve({ data: null, error: { message: `fakeDb: no function ${name}` } });
+          }
+          // Before the copy is taken, not after: an interloper writing "in the
+          // gap between our read and our write" has to land on the tables this
+          // change is about to be measured against, or the compare-and-swap it
+          // is meant to lose would never see it.
+          fire();
+          const copy = structuredClone(tables);
+          const failed = runAll(copy, args.statements);
+          if (failed === "stale") return resolve({ data: false, error: null });
+          if (failed) return resolve({ data: null, error: failed });
+          // Column by column rather than by replacing `tables`: the object is
+          // the game, and `saves.ts` and `mm` are holding it.
+          for (const table of TABLE_NAMES) tables[table] = copy[table];
+          return resolve({ data: true, error: null });
+        },
+      };
     },
   };
 }

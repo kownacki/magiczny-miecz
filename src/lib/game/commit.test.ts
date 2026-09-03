@@ -23,7 +23,7 @@ vi.mock("@/lib/supabase", () => ({
   },
 }));
 
-const { change, commit, loadSnapshot, Conflict } = await import("./change");
+const { change, commit, loadSnapshot, statementsFor, Conflict } = await import("./change");
 const { scriptedRandom } = await import("@/lib/engine/ports");
 
 function seed(): Tables {
@@ -322,6 +322,67 @@ describe("two changes reaching the journal at once", () => {
  * the same thing by it, because the lobby cascades through `apply` and then
  * hands the whole changeset here.
  */
+/**
+ * The failure that made a commit one statement, on 2026-09-03.
+ *
+ * A player took a Tarcza Tolimana off a Nieznajomy. The Tarcza moved, the turn
+ * advanced, and then the journal insert was refused: `moves_kind_check` in the
+ * live database was two kinds behind the code. The state had happened and the
+ * record of it had not, which is the one failure the journal must not have —
+ * and the compare-and-swap had nothing to say about it, because this writer had
+ * *won*. It is statement nineteen of nineteen failing, not somebody else moving
+ * first.
+ */
+describe("a statement the database refuses", () => {
+  /** The journal line is numbered 13, and something is already sitting there. */
+  const alreadyTaken = () => {
+    tables.moves.push({ id: "m-taken", game_id: "g1", seq: 13, kind: "roll" });
+  };
+
+  it("takes back everything the same change had already written", async () => {
+    alreadyTaken();
+    const snapshot = await loadSnapshot("g1");
+
+    await expect(
+      commit(snapshot, {
+        game: { round: 4 },
+        seats: [{ id: "s1", patch: { gold: 99 } }],
+        journal: [{ seatId: "s1", round: 3, kind: "taken" }],
+      }),
+    ).rejects.toThrow(/duplicate key/);
+
+    // The Tarcza does not move without the line that says it moved.
+    expect(game().revision).toBe(7);
+    expect(game().round).toBe(3);
+    expect(game().journal_seq).toBe(12);
+    expect(tables.seats[0].gold).toBe(1);
+    expect(tables.moves.map((m) => m.seq)).toEqual([12, 13]);
+  });
+
+  /**
+   * And it is told once. A `Conflict` is re-decided against what is actually
+   * there, because nothing was written and the table has simply moved on; a
+   * refusal is not that, and re-running it four times would be four attempts to
+   * write something the database has already said no to.
+   */
+  it("is not retried the way losing a race is", async () => {
+    alreadyTaken();
+    let calls = 0;
+
+    await expect(
+      change("g1", () => {
+        calls += 1;
+        return {
+          writes: { journal: [{ seatId: "s1", round: 3, kind: "taken" as const }] },
+          result: undefined,
+        };
+      }, undefined),
+    ).rejects.toThrow(/duplicate key/);
+
+    expect(calls).toBe(1);
+  });
+});
+
 describe("removing a seat", () => {
   it("deletes the row and leaves the others sitting there", async () => {
     const snapshot = await loadSnapshot("g1");
@@ -351,22 +412,34 @@ describe("removing a seat", () => {
    * removals first. Patch first and a cascade would be reading a snapshot the
    * database disagrees with.
    *
-   * `beforeWrite` fires just before each statement, so this is the seats table
-   * as every write in turn found it.
+   * Read off the statement list rather than watched going past. It used to be
+   * proved by pushing the seats table onto an array before every write and
+   * counting three of them, which is as close as anybody could get while a
+   * commit was nineteen calls in a row. A commit is now one call over a list
+   * that was decided before anything was touched, so the order is a value —
+   * which is both stronger evidence and the same evidence the transaction on
+   * the other side is handed.
    */
-  it("issues the delete before any patch, as `apply` folds them", async () => {
-    const asFound: string[][] = [];
-    beforeWrite = () => asFound.push(tables.seats.map((seat) => String(seat.id)));
-
+  it("orders the delete before any patch, as `apply` folds them", async () => {
     const snapshot = await loadSnapshot("g1");
-    await commit(snapshot, {
+    const statements = statementsFor(snapshot, {
       seatsRemoved: ["s1"],
       seats: [{ id: "s1", patch: { gold: 99 } }],
     });
 
-    // Three statements — the games row, the delete, the patch — and by the
-    // time the patch went out there was nothing left for it to hit.
-    expect(asFound).toEqual([["s1", "s2"], ["s1", "s2"], ["s2"]]);
+    expect(statements.map((one) => `${one.op} ${one.table}`)).toEqual([
+      // The games row first, which is the lock and the compare-and-swap.
+      "update games",
+      "delete seats",
+      "update seats",
+    ]);
+
+    // And it lands that way round: by the time the patch is reached there is
+    // nothing left for it to hit.
+    await commit(snapshot, {
+      seatsRemoved: ["s1"],
+      seats: [{ id: "s1", patch: { gold: 99 } }],
+    });
     expect(tables.seats.map((seat) => seat.id)).toEqual(["s2"]);
   });
 

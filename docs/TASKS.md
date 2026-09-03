@@ -253,6 +253,33 @@ because the app rolls, moves and computes everything.
       automate everything that is not a decision — and what is left comes back
       as `pending` for the interface to ask about, which is exactly the set of
       choices the rules actually give a player.
+- [x] **A change lands whole, or not at all.** `commit` used to issue nineteen
+      PostgREST statements in a row, each its own transaction, and the journal
+      insert was the last of them. On 2026-09-03 a player took a Tarcza
+      Tolimana off a Nieznajomy: the Tarcza moved, the turn advanced, and then
+      the line saying so was refused by a `moves_kind_check` the database had
+      never been migrated to. A change that happened with no record that it
+      happened, which is the one failure the journal must not have.
+
+      The compare-and-swap never covered this. It makes a *loser* write nothing
+      at all — true, and what CLAUDE.md means — and says nothing about statement
+      nine of nineteen failing on the winner.
+
+      `commit` now folds a `Changeset` into an ordered list of `Statement`s
+      (`src/lib/game/statements.ts`) and hands the list over in one call.
+      `magiczny_miecz.apply_change` runs it inside one transaction; `fakeDb`
+      runs the same list against a copy of its tables and swaps it in only if
+      all of it worked. The SQL is **generic** on purpose — it knows nothing
+      about the game — because `storeOver(handle)` is one implementation for
+      both Postgres and the store `mm` and every save file run on, and a
+      `commit_change` that understood a changeset could not be called by a
+      `Map`. The decision stays in TypeScript; only its result crosses.
+
+      The compare-and-swap goes over as `expect: 1` on the games update, so it
+      is still written once, in `commit`, and both runners only enforce a number
+      they were handed. Nineteen round trips became one, which was not the
+      point but is not nothing.
+
 - [x] **A drift guard between `db/schema.sql` and the live database.**
       `npm run schema:check`. The file is applied by hand and had already
       fallen behind it: `games.turn_state`, `games.deck` and three columns of
