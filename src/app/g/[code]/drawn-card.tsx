@@ -233,9 +233,27 @@ export function DrawnCard({
         ? "text-verdigris"
         : "text-vermilion";
 
-  const skippable =
-    (classOf(known.id) !== "stranger" && mayWalkPast(known.id)) ||
-    (script !== null && inertFor(script.effect, nature));
+  /**
+   * Nothing here for this Postać at all — a `gdy natura` with no other branch,
+   * met by the wrong Natura. The WRÓŻKA and a Zła Postać.
+   *
+   * Resolving is still what clears it from the kolejka, so the one control is
+   * „Pomiń" wired to `onResolve`: nothing happens, and the Karta is done. The
+   * old pair — „Rozpatrz" beside „Pomiń" — offered a choice between two ways of
+   * doing nothing, one of which quietly did not finish the Karta.
+   */
+  const inert = script !== null && inertFor(script.effect, nature);
+
+  /**
+   * Whether walking away is one of the answers.
+   *
+   * Never for a Nieznajomy: 16.5 is flat and every one of them either gives you
+   * something or happens to you. A Miejsce says otherwise itself — „Jeżeli
+   * chcesz do niej wejść, rzuć kostką" is the Grota's own sentence, and that
+   * die costs a turn on 4 and starts a fight on 5 or 6.
+   */
+  const skippable = classOf(known.id) !== "stranger" && mayWalkPast(known.id);
+
 
   return (
     <DrawSheet
@@ -507,7 +525,29 @@ export function DrawnCard({
 
         {/* Nothing left to ask: the app does it, and the notice says what it
             did. A card with no script has nothing to do but be read. */}
-        {canAct && !foe && !keep && !asking && (
+        {/* Nothing here for this Postać, and one control that finishes it.
+
+            Resolving is what clears a Karta from the kolejka, so „Pomiń" is
+            wired to `onResolve` rather than to `onLeave`: nothing happens and
+            the Karta is done. The pair that stood here before — „Rozpatrz"
+            beside „Pomiń" — offered a choice between two ways of doing nothing,
+            one of which quietly did not finish the Karta. */}
+        {canAct && !foe && !keep && !asking && inert && (
+          <div className="flex flex-col items-start gap-2">
+            <p className="text-[11px] text-vermilion">Nie spełniasz warunków</p>
+            <button
+              disabled={busy}
+              onClick={() => onResolve(known.id, { choices })}
+              className="rounded border border-ochre/60 bg-ochre/10 px-4 py-2 text-sm text-ochre transition hover:bg-ochre/20 disabled:opacity-50"
+            >
+              Pomiń
+            </button>
+          </div>
+        )}
+
+        {/* Nothing left to ask: the app does it, and the notice says what it
+            did. A card with no script has nothing to do but be read. */}
+        {canAct && !foe && !keep && !asking && !inert && (
           <button
             disabled={busy}
             onClick={() =>
@@ -517,12 +557,7 @@ export function DrawnCard({
           >
             {!script
               ? "Rozumiem"
-              : /* Nothing is going to be asked and nothing is going to happen —
-                   this Karta is for another Natura. „Rozpatrz, co się da" over
-                   an empty column promises a column. */
-                skippable && script !== null && inertFor(script.effect, nature)
-                ? "Rozpatrz"
-                : script.effect.op === "rzut"
+              : script.effect.op === "rzut"
                 ? "Rzuć i rozpatrz"
                 : isSettled(script.effect)
                   ? "Rozpatrz"
@@ -536,9 +571,8 @@ export function DrawnCard({
             mid-question, which put a way out under a Karta that has none — a
             Nieznajomy is carried out at its place in the kolejka (16.5) and a
             Wróg is fought or fled (13.5), never shelved. What is left is a
-            Miejsce whose own text asks first („Jeżeli chcesz do niej wejść"),
-            and a Karta that has nothing for this character at all. */}
-        {canAct && !foe && skippable && (
+            Miejsce whose own text asks first („Jeżeli chcesz do niej wejść"). */}
+        {canAct && !foe && !inert && skippable && (
           <button
             disabled={busy}
             onClick={() => onLeave(known.id)}

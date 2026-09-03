@@ -118,7 +118,16 @@ export function staysAs(cardId: string): string | null {
     case "odloz":
       return "jednorazowa — potem wraca na stos";
     case "do-pierwszej":
-      return "czeka na Obszarze na pierwszą Postać — potem wraca na stos";
+      /**
+       * „na pierwszą Postać" is the EREMITA, who serves anybody. The WRÓŻKA
+       * does not — „Pierwszej **Dobrej** Postaci" — and a Zła Postać standing
+       * in front of her, told the Karta is waiting for the first Postać, has
+       * been told the wrong thing about why nothing is happening. The clause
+       * goes on exactly the cards that have a condition to meet.
+       */
+      return servedNatures(cardId)
+        ? "czeka na Obszarze na pierwszą Postać, która spełni warunki — potem wraca na stos"
+        : "czeka na Obszarze na pierwszą Postać — potem wraca na stos";
     case "zostaje":
       return "zostaje na Obszarze do końca gry";
     case "zostaje-z-pula":
