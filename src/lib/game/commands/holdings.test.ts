@@ -939,8 +939,16 @@ describe("clearing an Obszar", () => {
     expect(discardOf(writes, "events")).toEqual([]);
   });
 
-  /** One row, not every copy: a field can hold two Targowiska. */
-  it("takes one named Karta and leaves its twin", () => {
+  /**
+   * One row, not every copy: a field can hold two Targowiska — and of the two
+   * it takes the one that arrived last.
+   *
+   * `fc-1` before this, which was "the first one found" and a note saying
+   * nothing turned on it. Something does: `clear` is the undo for `place` and
+   * `deal`, and the copy you mean is the one you just put there. Rows are read
+   * `order by created_at`, so the last of the list is the last to arrive.
+   */
+  it("takes one named Karta and leaves its twin, the newest of the two", () => {
     const { writes, result } = clearField(
       table([
         { id: "fc-1", card_id: "targowisko" },
@@ -950,6 +958,25 @@ describe("clearing an Obszar", () => {
       { seatId: "seat-a", fieldId: HERE, cardIds: ["targowisko"] },
     );
     expect(result.cards).toEqual(["targowisko"]);
+    expect(writes.fieldCards?.delete).toEqual(["fc-2"]);
+  });
+
+  /**
+   * And a conjured copy goes before a real one whichever arrived first, which
+   * is the key above "newest".
+   *
+   * Taking the real Targowisko would leave the test card standing *and* return
+   * a card to a pile that never lost it — `putOnPile` keeps a `granted` card
+   * out, so the two mistakes compound.
+   */
+  it("takes the conjured copy before the real one", () => {
+    const { writes } = clearField(
+      table([
+        { id: "fc-1", card_id: "targowisko", granted: true },
+        { id: "fc-2", card_id: "targowisko" },
+      ]),
+      { seatId: "seat-a", fieldId: HERE, cardIds: ["targowisko"] },
+    );
     expect(writes.fieldCards?.delete).toEqual(["fc-1"]);
   });
 

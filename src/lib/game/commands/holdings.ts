@@ -1051,34 +1051,86 @@ export function clearField(
    * has to work out from the outcome.
    */
   /**
-   * One copy per name, taken off the board first and out of the turn second.
+   * Which copy a name takes, when the square holds more than one.
+   *
+   * A name takes exactly one, which it always has — a square can hold two
+   * Targowiska and "take that one off" is the likelier wish — and the question
+   * this answers is *which*. It used to be "the first one found, board before
+   * turn", with a note saying nothing turned on it. Something does: `clear` is
+   * the undo for `place` and `deal`, and the copy you mean is almost always the
+   * one you just conjured.
+   *
+   * So two keys, in this order.
+   *
+   * **Conjured first.** `granted` is the mark a test shortcut leaves — the deck
+   * never gave this card up — and it travels with the card through every table
+   * it lands on. A square holding a real Miecz that was drawn and a Miecz the
+   * console put there is a square where `clear MIECZ` means the second one:
+   * taking the real one would leave the test card behind *and* quietly return a
+   * card to a pile that never lost it.
+   *
+   * **Then newest.** Both halves record arrival honestly, which is what lets
+   * this be a rule rather than a guess: `field_cards` is read `order by
+   * created_at`, and duplicates inside the turn's `drawn` keep the order they
+   * were drawn in — two copies of one card are one class, so 15.2's stable sort
+   * cannot separate them. Reversing each gives newest first.
+   *
+   * One honest gap in that: `created_at` defaults to `now()`, which in Postgres
+   * is the *transaction's* clock, so rows written in one batch — the several
+   * Karty `leaveCardsBehind` puts back at the end of a turn — all carry the same
+   * timestamp and are returned in whatever order the store has them. Between
+   * two copies that arrived in the same write there is no arrival to be later
+   * than, so there is nothing here to get right.
+   *
+   * The board's rows come before the turn's, which is the same precedence as
+   * before and now earns it: arriving on a square *lifts* every row on it into
+   * the turn (`liftFieldCards` deletes them), so a row still lying there while
+   * the turn stands on it is one `place`d since — newer than anything drawn.
    *
    * Claimed rather than filtered, because a name may be typed twice and mean
-   * two copies: a filter by id would match the same row for both, and
-   * `clear MIECZ, MIECZ` would answer that it took two while taking one. So
-   * each name claims a row nothing else has claimed, and a name whose copies
-   * have run out is a miss rather than a silent repeat of the first.
-   *
-   * A row on the board goes before a card in the turn, so the two halves are
-   * ordered rather than raced. Nothing turns on which — they are the same Karta
-   * on the same square — but a rule that is written down is one nobody has to
-   * work out from the outcome.
+   * two copies: a filter by id would match the same candidate for both, and
+   * `clear MIECZ, MIECZ` would answer that it took two while taking one.
    */
+  type Candidate =
+    | { where: "board"; id: string; cardId: string; granted: boolean }
+    | { where: "turn"; at: number; cardId: string; granted: boolean };
+
+  const candidates: Candidate[] = [
+    ...here.map(
+      (row): Candidate => ({
+        where: "board",
+        id: row.id,
+        cardId: row.card_id,
+        granted: row.granted,
+      }),
+    ).reverse(),
+    ...inTurn.map(
+      (card, at): Candidate => ({
+        where: "turn",
+        at,
+        cardId: card.cardId,
+        granted: card.granted ?? false,
+      }),
+    ).reverse(),
+  ]
+    // Stable, so the newest-first order above survives inside each half.
+    .sort((a, b) => Number(b.granted) - Number(a.granted));
+
   const claimedRows = new Set<string>();
   const claimedInTurn = new Set<number>();
   const missing: string[] = [];
   for (const cardId of cardIds) {
-    const row = here.find((one) => one.card_id === cardId && !claimedRows.has(one.id));
-    if (row) {
-      claimedRows.add(row.id);
+    const found = candidates.find(
+      (one) =>
+        one.cardId === cardId &&
+        (one.where === "board" ? !claimedRows.has(one.id) : !claimedInTurn.has(one.at)),
+    );
+    if (!found) {
+      missing.push(cardId);
       continue;
     }
-    const at = inTurn.findIndex((card, index) => card.cardId === cardId && !claimedInTurn.has(index));
-    if (at !== -1) {
-      claimedInTurn.add(at);
-      continue;
-    }
-    missing.push(cardId);
+    if (found.where === "board") claimedRows.add(found.id);
+    else claimedInTurn.add(found.at);
   }
 
   // Only a named Karta can be missing. A bare sweep and a kind cannot: one

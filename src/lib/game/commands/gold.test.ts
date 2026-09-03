@@ -640,3 +640,112 @@ describe("sweeping several named Karty", () => {
     ).toThrow(/tylko 5/);
   });
 });
+
+/**
+ * Which copy a name takes, when the square holds more than one.
+ *
+ * `clear` is the undo for `place` and `deal`, so the copy you mean is almost
+ * always the one you just conjured — and if none of them was conjured, the one
+ * that arrived last.
+ */
+describe("choosing between duplicate Karty", () => {
+  /** `granted` is what a test shortcut leaves on a card; a drawn one has none. */
+  const onBoard = (rows: { card_id: string; granted: boolean }[]) =>
+    apply(table(), {
+      fieldCards: { insert: rows.map((row) => ({ field_id: HERE, ...row })) },
+    });
+
+  const swept = (before: ReturnType<typeof onBoard>, cardIds: string[]) => {
+    const after = apply(before, clearField(before, { seatId: "seat-a", fieldId: HERE, cardIds }).writes);
+    return before.fieldCards
+      .filter((row) => !after.fieldCards.some((one) => one.id === row.id))
+      .map((row) => `${row.card_id}${row.granted ? " (granted)" : ""}`);
+  };
+
+  it("takes the conjured copy before the real one, whichever came first", () => {
+    // Conjured first, drawn second — so "newest" would have taken the wrong one.
+    expect(
+      swept(onBoard([
+        { card_id: "miecz", granted: true },
+        { card_id: "miecz", granted: false },
+      ]), ["miecz"]),
+    ).toEqual(["miecz (granted)"]);
+
+    // And the other way round, where the two keys agree.
+    expect(
+      swept(onBoard([
+        { card_id: "miecz", granted: false },
+        { card_id: "miecz", granted: true },
+      ]), ["miecz"]),
+    ).toEqual(["miecz (granted)"]);
+  });
+
+  /**
+   * With nothing to choose on the first key, the newest goes. `field_cards` is
+   * read `order by created_at`, so the last row of the list is the last to
+   * arrive — which is why this is a rule and not a guess.
+   */
+  it("takes the newest when they are all conjured, or all real", () => {
+    const same = (granted: boolean) =>
+      apply(table(), {
+        fieldCards: {
+          insert: [
+            { field_id: HERE, card_id: "miecz", granted, pool: 1 },
+            { field_id: HERE, card_id: "miecz", granted, pool: 2 },
+            { field_id: HERE, card_id: "miecz", granted, pool: 3 },
+          ],
+        },
+      });
+    for (const granted of [true, false]) {
+      const before = same(granted);
+      const after = apply(
+        before,
+        clearField(before, { seatId: "seat-a", fieldId: HERE, cardIds: ["miecz"] }).writes,
+      );
+      // `pool` stands in for arrival here: 3 was inserted last and is the one
+      // that should go, leaving 1 and 2.
+      expect(after.fieldCards.map((row) => row.pool), `granted=${granted}`).toEqual([1, 2]);
+    }
+  });
+
+  /** Two names take two copies, and the ranking runs for each in turn. */
+  it("works down the ranking when the same name is given twice", () => {
+    expect(
+      swept(onBoard([
+        { card_id: "miecz", granted: false },
+        { card_id: "miecz", granted: true },
+        { card_id: "miecz", granted: false },
+      ]), ["miecz", "miecz"]),
+    ).toEqual(["miecz (granted)", "miecz"]);
+  });
+
+  /**
+   * And a Karta the turn is holding face up loses to one lying on the board,
+   * because arriving lifts every row into the turn — so a row still there is
+   * one `place`d since, and newer than anything drawn.
+   */
+  it("prefers a row placed since arrival over one lifted into the turn", () => {
+    const before = apply(
+      table({
+        game: {
+          active_seat: 0,
+          turn_state: only({
+            phase: "field",
+            fieldId: HERE,
+            from: null,
+            draw: 0,
+            drawn: [{ cardId: "miecz", cardClass: "item" }],
+            fought: [],
+          } as never),
+        },
+      }),
+      { fieldCards: { insert: [{ field_id: HERE, card_id: "miecz", granted: false }] } },
+    );
+    const after = apply(
+      before,
+      clearField(before, { seatId: "seat-a", fieldId: HERE, cardIds: ["miecz"] }).writes,
+    );
+    expect(after.fieldCards).toEqual([]);
+    expect((top(after.game.turn_state) as { drawn: unknown[] }).drawn).toHaveLength(1);
+  });
+});
