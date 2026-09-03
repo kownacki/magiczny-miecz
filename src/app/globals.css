@@ -95,3 +95,32 @@ body {
 .tnum {
   font-variant-numeric: tabular-nums;
 }
+
+/* The acting seat's edge, breathing.
+
+   Tailwind's own `animate-pulse` goes from opacity 1 to .5, which is plenty on
+   a dot the size of a full stop and invisible on a one-pixel ring the width of
+   a dialog. This one goes most of the way out and carries a halo with it, so
+   the movement reads from across a table rather than only when looked for.
+
+   `currentColor` throughout: the ring sets `color` to the seat's own and the
+   border and the halo both follow, so one inline style paints all of it. */
+@keyframes seat-breath {
+  0%,
+  100% {
+    opacity: 1;
+    box-shadow:
+      0 0 22px -4px currentColor,
+      inset 0 0 18px -10px currentColor;
+  }
+  50% {
+    opacity: 0.15;
+    box-shadow:
+      0 0 0 0 transparent,
+      inset 0 0 0 0 transparent;
+  }
+}
+
+.animate-seat-breath {
+  animation: seat-breath 2.4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}

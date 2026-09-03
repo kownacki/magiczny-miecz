@@ -144,16 +144,20 @@ export function DrawSheet({
           seatIndex === undefined ? "border-ochre/40" : ""
         } ${wide ? "max-w-5xl" : "max-w-3xl"}`}
       >
-        {/* The edge breathing in the seat's colour — `animate-pulse`, the same
-            one the turn pill's dot uses and for the same reason: the table is
-            waiting on one person and the largest thing on the screen should say
-            whose. A ring of its own rather than the container's own border,
-            because pulsing the container fades everything inside it. */}
+        {/* The edge breathing in the seat's colour, for the reason the turn
+            pill's dot does: the table is waiting on one person and the largest
+            thing on the screen should say whose.
+
+            Its own ring rather than the container's border, because pulsing the
+            container fades everything inside it — and its own keyframes rather
+            than `animate-pulse`, whose 1 → .5 is plenty on a dot the size of a
+            full stop and invisible on a hairline the width of a dialog. See
+            `seat-breath` in globals.css. */}
         {seatIndex !== undefined && (
           <div
             aria-hidden
-            className="pointer-events-none absolute inset-0 rounded-lg border motion-safe:animate-pulse"
-            style={{ borderColor: seatColour(seatIndex) }}
+            className="pointer-events-none absolute inset-0 rounded-lg border-2 motion-safe:animate-seat-breath"
+            style={{ color: seatColour(seatIndex), borderColor: "currentColor" }}
           />
         )}
         {/*
