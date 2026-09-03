@@ -147,7 +147,15 @@ export function effectRows(effect: Effect): string[] | null {
    * masz złota" does not. Only where there are two branches: a `gdy` with one
    * is a sentence and reads like one.
    */
-  if (effect.op === "gdy" && effect.inaczej) {
+  /**
+   * „w przeciwnym razie: nic się nie dzieje" is a row that says nothing.
+   *
+   * A condition with one branch already means the other way round nothing
+   * happens — the Dobre Bóstwo judges you and, if it finds nothing, judges you
+   * and goes. Spelling it out costs a line on a panel and tells the reader what
+   * they had worked out from the shape of the first one.
+   */
+  if (effect.op === "gdy" && effect.inaczej && effect.inaczej.op !== "nic") {
     const branch = (said: string, taken: Effect) => {
       const rows = effectRows(taken);
       return rows ? [`${said}:`, ...rows] : [`${said}: ${describeEffect(taken)}`];
@@ -270,7 +278,11 @@ export function describeEffect(effect: Effect): string {
     case "gdy":
       return (
         `${describeCondition(effect.warunek)}: ${describeEffect(effect.to)}` +
-        (effect.inaczej ? `; w przeciwnym razie: ${describeEffect(effect.inaczej)}` : "")
+        // See `effectRows`: an `inaczej` that does nothing is what a condition
+        // with one branch already says.
+        (effect.inaczej && effect.inaczej.op !== "nic"
+          ? `; ${describeConditionNot(effect.warunek)}: ${describeEffect(effect.inaczej)}`
+          : "")
       );
 
     case "punkty": {
