@@ -286,6 +286,17 @@ describe("what one row of a field's table says", () => {
     expect(describeCondition({ is: "natura", jedna_z: ["chaotic"] })).toBe("jeśli chaotyczna");
   });
 
+  /**
+   * The same fault, one op along, and it survived the fix above by being on a
+   * different line: `natura` — the op that *forces* one — had its own ternary,
+   * so the SABAT translated `evil` and the SŁUP OGNIA said „Natura: good".
+   */
+  it("names a forced Natura in Polish too", () => {
+    expect(describeEffect({ op: "natura", na: "good" })).toBe("Natura: dobra");
+    expect(describeEffect({ op: "natura", na: "evil" })).toBe("Natura: zła");
+    expect(describeEffect({ op: "natura", na: "chaotic" })).toBe("Natura: chaotyczna");
+  });
+
   it("says nothing happened rather than saying nothing", () => {
     expect(summariseEffect({ op: "nic" })).toBe("nic się nie dzieje");
     expect(summariseEffect({ op: "zaklecie", count: 1 })).toBe("+1 Zaklęcie");
@@ -464,6 +475,46 @@ describe("the Mędrzec's riddle, in rows", () => {
       "Wybierasz cyfrę od 1 do 6 i mówisz ją głośno",
       "rzuć kostką:",
       "— jeśli wypadnie twoja cyfra: zyskujesz 1 Zaklęcie",
+    ]);
+  });
+});
+
+/**
+ * Three Natury, two arms and one card — the shape four Spotkania are written
+ * in, because `gdy` has room for a condition and its opposite and none for a
+ * third answer.
+ */
+describe("a card with an arm per Natura", () => {
+  it("says each arm's own condition rather than the last one's negation", () => {
+    // „jeśli dobra: +1 Życia" and then „jeśli nie dobra: jeśli zła: −1 Życia",
+    // which made the reader work out what „nie dobra" excluded before reading
+    // what the arm actually tests.
+    expect(effectRows(SCRIPTS["poslancy-bogow"]!.effect)).toEqual([
+      "jeśli dobra: +1 Życia",
+      "jeśli zła: −1 Życia",
+    ]);
+    expect(effectRows(SCRIPTS["zatrute-ziola"]!.effect)).toEqual([
+      "jeśli zła: +1 Życia",
+      "jeśli dobra: −1 Życia",
+    ]);
+  });
+
+  /**
+   * Chaotyczna is in neither list, and that is the card rather than an
+   * omission: an arm nobody named is an arm on which nothing happens, which is
+   * what a missing `inaczej` has always meant here.
+   */
+  it("leaves the arm the card is silent about silent", () => {
+    for (const id of ["poslancy-bogow", "zatrute-ziola"] as const) {
+      expect(effectRows(SCRIPTS[id]!.effect)!.join(" ")).not.toContain("chaotyczna");
+    }
+  });
+
+  /** A genuine two-branch card still says the second branch in the negative. */
+  it("still negates where the second arm is the first one's opposite", () => {
+    expect(effectRows(SCRIPTS["sabat-czarownic"]!.effect)).toEqual([
+      "jeśli zła: +1 Magii",
+      "jeśli nie zła: Natura: zła",
     ]);
   });
 });

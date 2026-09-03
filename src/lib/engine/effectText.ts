@@ -188,6 +188,31 @@ export function effectRows(effect: Effect): string[] | null {
       // — otherwise it is a sentence and reads like one.
       return effectRows(effect.to) ? taken : null;
     }
+    /**
+     * A `gdy` whose `inaczej` is another `gdy` is not a branch and its
+     * opposite — it is a table of arms, and saying the first one's negation
+     * over the second's own condition tells the reader what the card does
+     * *not* test before telling them what it does.
+     *
+     * POSŁAŃCY BOGÓW read „jeśli dobra: +1 Życia" and then „jeśli nie dobra:
+     * jeśli zła: −1 Życia", which is one clause of arithmetic to get through
+     * before the second half of a two-line card. It is „jeśli dobra: +1 Życia;
+     * jeśli zła: −1 Życia". Chaotyczna is named by neither arm, and that is the
+     * card: nothing happens to her, which is what an unnamed arm has always
+     * meant here.
+     *
+     * The fallback is the shape a chain always ends in — a lone `gdy` whose
+     * body is one sentence, which `effectRows` answers null for because on its
+     * own it reads better as prose than as a bullet. Inside a chain it is a row
+     * like its siblings.
+     */
+    if (effect.inaczej.op === "gdy") {
+      const rest = effect.inaczej;
+      return [
+        ...taken,
+        ...(effectRows(rest) ?? branch(describeCondition(rest.warunek), rest.to)),
+      ];
+    }
     return [...taken, ...branch(describeConditionNot(effect.warunek), effect.inaczej)];
   }
   if (effect.op === "po-kolei") {
@@ -470,8 +495,16 @@ export function describeEffect(effect: Effect): string {
     case "zgadnij":
       return `${GUESS}, potem rzuć kostką — jeśli wypadnie twoja: ${describeEffect(effect.nagroda)}`;
 
+    /**
+     * The same fault `describeCondition` carries a comment about, twenty lines
+     * up and four hundred down: one of the three Natury translated by a ternary
+     * and the other two left in English. There it was „jeśli good"; here it was
+     * the SŁUP OGNIA saying „Natura: good" to a Polish table, because the only
+     * two cards that force a Natura force `evil` and `good` and only one of
+     * them was ever looked at.
+     */
     case "natura":
-      return `Natura: ${effect.na === "evil" ? "zła" : effect.na}`;
+      return `Natura: ${NATURE_LABEL[effect.na] ?? effect.na}`;
 
     case "kup":
       return `kupujesz — ${effect.towar
