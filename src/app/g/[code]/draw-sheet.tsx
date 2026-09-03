@@ -227,7 +227,10 @@ export function DrawSheet({
               purpose: it is a label, and the space it takes comes out of the
               prose column rather than out of the sheet. */}
           {actor && (
-            <div className="hidden w-[86px] shrink-0 flex-col gap-1.5 self-start sm:flex">
+            /* Ruled off from the Karta, the way every other pair of columns in
+               this app is: one is who, the other is what, and side by side with
+               nothing between them they read as one caption under two pictures. */
+            <div className="hidden w-[102px] shrink-0 flex-col gap-1.5 self-stretch border-r border-edge/60 pr-4 sm:flex">
               {/* The same heading the Teraz box carries, in the same hand: the
                   book's own noun for what this is (chapter 10, „TURY"). */}
               <h3 className="text-[11px] uppercase tracking-widest text-muted">Tura</h3>
