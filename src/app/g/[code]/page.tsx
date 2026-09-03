@@ -69,7 +69,7 @@ import { AnnouncementModal } from "./announcement";
 import { ConfirmDialog, type Confirmation } from "./confirm";
 import { askAbout, usageOf } from "@/lib/engine/uses";
 import { compulsoryOffer, offerNamed } from "@/lib/engine/fieldScript";
-import { nodeAt } from "@/lib/engine/resolve";
+import { faceAt, nodeAt } from "@/lib/engine/resolve";
 import { reachableBy } from "@/lib/engine/losses";
 import { MAX_SEATS } from "@/lib/game/modes";
 import { stillStone } from "@/lib/engine/status";
@@ -1065,7 +1065,17 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
     const seat = seats.find((one) => one.id === turnState.seatId);
     if (!seat || (kind === "spell" && seat.hidden_count > 0)) return null;
     const cards = seat.holdings.filter((held) => held.kind === kind);
-    return cards.length > 0 ? { cardId: turnState.cardId, kind, cards } : null;
+    return cards.length > 0
+      ? {
+          cardId: turnState.cardId,
+          kind,
+          cards,
+          /* What came up, off the cursor rather than off the reply: the player
+             who threw it has the face already, and this is how everybody else
+             gets it — see `faceAt`. */
+          face: faceAt(turnState.effect, turnState.cursor),
+        }
+      : null;
   })();
 
   /**

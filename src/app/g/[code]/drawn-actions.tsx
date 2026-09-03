@@ -136,7 +136,13 @@ export interface DrawnActionsProps {
    * one. Null where there is no such question, or where this device cannot
    * vouch for the list.
    */
-  losing?: { cardId: string; kind: Held["kind"]; cards: Held[] } | null;
+  losing?: {
+    cardId: string;
+    kind: Held["kind"];
+    cards: Held[];
+    /** The face that asked for it, for the devices that did not throw it. */
+    face: number | null;
+  } | null;
   /** Which of them goes, by its place in that list. */
   onLose?: (index: number) => void;
   /**
@@ -598,6 +604,14 @@ export function DrawnActions({
       <div className="mt-auto flex flex-col gap-2 border-t border-edge pt-3">
         {offered.length > 0 && (
           <ul className="flex flex-col gap-1 pb-1">{specialRows(offered)}</ul>
+        )}
+        {/* The face, for the players who did not press the button. It is not
+            in the reply they never received — it is on the frame, which is the
+            same thing said to everybody at once (`faceAt`). What it *did* is
+            the actor's own line and the Dziennik's; here the six rows above
+            already say what a 4 means. */}
+        {owing?.face !== null && owing?.face !== undefined && (
+          <RollSaid face={owing.face} did={[]} />
         )}
         {chosenCard && (
           <TileRow frame={false}>

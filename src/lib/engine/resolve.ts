@@ -275,6 +275,34 @@ export function inertFor(effect: Effect | undefined, failsCondition: boolean): b
  * different code than is reading it and worth showing as nothing rather than
  * as the wrong question.
  */
+/**
+ * The die face a suspended walk came through, out of the cursor itself.
+ *
+ * A `rzut`'s step in a cursor *is* its face — `nodeAt` indexes `faces[index]`
+ * with it — so a frame that stopped somewhere below a die table is still
+ * carrying what came up, and nothing has to be stored or sent to know it.
+ *
+ * Which is what lets the rest of the table read a roll they did not press. The
+ * face reaches the player who threw it on the reply to their own request and is
+ * theirs alone; this is the same number, on the frame everybody can see, for as
+ * long as the Karta is waiting on an answer.
+ *
+ * The last one, where a card rolls twice: the face that decided the question
+ * being asked is the one at the bottom of the walk, not the one that got it
+ * started.
+ */
+export function faceAt(effect: Effect, cursor: readonly number[]): number | null {
+  let at: Effect = effect;
+  let face: number | null = null;
+  for (const index of cursor) {
+    if (at.op === "rzut") face = index;
+    const next = nodeAt(at, [index]);
+    if (!next) return face;
+    at = next;
+  }
+  return face;
+}
+
 export function nodeAt(effect: Effect, cursor: readonly number[]): Effect | null {
   let at: Effect = effect;
   for (const index of cursor) {
