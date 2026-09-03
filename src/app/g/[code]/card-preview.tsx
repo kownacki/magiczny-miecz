@@ -486,7 +486,10 @@ export function CardPreview({
          the pointer in it — to drag a line of the card's text, or to follow a
          rule number into the Instrukcja — so it takes events, and says so with
          a brighter edge. */
-      className={`fixed ${LAYER.hover} flex gap-3 overflow-y-auto rounded-lg border bg-night p-3 shadow-[0_8px_32px_rgba(0,0,0,0.6)] ${
+      /* Its own edge, lit — the same treatment the sheet gets in the seat's
+         colour, in the ochre this one already wears. A panel that floats over
+         a board needs to look like it is floating. */
+      className={`fixed ${LAYER.hover} flex gap-3 overflow-y-auto rounded-lg border bg-night p-3 shadow-[0_8px_32px_rgba(0,0,0,0.6),0_0_20px_-6px_var(--color-ochre)] ${
         pinned
           ? "pointer-events-auto select-text border-ochre"
           : "pointer-events-none select-none border-ochre/40"

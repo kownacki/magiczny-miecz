@@ -312,6 +312,11 @@ export function DrawnCard({
           all of it again beside the picture was two of everything and pushed
           the buttons off the bottom. What is left is this app's reading of the
           card and the things you can do about it. */}
+      {/* One stack, spaced the way `CardFacts` spaces the same three lines in
+          the hover: the sheet's own column is `gap-3`, which is right between
+          the card and the buttons and half again too much between three
+          statements that belong together. */}
+      <div className="flex flex-col gap-1.5">
       {/* Whose Karta this is, at the head of the column — with or without a
           scan. It used to be here only when there was no picture, on the
           reasoning that the scan carries its own title band; true, in a
@@ -392,6 +397,8 @@ export function DrawnCard({
           )}
         </p>
       )}
+
+      </div>
 
       {coverageOf(known.id) === "brak" && (
         <p className="rounded border border-edge bg-night/50 px-2 py-1 text-[11px] text-muted">

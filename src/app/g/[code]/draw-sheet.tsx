@@ -4,6 +4,7 @@ import Image from "next/image";
 import { CardMark, Corner, MARK_SIZE } from "./card-mark";
 import { Overlay } from "./overlay";
 import { ChromeButton } from "./chrome";
+import { seatColour } from "@/lib/view/boardMap";
 import { CARD_RATIO, PICTURE_WIDTH } from "./card-preview";
 import { WithRules } from "./rule-ref";
 
@@ -31,6 +32,16 @@ export interface SheetChrome {
    */
   canAct: boolean;
   /**
+   * The seat whose turn is being played, for the edge.
+   *
+   * The sheet is the turn happening, and every other thing on the table that
+   * belongs to one seat wears that seat's colour — the figure on the board, the
+   * dot in the journal, the border of the Teraz box, the dot in the pill. This
+   * is the largest of them and was the only one in the house ochre, so on a
+   * four-player table nothing about it said whose turn you were watching.
+   */
+  seatIndex?: number;
+  /**
    * Whether this has been folded away.
    *
    * It used to be a watcher's only — the player being asked could not put their
@@ -51,6 +62,7 @@ export interface SheetChrome {
 export function DrawSheet({
   label,
   heading,
+  seatIndex,
   art,
   granted = false,
   canAct,
@@ -115,9 +127,24 @@ export function DrawSheet({
     // testing, and folding it away if you are only watching.
     <Overlay label={label} onDismiss={null}>
       <div
-        className={`flex max-h-[90vh] w-full flex-col gap-3 overflow-hidden rounded-lg border border-ochre/40 bg-panel p-4 shadow-[0_8px_40px_rgba(0,0,0,0.7)] ${
-          wide ? "max-w-5xl" : "max-w-3xl"
-        }`}
+        /* The seat's colour on the edge, and its own light around it. The glow
+           is the pill's dot enlarged — same colour, same reason — so a table
+           watching one player act can see whose from across the room. Static
+           and not a pulse: what is right for a dot the size of a full stop is a
+           strobe at the size of a dialog. */
+        style={
+          seatIndex === undefined
+            ? undefined
+            : {
+                borderColor: seatColour(seatIndex),
+                boxShadow: `0 8px 40px rgba(0,0,0,0.7), 0 0 24px -4px ${seatColour(seatIndex)}`,
+              }
+        }
+        className={`flex max-h-[90vh] w-full flex-col gap-3 overflow-hidden rounded-lg border bg-panel p-4 ${
+          seatIndex === undefined
+            ? "border-ochre/40 shadow-[0_8px_40px_rgba(0,0,0,0.7)]"
+            : ""
+        } ${wide ? "max-w-5xl" : "max-w-3xl"}`}
       >
         {/*
           One header across the whole sheet.

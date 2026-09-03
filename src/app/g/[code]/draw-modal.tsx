@@ -63,6 +63,7 @@ export function DrawModal({
   occupied,
   mySword,
   nature,
+  seatIndex,
   aggression,
   busy,
   onAction,
@@ -147,6 +148,8 @@ export function DrawModal({
   occupied?: FieldId[];
   /** What the character fights with (1.5) — the Sobowtór's own strength. */
   mySword: number;
+  /** Whose turn is being played, for the sheet's edge. */
+  seatIndex: number;
   /** The active character's Natura — see `DrawnCard`. */
   nature: Nature | null;
   /** The active character's last aggressive act — see `DrawnCard`. */
@@ -166,7 +169,7 @@ export function DrawModal({
   /** Nothing to do with this one — it stays on the field (16.8). */
   onLeave: (cardId: string) => void;
 }) {
-  const chrome: SheetChrome = { canAct, minimized, onMinimize, error };
+  const chrome: SheetChrome = { canAct, minimized, onMinimize, error, seatIndex };
 
   if (move) {
     return (

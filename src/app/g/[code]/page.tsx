@@ -1587,6 +1587,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
             /* 1.5's fight total, for the Sobowtór, whose Miecz is whoever is
                opposite him and is therefore not on his Karta. */
             mySword={active.sword_in_fight}
+            seatIndex={active.seat_index}
             /* The ACTIVE seat's, not the reader's: the card is being resolved
                for whoever is having the turn. */
             nature={asNature(active.nature)}
