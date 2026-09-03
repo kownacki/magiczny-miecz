@@ -740,8 +740,22 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
     const name = CARD_NAMES.get(held.cardId) ?? held.cardId;
     const here = seat?.field_id ? FIELD_NAMES.get(seat.field_id) : null;
     const where = here ? `na Obszarze ${here}` : "na Obszarze";
+    /**
+     * Two words for two destinations, and the dialog is where the difference
+     * is worth spelling out.
+     *
+     * „Upuść" for a Przedmiot or a Przyjaciel: the Karta lies face up on the
+     * Obszar you are standing on and 12.1 lets the next visitor take it, so
+     * nothing is destroyed and the table can see where it went. „Odrzuć" for a
+     * Zaklęcie, which goes on the stos Kart już zużytych (9.6) — out of the
+     * hand for good, and back into circulation only when 9.5 reshuffles the
+     * pile. The app said „odrzuć" for all three, which is the rulebook's verb
+     * for both and the wrong word for one of them here, because a player
+     * reading a button wants to know where the card is going.
+     */
+    const spell = held.kind === "spell";
     setAsk({
-      title: `Odrzuć: ${name}`,
+      title: `${spell ? "Odrzuć" : "Upuść"}: ${name}`,
       /**
        * A Przyjaciel is left, not thrown away, and the rule is his own.
        *
@@ -751,11 +765,15 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
        * is picked up, and he *goes with* whoever picks him up. Saying it in the
        * dialog is the last moment anybody is deciding.
        */
-      body:
-        held.kind === "friend"
+      body: spell
+        ? // Said plainly, because this is the one card that does not come back:
+          // 9.4 only lets it go while there is a surplus, and 9.6's pile is
+          // where it goes rather than the Obszar underneath you.
+          `${name} trafi na stos Kart już zużytych — nie zostanie na Obszarze i nikt jej stąd nie weźmie (9.4, 9.6).`
+        : held.kind === "friend"
           ? `Zostawisz jego Kartę ${where} — kto się tu zatrzyma, może go wziąć ze sobą (6.4, 12.1).`
           : `${name} zostanie ${where}, odkryta — kto się tu zatrzyma, może ją wziąć (5.5, 16.8).`,
-      confirmLabel: "Odrzuć",
+      confirmLabel: spell ? "Odrzuć" : "Upuść",
       tone: "grave",
       onConfirm: () => {
         setAsk(null);
@@ -2588,6 +2606,11 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                       const held = mine.holdings.find((card) => card.id === holdingId);
                       if (held) askToCast(holdingId, held.cardId, target);
                     }}
+                    /* The same write a Przedmiot goes down with, and the same
+                       question first — `askToDrop` reads the kind and says the
+                       right thing about where the card lands. Offered only
+                       while 9.4 is open, which the hand decides for itself. */
+                    onDrop={askToDrop}
                     /* The same write the pack's arranging goes through:
                        `reorderPack` numbers whatever holdings it is given and
                        never asked whether they were Przedmioty. */

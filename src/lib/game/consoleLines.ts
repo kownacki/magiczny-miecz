@@ -128,15 +128,33 @@ export function overflowLines(snapshot: Snapshot): string[] {
   if (!seat || !over) return [];
 
   const whose = nameOfSeat(snapshot.users, seat.seat_index);
-  const said: Record<string, string> = {
-    odrzuc: "odrzuć  (na Obszar)",
-    uzyj: "użyj    (na stos zużytych)",
-    zaloz: "załóż   (na siebie)",
-  };
+  /**
+   * The verb from what you do, the place from where it lands.
+   *
+   * Keyed off `kind` alone, this said „odrzuć (na Obszar)" for a Zaklęcie —
+   * which is the one card that does not go there. 9.6 sends a spell to the
+   * stos Kart już zużytych, 12.1 lists złoto, Przedmioty and Przyjaciół and no
+   * Zaklęcia, and `waysUnder` has always known the difference and put it in
+   * `gdzie`; only this line was reading past it.
+   *
+   * Two verbs for the two destinations, the same two the Plecak and the hand
+   * now print: you *upuść* a Przedmiot, where it lies face up for the next
+   * visitor, and you *odrzuć* a Zaklęcie, which is gone until 9.5 reshuffles
+   * the pile. One vocabulary for both surfaces is the whole point of
+   * docs/TERMINAL.md.
+   */
+  const said = (way: { kind: string; gdzie: string }) =>
+    way.gdzie === "obszar"
+      ? "upuść  (na Obszar)"
+      : way.gdzie === "na-sobie"
+        ? "załóż  (na siebie)"
+        : way.kind === "odrzuc"
+          ? "odrzuć (na stos zużytych)"
+          : "użyj   (na stos zużytych)";
   return [
     overflowSaid(over, whose),
     ...waysOut(snapshot, frame.seatId).map(
-      (way) => `  ${said[way.kind]}  ${cardName(way.cardId)}`,
+      (way) => `  ${said(way)}  ${cardName(way.cardId)}`,
     ),
     "  — `drop <nazwa>`, `use <nazwa>` albo `equip <nazwa>`",
   ];

@@ -62,6 +62,7 @@ export function SpellHand({
   onCast,
   onInspect,
   onReorder,
+  onDrop,
 }: {
   spells: HeldSpell[];
   /** Every window the turn is open for right now — a moment can be several. */
@@ -114,6 +115,17 @@ export function SpellHand({
    * as one, and neither is a row on the board. Null everywhere but a fight.
    */
   foeInFight?: { name: string } | null;
+  /**
+   * Sheds one Zaklęcie, and only while there is a surplus to shed.
+   *
+   * 9.4 is the narrowest rule in the chapter — „Postać nie może odrzucać
+   * Zaklęć, chyba, że posiada ich więcej, niż wynika to z jej parametru Magii"
+   * — so the control that does it has no business existing the rest of the
+   * time. The server refuses either way (`dropCard`); this is so the offer is
+   * not there to be taken up, in the one state where it is the only thing the
+   * table is waiting for.
+   */
+  onDrop?: (holdingId: string) => void;
   onCast: (
     holdingId: string,
     target: {
@@ -190,6 +202,18 @@ export function SpellHand({
   if (held.length === 0 && (frame === "panel" || capacity === undefined)) return null;
 
   const section = frame === "section";
+  /**
+   * Whether 9.4 is open right now.
+   *
+   * The one state in which a Zaklęcie may be let go of at all, and therefore
+   * the only state in which the control for it is drawn. It comes and goes on
+   * purpose, unlike the Różdżka's „dobierz Zaklęcie" beside it, which is greyed
+   * instead — that offer belongs to a card a player is holding and is worth
+   * learning the shape of, and this one belongs to a rule that has stopped the
+   * whole table until it is answered.
+   */
+  const surplus = capacity !== undefined && held.length > capacity;
+
   // The count against what will fit, exactly as the pack says it — and the same
   // red when there is no room, which is the moment 9.4 starts to bite.
   const tally =
@@ -670,14 +694,38 @@ export function SpellHand({
                    acting on it — and the tile is already dimmed when the window
                    is shut. Why it is greyed is on the hover, where the rest of
                    what the app knows about the card is. */
-                <button
-                  disabled={busy || !now || blocked !== null || nowhere}
-                  onClick={() => (mustAim ? setAiming(entry.holdingId) : onCast(entry.holdingId, {}))}
-                  title={whyNot ?? script?.effect}
-                  className="text-[9px] text-magia underline transition hover:text-ink disabled:text-muted/50 disabled:no-underline"
-                >
-                  {CAST_VERB}
-                </button>
+                <span className="flex items-center gap-2">
+                  <button
+                    disabled={busy || !now || blocked !== null || nowhere}
+                    onClick={() =>
+                      mustAim ? setAiming(entry.holdingId) : onCast(entry.holdingId, {})
+                    }
+                    title={whyNot ?? script?.effect}
+                    className="text-[9px] text-magia underline transition hover:text-ink disabled:text-muted/50 disabled:no-underline"
+                  >
+                    {CAST_VERB}
+                  </button>
+                  {/* „odrzuć" and not „upuść", which is what the Plecak and the
+                      Przyjaciele say. The two words are two destinations: a
+                      Przedmiot is *put down* on the Obszar you are standing on
+                      and 12.1 lets the next visitor take it, while a Zaklęcie
+                      goes on the stos Kart już zużytych — 9.6's own place for a
+                      spell leaving a hand, and the pile 9.5 reshuffles when the
+                      deck runs out. 12.1 lists złoto, Przedmioty and Przyjaciół
+                      and no Zaklęcia, so one left lying on a field would be a
+                      card nobody could ever pick up — and 9.3 would have
+                      published it on the way. */}
+                  {surplus && onDrop && (
+                    <button
+                      disabled={busy}
+                      onClick={() => onDrop(entry.holdingId)}
+                      title="Nadwyżka ponad limit Magii — Karta idzie na stos Kart już zużytych (9.4, 9.6)"
+                      className="text-[9px] text-muted underline transition hover:text-vermilion disabled:text-muted/50 disabled:no-underline"
+                    >
+                      odrzuć
+                    </button>
+                  )}
+                </span>
               )}
             </ItemSlot>
           );

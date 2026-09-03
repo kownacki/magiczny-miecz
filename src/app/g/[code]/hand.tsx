@@ -66,7 +66,7 @@ export function Hand({
    * 5.5 is confirmed in a dialog and carried out by the server, so between the
    * two there is a card that is still in the pack and already on its way out of
    * it. Without this the pack looks untouched until it suddenly is not, and the
-   * „odrzuć" under an unchanged card invites a second press.
+   * „upuść" under an unchanged card invites a second press.
    */
   asked?: readonly string[];
   onEquip: (holdingId: string, slot: Slot | null) => void;
@@ -553,7 +553,7 @@ export function Hand({
                 {/* Always drawn where a card has a use, whether or not the
                     double-click reaches it — a gesture nobody can see is not
                     an offer. In ochre because it costs you the card, unlike
-                    "odrzuć", which leaves it lying on the Obszar (5.5). */}
+                    „upuść", which leaves it lying on the Obszar (5.5). */}
                 {onUse && isUsable(held.cardId) && (
                   <button
                     onClick={() => onUse(held.id, held.cardId)}
@@ -582,11 +582,18 @@ export function Hand({
                     dobierz Zaklęcie
                   </button>
                 )}
+                {/* „upuść" and not „odrzuć", which is what a Zaklęcie says.
+                    The two words are two destinations, and the rulebook uses
+                    one verb for both: 5.5 leaves the Karta face up on the
+                    Obszar you are standing on and 12.1 lets the next visitor
+                    take it, while 9.6 sends a Zaklęcie to the stos Kart już
+                    zużytych. Nothing is thrown away here — it is put down, in
+                    a place everybody can see, and „odrzuć" said otherwise. */}
                 <button
                   onClick={() => onDrop(held.id)}
                   className="text-[9px] text-muted underline hover:text-vermilion"
                 >
-                  odrzuć
+                  upuść
                 </button>
               </span>
             )}
@@ -761,7 +768,7 @@ function FriendsHeld({
               the only one they could not reach.
               
               „w każdej chwili" is meant: no turn is required, and none is
-              asked for. The same „odrzuć" the pack draws, in the same place,
+              asked for. The same „upuść" the pack draws, in the same place,
               because the outcome is the same one — a Karta face up on the
               Obszar you are standing on, for whoever stops there next. */}
           {canAct && (
@@ -769,7 +776,7 @@ function FriendsHeld({
               onClick={() => onDrop(held.id)}
               className="text-[9px] text-muted underline hover:text-vermilion"
             >
-              odrzuć
+              upuść
             </button>
           )}
         </ItemSlot>
