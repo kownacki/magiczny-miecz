@@ -59,7 +59,33 @@ export function fieldName(fieldId: FieldId): string {
  * fault and falls back to the id like the other two lookups.
  */
 export function characterName(characterId: string): string {
-  return (characters as Character[]).find((one) => one.id === characterId)?.name ?? characterId;
+  return (
+    (characters as Character[]).find((one) => one.id === characterId)?.name ??
+    NOT_IN_THIS_BOX[characterId] ??
+    characterId
+  );
+}
+
+/**
+ * Postacie a base-game card names that are not in the base game.
+ *
+ * Two of them, both on the Zaklinacz Czasu, and the slug cannot be turned back
+ * into the name — „szczesciarz" has no way of becoming „SZCZĘŚCIARZ". Without
+ * this the exemption list read „ELF, HUMMIT, SPRYCIARZ, czarodziejka,
+ * szczesciarz": three names and two file names, which looks like a bug in the
+ * app rather than a fact about the box.
+ *
+ * `isInThisBox` is the other half — the sentence has to say they are missing,
+ * not merely spell them properly.
+ */
+const NOT_IN_THIS_BOX: Record<string, string> = {
+  czarodziejka: "CZARODZIEJKA",
+  szczesciarz: "SZCZĘŚCIARZ",
+};
+
+/** Whether the box this app plays actually contains this Postać. */
+export function isInThisBox(characterId: string): boolean {
+  return (characters as Character[]).some((one) => one.id === characterId);
 }
 
 /**

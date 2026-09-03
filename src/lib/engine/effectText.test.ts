@@ -105,12 +105,21 @@ describe("who an effect passes over", () => {
     ).toBe("tracisz 1 turę — wszyscy (oprócz: ELF)");
   });
 
-  it("still falls back to the id for a character out of this box", () => {
+  it("says which of them are not in this box", () => {
     // Two of the five that card names are expansion characters, so they are not
-    // `CharacterId`s and never will be while the scope is the base game.
+    // `CharacterId`s and never will be while the scope is the base game — and
+    // an exemption that quietly never fires is worth a clause rather than a
+    // silence.
     expect(
-      describeEffect({ op: "tura-stracona", turns: 1, target: "wszyscy", oprocz: ["szczesciarz"] }),
-    ).toBe("tracisz 1 turę — wszyscy (oprócz: szczesciarz)");
+      describeEffect({
+        op: "tura-stracona",
+        turns: 1,
+        target: "wszyscy",
+        oprocz: ["elf", "szczesciarz"],
+      }),
+    ).toBe(
+      "tracisz 1 turę — wszyscy (oprócz: ELF; SZCZĘŚCIARZ — tej Postaci nie ma w tym pudełku)",
+    );
   });
 });
 

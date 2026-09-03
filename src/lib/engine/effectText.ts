@@ -5,6 +5,7 @@ import {
   cardName,
   characterName,
   fieldName,
+  isInThisBox,
   NATURE_LABEL,
   LOST_COUNTED,
   LOST_LABEL,
@@ -57,6 +58,39 @@ function where(destination: Destination): string {
  * copy of it had been living in the turn panel: three arms, the same words, and
  * nothing at all to notice if one of them changed.
  */
+/**
+ * The exemption list, saying which of the named Postacie are not in this box.
+ *
+ * „z wyjątkiem Elfa, Hummita, Spryciarza, Czarodziejki i Szczęściarza" — and
+ * the last two are expansion characters, so the exception never fires for them
+ * here. Printed without the note it reads as five exemptions, of which two
+ * quietly do nothing; printed with it, the card is transcribed and the box is
+ * described, which are two different jobs and both of them wanted.
+ */
+function exempt(ids: readonly string[]): string {
+  const here = ids.filter(isInThisBox).map(characterName);
+  const missing = ids.filter((id) => !isInThisBox(id)).map(characterName);
+  if (missing.length === 0) return here.join(", ");
+  const absent = `${missing.join(" i ")} — ${
+    missing.length === 1 ? "tej Postaci" : "tych Postaci"
+  } nie ma w tym pudełku`;
+  return here.length === 0 ? absent : `${here.join(", ")}; ${absent}`;
+}
+
+/** The same test, said the other way round — for a `gdy` that has both branches. */
+export function describeConditionNot(condition: Condition): string {
+  switch (condition.is) {
+    case "natura":
+      return `jeśli nie ${condition.jedna_z.map((n) => NATURE_LABEL[n] ?? n).join(" ani ")}`;
+    case "prog":
+      return `jeśli ${condition.stat === "sword" ? "Miecz" : "Magia"} ≥ ${condition.ponizej}`;
+    case "attacker":
+      return "jeśli nie zaatakowałeś innej Postaci w tej rozgrywce";
+    case "ma-zloto":
+      return "jeśli nie masz złota";
+  }
+}
+
 export function describeCondition(condition: Condition): string {
   switch (condition.is) {
     case "natura":
@@ -124,6 +158,20 @@ export function effectRows(effect: Effect): string[] | null {
    * przenosisz się" reads better as prose than as two bullets, and a rule that
    * turned every sequence into a list would make a list of everything.
    */
+  /**
+   * Both branches, each on its own row, and the second says its own condition.
+   *
+   * „Jeśli masz złoto: −1 Złota; w przeciwnym razie: +1 Złota" makes the reader
+   * hold the first clause in their head to understand the second. „jeśli nie
+   * masz złota" does not. Only where there are two branches: a `gdy` with one
+   * is a sentence and reads like one.
+   */
+  if (effect.op === "gdy" && effect.inaczej) {
+    return [
+      `${describeCondition(effect.warunek)}: ${describeEffect(effect.to)}`,
+      `${describeConditionNot(effect.warunek)}: ${describeEffect(effect.inaczej)}`,
+    ];
+  }
   if (effect.op === "po-kolei") {
     const steps = effect.steps.map((step) => effectRows(step));
     if (!steps.some((rows) => rows !== null)) return null;
@@ -228,9 +276,7 @@ export function describeEffect(effect: Effect): string {
 
     case "tura-stracona": {
       const turns = `${effect.turns} ${plural(effect.turns, "turę", "tury", "tur")}`;
-      const spared = effect.oprocz?.length
-        ? ` (oprócz: ${effect.oprocz.map(characterName).join(", ")})`
-        : "";
+      const spared = effect.oprocz?.length ? ` (oprócz: ${exempt(effect.oprocz)})` : "";
       return `tracisz ${turns}${forWhom(effect.target)}${spared}`;
     }
 

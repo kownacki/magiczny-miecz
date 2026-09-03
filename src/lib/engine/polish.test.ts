@@ -4,6 +4,7 @@ import {
   cardName,
   characterName,
   fieldName,
+  isInThisBox,
   LOST_LABEL,
   plural,
   roundShown,
@@ -116,11 +117,15 @@ describe("naming what is printed on a card", () => {
     expect(characterName("barbarzynca")).toBe("BARBARZYŃCA");
   });
 
-  it("falls back to the id for a character out of another box", () => {
+  it("still names a character out of another box", () => {
     // The Zaklinacz Czasu's card names two expansion characters (see `oprocz`
     // in `cardScript.ts`), so a miss here is the card being transcribed
-    // faithfully rather than anything being wrong.
-    expect(characterName("szczesciarz")).toBe("szczesciarz");
+    // faithfully rather than anything being wrong — but "szczesciarz" beside
+    // "ELF" and "HUMMIT" reads as a bug in the app, and the slug cannot be
+    // turned back into the name.
+    expect(characterName("szczesciarz")).toBe("SZCZĘŚCIARZ");
+    expect(isInThisBox("szczesciarz")).toBe(false);
+    expect(isInThisBox("barbarzynca")).toBe(true);
   });
 
   it("names a Karta Zdarzeń", () => {
