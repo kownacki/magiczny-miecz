@@ -172,6 +172,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
     dismissNotice,
     setHouseRule,
     busy,
+    intent,
     post,
     runConsole,
     leave,
@@ -1516,6 +1517,11 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
             // the journal. Only the player whose turn it is can press anything.
             who={active.player_name ?? `Miejsce ${active.seat_index + 1}`}
             canAct={mySeatIndex === active.seat_index || isTableScreen}
+            // The three seconds between somebody deciding and it landing —
+            // only ever drawn on the devices that cannot press anything. Sent
+            // by the acting seat and by nobody else, which the route is what
+            // checks, so there is nothing to compare against `active` here.
+            intent={intent}
             minimized={folded}
             onMinimize={() => setFolded(true)}
             cards={turnState.phase === "field" ? turnState.drawn : []}
@@ -1671,6 +1677,17 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
               post("holdings", { action: "take", seatId: active.id, cardId })
             }
             onLeave={(cardId) => setWaved((current) => [...current, cardId])}
+            /* The same door the Obszar drawer uses, and it clears itself here
+               so no caller can leave an answered question on screen. */
+            onAsk={(question) =>
+              setAsk({
+                ...question,
+                onConfirm: () => {
+                  setAsk(null);
+                  question.onConfirm();
+                },
+              })
+            }
           />
         </TheReader.Provider>
         )}

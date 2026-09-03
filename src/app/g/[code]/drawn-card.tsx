@@ -19,6 +19,7 @@ import { sentence } from "@/lib/engine/polish";
 import { mayWalkPast } from "@/lib/engine/kolejka";
 import { TheReader } from "./card-facts";
 import { WithRules } from "./rule-ref";
+import type { Confirmation } from "./confirm";
 import type { Nature } from "@/data/types";
 import { pendingIn } from "@/lib/engine/resolve";
 import { coverageOf, manualNote, NOT_HANDLED } from "@/lib/engine/coverage";
@@ -69,6 +70,7 @@ export function DrawnCard({
   onEscape,
   onTake,
   onLeave,
+  onAsk,
 }: {
   who: string;
   chrome: SheetChrome;
@@ -130,6 +132,8 @@ export function DrawnCard({
   onTake: (cardId: string) => void;
   /** Nothing to do with this one — it stays on the field (16.8). */
   onLeave: (cardId: string) => void;
+  /** Raises the table's one „are you sure?" — see `ConfirmDialog`. */
+  onAsk: (question: Omit<Confirmation, "tone">) => void;
 }) {
   // The choices made so far for the card on screen, as indices into its own
   // options. Sent back with the next attempt, so the server re-walks the card
@@ -612,10 +616,34 @@ export function DrawnCard({
                         ...(choices.length === 0 ? { option: index } : {}),
                       }}
                       disabled={busy || !going}
+                      /**
+                       * Asked before it happens, like dropping a Przedmiot and
+                       * spending gold.
+                       *
+                       * A relocation cannot be taken back and the Karta goes
+                       * either way — „Bez względu na to, czy skorzystasz z
+                       * propozycji, Jednorożec oddala się" — so a mis-picked
+                       * Obszar off a dropdown is spent. 16.8 then makes you
+                       * explore where you landed, which can be a fight you did
+                       * not choose.
+                       *
+                       * The Obszar is named rather than declined — „Obszar:
+                       * Karczma", not „na Karczmę" — for the reason the journal
+                       * keeps names bare: the data carries one case and Polish
+                       * wants several.
+                       */
                       onClick={() =>
-                        onResolve(known.id, {
-                          choices: [...choices, index],
-                          destination: going as FieldId,
+                        onAsk({
+                          title: "Przenieść się?",
+                          body:
+                            `Obszar: ${FIELDS.get(going as FieldId)?.name ?? going}. ` +
+                            "Rozpatrzysz go tak, jakby twój ruch skończył się tam (16.8).",
+                          confirmLabel: "Przenieś się",
+                          onConfirm: () =>
+                            onResolve(known.id, {
+                              choices: [...choices, index],
+                              destination: going as FieldId,
+                            }),
                         })
                       }
                     >

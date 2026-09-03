@@ -13,6 +13,7 @@ import type { Effect } from "@/lib/engine/cardScript";
 import { nextFrame } from "@/lib/engine/kolejka";
 import type { CardClass } from "@/data/types";
 import type { Nature } from "@/data/types";
+import type { Confirmation } from "./confirm";
 import type { FieldId } from "@/lib/engine/board";
 import type { SpellTiming } from "@/lib/engine/spells";
 import type { Fight, TurnMoveOption } from "@/lib/engine/turn";
@@ -69,6 +70,7 @@ export function DrawModal({
   actor,
   aggression,
   busy,
+  intent,
   onAction,
   onResolve,
   onResolveField,
@@ -76,6 +78,7 @@ export function DrawModal({
   onEscape,
   onTake,
   onLeave,
+  onAsk,
 }: {
   /** Whose turn this is, for everybody who is only watching it. */
   who: string;
@@ -160,6 +163,8 @@ export function DrawModal({
   /** The active character's last aggressive act — see `DrawnCard`. */
   aggression?: string | null;
   busy: boolean;
+  /** What the acting player is about to do, passed straight through to `DrawnCard`. */
+  intent?: { kind: string; option?: number } | null;
   onAction: OnAction;
   onResolve: (
     cardId: string,
@@ -173,6 +178,8 @@ export function DrawModal({
   onTake: (cardId: string) => void;
   /** Nothing to do with this one — it stays on the field (16.8). */
   onLeave: (cardId: string) => void;
+  /** Raises the table's one confirmation — see `ConfirmDialog`. */
+  onAsk: (question: Omit<Confirmation, "tone">) => void;
 }) {
   const chrome: SheetChrome = { canAct, minimized, onMinimize, error, seatIndex, actor };
 
@@ -285,11 +292,13 @@ export function DrawModal({
       nature={nature}
       aggression={aggression}
       busy={busy}
+      intent={intent}
       onResolve={onResolve}
       onFight={onFight}
       onEscape={onEscape}
       onTake={onTake}
       onLeave={onLeave}
+      onAsk={onAsk}
     />
   );
 }
