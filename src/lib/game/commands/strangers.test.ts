@@ -222,3 +222,40 @@ describe("the Kuglarz, who reads one parameter off the other", () => {
     expect(said).toMatch(/bez zmian/);
   });
 });
+
+/**
+ * A destination the card leaves open is answered in the walk, before `runOp` is
+ * reached — so the op that names the Karta is never run, and the journal line
+ * had a name in its text with nothing to press.
+ */
+describe("the Jednorożec's ride, in the journal", () => {
+  it("names the Karta that did the moving", async () => {
+    const table = aTable({
+      game: {
+        active_seat: 0,
+        turn_state: {
+          phase: "field",
+          fieldId: "osada",
+          from: null,
+          draw: 0,
+          drawn: [{ cardId: "jednorozec", cardClass: "stranger" as const }],
+          resolved: [],
+        } as TurnPhase,
+      },
+      seats: [
+        aSeat({ id: "seat-a", character_id: asSeatCharacter("awanturnik"), field_id: "osada" }),
+      ],
+    });
+    const out = await resolveDrawnCard(
+      table,
+      { cardId: "jednorozec", decided: { choices: [0], destination: "karczma" }, shuffle: asIs },
+      ports(),
+    );
+    const line = out.writes.journal?.find((one) => one.kind === "moved-by-card");
+    expect(line?.payload).toMatchObject({
+      from: "osada",
+      to: "karczma",
+      cardId: "jednorozec",
+    });
+  });
+});

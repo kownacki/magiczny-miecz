@@ -409,7 +409,17 @@ async function walk(
     if (!where) return owed();
     // A Karta moving somebody, as 13.1 has it — the same as the settled
     // destination above, and read the same way in the journal.
-    const moved = placeSeat(snapshot, { seatId, target: where, reason, by: "karta" });
+    // `byCard` here as well as on the op below: a destination the card leaves
+    // open is answered *in the walk*, before `runOp` is ever reached, so the
+    // Jednorożec's relocation never went through the op that names the Karta —
+    // and its journal line had a name in its text and nothing to press.
+    const moved = placeSeat(snapshot, {
+      seatId,
+      target: where,
+      reason,
+      by: "karta",
+      byCard: command.cardId,
+    });
     return {
       writes: moved.writes,
       result: {
