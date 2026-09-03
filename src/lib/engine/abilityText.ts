@@ -109,24 +109,43 @@ export function whenApplies(
 }
 
 /**
- * How long a Nieznajomy or a Miejsce is here, in a phrase.
+ * How long this Karta is here, in a phrase.
  *
- * Which is the only thing that varies between them worth saying beside the
- * picture. Whether the instruction is binding is not: 16.5 and 16.7 both say
- * „konieczne jest wykonanie zawartej w Karcie instrukcji", so every one of them
- * is carried out at its place in the kolejka, and a label repeating that on all
- * thirty is a word that says nothing.
+ * Which is the only thing that varies between a Nieznajomy and a Miejsce worth
+ * saying beside the picture. Whether the instruction is binding is not: 16.5
+ * and 16.7 both say „konieczne jest wykonanie zawartej w Karcie instrukcji", so
+ * every one of them is carried out at its place in the kolejka, and a label
+ * repeating that on all thirty is a word that says nothing.
  *
  * What a player actually needs to know is whether the Karta will still be there
  * — the CUDOTWÓRCA for the rest of the game, the WRÓŻKA until the first Dobra
  * Postać takes her wish, the KUGLARZ not even until the end of this turn. Read
  * off the disposition, which is where that fact already lives.
+ *
+ * # And on a Spotkanie, where it was silent
+ *
+ * A Spotkanie has the same range of fates and a wider one: MGŁA sits on the
+ * table for two turns capping everybody's walk, POŁUDNICA and ZŁY DUCH attach
+ * themselves to you for the rest of the game. Those said it in ochre at the
+ * *foot* of the rows — „Bierzesz Kartę ze sobą." — as an instruction to the
+ * table, under everything the card does, while a Nieznajomy said the same kind
+ * of fact first and in the terms colour. One question, two registers, decided
+ * by a class the reader cannot see.
+ *
+ * `odloz` is the exception, and stays null. On a Nieznajomy it is worth saying,
+ * because the Karta might have stayed on the Obszar and five of the seventeen
+ * do not; on a Spotkanie it is what happens to fourteen of the twenty and to
+ * every card nobody wonders about. Absence is the answer there: no line means
+ * the Karta happens and is over, and the housekeeping sentence in the rows
+ * below still says where it goes.
  */
 export function staysAs(cardId: string): string | null {
   const cardClass = classOf(cardId);
-  if (cardClass !== "stranger" && cardClass !== "place") return null;
+  const resident = cardClass === "stranger" || cardClass === "place";
+  if (!resident && cardClass !== "encounter") return null;
   const disposition = scriptFor(cardId)?.disposition;
   if (!disposition) return null;
+  if (!resident && disposition.kind === "odloz") return null;
   switch (disposition.kind) {
     case "odloz":
       return "jednorazowa — potem wraca na stos";
@@ -165,8 +184,8 @@ export interface AbilityFact {
 /** Everything the app carries about one card, ready to be shown. */
 export interface ItemProfile {
   /**
-   * How long this Karta is here — see `staysAs`. Null for every class but a
-   * Nieznajomy and a Miejsce, which is most of the box.
+   * How long this Karta is here — see `staysAs`. Null on a Przedmiot and a
+   * Wróg, and on the Spotkania that simply happen and are over.
    */
   visit: string | null;
   /** Where it may be worn. Empty when it is only ever carried. */

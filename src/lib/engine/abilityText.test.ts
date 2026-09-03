@@ -210,6 +210,41 @@ describe("how long a Nieznajomy or a Miejsce stays", () => {
   it("is carried on the profile, for the panel beside the picture", () => {
     expect(itemProfile("targowisko").visit).toBe("zostaje na Obszarze do końca gry");
   });
+
+  /**
+   * A Spotkanie has the same fates and a wider range of them, and was saying
+   * so in the ochre rows at the foot of the panel instead — as an instruction
+   * to the table rather than as the terms the Karta is here on.
+   */
+  it("says it on a Spotkanie that does not simply happen and go", () => {
+    // „Musisz ją zabrać jako Przyjaciela" — for the rest of the game, unless
+    // you cross the Trzęsawiska or the Lodowy Las.
+    expect(staysAs("poludnica")).toBe("bierzesz ją ze sobą");
+    expect(staysAs("zly-duch")).toBe("bierzesz ją ze sobą");
+    // „Przez 2 tury Postacie mogą przebywać tylko 2 Obszary."
+    expect(staysAs("mgla")).toBe("działa przez 2 tury");
+    expect(staysAs("uklad-planet")).toBe("działa przez 1 turę");
+  });
+
+  /**
+   * And stays quiet about the fourteen that do. On a Nieznajomy „jednorazowa"
+   * is worth saying because the Karta might have stayed on the Obszar; on a
+   * Spotkanie it is the answer nobody wonders about, and absence says it.
+   */
+  it("stays quiet about a Spotkanie that is over when it is over", () => {
+    for (const id of ["zaraza", "zasadzka", "straz", "danina", "przesilenie"]) {
+      expect(staysAs(id), id).toBeNull();
+    }
+  });
+
+  /** Said once: whichever line carries it, the other one does not repeat it. */
+  it("does not print the disposition twice on a Spotkanie either", () => {
+    expect(itemProfile("poludnica").special.join(" ")).not.toContain("Bierzesz Kartę");
+    expect(itemProfile("mgla").special.join(" ")).not.toContain("Karta działa przez");
+    // The fourteen keep the housekeeping sentence, which is now the only place
+    // their disposition is said.
+    expect(itemProfile("zaraza").special).toContain("Odłóż Kartę na stos użytych.");
+  });
 });
 
 /**
