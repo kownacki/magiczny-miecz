@@ -184,22 +184,28 @@ body {
    rather than the app's, it is the one a reader reaches for without looking,
    and a scroll of the whole window is a different gesture from a scroll of a
    drawer. The viewport takes its scrollbar from `html`, so leaving those two
-   alone is the whole of it. */
-:not(html, body) {
+   alone is most of it.
+
+   `.page-scroll` is the rest. The table screen never scrolls the window — it
+   is a full-height layout with its own columns — so the column holding the
+   Karta Postaci *is* the page's scroll, and a bar that reads as the browser's
+   is the honest one there whatever element it happens to hang off. One class,
+   on the one element that stands in for the viewport. */
+:not(html, body, .page-scroll) {
   scrollbar-width: thin;
   scrollbar-color: var(--color-edge) transparent;
 }
 
-:not(html, body)::-webkit-scrollbar {
+:not(html, body, .page-scroll)::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 
-:not(html, body)::-webkit-scrollbar-track {
+:not(html, body, .page-scroll)::-webkit-scrollbar-track {
   background: transparent;
 }
 
-:not(html, body)::-webkit-scrollbar-thumb {
+:not(html, body, .page-scroll)::-webkit-scrollbar-thumb {
   background: var(--color-edge);
   border-radius: 4px;
 }

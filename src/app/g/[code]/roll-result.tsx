@@ -70,7 +70,18 @@ export function RollSaid({
       <div className="flex flex-wrap items-center gap-3">
         <p className="flex items-center gap-2 text-ochre">
           <span className="text-[11px] uppercase tracking-widest text-muted">Wypadło</span>
-          <span className="font-[family-name:var(--font-display)] text-4xl leading-none tabular-nums">
+          {/**
+           * `leading-snug`, and not the `leading-none` this had.
+           *
+           * Cinzel's ascent and descent do not fit a line box the height of its
+           * own font size: at 36px the glyph's box stands 6px past the line,
+           * and while nothing looks clipped — ink overflow paints outside its
+           * box happily — those 6px are *scrollable* overflow, so the Karta's
+           * column grew a scrollbar with half the panel standing empty above
+           * it. Measured, not guessed: `leading-none` overflows by 6, the
+           * default by 4, `leading-tight` by 1, and this by none.
+           */}
+          <span className="font-[family-name:var(--font-display)] text-4xl leading-snug tabular-nums">
             {face}
           </span>
           {/* The glyph off the button that threw it, so the two read as one act

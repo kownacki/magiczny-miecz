@@ -172,7 +172,10 @@ export function TableLayout({
           style={{
             paddingBottom: "calc(0.75rem + var(--console-h, 0px) + var(--fab-h, 0px))",
           }}
-          className="min-h-0 w-[61.8%] flex-1 overflow-y-auto p-3"
+          /* `page-scroll`: this column is the page's own scroll — the table
+             screen never scrolls the window — so its bar is the browser's
+             furniture rather than the app's. See `globals.css`. */
+          className="page-scroll min-h-0 w-[61.8%] flex-1 overflow-y-auto p-3"
         >
           {right}
         </section>
