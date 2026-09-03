@@ -147,8 +147,13 @@ export function DrawModal({
     /** Whether this device is the character being attacked in a duel (17.6). */
     myEscape: boolean;
     onAction: OnAction;
-    /** Throws the field's own table and applies the row. */
-    onResolveField: (choices: number[]) => void;
+    /**
+     * Throws the field's own table and applies the row.
+     *
+     * The promise settles when the server has answered, which is what
+     * `FieldOffer` holds its pressed button on.
+     */
+    onResolveField: (choices: number[]) => void | Promise<void>;
   }) {
   const chrome: SheetChrome = { canAct, minimized, onMinimize, error, seatIndex, actor };
 

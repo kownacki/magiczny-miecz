@@ -30,14 +30,39 @@ export function FieldOffer({
   chrome: SheetChrome;
   offer: { name: string; effect: Effect };
   busy: boolean;
-  /** Throws the field's own table and applies the row. */
-  onResolveField: (choices: number[]) => void;
+  /**
+   * Throws the field's own table and applies the row.
+   *
+   * The promise is what the buttons below wait on — see `sent`.
+   */
+  onResolveField: (choices: number[]) => void | Promise<void>;
 }) {
-  // The choices made so far, as indices into the effect's own options. Sent
-  // back with the next attempt, so the server re-walks the table and takes the
-  // branch rather than being handed an effect.
-  const [choices, setChoices] = useState<number[]>([]);
-  const owed = pendingIn(offer.effect, choices);
+  /**
+   * The answer that has gone to the server and has not come back.
+   *
+   * The same rule as the Karta's own panel, and it is here for the same reason
+   * — see `sent` in `drawn-actions.tsx`. This used to append the option to a
+   * local list, ask `pendingIn` again with the longer one, and so replace the
+   * Strażnik's two answers with „Rozpatrz" the instant one of them was pressed:
+   * a control nobody chose, greyed out while the request flew and live again
+   * for as long as the new turn state took to arrive.
+   *
+   * An option pressed here is the table's first question, and a question left
+   * over after it is the server's to ask, as a `script` frame. So the panel
+   * keeps what it is showing, marks the button that was pressed, and waits.
+   */
+  const [sent, setSent] = useState<{ option: number | null } | null>(null);
+  const owed = pendingIn(offer.effect, []);
+
+  /** Sends one answer and holds it on screen until the server has answered. */
+  const answer = async (was: { option: number | null }, choices: number[]) => {
+    setSent(was);
+    try {
+      await onResolveField(choices);
+    } finally {
+      setSent((current) => (current === was ? null : current));
+    }
+  };
 
   return (
     <DrawSheet
@@ -54,11 +79,8 @@ export function FieldOffer({
               <ActionButton
                 key={option.label}
                 disabled={busy}
-                onClick={() => {
-                  const next = [...choices, index];
-                  setChoices(next);
-                  onResolveField(next);
-                }}
+                sent={sent?.option === index}
+                onClick={() => void answer({ option: index }, [index])}
               >
                 {option.label}
               </ActionButton>
@@ -68,7 +90,8 @@ export function FieldOffer({
               weight="lead"
               size="lg"
               disabled={busy}
-              onClick={() => onResolveField(choices)}
+              sent={sent !== null}
+              onClick={() => void answer({ option: null }, [])}
             >
               {offer.effect.op === "rzut" ? "Rzuć i rozpatrz" : "Rozpatrz"}
             </ActionButton>

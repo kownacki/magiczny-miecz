@@ -1759,7 +1759,10 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                 active.field_id,
                 turnState.phase === "field" ? (turnState.resolved ?? []) : [],
               );
-              if (offer) post("turn", { action: "pole-tabela", offer: offer.name, choices });
+              /* Handed back rather than dropped: the panel holds the button
+                 that was pressed until this settles. */
+              if (!offer) return;
+              return post("turn", { action: "pole-tabela", offer: offer.name, choices });
             }}
             onFight={(cardIds) => post("turn", { action: "fight", cardIds })}
             onEscape={() => post("turn", { action: "escape" })}

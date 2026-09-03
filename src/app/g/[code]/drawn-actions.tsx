@@ -120,10 +120,18 @@ export interface DrawnActionsProps {
    * table has ever had, and this is what fills them.
    */
   intent?: Intent | null;
+  /**
+   * Sends a decision about the Karta, and settles when the server has answered.
+   *
+   * The promise is what `answer` below waits on: the panel holds the button
+   * that was pressed until the turn state carrying it comes back, rather than
+   * drawing what it guesses comes next. `void` for a caller with nothing to
+   * wait on.
+   */
   onResolve: (
     cardId: string,
     decisions: { choices?: number[]; destination?: FieldId },
-  ) => void;
+  ) => void | Promise<void>;
   /** One creature, or several at once when 17.5 lets them attack together. */
   onFight: (cardIds: string[]) => void;
   onEscape: () => void;
@@ -209,10 +217,30 @@ export function DrawnActions({
    * See `TheReader`.
    */
   const reader = useContext(TheReader);
-  // The choices made so far for the card on screen, as indices into its own
-  // options. Sent back with the next attempt, so the server re-walks the card
-  // and takes the branch rather than being handed an effect.
-  const [choices, setChoices] = useState<number[]>([]);
+  /**
+   * The answer that has gone to the server and has not come back.
+   *
+   * This panel does not walk the Karta ahead of the server. It used to: an
+   * option press appended its index to a local list of choices, and the next
+   * render asked `pendingIn` again with the longer list — so the moment a
+   * decision was *sent*, the panel drew what it thought came next. For every
+   * card in the box that is the same thing: the options vanish and „Rozpatrz"
+   * takes their place, disabled for as long as the request is in flight and
+   * live again if the new turn state is a beat behind it. The player who chose
+   * a wish from the KRÓL LASU pressed six buttons and got a seventh.
+   *
+   * The list bought nothing. A question this panel asks is answered by the
+   * request that carries it, and a question left over after that one is the
+   * *server's* to ask — it suspends the walk into a `script` frame with a
+   * cursor (docs/STACK.md), and `ScriptFramePanel` is what draws it. So there
+   * is never a second question here to walk down to, and every press is the
+   * first: the panel keeps what it is showing, marks the button that was
+   * pressed, and waits for the turn state to move it on.
+   *
+   * `option` is which of a `wybor`'s buttons it was, for the mark; null for a
+   * decision that is not one of several.
+   */
+  const [sent, setSent] = useState<{ option: number | null } | null>(null);
   const [going, setGoing] = useState<FieldId | "">("");
 
   /**
@@ -226,7 +254,7 @@ export function DrawnActions({
   const [decidingAbout, setDecidingAbout] = useState(card.cardId);
   if (card.cardId !== decidingAbout) {
     setDecidingAbout(card.cardId);
-    setChoices([]);
+    setSent(null);
     setGoing("");
   }
 
@@ -234,6 +262,32 @@ export function DrawnActions({
   if (!known) return null;
 
   const script = scriptFor(known.id);
+
+  /**
+   * Sends one decision and holds it on screen until the server has answered.
+   *
+   * Every button under a Karta that resolves it goes through here, so that the
+   * one that was pressed is the one that says something is happening — the rest
+   * of the panel dims behind `busy`, and what a player is left looking at is
+   * their own answer rather than a control they did not choose.
+   *
+   * `finally`, because a refusal has to release the button too: the Karta is
+   * still there and the error is on the sheet above, and a decision stuck
+   * mid-press would be the one thing on screen that cannot be corrected.
+   */
+  const answer = async (
+    was: { option: number | null },
+    decisions: { choices?: number[]; destination?: FieldId },
+  ) => {
+    setSent(was);
+    try {
+      await onResolve(known.id, decisions);
+    } finally {
+      // Only if it is still ours: the Karta may have moved on and reset this
+      // already, and a late answer must not clear the next one's mark.
+      setSent((current) => (current === was ? null : current));
+    }
+  };
 
   // Whose Miecz the Sobowtór borrows — see `combatValueOf`. Harmless for every
   // other creature, which carries its own number.
@@ -268,9 +322,11 @@ export function DrawnActions({
       : null;
   const keep = kindForCard(known);
 
-  // What the card is still asking, walked down through the choices already
-  // made. Null when there is nothing left to ask and the app can simply do it.
-  const asking = script ? pendingIn(script.effect, choices, nature) : null;
+  // What the card is asking. Null when there is nothing to ask and the app can
+  // simply do it. Nothing has been decided yet by definition — an answer given
+  // here is sent, and what the card asks after it is the server's frame to put
+  // up, not this panel's to guess at (see `sent`).
+  const asking = script ? pendingIn(script.effect, [], nature) : null;
 
   /* Kept for `inert` below: the line itself is `CardFacts`'s now, drawn from
      the same `requirementOf` against the same reader. What is asked here is
@@ -341,10 +397,11 @@ export function DrawnActions({
    * and the reason the sentence quotes the `Do wyboru:` line above it word for
    * word rather than approximately.
    *
-   * The sender leaves the number out once it is already partway down a nested
-   * question, because this end re-walks the script with its own (empty)
-   * `choices` and would be pointing into a different list. „wybiera…" with no
-   * option is the honest answer there, and better than a confident wrong one.
+   * Both ends read the same list, which is what makes the number mean the same
+   * thing at both: every answer this panel sends is the first question of its
+   * Karta, so the watching device walks to the very node the sender was looking
+   * at. A question that comes after one is asked by a `script` frame, and that
+   * panel says its own piece.
    */
   const chosen =
     intent?.option !== undefined && asking?.op === "wybor"
@@ -498,11 +555,9 @@ export function DrawnActions({
                 <span key={option.label} className="flex flex-wrap items-center gap-2">
                   <ObszarPicker among={ring} value={going} onPick={setGoing} />
                   <ActionButton
-                    says={{
-                      kind: "wybiera",
-                      ...(choices.length === 0 ? { option: index } : {}),
-                    }}
+                    says={{ kind: "wybiera", option: index }}
                     disabled={busy || !going}
+                    sent={sent?.option === index}
                     /**
                      * Asked before it happens, like dropping a Przedmiot and
                      * spending gold.
@@ -524,10 +579,10 @@ export function DrawnActions({
                      * eventually run, not what the press runs.
                      */
                     onClick={() =>
-                      onResolve(known.id, {
-                        choices: [...choices, index],
-                        destination: going as FieldId,
-                      })
+                      void answer(
+                        { option: index },
+                        { choices: [index], destination: going as FieldId },
+                      )
                     }
                     confirm={(proceed) =>
                       onAsk({
@@ -544,17 +599,13 @@ export function DrawnActions({
               ) : (
                 <ActionButton
                   key={option.label}
-                  // The index goes only while this is still the first
-                  // question asked. Past that, the watching device re-walks
-                  // the script with its own empty `choices` and would read
-                  // the number against a different list — see `chosen`.
-                  says={{ kind: "wybiera", ...(choices.length === 0 ? { option: index } : {}) }}
+                  // The number means the same thing at both ends: this is the
+                  // Karta's first question, so the watching device walks to the
+                  // same node with its own empty choices — see `chosen`.
+                  says={{ kind: "wybiera", option: index }}
                   disabled={busy}
-                  onClick={() => {
-                    const next = [...choices, index];
-                    setChoices(next);
-                    onResolve(known.id, { choices: next });
-                  }}
+                  sent={sent?.option === index}
+                  onClick={() => void answer({ option: index }, { choices: [index] })}
                   // What it would leave you with. A choice between two rules is
                   // not a choice until you know the numbers: „Miecz 6 → 2 ·
                   // Magia 2 → 6" is the decision the label only describes.
@@ -576,7 +627,8 @@ export function DrawnActions({
           <ActionButton
             says={{ kind: "przenosi-sie" }}
             disabled={busy || !going}
-            onClick={() => onResolve(known.id, { choices, destination: going as FieldId })}
+            sent={sent !== null}
+            onClick={() => void answer({ option: null }, { destination: going as FieldId })}
           >
             Przenieś się
           </ActionButton>
@@ -597,7 +649,8 @@ export function DrawnActions({
           <ActionButton
             says={{ kind: "kladzie" }}
             disabled={busy || !going}
-            onClick={() => onResolve(known.id, { choices, destination: going as FieldId })}
+            sent={sent !== null}
+            onClick={() => void answer({ option: null }, { destination: going as FieldId })}
           >
             Połóż tutaj
           </ActionButton>
@@ -619,7 +672,8 @@ export function DrawnActions({
             size="lg"
             says={{ kind: "pomija" }}
             disabled={busy}
-            onClick={() => onResolve(known.id, { choices })}
+            sent={sent !== null}
+            onClick={() => void answer({ option: null }, {})}
           >
             {/* „Musisz", because it is the only thing there is to press. The
                 other „Pomiń" — a Miejsce whose own text asks first — is a
@@ -638,7 +692,8 @@ export function DrawnActions({
           className="self-start"
           says={{ kind: "rozpatruje" }}
           disabled={busy}
-          onClick={() => (script ? onResolve(known.id, { choices }) : onLeave(known.id))}
+          sent={sent !== null}
+          onClick={() => (script ? void answer({ option: null }, {}) : onLeave(known.id))}
         >
           {/* „Rozpatrz, co się da" is gone. It was the label for an effect
               the browser could not fully predict, and it read as a shrug —

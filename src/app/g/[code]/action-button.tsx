@@ -137,6 +137,7 @@ export function ActionButton({
   note,
   title,
   disabled = false,
+  sent = false,
   onClick,
   says,
   confirm,
@@ -160,6 +161,21 @@ export function ActionButton({
   /** Only where a glyph or an abbreviation cannot say it. Never a rule number. */
   title?: string;
   disabled?: boolean;
+  /**
+   * This button's decision has gone to the server and has not come back.
+   *
+   * The other side of the three seconds. While a button fills, the decision is
+   * still the player's and the button is the way out of it; once it is sent
+   * there is no way out, and what the panel owes them instead is to say which
+   * of the buttons they pressed — the whole row is disabled by then, and a row
+   * of equally grey options is a panel that has forgotten what it was asked.
+   *
+   * So this one keeps its colour while the rest dim, and breathes. It is not a
+   * spinner: nothing here reports progress, because there is none to report —
+   * it says *this is the one that is happening*, and it stops when the turn
+   * state that carries it arrives and the panel moves on.
+   */
+  sent?: boolean;
   onClick: () => void;
   /**
    * What the watching players are told while this fills.
@@ -200,7 +216,8 @@ export function ActionButton({
   return (
     <button
       type="button"
-      disabled={disabled || waiting}
+      disabled={disabled || waiting || sent}
+      aria-busy={sent || undefined}
       onClick={
         filling
           ? cancelChannelling
@@ -213,7 +230,10 @@ export function ActionButton({
       title={filling ? undefined : title}
       aria-label={filling ? "Anuluj" : undefined}
       className={[
-        "relative overflow-hidden rounded border transition disabled:opacity-50",
+        "relative overflow-hidden rounded border transition",
+        // Everything else on the panel dims behind `busy`; the decision that is
+        // in flight is the one thing still true, so it does not.
+        sent ? "" : "disabled:opacity-50",
         SIZE[size],
         LOOK[role][weight],
         align === "left" ? "text-left" : "",
@@ -230,6 +250,12 @@ export function ActionButton({
           <span className="mt-0.5 block text-[11px] leading-snug text-muted">{note}</span>
         ) : null}
       </span>
+      {sent ? (
+        <span
+          aria-hidden
+          className={`pointer-events-none absolute inset-0 motion-safe:animate-pulse ${FILL[role]}`}
+        />
+      ) : null}
       {filling ? (
         <>
           <span
