@@ -133,9 +133,17 @@ export function NowBox({
        * question the colour answers at a glance, and from across a table you
        * cannot read the name.
        */
-      className="flex min-h-[180px] w-[270px] shrink-0 flex-col rounded-lg border bg-panel p-3"
+      className="relative flex min-h-[180px] w-[270px] shrink-0 flex-col rounded-lg border bg-panel p-3"
       style={{ borderColor: seatColour(seatIndex) }}
     >
+      {/* Breathing in that colour, like the sheet — see `seat-breath`. The two
+          are the same statement in two places: this is whose turn it is. Its
+          own ring, because animating the box fades the numbers inside it. */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 rounded-lg border-2 motion-safe:animate-seat-breath"
+        style={{ color: seatColour(seatIndex), borderColor: "currentColor" }}
+      />
       <header className="mb-2 min-w-0">
         {/* What the box is, in the same hand as Dziennik and the other
             surfaces' titles. Without it the first line was a player's name in
@@ -143,8 +151,14 @@ export function NowBox({
             box announced *who* before it announced *what it was*, and a player
             who had not been told had to work it out from the buttons. */}
         <div className="mb-1 flex items-baseline justify-between gap-2">
+          {/* „Tura", which is the book's own noun for it — chapter 10 is
+              „TURY" and 10.1 opens „Czas gry podzielony jest na tury, podczas
+              których Postacie kolejno wykonują swoje czynności". „Teraz" was
+              the app's word for the same thing, and it sat beside „Runda",
+              which is the app's word for the other one. Two nouns from the
+              game, not one from the game and one from the interface. */}
           <h2 id="teraz" className="text-[11px] uppercase tracking-widest text-muted">
-            Teraz
+            Tura
           </h2>
           {/* Opposite the heading and in the same hand as it: this is what kind
               of moment it is, not something to act on. Round 1 is a real

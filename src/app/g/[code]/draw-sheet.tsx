@@ -7,6 +7,7 @@ import { ChromeButton } from "./chrome";
 import { seatColour } from "@/lib/view/boardMap";
 import { CARD_RATIO, PICTURE_WIDTH } from "./card-preview";
 import { CHARACTER_ART_RATIO, characterStandeeUrl } from "@/lib/view/cardImages";
+import { Lookable } from "./lookable";
 import { WithRules } from "./rule-ref";
 
 /**
@@ -224,6 +225,9 @@ export function DrawSheet({
               prose column rather than out of the sheet. */}
           {actor && (
             <div className="hidden w-[86px] shrink-0 flex-col gap-1.5 self-start sm:flex">
+              {/* The same heading the Teraz box carries, in the same hand: the
+                  book's own noun for what this is (chapter 10, „TURY"). */}
+              <h3 className="text-[11px] uppercase tracking-widest text-muted">Tura</h3>
               {actor.characterId && characterStandeeUrl(actor.characterId) && (
                 /* The standee is a way in to the roster, which is where
                    everything else about a player is — their Postać, their
@@ -259,8 +263,16 @@ export function DrawSheet({
                 />
                 <span className="truncate">{actor.name}</span>
               </p>
-              <p className="truncate text-[12px] leading-none text-muted">
-                {actor.characterName}
+              {/* At the size a card's name is under its tile in the Księga, so
+                  it fits under the standee without being cut. Hoverable like
+                  every other name in the app — `Lookable` draws the Karta
+                  Postaci and its abilities. */}
+              <p className="truncate text-center text-[9px] leading-tight text-muted">
+                {actor.characterId ? (
+                  <Lookable kind="character" id={actor.characterId} name={actor.characterName} />
+                ) : (
+                  actor.characterName
+                )}
               </p>
             </div>
           )}
