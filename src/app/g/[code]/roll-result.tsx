@@ -20,8 +20,16 @@ export interface Rolled {
    * table — the same naming a fight against a square's guardian uses.
    */
   cardId: string;
-  /** What it was thrown for, in its own words — the Karta's name, or the offer's. */
-  title: string;
+  /**
+   * Nothing the face chose has happened yet.
+   *
+   * The face stays on the Obszar's frame until the Karta finishes, which
+   * outlasts the wait: „Dalej" runs the row, and a row that opens a fight or
+   * asks which Przedmiot goes leaves the number standing over the question it
+   * raised. Only while this is true is the sheet *holding* the Karta — showing
+   * the button, and refusing to let the turn move on around it.
+   */
+  held: boolean;
   face: number;
   /** What the app applied, as the command reported it. */
   did: string[];

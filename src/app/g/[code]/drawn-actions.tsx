@@ -995,7 +995,8 @@ export function DrawnActions({
                  sentence twice; „Zaklęcie: KAMIEŃ FILOZOFICZNY" over „zyskujesz
                  1 Zaklęcie" is the card it turned out to be, and worth a line. */
               did={said6.did.filter((line) => line !== saidByFace(said6.face))}
-              onDone={onRollRead ?? (() => {})}
+              /* The button only while the row is still waiting — see `held`. */
+              {...(said6.held ? { onDone: onRollRead ?? (() => {}) } : {})}
             />
           ) : (
           <ActionButton

@@ -185,9 +185,10 @@ export function DrawModal({
    * (see `markRolled`), which no Karta answers to — so it falls through to the
    * offer's own panel below, which is where that face belongs.
    */
-  const holding = rolled?.cardId.startsWith("pole:")
+  const waiting = rolled?.held ? rolled : null;
+  const holding = waiting?.cardId.startsWith("pole:")
     ? (losing?.cardId ?? null)
-    : (rolled?.cardId ?? losing?.cardId ?? null);
+    : (waiting?.cardId ?? losing?.cardId ?? null);
   if (holding) {
     const known = EVENTS.find((one) => one.id === holding);
     const held =

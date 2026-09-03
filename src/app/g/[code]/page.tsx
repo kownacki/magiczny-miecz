@@ -32,7 +32,6 @@ import {
 } from "./table-view";
 import { CardLibrary } from "./card-library";
 import { useTable, type Person, type Said } from "./use-table";
-import type { Rolled } from "./roll-result";
 import { TestConsole, wakeConsole } from "./console";
 import { stageOf } from "@/lib/engine/console";
 import { TurnFab, owedLabel } from "./turn-fab";
@@ -437,7 +436,11 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
    * already up, so a notice living inside the card's own panel would have
    * nowhere to stand.
    */
-  const [rolled, setRolled] = useState<Rolled | null>(null);
+  const [rolled, setRolled] = useState<{
+    cardId: string;
+    face: number;
+    did: string[];
+  } | null>(null);
   /**
    * Keeps the lines a reply carried about a die, for the device that got one.
    *
@@ -453,12 +456,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
    */
   const showDie = useCallback((cardId: string, said: Said | null) => {
     if (!said || typeof said.face !== "number") return;
-    setRolled({
-      cardId,
-      title: String(said.card ?? said.offer ?? ""),
-      face: said.face,
-      did: said.did ?? [],
-    });
+    setRolled({ cardId, face: said.face, did: said.did ?? [] });
   }, []);
   /** Whether the "choose again" modal was *asked* for (4.4). */
   const [reborn, setReborn] = useState(false);
@@ -1054,13 +1052,25 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
   const onTheFrame = [...game.turn_state.stack]
     .reverse()
     .find((frame) => frame.phase === "field");
+  const beneath = onTheFrame?.phase === "field" ? onTheFrame : null;
   const shownRoll =
-    onTheFrame?.phase === "field" && onTheFrame.rolled
+    beneath?.rolled
       ? {
-          ...onTheFrame.rolled,
-          title: "",
+          ...beneath.rolled,
+          /**
+           * Whether the throw is still waiting to be read.
+           *
+           * The mark stands until the Karta finishes, which is longer than the
+           * wait: „Dalej" runs the row, and a row that opens a fight or asks
+           * which Przedmiot goes leaves the face standing over the question it
+           * raised. `held` on the frame is the narrower fact — nothing has run
+           * yet — and it is what decides whether the sheet holds this Karta up
+           * and offers the button, rather than merely showing the number above
+           * whatever came next.
+           */
+          held: turnState.phase === "script" && turnState.held === true,
           did:
-            rolled?.cardId === onTheFrame.rolled.cardId && rolled.face === onTheFrame.rolled.face
+            rolled?.cardId === beneath.rolled.cardId && rolled.face === beneath.rolled.face
               ? rolled.did
               : [],
         }
@@ -1125,7 +1135,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
        * whose face has not been read, and a loss being chosen against the pack.
        * Both belong on the Karta they happened to, so the Karta stays up.
        */
-      shownRoll !== null ||
+      shownRoll?.held === true ||
       losing !== null ||
       (panel.sheet === "when-drawn" &&
         turnState.phase === "field" &&
@@ -1733,14 +1743,15 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
             intent={intent}
             minimized={folded}
             onMinimize={() => setFolded(true)}
-            cards={turnState.phase === "field" ? turnState.drawn : []}
-            resolved={
-              turnState.phase === "field"
-                ? [...(turnState.resolved ?? []), ...waved]
-                : []
-            }
-            fought={turnState.phase === "field" ? (turnState.fought ?? []) : []}
-            beaten={turnState.phase === "field" ? (turnState.beaten ?? []) : []}
+            /* Off the Obszar's own frame rather than off the top of the stack:
+               a Karta held on a thrown face has a `script` frame over it, and
+               reading the kolejka from there emptied the row under the sheet —
+               the Karty are still on the square, and the row is the account of
+               them. `beneath` is that frame wherever it is. */
+            cards={beneath?.drawn ?? []}
+            resolved={[...(beneath?.resolved ?? []), ...waved]}
+            fought={beneath?.fought ?? []}
+            beaten={beneath?.beaten ?? []}
             fight={turnState.phase === "fight" ? turnState.fight : null}
             // The direction choice, which used to be a panel of its own below
             // the queue. It is the same shape as everything else in here: one
