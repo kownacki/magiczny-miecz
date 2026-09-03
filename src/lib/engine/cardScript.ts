@@ -468,9 +468,28 @@ export type Condition =
    * condition in the box asks what is true of a character now; this one asks
    * what they did, which is why 13.3 leaves a mark for it to read.
    *
-   * The second half — abilities used to somebody's disadvantage — is not
-   * marked, because no encoded ability is aimed at another Postać. If one ever
-   * is, it marks the same way and this needs no change.
+   * The second half — „lub użyłeś swoich zdolności na jej niekorzyść" — is
+   * 13.3's other form of meeting: „Postać która właśnie weszła na dany Obszar
+   * może zaatakować Postać, która już się tam znajduje (17.6-10.) **lub użyć w
+   * stosunku do niej swoich specjalnych zdolności**." Five Charakterystyki
+   * carry one, and all five are used *instead of* attacking:
+   *
+   * ```
+   * AWANTURNIK      „Zamiast atakować spotkaną Postać… zabrać jej 1 Zaklęcie"
+   * QUARK           „Zamiast atakować… możesz rzucić na nią urok"
+   * WIEDŹMA         „rzucić urok na napotkaną Postać lub z nią walczyć"
+   * SPRYCIARZ       „Od napotkanej Postaci możesz próbować wyłudzić 1 Sz. Z."
+   * BŁĘDNY RYCERZ   „Każdej napotkanej Postaci możesz odebrać Krzyżowca i Giermka"
+   * ```
+   *
+   * Not the ones that follow a fight — the Troll's eviction, the Zdobywca's two
+   * points, the Łotr's dishonest roll, the Kat's beheading. Those are part of
+   * an attack and the first half of the condition already has them.
+   *
+   * None of the five is encoded yet, so nothing marks for this half and the
+   * Bóstwo currently under-judges: a Wiedźma who cursed somebody walks free.
+   * When one is written it writes the same `attacker` status `attackSeat` does,
+   * and this needs no change.
    */
   | { is: "attacker" };
 
