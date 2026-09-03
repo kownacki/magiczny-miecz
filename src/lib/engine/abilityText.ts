@@ -307,24 +307,44 @@ function servedNatures(cardId: string): readonly Nature[] | undefined {
  * answers the question the sheet was silent about: a Zła Postać standing in
  * front of the WRÓŻKA saw six gift buttons she could not press.
  */
+export interface Reader {
+  /** The Natura of the Postać the Karta is being read for. */
+  nature: Nature | null;
+  /** Their last act of aggression, in words, or null — see `describeAggression`. */
+  aggression?: string | null;
+  /** What that Postać is called, for a sentence about them rather than about you. */
+  name?: string;
+  /** Whether they are the reader's own Postać, which changes only the pronoun. */
+  mine?: boolean;
+}
+
+/** „Twoja Postać" or the name, for a sentence that has to say whose. */
+function whose(reader: Reader): string {
+  return reader.mine === false && reader.name ? reader.name : "Twoja Postać";
+}
+
 export function requirementOf(
   cardId: string,
-  /**
-   * Who is reading it, and what the Karta might have against them.
-   *
-   * `nature` is null outside a game, where the answer is nobody's. `aggression`
-   * is the sentence describing their last aggressive act, already built — the
-   * envelope sends it finished, because working it out needs seat rows and
-   * field names the browser is not given for other players.
-   */
-  reader: Nature | null | { nature: Nature | null; aggression?: string | null },
+  reader: Nature | null | Reader,
 ): { text: string; met: boolean | null; detail?: string } | null {
-  const who = typeof reader === "object" && reader !== null ? reader : { nature: reader };
+  const who: Reader = typeof reader === "object" && reader !== null ? reader : { nature: reader };
   const only = servedNatures(cardId);
   if (only) {
+    const met = who.nature === null ? null : only.includes(who.nature);
     return {
       text: `tylko Postać: ${only.map((one) => NATURE_LABEL[one] ?? one).join(" lub ")}`,
-      met: who.nature === null ? null : only.includes(who.nature),
+      met,
+      /**
+       * Their Natura, said outright.
+       *
+       * The colour says whether they pass and nothing says why, which on a red
+       * line is the half a player wants: „tylko Postać: dobra" in red is a
+       * refusal, and „Twoja Postać jest zła" is its reason. „Postać" is
+       * feminine whoever it is, so this needs no gender it does not have.
+       */
+      ...(who.nature === null
+        ? {}
+        : { detail: `${whose(who)} jest ${NATURE_LABEL[who.nature] ?? who.nature}` }),
     };
   }
   /**
@@ -334,15 +354,15 @@ export function requirementOf(
    * Said as a requirement because that is what it is: the Karta has nothing for
    * an innocent Postać and everything for a guilty one, which is the same shape
    * as „tylko Postać: dobra" and reads better in the same place. The detail is
-   * the accusation's evidence, and it hangs off the line as a hover rather than
-   * standing on the panel — a player who wants to check gets it, and one who
-   * does not is not made to read a second sentence.
+   * the accusation's evidence — or, where there is none, the acquittal.
    */
-  if (scriptFor(cardId)?.effect.op === "gdy" && conditionOf(cardId) === "attacker") {
+  if (conditionOf(cardId) === "attacker") {
+    if (who.aggression === undefined) return { text: "tylko Postać: uznany agresor", met: null };
     return {
       text: "tylko Postać: uznany agresor",
-      met: who.aggression === undefined ? null : who.aggression !== null,
-      ...(who.aggression ? { detail: who.aggression } : {}),
+      met: who.aggression !== null,
+      detail:
+        who.aggression ?? `${whose(who)} nie jest uznanym agresorem`,
     };
   }
   return null;
@@ -357,24 +377,36 @@ function conditionOf(cardId: string): Condition["is"] | null {
 /**
  * One act of aggression, in the words a player can check against the journal.
  *
- * „Runda 3 — zaatakowałeś WIEDŹMĘ w Osadzie". Where the victim stood somewhere
- * else it says both, which no base-game act does — 13.3 puts the two Postacie
- * on one Obszar — and a Przyjaciel sent three Obszary out (POSZUKIWACZ PRZYGÓD)
- * or a Zaklęcie cast across a Kraina both would.
+ * „Runda 3 — atak na Postać WIEDŹMA, Obszar Osada". Impersonal and without a
+ * gender, because the same sentence is read about your own Postać and about
+ * somebody else's, and Polish would otherwise need „zaatakowałeś" here and
+ * „zaatakowała" or „zaatakował" there — three wordings and a table of genders
+ * the box does not print.
+ *
+ * Where the victim stood somewhere else it says both, which no base-game act
+ * does — 13.3 puts the two Postacie on one Obszar — and a Przyjaciel sent three
+ * Obszary out (POSZUKIWACZ PRZYGÓD) or a Zaklęcie cast across a Kraina would.
  */
 export function describeAggression(
   act: Extract<Status["modifier"], { kind: "attacker" }>,
 ): string {
   const when = act.round === undefined ? "" : `Runda ${act.round} — `;
-  const did = act.how === "zdolnosc" ? "użyłeś zdolności przeciw" : "zaatakowałeś";
-  const whom = act.victim ?? "inną Postać";
+  const ability = act.how === "zdolnosc";
+  // Naming the class before the name — „na Postać WIEDŹMA" — is what lets the
+  // name stay in the nominative it is printed in. With no name there is nothing
+  // to protect and the ordinary phrasing is better.
+  const whom = act.victim
+    ? `${ability ? "zdolność użyta przeciw Postaci" : "atak na Postać"} ${act.victim}`
+    : ability
+      ? "zdolność użyta przeciw innej Postaci"
+      : "atak na inną Postać";
   const where =
     act.where === undefined
       ? ""
       : act.victimWhere !== undefined && act.victimWhere !== act.where
-        ? ` — ty na Obszarze ${fieldName(act.where as FieldId)}, ofiara na Obszarze ${fieldName(act.victimWhere as FieldId)}`
-        : ` na Obszarze ${fieldName(act.where as FieldId)}`;
-  return `${when}${did} ${whom}${where}`;
+        ? `, Obszar ${fieldName(act.where as FieldId)} → ${fieldName(act.victimWhere as FieldId)}`
+        : `, Obszar ${fieldName(act.where as FieldId)}`;
+  return `${when}${whom}${where}`;
 }
 
 /**

@@ -54,7 +54,9 @@ import { BoardMap } from "./board-map";
 import events from "@/data/events.json";
 import spells from "@/data/spells.json";
 import type { EventCard, Spell } from "@/data/types";
-import { TheAggressor } from "./card-facts";
+import { TheReader } from "./card-facts";
+import type { Reader } from "@/lib/engine/abilityText";
+import { characterName } from "@/lib/engine/polish";
 import { FieldModal } from "./field-modal";
 import { RaidOffer } from "./raid-offer";
 import { FriendOffer } from "./friend-offer";
@@ -958,6 +960,33 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
   const eqMode: EqMode = game?.eq_mode === "slots" ? "slots" : "classic";
 
   /**
+   * The two Postacie a card can be read for, built once.
+   *
+   * `viewer` is whoever is at this device and covers the whole table: a hover
+   * in the Księga, on a tile, on a figure. `dealt` is the Postać the Karty on
+   * the Obszar were dealt to, and covers the sheet alone — a WRÓŻKA in their
+   * kolejka is a WRÓŻKA for *them*, and asking the viewer's Natura about it
+   * answers a question nobody asked. They are usually the same Postać and
+   * differ exactly when you are watching somebody else's turn.
+   */
+  const viewer: Reader | null = mySeat
+    ? {
+        nature: asNature(mySeat.nature),
+        aggression: mySeat.aggression,
+        name: characterName(mySeat.character_id ?? ""),
+        mine: true,
+      }
+    : null;
+  const dealt: Reader | null = active
+    ? {
+        nature: asNature(active.nature),
+        aggression: active.aggression,
+        name: characterName(active.character_id ?? ""),
+        mine: active.id === mySeat?.id,
+      }
+    : null;
+
+  /**
    * 12.1's two exceptions, for the Obszar the active character is standing on.
    *
    * Computed here rather than in the window because both lists live here, and
@@ -1422,6 +1451,10 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
       {/* The card you just turned over, at a size you can read, with exactly
           the things this card lets you do under it. */}
       {active && sheetApplies && (
+        /* The Karty on this Obszar were dealt to the active Postać, so every
+           condition inside the sheet — and inside the previews it opens — is
+           read for them rather than for whoever is watching. */
+        <TheReader.Provider value={dealt}>
           <DrawModal
             // Everybody at the table watches. A fight is the moment the game
             // is most worth looking at, and it used to happen entirely inside
@@ -1564,6 +1597,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
             }
             onLeave={(cardId) => setWaved((current) => [...current, cardId])}
           />
+        </TheReader.Provider>
         )}
 
       {/* The card the turn is suspended on — a question left over after a
@@ -1769,11 +1803,10 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
    */
 
   return (
-    /* The reader's own record, for the one Karta that accuses — see
-       `TheAggressor`. Their own and not the active seat's: a hover in the
-       Księga is somebody looking a card up, and what it answers is „does this
-       one have anything on ME". */
-    <TheAggressor.Provider value={mySeat?.aggression ?? null}>
+    /* Whom a card looked up anywhere on the table is read for: the viewer.
+       The sheet overrides it with the Postać the Karty were dealt to — see
+       `TheReader`. */
+    <TheReader.Provider value={viewer}>
       {overlays}
       <TableLayout
         drawer={
@@ -2488,7 +2521,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
           </div>
         }
       />
-    </TheAggressor.Provider>
+    </TheReader.Provider>
   );
   }
 }

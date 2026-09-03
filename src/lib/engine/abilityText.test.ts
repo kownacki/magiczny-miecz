@@ -217,6 +217,7 @@ describe("what a Karta asks of the character in front of it", () => {
     expect(requirementOf("wrozka", "good")).toEqual({
       text: "tylko Postać: dobra",
       met: true,
+      detail: "Twoja Postać jest dobra",
     });
     expect(requirementOf("wrozka", "evil")?.met).toBe(false);
     // Outside a game nobody is reading it, so neither colour is earned.
@@ -309,7 +310,7 @@ describe("describing one act of aggression", () => {
   it("says when, what and whom", () => {
     expect(
       describeAggression({ kind: "attacker", victim: "WIEDŹMA", where: "osada", round: 3, how: "atak" }),
-    ).toBe("Runda 3 — zaatakowałeś WIEDŹMA na Obszarze Osada");
+    ).toBe("Runda 3 — atak na Postać WIEDŹMA, Obszar Osada");
   });
 
   /** 13.3 puts both on one Obszar; a Przyjaciel sent out would not. */
@@ -323,11 +324,11 @@ describe("describing one act of aggression", () => {
         round: 3,
         how: "atak",
       }),
-    ).toContain("ofiara na Obszarze");
+    ).toContain("Obszar Osada → Gród");
   });
 
   /** A mark written before any of this existed still says what it said. */
   it("says what it can about a bare mark", () => {
-    expect(describeAggression({ kind: "attacker" })).toBe("zaatakowałeś inną Postać");
+    expect(describeAggression({ kind: "attacker" })).toBe("atak na inną Postać");
   });
 });

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { DrawSheet, type SheetChrome } from "./draw-sheet";
 import { dismissableOpen } from "./overlay";
 import events from "@/data/events.json";
@@ -14,6 +14,7 @@ import { scriptFor, describeDisposition } from "@/lib/engine/cardScript";
 import { requirementOf, staysAs } from "@/lib/engine/abilityText";
 import { sentence } from "@/lib/engine/polish";
 import { mayWalkPast } from "@/lib/engine/kolejka";
+import { TheReader } from "./card-facts";
 import type { Nature } from "@/data/types";
 import { inertFor, isSettled, pendingIn } from "@/lib/engine/resolve";
 import { coverageOf, manualNote, NOT_HANDLED } from "@/lib/engine/coverage";
@@ -119,6 +120,11 @@ export function DrawnCard({
   // The choices made so far for the card on screen, as indices into its own
   // options. Sent back with the next attempt, so the server re-walks the card
   // and takes the branch rather than being handed an effect.
+  /**
+   * Whom these Karty are being read for — the Postać they were dealt to, which
+   * the sheet's own provider supplies. See `TheReader`.
+   */
+  const reader = useContext(TheReader);
   const [choices, setChoices] = useState<number[]>([]);
   const [going, setGoing] = useState<FieldId | "">("");
 
@@ -217,7 +223,7 @@ export function DrawnCard({
    * has already said it — „Pierwszej Dobrej Postaci" is one fact and was coming
    * out as two, the second being the first with a word missing.
    */
-  const needs = requirementOf(known.id, { nature, aggression });
+  const needs = requirementOf(known.id, reader ?? { nature, aggression });
   /** Green where the reader passes, red where they do not, neutral outside a game. */
   const passes =
     needs === null || needs.met === null
@@ -328,8 +334,13 @@ export function DrawnCard({
           „does this card have a restriction" but „does it shut me out", and on
           a turn being taken the answer is known. */}
       {needs && (
-        <p className={`text-[11px] ${passes}`} title={needs.detail}>
-          {sentence(needs.text)}
+        <p className={`text-[11px] ${passes}`}>
+          <span
+            className={needs.detail ? "cursor-help underline decoration-dotted underline-offset-2" : ""}
+            title={needs.detail}
+          >
+            {sentence(needs.text)}
+          </span>
         </p>
       )}
 

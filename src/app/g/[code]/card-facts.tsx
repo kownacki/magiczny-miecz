@@ -16,7 +16,7 @@
  */
 
 import { createContext, useContext } from "react";
-import type { ItemProfile } from "@/lib/engine/abilityText";
+import type { ItemProfile, Reader } from "@/lib/engine/abilityText";
 import { forbiddenNatures, requirementOf } from "@/lib/engine/abilityText";
 import type { Nature } from "@/data/types";
 import { sentence } from "@/lib/engine/polish";
@@ -35,18 +35,24 @@ export function hasFacts(profile: ItemProfile | null): boolean {
 }
 
 /**
- * The reader's last act of aggression, for the one Karta that accuses.
+ * Whom a Karta's conditions are being read *for*.
+ *
+ * Usually the viewer — a hover in the Księga is somebody looking a card up, and
+ * the question is whether it has anything on them. Not always: the Karty being
+ * worked through on an Obszar were dealt to whoever is having the turn, and a
+ * WRÓŻKA in that kolejka is a WRÓŻKA for *them*. The sheet provides the active
+ * seat over its own subtree and everything under it answers about that Postać.
  *
  * A context and not a prop, because this panel is reached from nine places —
  * every tile, every slot, the Księga, the piles, a figure on the board — and
- * threading a second reader fact through all nine to reach one card is the kind
- * of plumbing nobody maintains. `nature` is already threaded and stays that
- * way; it is asked of *cards* as well as of readers.
+ * threading the reader through all nine is plumbing nobody maintains. `nature`
+ * stays a prop as well, because half those call sites pass a Natura that is
+ * nobody's — a Postać card in the picker, a card looked up outside a game.
  *
- * `undefined` is the default and means unknown, which is the shelf read from
- * outside a game: the line is then muted rather than accusing anybody.
+ * Null is the default and means unknown: the lines are then muted and say
+ * nothing about anybody.
  */
-export const TheAggressor = createContext<string | null | undefined>(undefined);
+export const TheReader = createContext<Reader | null>(null);
 
 export function CardFacts({
   cardId,
@@ -69,8 +75,8 @@ export function CardFacts({
    * która tu zawita", said nothing here at all. One question for the reader,
    * one answer, and the same two colours as the Przedmioty.
    */
-  const aggression = useContext(TheAggressor);
-  const needs = requirementOf(cardId, { nature, aggression });
+  const reader = useContext(TheReader);
+  const needs = requirementOf(cardId, reader ?? { nature });
   const passes =
     needs === null || needs.met === null
       ? "text-muted"
@@ -96,11 +102,15 @@ export function CardFacts({
       {/* The Karta's condition, where the line above has not already folded it
           in — „czeka tu na pierwszą Dobrą Postać" says both at once. */}
       {needs && (
-        <p
-          className={`border-t border-edge/60 pt-2 text-[11px] leading-snug ${passes}`}
-          title={needs.detail}
-        >
-          {sentence(needs.text)}
+        <p className={`border-t border-edge/60 pt-2 text-[11px] leading-snug ${passes}`}>
+          {/* Dotted, and only where there is something under it: a line that
+              looks hoverable and answers nothing is worse than a plain one. */}
+          <span
+            className={needs.detail ? "cursor-help underline decoration-dotted underline-offset-2" : ""}
+            title={needs.detail}
+          >
+            {sentence(needs.text)}
+          </span>
         </p>
       )}
 
