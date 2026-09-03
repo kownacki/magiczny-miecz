@@ -61,6 +61,11 @@ export interface SheetChrome {
     mine?: boolean;
     /** Opens the roster — the standee is the way in. */
     onOpen?: () => void;
+    /**
+     * Whether the roster is already out about this seat, so the tooltip can
+     * name the direction the click actually goes. The press is a toggle.
+     */
+    open?: boolean;
   };
   /**
    * Whether this has been folded away.
@@ -242,7 +247,7 @@ export function DrawSheet({
                 <button
                   type="button"
                   onClick={actor.onOpen}
-                  title={`${actor.name} — otwórz Graczy`}
+                  title={`${actor.name} — ${actor.open ? "zamknij Graczy" : "otwórz Graczy"}`}
                   className="block cursor-pointer rounded border transition hover:brightness-110"
                   style={{ borderColor: seatColour(seatIndex ?? 0) }}
                 >

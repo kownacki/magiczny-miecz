@@ -1637,7 +1637,20 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
               characterName: characterName(active.character_id ?? ""),
               characterId: active.character_id ?? null,
               mine: active.id === mySeat?.id,
-              onOpen: () => setRightDrawer("gracze"),
+              /**
+               * The same door the turn bar's name goes through, not a second
+               * one that happens to open the same drawer.
+               *
+               * `setRightDrawer("gracze")` on its own did two things wrong and
+               * both were invisible from here: the roster opened on whichever
+               * seat it was last asked about rather than this one, because the
+               * seat is `askedAbout` and nothing set it; and it could not shut,
+               * because setting a state to the value it already holds is not a
+               * toggle. Pressing the standee twice looked like a dead button.
+               */
+              onOpen: () => showSeat(active.id),
+              /** So the standee can say which way its own click goes. */
+              open: rightDrawer === "gracze" && askedAbout === active.id,
             }}
             /* The ACTIVE seat's, not the reader's: the card is being resolved
                for whoever is having the turn. */
