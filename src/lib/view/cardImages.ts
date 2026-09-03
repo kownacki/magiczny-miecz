@@ -56,16 +56,14 @@ export const TILE_GAP_PX = 8;
  * zoom level. So the term is the bar at 100% plus a margin, and it is the
  * margin that absorbs the zoom.
  *
- * It was 23 while the panels wore the platform's default bar. They wear a thin
- * one now (`globals.css`), and thin is 11 rather than 15 — measured in Chrome
- * 152 as `offsetWidth - clientWidth` on a scrolling box carrying the app's own
- * rules, against 15 for the same box forced back to `scrollbar-width: auto`.
- * Four pixels back on every drawer, on both sides of the board.
+ * It went to 19 for a while, when the panels wore a thin bar: thin measures 11
+ * in Chrome 152 against the platform's 15, and 11 + 8 is 19. The bars are the
+ * platform's width again — a bar you have to aim at is a bar you fight — so the
+ * term is 15 + 8, which is 23 and where it started.
  *
- * 19, so what is left at 100% is the same 8px the row's own gap is — once, past
- * the last tile, which is the least it can be while still being a margin. It
- * covers further down the zoom range than 23 did, not less: 11/z clears 19
- * until about 58%, where 15/z cleared 23 at about 65%.
+ * 8 is the margin, and it is the row's own gap: the least a margin can be here
+ * while still being one. 15/z clears 23 down to about 65% zoom, which is the
+ * range this has to hold over.
  *
  * The padding is a parameter because not every drawer wraps its row in the same
  * chrome. Most put the tiles straight inside `px-4` and 32 is the whole of it;
@@ -73,7 +71,7 @@ export const TILE_GAP_PX = 8;
  * deep by the time it is drawn.
  */
 export function shelfWidth(tiles: number, sides = 32): number {
-  return tiles * TILE_WIDTH + (tiles - 1) * TILE_GAP_PX + sides + 1 + 19;
+  return tiles * TILE_WIDTH + (tiles - 1) * TILE_GAP_PX + sides + 1 + 23;
 }
 
 /**
@@ -119,7 +117,7 @@ export const OBSZAR_WIDTH = shelfWidth(OBSZAR_TILES);
  * lies over the board like the Obszar does.
  *
  * Measured rather than reasoned: the narrowest width that keeps three tiles on
- * one line through this chain is 317 plus the scrollbar's 19.
+ * one line through this chain is 317 plus the scrollbar's 23.
  */
 export const PLAYERS_WIDTH = shelfWidth(OBSZAR_TILES, 2 * (12 + 1 + 8));
 

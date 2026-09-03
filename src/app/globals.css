@@ -51,20 +51,20 @@ html {
      arithmetic and the reason each term is what it is live on `SHELF_WIDTH` in
      `cardImages.ts`, which is the source; `shelfWidth.test.ts` fails the build
      if this number and that one drift apart. */
-  --shelf-w: 514px;
+  --shelf-w: 518px;
 
   /* The same measurement for the Obszar, which is three tiles and not five —
      it holds a handful of Karty rather than a catalogue, and it lies over the
      board the whole time you are reading it. `OBSZAR_WIDTH` in `cardImages.ts`
      is the source, and `shelfWidth.test.ts` pins this to it as well. */
-  --obszar-w: 326px;
+  --obszar-w: 330px;
 
   /* And the roster, which is the same row of three and ten pixels wider: in
      here the tiles are not laid straight into the drawer but into a box per
      player, so the column's `p-3`, that box's border and the open panel's
      `px-2` come between them and the edge. `PLAYERS_WIDTH` in `cardImages.ts`
      is the source, and `shelfWidth.test.ts` pins this to it too. */
-  --gracze-w: 336px;
+  --gracze-w: 340px;
 }
 
 @theme {
@@ -166,46 +166,63 @@ body {
 /* Scrollbars, in the panel's own colours.
 
    The default is a light slab: on a dark sheet it reads as a second column of
-   chrome, and on the Karta's own text column — which overflows by a line as
-   soon as a die table is under it — it looked like something had gone wrong
-   rather than like a page continuing. What a scroll needs to say is *there is
-   more below*, and a thin edge-coloured thumb on nothing says it.
+   chrome, so the thumb takes the panel's own edge and the track goes away. The
+   *width* is the platform's, which is the part that was wrong when these were
+   thin: a bar you have to aim at is a bar you fight, and every one of these is
+   a panel you scroll while reading something else.
 
-   `scrollbar-*` first, because that is the standard pair and what Chrome and
-   Firefox both read now; the WebKit pseudo-elements are the same thing again
-   for the Safari versions that never learned them. Where both are understood
-   the standard pair wins and the 8px below is never reached — measured at 11px
-   either way in Chrome 152, against 15 for the default. `shelfWidth` in
-   `cardImages.ts` budgets for the 11 and says so.
+   Two mechanisms, and a browser reads exactly one of them. Chrome and Safari
+   take the `::-webkit-scrollbar` pseudo-elements, which are the only way to
+   ask for a *width* in pixels — and Chrome ignores them outright the moment
+   `scrollbar-color` or `scrollbar-width` is set on the same element, so the
+   standard properties are given to Firefox alone, behind a query for the
+   pseudo-element Firefox does not have. Firefox gets the colours and the
+   platform's width; it has no way to be asked for a wider one, and a bar four
+   pixels wider is not worth a second layout to it.
+
+   The thumb is inset with a transparent border rather than drawn edge to edge:
+   a full-width slab of `--color-edge` beside a dark panel reads as a second
+   border on the panel, and the inset is what makes it read as something to
+   take hold of. `background-clip: padding-box` is what keeps the border
+   transparent to the track rather than to the thumb's own colour.
 
    Not the window's own bar, which is why this is `:not(html, body)` and not
-   `*`. Everything the app draws is inside a panel and a thin edge-coloured
-   thumb is right in there; the page's scrollbar is the browser's furniture
-   rather than the app's, it is the one a reader reaches for without looking,
-   and a scroll of the whole window is a different gesture from a scroll of a
-   drawer. The viewport takes its scrollbar from `html`, so leaving those two
-   alone is most of it.
+   `*`: the viewport takes its scrollbar from `html`, and that one is the
+   browser's furniture rather than the app's.
 
-   `.page-scroll` is the rest. The table screen never scrolls the window — it
-   is a full-height layout with its own columns — so the column holding the
-   Karta Postaci *is* the page's scroll, and a bar that reads as the browser's
-   is the honest one there whatever element it happens to hang off. One class,
-   on the one element that stands in for the viewport. */
-:not(html, body, .page-scroll) {
-  scrollbar-width: thin;
-  scrollbar-color: var(--color-edge) transparent;
+   `.page-scroll` is wider still, and is the reason the width is a number here
+   at all. The table screen never scrolls the window — it is a full-height
+   layout with its own columns — so the column holding the Karta Postaci *is*
+   the page's scroll, and the bar a reader reaches for without looking should be
+   the easiest one on the screen to hit. */
+:not(html, body)::-webkit-scrollbar {
+  width: 15px;
+  height: 15px;
 }
 
-:not(html, body, .page-scroll)::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-:not(html, body, .page-scroll)::-webkit-scrollbar-track {
+:not(html, body)::-webkit-scrollbar-track {
   background: transparent;
 }
 
-:not(html, body, .page-scroll)::-webkit-scrollbar-thumb {
+:not(html, body)::-webkit-scrollbar-thumb {
   background: var(--color-edge);
-  border-radius: 4px;
+  border: 3px solid transparent;
+  background-clip: padding-box;
+  border-radius: 8px;
+}
+
+.page-scroll::-webkit-scrollbar {
+  width: 20px;
+  height: 20px;
+}
+
+.page-scroll::-webkit-scrollbar-thumb {
+  border-width: 4px;
+  border-radius: 10px;
+}
+
+@supports not selector(::-webkit-scrollbar) {
+  :not(html, body) {
+    scrollbar-color: var(--color-edge) transparent;
+  }
 }
