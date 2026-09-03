@@ -73,9 +73,13 @@ anything.
   shape, and `turnStore.ts` is the thin dispatcher over them. Do not add a
   database call or a hand-rolled journal write back into it. The invariant to
   check is `grep -rl 'from "@/lib/supabase"' src`, which must answer with exactly
-  four files and no fifth: `store.ts` (rows and reads), `change.ts` (the load and
-  the commit), `tables.ts` (the typed doors, which need the default handle) and
-  `gameStore.ts` (which is where the default is *chosen*). Grepping for `db.from`
+  five files and no sixth: `store.ts` (rows and reads), `change.ts` (the load and
+  the commit), `tables.ts` (the typed doors, which need the default handle),
+  `gameStore.ts` (which is where the default is *chosen*) and `handle.ts` (which
+  is where the reads outside a change find it). It said four for a while and was
+  wrong from the moment `handle.ts` was split out of `gameStore.ts`, which is
+  the way a number in prose goes stale — so read the list, not the count.
+  Grepping for `db.from`
   looks equivalent and is not, because the handle and the call can sit on
   separate lines, which is exactly how the last two escapees stayed hidden. Two traps worth
   knowing before you write one: `merge` resolves two writes to the same column

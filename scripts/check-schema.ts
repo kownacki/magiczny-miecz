@@ -46,7 +46,12 @@
 
 import { readFileSync } from "node:fs";
 import { createClient } from "@supabase/supabase-js";
-import { functionsInFile, kindsInFile, tablesInFile } from "../src/lib/game/schemaFile";
+import {
+  functionsInFile,
+  kindsInFile,
+  tablesInFile,
+  triggersInFile,
+} from "../src/lib/game/schemaFile";
 import { JOURNAL_KINDS } from "../src/lib/engine/journal";
 
 /** What `schema_shape()` hands back. Mirrored here so a change to one fails the other. */
@@ -59,6 +64,8 @@ interface Shape {
   move_kinds: string[];
   /** The functions the schema owns, live. */
   functions: string[];
+  /** Every trigger anybody wrote, live. The internal foreign-key ones are excluded. */
+  triggers: string[];
 }
 
 /** Wrapped rather than run at the top level: tsx loads this as CJS, where a
@@ -199,6 +206,27 @@ async function main(): Promise<never> {
     }
   }
 
+  // --- triggers -------------------------------------------------------------
+  /**
+   * Asked separately from the functions, because that is where this went wrong.
+   *
+   * `broadcast_revision()` was live, correct, and attached to nothing, so the
+   * Realtime ping every device at a table waits on had never fired once — and
+   * nobody noticed, because the two-second poll that was meant to be the
+   * backstop was quietly doing the whole job. A function with no trigger is not
+   * a feature working badly; it is a feature that has never run.
+   */
+  const liveTriggers = new Set(live.triggers ?? []);
+  const fileTriggers = triggersInFile(readFileSync("db/schema.sql", "utf8"));
+  for (const one of fileTriggers) {
+    if (!liveTriggers.has(one)) {
+      drift.push(`trigger ${one}: in the file, not in the database — it has never fired`);
+    }
+  }
+  for (const one of liveTriggers) {
+    if (!fileTriggers.has(one)) drift.push(`trigger ${one}: in the database, not in the file`);
+  }
+
   if (live.ungranted.length > 0) {
     drift.push(
       `not granted to anon/authenticated/service_role: ${named(live.ungranted)}` +
@@ -211,7 +239,8 @@ async function main(): Promise<never> {
     const columns = [...file.values()].reduce((sum, one) => sum + one.size, 0);
     console.log(
       `db/schema.sql matches the database — ${file.size} tables, ${columns} columns,` +
-        ` ${fileFunctions.size} function${fileFunctions.size === 1 ? "" : "s"}.`,
+        ` ${fileFunctions.size} function${fileFunctions.size === 1 ? "" : "s"},` +
+        ` ${fileTriggers.size} trigger${fileTriggers.size === 1 ? "" : "s"}.`,
     );
     console.log("RLS on everywhere, no policies, everything granted.");
     process.exit(0);

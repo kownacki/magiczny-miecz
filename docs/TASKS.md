@@ -253,6 +253,26 @@ because the app rolls, moves and computes everything.
       automate everything that is not a decision — and what is left comes back
       as `pending` for the interface to ask about, which is exactly the set of
       choices the rules actually give a player.
+- [x] **The Realtime ping had never fired.** `liveRevision.ts` says a device is
+      told the moment the table changes, "sent from a trigger on
+      `games.revision`". There was no such trigger. `broadcast_revision()` was
+      live, correct and attached to nothing, so `stol:{kod}` had never carried a
+      message and every table had been running on the two-second poll that was
+      meant to be the backstop — which is exactly why nobody noticed.
+
+      Found by `schema:check` on the first run after it learned to compare
+      functions, and the fix goes one step further: it compares **triggers**
+      too, because comparing functions alone called that schema clean. A
+      function nothing calls is not a feature working badly; it is a feature
+      that has never run.
+
+      Attached with a `when (old.revision is distinct from new.revision)`
+      clause rather than `after update of revision`, which fires on the column
+      being *named* whether or not it moved. Safe inside the one transaction
+      `apply_change` now runs: `realtime.send` swallows its own errors into a
+      warning, so a broken channel cannot take a move down with it — checked in
+      the catalog rather than assumed.
+
 - [x] **A change lands whole, or not at all.** `commit` used to issue nineteen
       PostgREST statements in a row, each its own transaction, and the journal
       insert was the last of them. On 2026-09-03 a player took a Tarcza

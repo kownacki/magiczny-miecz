@@ -546,18 +546,26 @@ grant all on all tables in schema magiczny_miecz to service_role;
 -- made through the dashboard rather than from this file, which is exactly the
 -- drift the check exists for.
 --
--- **Nothing fires it.** `liveRevision.ts` says the broadcast is "sent from a
--- trigger on `games.revision`" and there is no such trigger: every trigger on
--- this schema is an internal foreign-key one. So the channel has been silent
--- since it was written and every table has been running on the two-second poll
--- that was meant to be the backstop, which is why nobody noticed.
+-- **Nothing fired it**, for as long as it existed. `liveRevision.ts` says the
+-- broadcast is "sent from a trigger on `games.revision`" and there was no such
+-- trigger: every trigger on this schema was an internal foreign-key one. So the
+-- channel was silent from the day it was written and every table ran on the
+-- two-second poll that was meant to be the backstop — which is exactly why
+-- nobody noticed, and why `schema_shape()` now reads triggers as well as
+-- functions. A function nothing calls is not a smaller version of a working
+-- feature; it is a feature that has never once run.
 --
--- Left disconnected rather than wired up in passing. Attaching it is a change to
--- how a live table behaves, and it is no longer free: since `apply_change` every
--- write is one transaction, so a `realtime.send` from a trigger would run inside
--- it and a failure there would take the whole move down with it. That is a
--- decision to make deliberately, with `after update` and a `when` clause, not a
--- line added while doing something else.
+-- The one thing worth checking before attaching it, since `apply_change` made
+-- every write one transaction: a trigger now fires *inside* that transaction, so
+-- a broadcast that threw would take the whole move down with it. It cannot.
+-- `realtime.send` wraps its own body in `exception when others then raise
+-- warning`, so the worst a broken channel can do is log. Checked, not assumed.
+--
+-- `when (old.revision is distinct from new.revision)` rather than `after update
+-- of revision`: the `of` form fires on the column being *named* in the SET list
+-- whether or not the value moved, and every commit names it. The `when` clause
+-- asks the question actually being asked, and a loser — whose statements are
+-- rolled back — announces nothing either way.
 create or replace function magiczny_miecz.broadcast_revision()
 returns trigger
 language plpgsql
@@ -579,6 +587,12 @@ begin
   return new;
 end;
 $$;
+
+create trigger broadcast_revision
+after update on magiczny_miecz.games
+for each row
+when (old.revision is distinct from new.revision)
+execute function magiczny_miecz.broadcast_revision();
 
 -- ---------------------------------------------------------------------------
 -- One change to one game, applied whole or not at all.
@@ -855,6 +869,21 @@ as $$
       from pg_proc p
       join pg_namespace n on n.oid = p.pronamespace
       where n.nspname = 'magiczny_miecz'
+    ),
+    -- Every trigger anybody wrote, which is a different question from which
+    -- functions exist.
+    --
+    -- `broadcast_revision()` was live for months with nothing calling it, so the
+    -- Realtime ping every table depends on had never fired once. Comparing
+    -- functions alone would have said the schema was fine. Internal ones are
+    -- excluded — `tgisinternal` is every foreign key's own machinery, forty-odd
+    -- of them, none of which anybody wrote or could get wrong.
+    'triggers', (
+      select coalesce(jsonb_agg(t.tgname order by t.tgname), '[]'::jsonb)
+      from pg_trigger t
+      join pg_class c on c.oid = t.tgrelid
+      join pg_namespace n on n.oid = c.relnamespace
+      where n.nspname = 'magiczny_miecz' and not t.tgisinternal
     ),
     -- A table one of the three roles cannot select from is invisible to
     -- PostgREST, which answers 401 and reads exactly like a missing table.

@@ -139,3 +139,21 @@ export function functionsInFile(sql: string): Set<string> {
   }
   return found;
 }
+
+/**
+ * Every trigger the file creates.
+ *
+ * A different question from `functionsInFile`, and the reason both are asked:
+ * `broadcast_revision()` existed, was correct, and was attached to nothing, so
+ * the Realtime ping the whole table depends on had never fired. Comparing
+ * functions would have called that schema clean.
+ */
+export function triggersInFile(sql: string): Set<string> {
+  const found = new Set<string>();
+  for (const one of sql.matchAll(
+    /create\s+(?:or\s+replace\s+)?trigger\s+([a-z_][a-z0-9_]*)\b/g,
+  )) {
+    found.add(one[1]);
+  }
+  return found;
+}
