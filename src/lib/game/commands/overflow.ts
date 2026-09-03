@@ -7,8 +7,10 @@ import {
   overflowOnTop,
   waysUnder,
   type Overflow,
+  type OverflowFrame,
   type WayUnder,
 } from "@/lib/engine/overflow";
+import { plural } from "@/lib/engine/polish";
 import { isUsable } from "@/lib/engine/uses";
 import { startingKit, asCharacterId } from "@/lib/engine/characters";
 import { apply, type Changeset, type Snapshot } from "../change";
@@ -146,19 +148,58 @@ export function releaseOverflow(snapshot: Snapshot, soFar: Changeset = {}): Chan
  * asked of the seat the frame names. Everybody else — including whoever's turn
  * it is, when the two are not the same person — waits.
  */
+/**
+ * What there is too much of, counted and named.
+ *
+ * The number on its own said "26 za dużo" to somebody who had just asked for a
+ * Nieznajomy, which reads as nonsense until you know it is about a *hand* and
+ * not about the card being asked for. The kind is the word that connects them,
+ * and the frame has carried it all along without ever saying it.
+ */
+function tooMany(what: OverflowFrame["what"], over: number): string {
+  return what === "przedmioty"
+    ? `${over} ${plural(over, "Przedmiot", "Przedmioty", "Przedmiotów")}`
+    : `${over} ${plural(over, "Zaklęcie", "Zaklęcia", "Zaklęć")}`;
+}
+
+/**
+ * The ways back under, which are not the same ways for the two kinds.
+ *
+ * This offered "odrzucić Kartę, użyć jej albo założyć (5.4)" for both, and for
+ * a hand of Zaklęcia every clause of it is wrong: nobody wears a Zaklęcie,
+ * 5.4 is about carrying Przedmioty and has nothing to say about Magia, and the
+ * rule that lets an over-full hand shed one at all is 9.4 — which is the number
+ * `dropCard`'s own refusal already cites when it stops you shedding one you are
+ * allowed to keep.
+ */
+function waysBack(what: OverflowFrame["what"]): string {
+  return what === "przedmioty"
+    ? "Możesz odrzucić Kartę, użyć jej albo założyć (5.4)."
+    : "Możesz odrzucić Zaklęcie albo je rzucić (9.4).";
+}
+
 export function refuseWhileOverflow(snapshot: Snapshot, seatId: string | null): void {
   const frame = overflowOnTop(snapshot.game.turn_state);
   if (!frame) return;
   const over = overflowOf(snapshot, frame.seatId);
   const who = snapshot.seats.find((seat) => seat.id === frame.seatId);
   const rule = frame.what === "przedmioty" ? "5.6" : "2.6";
+  const much = tooMany(frame.what, over?.over ?? 1);
   if (seatId !== frame.seatId) {
     throw new Error(
-      `Miejsce ${(who?.seat_index ?? 0) + 1} niesie za dużo — gra czeka, aż zejdzie do limitu (${rule}).`,
+      `Miejsce ${(who?.seat_index ?? 0) + 1} ma o ${much} za dużo — gra czeka, aż zejdzie do limitu (${rule}).`,
     );
   }
+  /**
+   * "Gra czeka" on this branch too, which is the half that was missing.
+   *
+   * "Najpierw zejdź do limitu" reads as an answer about the thing you just
+   * typed, so a Nieznajomy refused over a hand of Zaklęcia looked like a bug in
+   * `deal`. It is not: the surplus is 5.6's „natychmiast" and the whole table
+   * is stopped on it, whatever anybody asks for next. Saying so is the
+   * difference between a refusal you argue with and one you act on.
+   */
   throw new Error(
-    `Najpierw zejdź do limitu: ${over?.over ?? 1} za dużo (${rule}).` +
-      " Możesz odrzucić Kartę, użyć jej albo założyć (5.4).",
+    `Gra czeka: masz o ${much} za dużo (${rule}). ${waysBack(frame.what)}`,
   );
 }

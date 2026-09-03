@@ -117,12 +117,12 @@ describe("who waits", () => {
   const waiting = () => apply(table(FIVE), holdOverflow(table(FIVE)));
 
   it("lets nobody through, including whoever's turn it is", () => {
-    expect(() => refuseWhileOverflow(waiting(), "seat-b")).toThrow(/Miejsce 1 niesie za dużo/);
+    expect(() => refuseWhileOverflow(waiting(), "seat-b")).toThrow(/Miejsce 1 ma o 1 Przedmiot za dużo/);
     expect(() => refuseWhileOverflow(waiting(), "seat-b")).toThrow(/5\.6/);
   });
 
   it("tells the seat it names how far over it is and what would help", () => {
-    expect(() => refuseWhileOverflow(waiting(), "seat-a")).toThrow(/1 za dużo/);
+    expect(() => refuseWhileOverflow(waiting(), "seat-a")).toThrow(/Gra czeka: masz o 1 Przedmiot za dużo \(5\.6\)/);
     expect(() => refuseWhileOverflow(waiting(), "seat-a")).toThrow(/odrzucić.*użyć.*założyć/);
   });
 

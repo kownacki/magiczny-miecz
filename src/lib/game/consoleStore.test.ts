@@ -146,7 +146,9 @@ describe("handing the turn on over a surplus", () => {
     // the state a console actually sits in when somebody types `force`.
     await expect(
       runCommand(gameId, actor, { kind: "turn", act: "end", force: false }),
-    ).rejects.toThrow(/Najpierw zejdź do limitu/);
+      // Przedmioty here and Zaklęcia below, which is the whole of the fix: the
+      // sentence used to count without ever saying what it was counting.
+    ).rejects.toThrow(/Gra czeka: masz o 1 Przedmiot za dużo \(5\.6\)/);
   });
 
   /**
@@ -183,7 +185,7 @@ describe("handing the turn on over a surplus", () => {
     await overSpelled(gameId, actor);
     await expect(
       runCommand(gameId, actor, { kind: "deal", cardIds: ["fatum"] }),
-    ).rejects.toThrow(/Najpierw zejdź do limitu/);
+    ).rejects.toThrow(/Gra czeka: masz o 1 Zaklęcie za dużo/);
   });
 
   it("answers a Karta with the frame's own words, not the stack's", async () => {
@@ -193,7 +195,7 @@ describe("handing the turn on over a surplus", () => {
     // under — none of which "trzeba odłożyć nadmiar Kart" said.
     await expect(
       runCommand(gameId, actor, { kind: "deal", cardIds: ["cudotworca"] }),
-    ).rejects.toThrow(/Najpierw zejdź do limitu: 1 za dużo \(2\.6\)/);
+    ).rejects.toThrow(/Gra czeka: masz o 1 Zaklęcie za dużo \(2\.6\)\. Możesz odrzucić Zaklęcie albo je rzucić \(9\.4\)/);
   });
 
   it("deals again once the surplus is gone", async () => {

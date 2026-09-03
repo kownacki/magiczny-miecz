@@ -358,7 +358,7 @@ describe("handing the turn on anyway (the test console's `force`)", () => {
         turn_state: only({ phase: "overflow", seatId: "seat-a", what: "przedmioty" }),
       },
     });
-    expect(() => finishTurn(at)).toThrow(/limitu/);
+    expect(() => finishTurn(at)).toThrow(/Gra czeka: masz o 1 Przedmiot za dużo/);
     expect(finishTurn(at, { force: true }).result).toBe("passed");
   });
 
