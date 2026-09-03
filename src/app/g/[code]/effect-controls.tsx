@@ -9,6 +9,7 @@ import { FIELDS } from "@/lib/engine/board";
 import { andWhom, describeCondition, describeLoss } from "@/lib/engine/effectText";
 import { characterName, STAT_LABEL } from "@/lib/engine/polish";
 import type { OnSuggestion } from "./turn-controls";
+import { ActionButton } from "./action-button";
 
 /**
  * The buttons for one effect.
@@ -114,13 +115,14 @@ export function EffectControls({
       }
       if (applied) return stated(label);
       return (
-        <button
+        <ActionButton
+          role="gain"
+          size="xs"
           disabled={busy}
           onClick={() => onSuggestion(effect.stat, effect.delta, cardName)}
-          className="rounded border border-verdigris/50 px-2 py-0.5 text-[11px] text-ink transition hover:bg-verdigris/20 disabled:opacity-50"
         >
           {label}
-        </button>
+        </ActionButton>
       );
     }
     case "uzdrow":
@@ -135,13 +137,14 @@ export function EffectControls({
               : ""),
         )
       ) : (
-        <button
+        <ActionButton
+          role="harm"
+          size="xs"
           disabled={busy}
           onClick={() => onSuggestion("tury", effect.turns, cardName)}
-          className="rounded border border-vermilion/50 px-2 py-0.5 text-[11px] text-ink transition hover:bg-vermilion/20 disabled:opacity-50"
         >
           −{effect.turns} tura
-        </button>
+        </ActionButton>
       );
     case "ruch-dodatkowy":
       return stated("dodatkowy ruch");

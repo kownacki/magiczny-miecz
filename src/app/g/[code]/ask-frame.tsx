@@ -6,6 +6,7 @@ import { cardName } from "@/lib/engine/polish";
 import { SPELL_BY_REF } from "@/lib/game/decks";
 import { CardBack } from "./card-tile";
 import { Overlay } from "./overlay";
+import { ActionButton } from "./action-button";
 
 /**
  * An `ask` frame on screen (docs/STACK.md).
@@ -60,20 +61,17 @@ export function AskFramePanel({
         {mine ? (
           <div className="mt-3 flex flex-col gap-2">
             {offered.map((spell, index) => (
-              <button
+              <ActionButton
                 key={index}
-                type="button"
+                weight="quiet"
+                size="lg"
+                align="left"
                 disabled={busy || !canAct}
                 onClick={() => onAnswer(index)}
-                className="rounded border border-edge px-3 py-2 text-left text-sm text-ink transition hover:border-ochre disabled:opacity-50"
+                note={spell?.text}
               >
                 {spell ? cardName(spell.id) : `Karta ${index + 1}`}
-                {spell?.text && (
-                  <span className="mt-1 block text-[12px] leading-snug text-muted">
-                    {spell.text}
-                  </span>
-                )}
-              </button>
+              </ActionButton>
             ))}
           </div>
         ) : (

@@ -6,6 +6,7 @@ import type { Effect } from "@/lib/engine/cardScript";
 import { nodeAt } from "@/lib/engine/resolve";
 import type { FieldId } from "@/lib/engine/board";
 import { Overlay } from "./overlay";
+import { ActionButton } from "./action-button";
 
 /**
  * A `script` frame on screen (docs/STACK.md).
@@ -51,15 +52,16 @@ export function ScriptFramePanel({
         {asking?.op === "wybor" && (
           <div className="mt-3 flex flex-col gap-2">
             {asking.options.map((option, index) => (
-              <button
+              <ActionButton
                 key={index}
-                type="button"
+                weight="quiet"
+                size="lg"
+                align="left"
                 disabled={busy || !canAct}
                 onClick={() => onAnswer({ choices: [index] })}
-                className="rounded border border-edge px-3 py-2 text-left text-sm text-ink transition hover:border-ochre disabled:opacity-50"
               >
                 {option.label}
-              </button>
+              </ActionButton>
             ))}
           </div>
         )}
@@ -67,15 +69,15 @@ export function ScriptFramePanel({
         {asking?.op === "przenies" && asking.to.kind !== "pole" && (
           <div className="mt-3 flex flex-wrap gap-1">
             {ring.map((field) => (
-              <button
+              <ActionButton
                 key={field.fieldId}
-                type="button"
+                weight="quiet"
+                size="sm"
                 disabled={busy || !canAct}
                 onClick={() => onAnswer({ destination: field.fieldId })}
-                className="rounded border border-edge px-2 py-1 text-[12px] text-ink transition hover:border-ochre disabled:opacity-50"
               >
                 {field.name}
-              </button>
+              </ActionButton>
             ))}
           </div>
         )}

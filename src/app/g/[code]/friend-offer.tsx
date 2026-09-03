@@ -6,6 +6,7 @@ import { abilitiesOf } from "@/lib/engine/abilities";
 import { HEAL_CEILING } from "@/lib/engine/derive";
 import type { FieldId } from "@/lib/engine/board";
 import { CARD_NAMES, type Seat } from "./table";
+import { ActionButton } from "./action-button";
 
 /**
  * The two things the Księżniczka and the Władca do where they belong.
@@ -69,8 +70,11 @@ export function FriendOffer({
           <div key={held.id} className="mt-2 flex flex-col gap-1">
             <p className="text-xs text-ochre/90">{name}</p>
             {heals?.kind === "uzdrowienie" && (
-              <button
-                type="button"
+              <ActionButton
+                role="gain"
+                weight="quiet"
+                size="sm"
+                align="left"
                 disabled={busy || canHeal === 0}
                 onClick={() => onHeal(canHeal)}
                 title={
@@ -78,24 +82,24 @@ export function FriendOffer({
                     ? `Życie jest już na poziomie początkowym (${HEAL_CEILING}) — 4.7 nie pozwala wyżej`
                     : undefined
                 }
-                className="rounded border border-edge px-2 py-1.5 text-left text-xs text-ink transition hover:border-verdigris disabled:opacity-50"
               >
                 Odzyskaj {canHeal || heals.upTo} Życia — za darmo, raz na wizytę
-              </button>
+              </ActionButton>
             )}
             {parts?.kind === "oddaj-w" && (
-              <button
-                type="button"
+              <ActionButton
+                weight="quiet"
+                size="sm"
+                align="left"
                 disabled={busy}
                 onClick={() => onPart(held.id)}
                 // Not asked about first, though it cannot be undone: 6.4 already
                 // lets anybody put a friend down anywhere for nothing, so the
                 // irreversible half is the ordinary case and this is the one
                 // that pays. The gold in the label is the whole warning.
-                className="rounded border border-edge px-2 py-1.5 text-left text-xs text-ink transition hover:border-ochre disabled:opacity-50"
               >
                 Oddaj Kartę za {parts.cena} Sz. Z. — {name} zostaje tutaj
-              </button>
+              </ActionButton>
             )}
           </div>
         );

@@ -6,6 +6,7 @@ import { summariseEffect } from "@/lib/engine/effectText";
 import { sentence } from "@/lib/engine/polish";
 import { pendingIn } from "@/lib/engine/resolve";
 import type { Effect } from "@/lib/engine/cardScript";
+import { ActionButton } from "./action-button";
 
 /** A field's compulsory table (16.5) — the thing an Obszar does to you for arriving. */
 
@@ -50,7 +51,7 @@ export function FieldOffer({
         <div className="mt-auto flex flex-wrap gap-2 border-t border-edge pt-3">
           {owed?.op === "wybor" ? (
             owed.options.map((option, index) => (
-              <button
+              <ActionButton
                 key={option.label}
                 disabled={busy}
                 onClick={() => {
@@ -58,19 +59,19 @@ export function FieldOffer({
                   setChoices(next);
                   onResolveField(next);
                 }}
-                className="rounded border border-ochre/60 px-3 py-1.5 text-sm text-ochre transition hover:bg-edge disabled:opacity-50"
               >
                 {option.label}
-              </button>
+              </ActionButton>
             ))
           ) : (
-            <button
+            <ActionButton
+              weight="lead"
+              size="lg"
               disabled={busy}
               onClick={() => onResolveField(choices)}
-              className="rounded border border-ochre/60 bg-ochre/10 px-4 py-2 text-sm text-ochre transition hover:bg-ochre/20 disabled:opacity-50"
             >
               {offer.effect.op === "rzut" ? "Rzuć i rozpatrz" : "Rozpatrz"}
-            </button>
+            </ActionButton>
           )}
         </div>
       )}
