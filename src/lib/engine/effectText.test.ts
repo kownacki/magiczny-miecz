@@ -433,7 +433,7 @@ describe("the Mędrzec's riddle", () => {
   it("says what to guess, when, and how loudly", () => {
     expect(describeEffect(SCRIPTS["medrzec"]!.effect)).toBe(
       "wybierasz cyfrę od 1 do 6 i mówisz ją głośno, potem rzuć kostką — " +
-        "jeśli wypadnie twoja: bierzesz 1 Zaklęcie",
+        "jeśli wypadnie twoja: zyskujesz 1 Zaklęcie",
     );
   });
 });
@@ -449,11 +449,21 @@ describe("a sequence beside a picture", () => {
     expect(rows).toContain("gdy odwiedzony — do wyboru:");
     // A blank row between the two groups, which the panel draws as a gap.
     expect(rows).toContain("");
-    expect(rows).toContain("— otrzymujesz Magiczny Miecz");
+    expect(rows).toContain("— Otrzymujesz Magiczny Miecz");
   });
 
   /** A sequence of plain steps keeps its sentence. */
   it("leaves prose as prose", () => {
     expect(effectRows({ op: "po-kolei", steps: [{ op: "nic" }, { op: "nic" }] })).toBeNull();
+  });
+});
+
+describe("the Mędrzec's riddle, in rows", () => {
+  it("names the number, then throws", () => {
+    expect(effectRows(SCRIPTS["medrzec"]!.effect)).toEqual([
+      "Wybierasz cyfrę od 1 do 6 i mówisz ją głośno",
+      "rzuć kostką:",
+      "— jeśli wypadnie twoja cyfra: zyskujesz 1 Zaklęcie",
+    ]);
   });
 });

@@ -458,7 +458,7 @@ export function DrawnCard({
                   }}
                   className="rounded border border-ochre/60 px-3 py-1.5 text-sm text-ochre transition hover:bg-edge disabled:opacity-50"
                 >
-                  {option.label}
+                  {sentence(option.label)}
                 </button>
               ))}
             </div>

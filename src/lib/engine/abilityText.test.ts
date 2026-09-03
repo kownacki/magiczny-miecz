@@ -310,7 +310,7 @@ describe("what the summary beside the picture leaves out", () => {
     // One row per gift, so six alternatives read as six things (15.2's own
     // sentence is a paragraph; this is a list).
     expect(wrozka[0]).toBe("do wyboru:");
-    expect(wrozka[1]).toBe("— zyskujesz 1 punkt Miecza");
+    expect(wrozka[1]).toBe("— Zyskujesz 1 punkt Miecza");
     expect(wrozka).toHaveLength(7);
   });
 

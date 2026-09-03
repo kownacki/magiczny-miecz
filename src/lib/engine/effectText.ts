@@ -9,6 +9,7 @@ import {
   LOST_COUNTED,
   LOST_LABEL,
   plural,
+  sentence,
   STAT_LABEL,
   TARGET_FULL,
   TARGET_SHORT,
@@ -94,6 +95,12 @@ export function describeCondition(condition: Condition): string {
  * "1, 2, 3 — przemykasz; 4 — Upiór (Magia 4)" is the card. Six separate lines
  * for six faces is the same information arranged so nobody reads it.
  */
+/**
+ * „Wybierz cyfrę od 1 do 6 (musisz ją głośno powiedzieć)" — the Mędrzec's, and
+ * said the same whether the riddle is one line or three.
+ */
+const GUESS = "wybierasz cyfrę od 1 do 6 i mówisz ją głośno";
+
 function dieRows(faces: Record<number, Effect>): string[] {
   const order: { said: string; on: number[] }[] = [];
   for (const face of Object.keys(faces).map(Number).sort((a, b) => a - b)) {
@@ -121,10 +128,25 @@ function dieTable(faces: Record<number, Effect>): string {
  */
 export function effectRows(effect: Effect): string[] | null {
   if (effect.op === "wybor") {
-    return ["do wyboru:", ...effect.options.map((option) => `— ${option.label}`)];
+    // Each option capitalised, so a row written as a verb phrase („zyskujesz
+    // dodatkowy ruch") and one written as a word („Pomiń") sit in the same
+    // column looking like the same kind of thing.
+    return ["do wyboru:", ...effect.options.map((option) => `— ${sentence(option.label)}`)];
   }
   if (effect.op === "rzut") {
     return ["rzuć kostką:", ...dieRows(effect.faces)];
+  }
+  /**
+   * The Mędrzec's riddle in the order it happens: name the number, then throw.
+   * As one line it was a sentence with three clauses and a colon in the middle
+   * of it, which is a paragraph however short.
+   */
+  if (effect.op === "zgadnij") {
+    return [
+      `${sentence(GUESS)}`,
+      "rzuć kostką:",
+      `— jeśli wypadnie twoja cyfra: ${describeEffect(effect.nagroda)}`,
+    ];
   }
   /**
    * A sequence flattens into the rows of its steps, but only if a step has any.
@@ -369,7 +391,7 @@ export function describeEffect(effect: Effect): string {
       // „dowolne", because the point is that no face of the pile is off limits.
       return effect.zeStosu
         ? `wybierasz ${effect.count} dowolne ${plural(effect.count, "Zaklęcie", "Zaklęcia", "Zaklęć")} ze stosu`
-        : `bierzesz ${many}`;
+        : `zyskujesz ${many}`;
     }
 
     case "zaklecia-do-limitu":
@@ -437,10 +459,7 @@ export function describeEffect(effect: Effect): string {
      * riddle is that the table hears the guess first.
      */
     case "zgadnij":
-      return (
-        "wybierasz cyfrę od 1 do 6 i mówisz ją głośno, potem rzuć kostką — " +
-        `jeśli wypadnie twoja: ${describeEffect(effect.nagroda)}`
-      );
+      return `${GUESS}, potem rzuć kostką — jeśli wypadnie twoja: ${describeEffect(effect.nagroda)}`;
 
     case "natura":
       return `Natura: ${effect.na === "evil" ? "zła" : effect.na}`;
