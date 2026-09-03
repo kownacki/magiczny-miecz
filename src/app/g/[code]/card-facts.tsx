@@ -15,6 +15,7 @@
  * answer it in a phrase.
  */
 
+import { createContext, useContext } from "react";
 import type { ItemProfile } from "@/lib/engine/abilityText";
 import { forbiddenNatures, requirementOf } from "@/lib/engine/abilityText";
 import type { Nature } from "@/data/types";
@@ -33,18 +34,29 @@ export function hasFacts(profile: ItemProfile | null): boolean {
   );
 }
 
+/**
+ * The reader's last act of aggression, for the one Karta that accuses.
+ *
+ * A context and not a prop, because this panel is reached from nine places —
+ * every tile, every slot, the Księga, the piles, a figure on the board — and
+ * threading a second reader fact through all nine to reach one card is the kind
+ * of plumbing nobody maintains. `nature` is already threaded and stays that
+ * way; it is asked of *cards* as well as of readers.
+ *
+ * `undefined` is the default and means unknown, which is the shelf read from
+ * outside a game: the line is then muted rather than accusing anybody.
+ */
+export const TheAggressor = createContext<string | null | undefined>(undefined);
+
 export function CardFacts({
   cardId,
   profile,
   /** Who is looking, so a requirement can say whether THEY meet it. */
   nature,
-  aggression,
 }: {
   cardId: string;
   profile: ItemProfile;
   nature: Nature | null;
-  /** The reader's last aggressive act, for the one Karta that accuses (Dobre Bóstwo). */
-  aggression?: string | null;
 }) {
   // 5.3, answered for the reader rather than stated in the abstract.
   const barred = nature !== null && (forbiddenNatures(cardId)?.includes(nature) ?? false);
@@ -57,6 +69,7 @@ export function CardFacts({
    * która tu zawita", said nothing here at all. One question for the reader,
    * one answer, and the same two colours as the Przedmioty.
    */
+  const aggression = useContext(TheAggressor);
   const needs = requirementOf(cardId, { nature, aggression });
   const passes =
     needs === null || needs.met === null

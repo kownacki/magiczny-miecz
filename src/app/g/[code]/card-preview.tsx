@@ -154,7 +154,6 @@ export function useCardPreview(
   eqMode: EqMode = "classic",
   /** Who is looking, so a requirement can say whether THEY meet it. */
   nature: Nature | null = null,
-  aggression: string | null = null,
 ) {
   const [anchor, setAnchor] = useState<DOMRect | null>(null);
   /**
@@ -308,7 +307,6 @@ export function useCardPreview(
         imageless={imageless}
         eqMode={eqMode}
         nature={nature}
-        aggression={aggression}
         pinned={mine}
         onUnpin={() => setPinnedPreview(null)}
       />
@@ -322,7 +320,6 @@ export function CardPreview({
   imageless = false,
   eqMode = "classic",
   nature = null,
-  aggression = null,
   pinned = false,
   onUnpin,
 }: {
@@ -339,8 +336,6 @@ export function CardPreview({
   pinned?: boolean;
   onUnpin?: () => void;
   nature?: Nature | null;
-  /** The reader's last aggressive act, for the Karta that accuses. */
-  aggression?: string | null;
   /**
    * There is no picture of this and there should be no lookup for one.
    *
@@ -573,12 +568,7 @@ export function CardPreview({
             </p>
           )}
 
-          {profile && <CardFacts
-              cardId={card.cardId}
-              profile={profile}
-              nature={nature}
-              aggression={aggression}
-            />}
+          {profile && <CardFacts cardId={card.cardId} profile={profile} nature={nature} />}
 
           {/**
            * What a Postać owns before anybody rolls (8.1).

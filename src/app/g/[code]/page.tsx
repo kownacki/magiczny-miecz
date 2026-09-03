@@ -54,6 +54,7 @@ import { BoardMap } from "./board-map";
 import events from "@/data/events.json";
 import spells from "@/data/spells.json";
 import type { EventCard, Spell } from "@/data/types";
+import { TheAggressor } from "./card-facts";
 import { FieldModal } from "./field-modal";
 import { RaidOffer } from "./raid-offer";
 import { FriendOffer } from "./friend-offer";
@@ -1768,7 +1769,11 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
    */
 
   return (
-    <>
+    /* The reader's own record, for the one Karta that accuses — see
+       `TheAggressor`. Their own and not the active seat's: a hover in the
+       Księga is somebody looking a card up, and what it answers is „does this
+       one have anything on ME". */
+    <TheAggressor.Provider value={mySeat?.aggression ?? null}>
       {overlays}
       <TableLayout
         drawer={
@@ -2483,7 +2488,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
           </div>
         }
       />
-    </>
+    </TheAggressor.Provider>
   );
   }
 }
