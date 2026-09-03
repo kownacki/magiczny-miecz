@@ -11,7 +11,7 @@ import { wandRefills } from "@/lib/engine/derive";
 import { PRINTED_STOCK, stockLeft } from "@/lib/engine/stock";
 import { FIELDS } from "@/lib/engine/board";
 import { afterDraw, type TurnPhase } from "@/lib/engine/turn";
-import { replaceTop, requireTop } from "@/lib/engine/stack";
+import { replaceTop, requireTop, whatIsOpen, type TurnState } from "@/lib/engine/stack";
 import { BY_REF, EVENTS, SPELL_BY_REF, decksOf } from "../decks";
 import type { Changeset, Outcome, Snapshot } from "../change";
 import { activeSeat, cardLending, holdingsOf, seatById, seatView } from "./seat";
@@ -116,6 +116,30 @@ function countedOff(phase: TurnPhase, byCard: boolean | undefined): TurnPhase {
   return { ...phase, draw: Math.max(0, phase.draw - 1) };
 }
 
+/**
+ * Why there is no badanie to draw into — and what is in the way, where anything
+ * is.
+ *
+ * **No rule number, and it used to carry the wrong one.** This said „(13.4)",
+ * which is BADANIE OBSZARU: how many Karty a square is worth, that they come
+ * off the top, and how the ones already lying there count against the number.
+ * It says nothing at all about *when* in a turn you may draw — that is 10.1's
+ * order of a turn and 13.1's rule about the square you started on — so a reader
+ * following the link landed on a rule about something else, which is the one
+ * thing CLAUDE.md says a citation must never do. The two refusals below it that
+ * do cite 13.4 are its own sentences and keep the number.
+ *
+ * A refusal about the shape of the turn carries no number at all; see
+ * `NOT_ON_SCREEN` in `stack.ts`, which says so and which this is the last
+ * exception to.
+ */
+function whyNotYet(state: TurnState): string {
+  const open = whatIsOpen(state);
+  return open
+    ? `Nie czas na ciągnięcie Kart — ${open}.`
+    : "Nie czas na ciągnięcie Kart — najpierw skończ ruch na Obszarze.";
+}
+
 export function drawCard(snapshot: Snapshot, command: DrawCard): Outcome<Drawn> {
   const seat = activeSeat(snapshot);
   // 13.2: a turn spent meeting somebody is not also spent exploring.
@@ -123,7 +147,7 @@ export function drawCard(snapshot: Snapshot, command: DrawCard): Outcome<Drawn> 
   const state = requireTop(
     snapshot.game.turn_state,
     "field",
-    "Nie czas na ciągnięcie kart (13.4).",
+    whyNotYet(snapshot.game.turn_state),
   );
 
   /**
@@ -279,7 +303,7 @@ export function drawAll(snapshot: Snapshot, command: DrawAll): Outcome<DrewAll> 
   const state = requireTop(
     snapshot.game.turn_state,
     "field",
-    "Nie czas na ciągnięcie kart (13.4).",
+    whyNotYet(snapshot.game.turn_state),
   );
 
   if (state.draw <= 0) {

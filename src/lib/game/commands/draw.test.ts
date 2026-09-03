@@ -82,7 +82,7 @@ describe("ciągnięcie Karty Zdarzeń", () => {
         named: null,
         shuffle: never,
       }),
-    ).toThrow("Nie czas na ciągnięcie kart (13.4).");
+    ).toThrow("Nie czas na ciągnięcie Kart — najpierw skończ ruch na Obszarze.");
   });
 
   /**
@@ -412,7 +412,9 @@ describe("wyciągnięcie wszystkich Kart naraz", () => {
       seats: [aSeat({ id: "seat-a", field_id: MGLY })],
       game: { turn_state: { phase: "roll" }, deck: piles() },
     });
-    expect(() => drawAll(early, { shuffle: never })).toThrow("Nie czas na ciągnięcie kart (13.4).");
+    expect(() => drawAll(early, { shuffle: never })).toThrow(
+      "Nie czas na ciągnięcie Kart — najpierw skończ ruch na Obszarze.",
+    );
   });
 
   it("refuses a square that owes nothing, and names the number it prints", () => {

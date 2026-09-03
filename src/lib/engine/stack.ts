@@ -50,6 +50,59 @@ const NOT_ON_SCREEN: Record<TurnPhase["phase"], string> = {
 };
 
 /**
+ * What is standing in the way, when something is — the inverse of the table
+ * above.
+ *
+ * `NOT_ON_SCREEN` answers "the frame you wanted is not here"; this answers "and
+ * here is what *is*", which is the half a player can act on. Four of the ten
+ * are not in anybody's way: `roll`, `move` and `end` are a turn between things
+ * and `field` is a turn doing the ordinary thing, so they answer null and the
+ * caller says whatever it says when nothing is wrong.
+ *
+ * Clauses rather than sentences, each one able to stand after a dash: "Nie czas
+ * na ciągnięcie Kart — trwa walka." A refusal that names only what you cannot
+ * do leaves you to guess what to type next.
+ *
+ * No rule numbers, for the reason written over `NOT_ON_SCREEN`: these are facts
+ * about the shape of the turn, not about a printed rule, and the honest answer
+ * to "which rule?" is none.
+ */
+const IN_THE_WAY: Record<TurnPhase["phase"], string | null> = {
+  roll: null,
+  move: null,
+  field: null,
+  end: null,
+  fight: "trwa walka",
+  loop: "trwa walka w rundach",
+  bridge: "trwa próba wejścia na Most",
+  overflow: "trzeba odłożyć nadmiar Kart",
+  script: "Karta jest w trakcie rozpatrywania",
+  ask: "Karta czeka na odpowiedź",
+};
+
+/**
+ * The frame in the way, named — with the Karta it belongs to where there is one.
+ *
+ * The two frames a Karta opens carry their own `reason`, which is the card's
+ * name, and it is the thing worth saying: "KUGLARZ jest w trakcie
+ * rozpatrywania" tells you what to type next and "trwa coś" does not. The
+ * table's own wording is what a frame carrying no reason falls back to.
+ *
+ * Null when the top frame is not in anybody's way. That is not the same as
+ * "nothing is wrong" — a stack deeper than one frame can have an ordinary
+ * `field` on top — so a caller that refused for its own reasons still needs a
+ * sentence of its own to fall back on.
+ */
+export function whatIsOpen(state: TurnState): string | null {
+  const frame = top(state);
+  if (frame.phase === "script" && frame.reason) {
+    return `${frame.reason} jest w trakcie rozpatrywania`;
+  }
+  if (frame.phase === "ask" && frame.reason) return `${frame.reason} czeka na odpowiedź`;
+  return IN_THE_WAY[frame.phase];
+}
+
+/**
  * The frame on screen, insisting it is the kind asked for.
  *
  * The narrowed frame comes back, so a caller that needed `fight.fight` reads it

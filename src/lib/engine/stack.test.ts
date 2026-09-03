@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { asTurnState, only, pop, push, replaceTop, top } from "./stack";
+import { asTurnState, only, pop, push, replaceTop, top, whatIsOpen } from "./stack";
 import type { TurnPhase } from "./turn";
 
 const roll: TurnPhase = { phase: "roll" };
@@ -58,5 +58,61 @@ describe("reading what the database holds", () => {
     for (const raw of [null, undefined, {}, [], "roll", { stack: [] }]) {
       expect(asTurnState(raw)).toEqual(only(end));
     }
+  });
+});
+
+/**
+ * What is standing in the way, which is the half a refusal can be acted on.
+ *
+ * The message this exists for named neither the thing blocking the turn nor a
+ * way out of it — and cited 13.4, which is BADANIE OBSZARU and has nothing to
+ * say about when in a turn you may draw.
+ */
+describe("naming the frame that is in the way", () => {
+  it("says nothing about a turn that is merely between things", () => {
+    for (const phase of ["roll", "move", "end"] as const) {
+      expect(whatIsOpen(only({ phase } as TurnPhase)), phase).toBeNull();
+    }
+  });
+
+  /** A turn doing the ordinary thing is not in anybody's way either. */
+  it("says nothing about an ordinary badanie", () => {
+    expect(
+      whatIsOpen(
+        only({ phase: "field", fieldId: "karczma", from: null, draw: 0, drawn: [], fought: [] } as never),
+      ),
+    ).toBeNull();
+  });
+
+  it("names a fight, and the Most", () => {
+    expect(whatIsOpen(only({ phase: "fight" } as never))).toBe("trwa walka");
+    expect(whatIsOpen(only({ phase: "bridge" } as never))).toBe("trwa próba wejścia na Most");
+  });
+
+  /**
+   * And the two frames a Karta opens say which Karta, because that is the thing
+   * worth saying: "KUGLARZ — Karta jest w trakcie rozpatrywania" tells you what
+   * to type next and "trwa coś" does not.
+   */
+  it("names the Karta a suspended frame belongs to", () => {
+    expect(whatIsOpen(only({ phase: "script", reason: "KUGLARZ" } as never))).toBe(
+      "KUGLARZ jest w trakcie rozpatrywania",
+    );
+    expect(whatIsOpen(only({ phase: "ask", reason: "CHOCHLIK" } as never))).toBe(
+      "CHOCHLIK czeka na odpowiedź",
+    );
+    // And a frame with no reason falls back to the table's own wording.
+    expect(whatIsOpen(only({ phase: "script" } as never))).toBe(
+      "Karta jest w trakcie rozpatrywania",
+    );
+  });
+
+  /** It reads the top frame, which is the one on screen. */
+  it("reads what is on screen, not what is beneath it", () => {
+    const mid = push(
+      only({ phase: "field", fieldId: "karczma", from: null, draw: 0, drawn: [], fought: [] } as never),
+      { phase: "fight" } as never,
+    );
+    expect(whatIsOpen(mid)).toBe("trwa walka");
   });
 });

@@ -13,7 +13,7 @@ import type { CardClass, EventCard } from "@/data/types";
 import { combatValueOf } from "@/lib/engine/cards";
 import { type Effect } from "@/lib/engine/cardScript";
 import { continueTopScript } from "./commands/effects";
-import { only, requireTop, type TurnState } from "@/lib/engine/stack";
+import { only, requireTop, whatIsOpen, type TurnState } from "@/lib/engine/stack";
 import { answerAsk as answerAskOn } from "./commands/ask";
 import {
   afterFight,
@@ -420,9 +420,26 @@ export async function stageCards(
           : dealtInto(state, { cardId: card.id, cardClass: card.cardClass, granted: true }, fieldId),
       snapshot.game.turn_state,
     );
-    // `draw`'s own refusal, in `draw`'s own words: a card resolves into the
-    // turn, and mid-fight or mid-Karta there is nowhere to put one.
-    if (!turn_state) throw new Error("Nie czas na ciągnięcie kart (13.4).");
+    /**
+     * A dealt Karta resolves *into* the turn, and mid-fight or mid-Karta there
+     * is nowhere to put one — see `dealtInto`, which refuses rather than
+     * throwing the suspended frame away as this used to.
+     *
+     * Not a rule, so no rule number. It said „(13.4)", which is BADANIE
+     * OBSZARU — how many Karty a square is worth and that they come off the top
+     * — and has nothing to say about when in a turn you may draw. `deal` is
+     * test mode's, and test mode walks past *rules*; what it cannot walk past
+     * is there being no turn to put a card in. So the sentence says which,
+     * and — the part that was missing — what is actually in the way.
+     */
+    if (!turn_state) {
+      const open = whatIsOpen(snapshot.game.turn_state);
+      throw new Error(
+        open
+          ? `Nie ma gdzie położyć Karty — ${open}.`
+          : "Nie ma gdzie położyć Karty — tura jest w trakcie czegoś innego.",
+      );
+    }
 
     return {
       writes: {
