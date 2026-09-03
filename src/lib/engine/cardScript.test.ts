@@ -84,7 +84,7 @@ describe("the card that prompted the vocabulary", () => {
       op: "wybor",
       options: [
         { label: "Przenieś się", effect: { op: "przenies", to: { kind: "dowolne-w-kregu" } } },
-        { label: "Nie", effect: { op: "nic" } },
+        { label: "Pomiń", effect: { op: "nic" } },
       ],
     });
     expect(script.optional).toBeUndefined();

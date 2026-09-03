@@ -254,7 +254,10 @@ export function describeEffect(effect: Effect): string {
         return `kupujesz ${many} za ${plural(effect.cena * effect.count, "Sztukę Złota", "Sztuki Złota", "Sztuk Złota")}`;
       }
       // „Możesz je wybrać ze stosu" — the Półbóg's, and the reason to meet him.
-      return effect.zeStosu ? `wybierasz ${many} ze stosu` : `bierzesz ${many}`;
+      // „dowolne", because the point is that no face of the pile is off limits.
+      return effect.zeStosu
+        ? `wybierasz ${effect.count} dowolne ${plural(effect.count, "Zaklęcie", "Zaklęcia", "Zaklęć")} ze stosu`
+        : `bierzesz ${many}`;
     }
 
     case "zaklecia-do-limitu":
@@ -377,7 +380,9 @@ export function summariseEffect(effect: Effect): string {
         : "przenieś się na dowolny Obszar w tym Kręgu";
 
     case "zaklecie":
-      return effect.zeStosu ? `${effect.count} Zaklęcie ze stosu` : `+${effect.count} Zaklęcie`;
+      return effect.zeStosu
+        ? `${effect.count} dowolne Zaklęcie ze stosu`
+        : `+${effect.count} Zaklęcie`;
 
     case "kamien":
       return "Zamiana w Kamień (20.1)";

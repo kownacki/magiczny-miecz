@@ -33,7 +33,7 @@ export const NIEZNAJOMI: Readonly<Record<string, CardScript>> = {
           label: "Przenieś się",
           effect: { op: "przenies", to: { kind: "dowolne-w-kregu" } },
         },
-        { label: "Nie", effect: { op: "nic" } },
+        { label: "Pomiń", effect: { op: "nic" } },
       ],
     },
     disposition: { kind: "odloz" },
@@ -43,7 +43,7 @@ export const NIEZNAJOMI: Readonly<Record<string, CardScript>> = {
       op: "wybor",
       options: [
         { label: "Weź dodatkowy ruch", effect: { op: "ruch-dodatkowy" } },
-        { label: "Nie", effect: { op: "nic" } },
+        { label: "Pomiń", effect: { op: "nic" } },
       ],
     },
     disposition: { kind: "odloz" },
@@ -208,7 +208,7 @@ export const NIEZNAJOMI: Readonly<Record<string, CardScript>> = {
       op: "wybor",
       options: [
         { label: "Zamień punkty", effect: { op: "zamien-punkty" } },
-        { label: "Nie", effect: { op: "nic" } },
+        { label: "Pomiń", effect: { op: "nic" } },
       ],
     },
     disposition: { kind: "odloz" },

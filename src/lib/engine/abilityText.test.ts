@@ -271,6 +271,6 @@ describe("what the summary beside the picture leaves out", () => {
 
   /** „Możesz je wybrać ze stosu" — the one Zaklęcie in the box that is chosen. */
   it("says the Półbóg's Zaklęcie is picked, not dealt", () => {
-    expect(itemProfile("polbog").special.join(" ")).toContain("wybierasz 1 Zaklęcie ze stosu");
+    expect(itemProfile("polbog").special.join(" ")).toContain("wybierasz 1 dowolne Zaklęcie ze stosu");
   });
 });
