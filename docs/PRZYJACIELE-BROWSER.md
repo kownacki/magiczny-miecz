@@ -67,6 +67,6 @@ is shared with three other projects, two of which take real payments, so
 schema-qualify everything and ask first. A new journal kind still needs its own
 `ALTER`; the note above the list in `db/schema.sql` says so.
 
-Fuller notes: `docs/TASKS.md` → "Przyjaciele". Card behaviour:
+Fuller notes: `docs/LANDED.md` → "Przyjaciele". Card behaviour:
 `src/lib/engine/abilities.ts`. What each card leaves undone:
 `src/lib/engine/coverage.ts`.

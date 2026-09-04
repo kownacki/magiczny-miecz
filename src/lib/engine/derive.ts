@@ -23,7 +23,7 @@ import {
  * NOTE: the worked example beneath the table is hard to reconcile with it — the
  * scan reads "z 5 do 5 punktów ... tylko 2 Zaklęć", which is garbled either way.
  * The table is unambiguous and is what is encoded here; the example is flagged
- * in docs/TASKS.md for a second look at the physical card.
+ * in docs/LANDED.md (Phase 2) for a second look at the physical card.
  */
 const SPELL_CAPACITY = [0, 0, 1, 2, 2, 3, 3] as const;
 

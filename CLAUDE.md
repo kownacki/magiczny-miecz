@@ -14,7 +14,10 @@ anything.
 ## Read these first
 
 - **[CONTEXT.md](CONTEXT.md)** — the referee's own vocabulary: Snapshot, Changeset, Command
-- **[docs/TASKS.md](docs/TASKS.md)** — the live checklist; what is done and what is next
+- **[docs/TASKS.md](docs/TASKS.md)** — what is open, and what is settled and must not be
+  re-derived. Short on purpose; read it every session
+- **[docs/LANDED.md](docs/LANDED.md)** — what has been built and why, in order. The
+  history half of TASKS.md; read it when a decision needs its reasoning
 - **[docs/COVERAGE.md](docs/COVERAGE.md)** — every numbered rule, and whether the app carries it
 - **[docs/TERMINAL.md](docs/TERMINAL.md)** — the terminal-first engine: the
   store port, save files, and the one console vocabulary both surfaces share
