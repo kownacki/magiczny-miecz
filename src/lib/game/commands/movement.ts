@@ -2,7 +2,7 @@
 
 import { FIELDS, requireFieldId } from "@/lib/engine/board";
 import type { FieldId } from "@/lib/engine/board";
-import { heldAbilities, opensTheWayTo } from "@/lib/engine/abilities";
+import { heldAbilities, moveBonusRange, opensTheWayTo } from "@/lib/engine/abilities";
 import { cardStatuses, cardUntouchable, movementCap, moveMultiplier } from "@/lib/engine/status";
 import { storedStatuses } from "./turn";
 import { asCharacterId, startingKit, withoutItems } from "@/lib/engine/characters";
@@ -28,7 +28,7 @@ import {
   type Snapshot,
 } from "../change";
 import type { GameRow, SeatRow } from "../store";
-import { activeSeat, eqModeOf, refuseWhileHeld, refuseWhileOverLimit } from "./seat";
+import { activeSeat, eqModeOf, refuseWhileHeld, refuseWhileOverLimit, seatView } from "./seat";
 import { refuseWhileOverflow } from "./overflow";
 import { refuseWhileBeastAwaits } from "./beast";
 import { driverOf, nameOfSeat } from "./lobby";
@@ -403,6 +403,25 @@ export async function rollForMove(
   // put on a seat and the character walked the full roll anyway.
   const cap = movementCap(storedStatuses(snapshot, seat.id));
 
+  /**
+   * The Wierzchowiec/Zaprzęg's „możesz dodać ... do wyniku rzutu kostką
+   * podczas wykonywania ruchu" — a fact about the seat, decided here the same
+   * way `cap` is, and handed to `afterRoll` to widen the destination list
+   * rather than the die.
+   *
+   * Read off `seatView`, not `heldAbilities(mine.map(...))` the way `hasSword`
+   * and `mayEnterCastle` above are: those two ask only "is one of these cards
+   * anywhere in the holdings", which is right for a Magiczny Miecz that opens
+   * the bridge whether it is worn or packed, but wrong for a mount that has to
+   * actually be in use. `seatView(...).abilities` is `inEffect`-filtered, so
+   * a Wierzchowiec sitting unworn in a slotowy hand lends no bonus — and it
+   * folds in the character's own printed abilities too, though no character
+   * prints `ruch-bonus`. This does not change `hasSword`/`mayEnterCastle`
+   * themselves: `opensTheWayTo` two lines up keeps asking the wider question,
+   * unchanged.
+   */
+  const bonus = moveBonusRange(seatView(snapshot, seat.id).abilities);
+
   const manual = command.manual ?? false;
   return {
     writes: {
@@ -413,6 +432,7 @@ export async function rollForMove(
           afterRoll(seat.field_id, roll, {
             bridgeOffered: hasSword && !blocked,
             cap,
+            bonus,
             /**
              * 14.7's other half. "Postać, która wejdzie na Most nie posiadając
              * tej Tarczy, musi ominąć Zamek" — so without one the Zamek is not a
@@ -437,7 +457,18 @@ export async function rollForMove(
           // The cap goes in the payload even though `roll` lines are UNSPOKEN,
           // because the row is the record of what the app decided and "why was
           // a 5 only worth one field" is exactly what it would be read for.
-          payload: { roll, manual, ...(cap === null ? {} : { cap }) },
+          //
+          // `bonus` joins it for the same reason: the roll itself must never
+          // say a character rolled something they did not, so it always stays
+          // the bare `thrown * multiplier` — but the `move` line right after
+          // this one only records `to`, and "why did a 3 reach four fields
+          // over" needs the range that was on offer, not just the destination.
+          payload: {
+            roll,
+            manual,
+            ...(cap === null ? {} : { cap }),
+            ...(bonus === null ? {} : { bonus }),
+          },
           manual,
         },
       ],

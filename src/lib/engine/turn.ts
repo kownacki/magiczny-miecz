@@ -554,6 +554,7 @@ export function afterRoll(
     bridgeOffered = false,
     cap = null,
     mayEnterCastle = true,
+    bonus = null,
   }: {
     bridgeOffered?: boolean;
     /** Whether the Zamek exists for this character — see `bridgeOptions`. */
@@ -568,39 +569,85 @@ export function afterRoll(
      * take them. Null when nothing is limiting the move, which is almost always.
      */
     cap?: number | null;
+    /**
+     * The Wierzchowiec/Zaprzęg's range of points a mount may add to this roll
+     * (`moveBonusRange`, abilities.ts) — a fact about the seat, decided by the
+     * caller the same way `cap` is.
+     *
+     * Both cards say „możesz"/„pozwala", so the bare roll stays on offer
+     * alongside a mounted one: the destination list gets one extra set of
+     * options per point from `bonus.min` to `bonus.max`, and which one the
+     * player picks — or the plain roll — is the whole of "how much did the
+     * mount add", with no separate ask. Null when the seat holds no mount.
+     */
+    bonus?: { min: number; max: number } | null;
   } = {},
 ): TurnPhase {
   // On the bridge the roll is ignored entirely (10.3) — one field per turn,
-  // either onward or back the way you came.
+  // either onward or back the way you came — and a mount adds to a die that
+  // plays no part here, so it changes nothing.
   if (ringOf(fieldId) === KAMIENNY_MOST) {
     return { phase: "move", roll, options: bridgeOptions(fieldId, mayEnterCastle) };
   }
   const ring = ringOf(fieldId) ?? DOLNY_KRAG;
-  const walks = moveOptions(ring, fieldId, cap === null ? roll : Math.min(roll, cap));
-  const options: TurnMoveOption[] = walks.map((option) => ({
-    direction: option.direction,
-    fieldId: option.field.id,
-    fieldName: option.field.name,
-    through: option.through.map((field) => field.name),
-  }));
 
-  // 11.10: the bridge is taken in passing. A character may try for it only if
-  // this move would carry it *through* an entrance with a step still to spend —
-  // "Postać, której ruch kończy się dokładnie na Obszarze Wymarłego Miasta albo
-  // Ruin Twierdzy, nie może podjąć próby wkroczenia na Most." Landing squares
-  // are therefore not candidates, only fields walked over.
-  if (bridgeOffered) {
+  // Mgła's cap binds the *total* a character ends up walking, mounted or not
+  // — a Wierzchowiec under an Mgła does not outrun it, it just wastes points
+  // of the bonus clamping to the same square the bare roll already reached.
+  const stepsFor = (pips: number) => (cap === null ? pips : Math.min(pips, cap));
+
+  // The bare roll first, then one more figure per point the mount could add
+  // — 1..3 for a roll of 3 under a Wierzchowiec offers 3, 4, 5 and 6.
+  const pipsToOffer = bonus
+    ? [roll, ...Array.from({ length: bonus.max - bonus.min + 1 }, (_, i) => roll + bonus.min + i)]
+    : [roll];
+
+  const options: TurnMoveOption[] = [];
+  // Under a cap, two different pip counts can clamp to the same number of
+  // steps and — a Wierzchowiec's own range can do this even without one, once
+  // the ring is small enough to wrap — walk out to the very same square. Keyed
+  // on the destination and the kind of option it is, not on the pips that
+  // produced it, so a clamped duplicate never reaches the player as two
+  // identical rows.
+  const seen = new Set<string>();
+  const offer = (option: TurnMoveOption) => {
+    const key = `${option.direction}:${option.fieldId}:${option.bridge ? "bridge" : "walk"}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    options.push(option);
+  };
+
+  for (const pips of pipsToOffer) {
+    const walks = moveOptions(ring, fieldId, stepsFor(pips));
     for (const walk of walks) {
-      const at = walk.through.findIndex((field) => bridgeEntranceFrom(field.id));
-      if (at === -1) continue;
-      const entrance = bridgeEntranceFrom(walk.through[at].id)!;
-      options.push({
+      offer({
         direction: walk.direction,
-        fieldId: entrance.from,
-        fieldName: FIELDS.get(entrance.from)?.name ?? entrance.from,
-        through: walk.through.slice(0, at).map((field) => field.name),
-        bridge: entrance,
+        fieldId: walk.field.id,
+        fieldName: walk.field.name,
+        through: walk.through.map((field) => field.name),
       });
+    }
+
+    // 11.10: the bridge is taken in passing. A character may try for it only
+    // if this move would carry it *through* an entrance with a step still to
+    // spend — "Postać, której ruch kończy się dokładnie na Obszarze Wymarłego
+    // Miasta albo Ruin Twierdzy, nie może podjąć próby wkroczenia na Most."
+    // Landing squares are therefore not candidates, only fields walked over —
+    // which a mount can reach for the first time by adding the step that
+    // carries the walk past the entrance rather than onto it.
+    if (bridgeOffered) {
+      for (const walk of walks) {
+        const at = walk.through.findIndex((field) => bridgeEntranceFrom(field.id));
+        if (at === -1) continue;
+        const entrance = bridgeEntranceFrom(walk.through[at].id)!;
+        offer({
+          direction: walk.direction,
+          fieldId: entrance.from,
+          fieldName: FIELDS.get(entrance.from)?.name ?? entrance.from,
+          through: walk.through.slice(0, at).map((field) => field.name),
+          bridge: entrance,
+        });
+      }
     }
   }
 

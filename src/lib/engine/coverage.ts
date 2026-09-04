@@ -71,6 +71,16 @@ const MANUAL: Readonly<Partial<Record<CardId, string>>> = {
   // `waysUnder` turns `odrzuc` into `zniszcz` for the surplus, and `dropCard`
   // sends it to the used pile through `putOnPile` instead of the Obszar.
   // Pinned in `overflow.test.ts`.
+  //
+  // The WIERZCHOWIEC's own clause is new here, not stale: "Twoi Przyjaciele
+  // muszą poruszać się w zwykły sposób, bez tego dodatku. Jeśli zostawisz ich
+  // w tyle, w następnej turze możesz do nich wrócić." The bonus itself is
+  // wired — `moveBonusRange` (abilities.ts) into `afterRoll` (turn.ts) via
+  // `rollForMove` (movement.ts) — but a Przyjaciel is a held Karta, not a
+  // token with its own square (chapter 6 is custody only, 6.1-6.4), so the
+  // app has no position to leave one behind at and none to walk one back to.
+  wierzchowiec:
+    "Twoi Przyjaciele poruszają się bez tego dodatku — jeśli zostawiłeś ich w tyle, w następnej turze możesz po nich wrócić zamiast zwykłego ruchu. Aplikacja nie trzyma dla Przyjaciela osobnej pozycji na planszy, więc zróbcie to sami.",
 
   // --- friends --------------------------------------------------------------
   // The ALCHEMIK was here for "zamiana jest nieodwracalna", which is not

@@ -291,6 +291,64 @@ describe("rzut na ruch (10.2)", () => {
     expect(writes.journal?.[0]).toMatchObject({ payload: { roll: 5, manual: true }, manual: true });
   });
 
+  /**
+   * The Wierzchowiec: „pozwala ci dodać od 1 do 3 punktów do wyniku rzutu
+   * kostką w trakcie wykonywania ruchu" — wired here for the first time.
+   * `ABILITIES`'s data (`ruch-bonus`) and `moveBonusRange` already existed;
+   * nothing in `src` called the latter until this.
+   */
+  it("widens the destination list by the Wierzchowiec's range, roll still on the record untouched", async () => {
+    const mounted = rolling({}, [aHolding({ card_id: "wierzchowiec" })]);
+    const { writes, result } = await rollForMove(mounted, {}, die(1));
+    expect(result).toBe(1);
+    expect(top(writes.game!.turn_state!)).toMatchObject({ roll: 1 });
+    const options = (top(writes.game!.turn_state!) as { options: { fieldId: string }[] }).options;
+    // The bare roll of 1 first — declining the mount is always allowed — then
+    // one pair per point the Wierzchowiec could add, 2 through 4.
+    expect(options.map((o) => o.fieldId)).toEqual([
+      "las-blednych-ogni",
+      "swiatynia-bogini-nemed",
+      "pustelnia",
+      "plaskowyz-mgiel",
+      "rownina-samotnych-skal",
+      "magiczne-wrota",
+      "przeprawa-2",
+      "straznik-magicznych-wrot",
+    ]);
+    // The `roll` line never claims the mount's help — only what was thrown.
+    expect(writes.journal?.[0]).toMatchObject({
+      payload: { roll: 1, bonus: { min: 1, max: 3 } },
+    });
+  });
+
+  /**
+   * `rollForMove` reads `hasSword`/`mayEnterCastle` off every held card
+   * regardless of where it is worn (`heldAbilities(mine.map(...))`), which is
+   * right for a Magiczny Miecz that opens the bridge whether worn or packed —
+   * but wrong for a mount, which has to actually be in use. The bonus is read
+   * off `seatView(...).abilities` instead, which is `inEffect`-filtered.
+   */
+  it("in slotowy, a packed Wierzchowiec lends no bonus and a worn one does", async () => {
+    const packed = rolling(
+      { id: "seat-a" },
+      [aHolding({ seat_id: "seat-a", card_id: "wierzchowiec", slot: null })],
+    );
+    packed.game.eq_mode = "slots";
+    const { writes: packedWrites } = await rollForMove(packed, {}, die(1));
+    const bareOptions = (top(packedWrites.game!.turn_state!) as { options: unknown[] }).options;
+    expect(bareOptions).toHaveLength(2);
+    expect(packedWrites.journal?.[0]).not.toMatchObject({ payload: { bonus: expect.anything() } });
+
+    const worn = rolling(
+      { id: "seat-a" },
+      [aHolding({ seat_id: "seat-a", card_id: "wierzchowiec", slot: "mount" })],
+    );
+    worn.game.eq_mode = "slots";
+    const { writes: wornWrites } = await rollForMove(worn, {}, die(1));
+    const mountedOptions = (top(wornWrites.game!.turn_state!) as { options: unknown[] }).options;
+    expect(mountedOptions).toHaveLength(8);
+  });
+
   it("refuses when the turn is not at the roll", async () => {
     const table = aTable({
       game: { active_seat: 0, turn_state: { phase: "move", roll: 2, options: [] } },

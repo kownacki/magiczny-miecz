@@ -313,6 +313,63 @@ describe("the Kamienny Most (10.3, 10.4)", () => {
   });
 });
 
+/**
+ * The Wierzchowiec and Zaprzęg: „możesz dodać ... do wyniku rzutu kostką
+ * podczas wykonywania ruchu". The decided shape is that the mount widens the
+ * destination list rather than the die — the bare roll stays on offer
+ * alongside one set of destinations per point the mount could add, and which
+ * one a player picks is the whole of "how much did the mount add".
+ */
+describe("a mount's bonus (Wierzchowiec, Zaprzęg)", () => {
+  it("offers the bare roll plus one set of destinations per point of bonus", () => {
+    // Karczma is index 0 of Dolny Krąg: a roll of 2 with a Wierzchowiec's
+    // 1..3 offers totals of 2, 3, 4 and 5 in both directions.
+    const phase = afterRoll("karczma", 2, { bonus: { min: 1, max: 3 } });
+    if (phase.phase !== "move") throw new Error("expected ruch");
+    expect(phase.options.map((o) => o.fieldId)).toEqual([
+      "step-2", // clockwise 2 (the bare roll — declining the mount)
+      "grod", // widdershins 2
+      "mokradla-2", // clockwise 3 (+1)
+      "bezdroza", // widdershins 3
+      "kurhan", // clockwise 4 (+2)
+      "studnia-wiecznosci", // widdershins 4
+      "osada", // clockwise 5 (+3)
+      "krag-mocy", // widdershins 5
+    ]);
+  });
+
+  it("declining the mount is still on offer — the base roll is never dropped", () => {
+    const withoutMount = afterRoll("karczma", 2);
+    const withMount = afterRoll("karczma", 2, { bonus: { min: 1, max: 1 } });
+    if (withoutMount.phase !== "move" || withMount.phase !== "move") {
+      throw new Error("expected ruch");
+    }
+    for (const option of withoutMount.options) {
+      expect(withMount.options).toContainEqual(option);
+    }
+  });
+
+  it("Mgła's cap binds the total, not the bare roll — and dedupes what it clamps together", () => {
+    // Roll 1, cap 2, bonus 1..3: totals 1, 2, 3, 4 clamp to 1, 2, 2, 2. Three
+    // of those four pip counts land on the very same pair of squares, and a
+    // player must see that pair once, not three times.
+    const phase = afterRoll("karczma", 1, { cap: 2, bonus: { min: 1, max: 3 } });
+    if (phase.phase !== "move") throw new Error("expected ruch");
+    expect(phase.options.map((o) => o.fieldId)).toEqual([
+      "uroczysko", // clockwise 1 (the bare, uncapped roll)
+      "mrozne-pustkowie", // widdershins 1
+      "step-2", // clockwise 2 (every capped total from here on)
+      "grod", // widdershins 2
+    ]);
+  });
+
+  it("leaves the Kamienny Most exactly as it was — 10.3 ignores the die outright", () => {
+    const withoutMount = afterRoll("gra-ze-smiercia", 6);
+    const withMount = afterRoll("gra-ze-smiercia", 6, { bonus: { min: 1, max: 3 } });
+    expect(withMount).toEqual(withoutMount);
+  });
+});
+
 describe("stepping onto the Kamienny Most (11.10)", () => {
   // Ruiny Twierdzy is index 1 of the outer ring, so a character on Urwisko
   // (index 0) walks over it with anything better than a roll of one.
