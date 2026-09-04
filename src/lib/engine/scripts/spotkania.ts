@@ -81,6 +81,12 @@ export const SPOTKANIA: Readonly<Record<string, CardScript>> = {
     },
     disposition: { kind: "odloz" },
   },
+  // „Na Krainę, po której wędrujesz spada apokaliptyczna Gwiazda. W
+  // katastrofie giną wszyscy Nieznajomi - należy odłożyć ich Karty."
+  kometa: {
+    effect: { op: "katastrofa", klasa: "stranger", zasieg: "krag" },
+    disposition: { kind: "odloz" },
+  },
   "magiczna-tablica": {
     effect: { op: "zaklecia-do-limitu" },
     disposition: { kind: "odloz" },

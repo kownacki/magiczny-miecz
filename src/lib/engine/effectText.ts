@@ -1,6 +1,7 @@
 /** Every card effect, said in words, so the picture of the card is never the only place a rule lives. */
 
 import type { CardScript, Condition, Destination, Effect, Target } from "./cardScript";
+import { CARD_CLASS_LABEL } from "@/data/types";
 import {
   cardName,
   characterName,
@@ -495,6 +496,15 @@ export function describeEffect(effect: Effect): string {
 
     case "kamien":
       return "zamiana w Kamień na 3 tury (20.1)";
+
+    /**
+     * Kometa alone: „W katastrofie giną wszyscy Nieznajomi — należy odłożyć
+     * ich Karty." Written by hand rather than derived from `CARD_CLASS_LABEL`,
+     * which only holds the singular — the same shortcut `rzut-za-kazdego`
+     * already takes for its own two nouns.
+     */
+    case "katastrofa":
+      return `giną wszyscy: ${effect.klasa === "stranger" ? "Nieznajomi" : CARD_CLASS_LABEL[effect.klasa]} w tym Kręgu`;
 
     /**
      * „bazowe", because that is the only kind there is to swap.

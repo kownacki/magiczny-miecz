@@ -28,6 +28,9 @@ export function isSettled(effect: Effect): boolean {
     case "kamien":
     case "natura":
     case "walka":
+    // The class is on the card and the whole Krąg is swept — nobody picks
+    // which Nieznajomi die, the way nobody picks which face of a die comes up.
+    case "katastrofa":
     // Whom it is sent at was named as the Zaklęcie was spoken, which is the
     // only choice it holds — see `przyzwij`.
     case "przyzwij":

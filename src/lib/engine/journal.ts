@@ -31,6 +31,8 @@ export const JOURNAL_KINDS = [
   "bridge-guardian",
   "bridge-trap",
   "card",
+  /** A Karta destroyed by another Karta's own text (Kometa), not a rule taking it off somebody. */
+  "card-destroyed",
   "card-table",
   /** A Przyjaciel joined carrying a Zaklęcie of his own (Krzyżowiec, Gnom). */
   "carried-spell",

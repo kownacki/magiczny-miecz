@@ -644,6 +644,19 @@ export function describe(
       return line(`${who} traci: ${parts.join(", ")}.`);
     }
 
+    /**
+     * A Karta destroyed by another Karta's own text — Kometa, so far the only
+     * one. Not `lost-card`: nothing here was held, only lying on the board or
+     * waiting mid-kolejka, and „giną" is the card's own word for it rather
+     * than „traci".
+     */
+    case "card-destroyed": {
+      const gone = Array.isArray(data.cardIds) ? data.cardIds : [];
+      if (gone.length === 0) return null;
+      const by = typeof data.cardId === "string" ? card(data.cardId) : "Kometa";
+      return line(`${by}: giną — ${gone.map((id) => card(id)).join(", ")}.`);
+    }
+
     case "discarded":
       // 5.5's own verb, and 7.4's: "ma prawo w dowolnym momencie odrzucić
       // posiadany Przedmiot", "musi zostać natychmiast odrzucony". It covers

@@ -570,6 +570,99 @@ describe("swapping the Karta in front of you", () => {
 });
 
 /**
+ * Kometa: „W katastrofie giną wszyscy Nieznajomi — należy odłożyć ich Karty."
+ *
+ * The default seat stands on Mroczna Polana, on the środkowy Krąg alongside
+ * Przełęcz Wichrów. One Nieznajomy lies on that other field's `field_cards`
+ * row, a second is still sitting in this turn's own `drawn` — lifted off the
+ * board on arrival and not yet resolved (`liftFieldCards`) — and a Wróg on the
+ * same field and a Nieznajomy on Urwisko I, a field on the górny Krąg
+ * entirely, are the control group: neither is a Nieznajomy on this Krąg.
+ */
+describe("Kometa sweeps a class of Karta off the whole Krąg", () => {
+  const komeciaTable = () =>
+    aTable({
+      seats: [aSeat({ id: "seat-a", seat_index: 0 })],
+      fieldCards: [
+        { id: "fc-cudotworca", field_id: "przelecz-wichrow", card_id: "cudotworca", granted: false, pool: null },
+        { id: "fc-cyklop", field_id: "przelecz-wichrow", card_id: "cyklop", granted: false, pool: null },
+        { id: "fc-jednorozec", field_id: "urwisko-1", card_id: "jednorozec", granted: false, pool: null },
+      ],
+      game: {
+        turn_state: {
+          phase: "field",
+          fieldId: "mroczna-polana",
+          from: null,
+          draw: 0,
+          drawn: [{ cardId: "czarodziej", cardClass: "stranger" }],
+        } as never,
+        // Left as `noDeck()` (aTable's default): neither pile already accounts
+        // for either card's refs, which is what `returningRef` needs to hand
+        // one back — the same shape the swap test above relies on for CYKLOP.
+      },
+    });
+
+  const strike = (table: ReturnType<typeof komeciaTable>) =>
+    applyEffect(
+      table,
+      {
+        seatId: "seat-a",
+        cardId: "kometa",
+        effect: { op: "katastrofa", klasa: "stranger", zasieg: "krag" },
+        reason: "KOMETA",
+        shuffle: asIs,
+      },
+      ports(),
+    );
+
+  it("sweeps the board and the kolejka, and puts both on the used pile", async () => {
+    const { writes, result } = await strike(komeciaTable());
+
+    expect(writes.fieldCards?.delete).toEqual(["fc-cudotworca"]);
+
+    const state = top((writes.game as { turn_state: TurnState }).turn_state) as {
+      drawn: { cardId: string }[];
+    };
+    expect(state.drawn).toEqual([]);
+
+    const deck = (writes.game as { deck: { events: { discard: string[] } } }).deck;
+    expect([...deck.events.discard].sort()).toEqual(
+      [EVENT_COPIES.get("cudotworca")![0], EVENT_COPIES.get("czarodziej")![0]].sort(),
+    );
+
+    expect(writes.journal?.[0]).toMatchObject({
+      kind: "card-destroyed",
+      payload: { cardId: "kometa", cardIds: ["cudotworca", "czarodziej"] },
+    });
+    expect(result.did[0]).toContain("CUDOTWÓRCA");
+    expect(result.did[0]).toContain("CZARODZIEJ");
+  });
+
+  it("leaves a Wróg on the same Krąg and a Nieznajomy on another one alone", async () => {
+    const { writes } = await strike(komeciaTable());
+    expect(writes.fieldCards?.delete).not.toContain("fc-cyklop");
+    expect(writes.fieldCards?.delete).not.toContain("fc-jednorozec");
+  });
+
+  it("says nothing happened when the Krąg has no Nieznajomi", async () => {
+    const bare = aTable({
+      seats: [aSeat({ id: "seat-a", seat_index: 0 })],
+      game: {
+        turn_state: {
+          phase: "field",
+          fieldId: "mroczna-polana",
+          from: null,
+          draw: 0,
+          drawn: [{ cardId: "cyklop", cardClass: "foe" }],
+        } as never,
+      },
+    });
+    const { result } = await strike(bare);
+    expect(result.did).toEqual(["nie ma tu nikogo, kogo dosięgnie Kometa"]);
+  });
+});
+
+/**
  * The Skalne Wrota's three, which join the kolejka they were drawn into.
  *
  * The card the box left ambiguous, and the community reading — forum

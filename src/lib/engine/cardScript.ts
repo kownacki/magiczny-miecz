@@ -1,6 +1,6 @@
 /** What a one-shot or fixture card does, and — just as importantly — where the card goes afterwards. */
 
-import type { Nature } from "@/data/types";
+import type { CardClass, Nature } from "@/data/types";
 import type { Ends, Modifier } from "./status";
 import { MIEJSCA } from "./scripts/miejsca";
 import { NIEZNAJOMI } from "./scripts/nieznajomi";
@@ -313,6 +313,21 @@ export type Effect =
    * points at both ends of it: which Karta, and which Obszar.
    */
   | { op: "przenies-karte" }
+  /**
+   * Wipes a whole class of Karta off the acting seat's Krąg.
+   *
+   * Kometa alone: "Na Krainę, po której wędrujesz spada apokaliptyczna Gwiazda.
+   * W katastrofie giną wszyscy Nieznajomi - należy odłożyć ich Karty." Not
+   * `strata`, which takes something the *character* holds — this reaches for
+   * Karty nobody has picked up yet, lying on squares the character may never
+   * even have visited, and sends every one of them to the used pile at once.
+   *
+   * `zasieg` is a field of its own rather than a hardcoded ring, on the chance
+   * a future card asks for less than a Krąg — Kometa is the only one
+   * transcribed and it always says `krag`, the same Krąg `zaraza` and
+   * `burza-siedmiu-slonc` already reach with a `target`.
+   */
+  | { op: "katastrofa"; klasa: CardClass; zasieg: "krag" }
   /**
    * Throws back the Karta in front of you and turns over another.
    *

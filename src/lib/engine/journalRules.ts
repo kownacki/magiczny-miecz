@@ -124,6 +124,13 @@ export const RULE_FOR: Record<JournalKind, string | null> = {
    * carry away, and reading it after losing something explains nothing.
    */
   "lost-card": null,
+  /**
+   * Kometa says it destroys them, in as many words — „giną wszyscy
+   * Nieznajomi" — and no numbered rule says a Karta may kill another one. This
+   * is `lost-card`'s neighbour and not its synonym: nothing is *held* here,
+   * only lying on the board, waiting to be met.
+   */
+  "card-destroyed": null,
 
   // — Zaklęcia —————————————————————————————————————————————————————————
   /** Wolno mieć tyle Zaklęć, ile wynosi parametr Magii. */

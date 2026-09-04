@@ -7,7 +7,7 @@
  */
 
 import { STORAGE, makerOf, type Slot } from "@/lib/engine/slots";
-import { FIELDS } from "@/lib/engine/board";
+import { FIELDS, ringFields } from "@/lib/engine/board";
 import type { FieldId } from "@/lib/engine/board";
 import type { Shuffle } from "@/lib/engine/deck";
 import { cardIdNamed } from "@/lib/engine/lookup";
@@ -39,7 +39,7 @@ import { keepOnly, storedStatuses, addEffect } from "./turn";
 import { turnToStone } from "./stone";
 import { seatView } from "./seat";
 import { isSpared } from "@/lib/engine/abilities";
-import { BY_REF, decksOf } from "../decks";
+import { BY_REF, decksOf, EVENTS } from "../decks";
 
 /**
  * What the player has already decided, in the order the effect asks.
@@ -415,6 +415,79 @@ const OPS: { [K in LeafOp]: OpRun<K> } = {
     return {
       writes: mergeAll(keepOnly(snapshot, seatId, left), lifted, piled),
       result: { did: [`uwalniasz się od: ${name}`], pending: null },
+    };
+  },
+
+  /**
+   * Kometa: „W katastrofie giną wszyscy Nieznajomi — należy odłożyć ich
+   * Karty."
+   *
+   * Two pools answer to „wszyscy". Everything of the named class still lying
+   * in `field_cards` anywhere on the acting seat's Krąg — reachable whether or
+   * not anybody ever stood on that Obszar, which is exactly what makes this
+   * unlike `strata`: that takes something a *character* holds, and this
+   * reaches for Karty nobody has picked up. And whatever this turn already
+   * lifted off its own square into `drawn` (`liftFieldCards`) and has not yet
+   * resolved — the one place `field_cards` does not reach, because arriving
+   * deletes the row. A Nieznajomy sitting there mid-kolejka is still a
+   * Nieznajomy on the Krainie when the Gwiazda falls, so it goes the same way
+   * as the rest: struck out of the queue rather than left to be met.
+   *
+   * Both pools end on the used pile together (`putOnPile`), chained through
+   * `apply` the way every command that reads a pile and writes it back has
+   * to. A card the console `granted` belongs to no pile and joins none —
+   * `putOnPile`/`asReturnable` already know that; it is only deleted here.
+   */
+  katastrofa: (ctx, effect) => {
+    const { snapshot, seatId } = ctx;
+    const seat = snapshot.seats.find((row) => row.id === seatId);
+    const ring = new Set(ringFields(seat?.field_id ?? null));
+
+    const onBoard = snapshot.fieldCards.filter((row) => {
+      if (!ring.has(row.field_id as FieldId)) return false;
+      const card = EVENTS.find((one) => one.id === row.card_id);
+      return card?.cardClass === effect.klasa;
+    });
+
+    const state = top(snapshot.game.turn_state);
+    const inTurn = state.phase === "field" ? state.drawn.filter((card) => card.cardClass === effect.klasa) : [];
+
+    if (onBoard.length === 0 && inTurn.length === 0) {
+      return cameToNothing(ctx, "nie ma tu nikogo, kogo dosięgnie Kometa");
+    }
+
+    const lifted: Changeset = {
+      ...(onBoard.length > 0 ? { fieldCards: { delete: onBoard.map((row) => row.id) } } : {}),
+      ...(state.phase === "field" && inTurn.length > 0
+        ? {
+            game: {
+              turn_state: replaceTop(snapshot.game.turn_state, {
+                ...state,
+                drawn: state.drawn.filter((card) => card.cardClass !== effect.klasa),
+              }),
+            },
+          }
+        : {}),
+    };
+
+    const gone = [...onBoard.map(asReturnable), ...inTurn];
+    const piled = putOnPile(apply(snapshot, lifted), "events", gone);
+
+    return {
+      writes: mergeAll(lifted, piled, {
+        journal: [
+          {
+            seatId,
+            round: snapshot.game.round,
+            kind: "card-destroyed" as const,
+            payload: { cardId: ctx.cardId, cardIds: gone.map((one) => one.cardId) },
+          },
+        ],
+      }),
+      result: {
+        did: [`giną: ${gone.map((one) => cardName(one.cardId)).join(", ")}`],
+        pending: null,
+      },
     };
   },
 

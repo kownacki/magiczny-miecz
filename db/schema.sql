@@ -495,7 +495,7 @@ create table if not exists magiczny_miecz.moves (
   kind text not null check (kind in (
     'beast-draw', 'beast-loss', 'bought', 'bridge-attempt',
     'bridge-cerberus', 'bridge-death-game', 'bridge-entry', 'bridge-failed',
-    'bridge-guardian', 'bridge-trap', 'card', 'card-table', 'carried-spell', 'crossing',
+    'bridge-guardian', 'bridge-trap', 'card', 'card-destroyed', 'card-table', 'carried-spell', 'crossing',
     'crossing-failed', 'death', 'died-for-you', 'discarded', 'duel', 'effect', 'escape',
     'escape-failed', 'ferry', 'ferry-refused', 'field-table', 'fight-end',
     'fight-roll', 'fight-start', 'guardian-end', 'guardian-start',

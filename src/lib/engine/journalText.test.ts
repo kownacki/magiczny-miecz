@@ -648,6 +648,7 @@ const SILENT = [
 /** Payloads that keep a line from rendering as a shrug. */
 const PAYLOADS: Record<string, Record<string, unknown>> = {
   "lost-card": { cardIds: ["miecz"] },
+  "card-destroyed": { cardId: "kometa", cardIds: ["upior"] },
   "left-behind": { cardIds: ["miecz"], fieldId: "kurhan" },
   "test-card-field": { cardId: "miecz", fieldId: "kurhan" },
   "test-gold-field": { gold: 5, fieldId: "kurhan" },

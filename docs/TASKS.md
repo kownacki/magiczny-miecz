@@ -59,12 +59,14 @@ their scans are deliberately untouched.
       The five with nothing at all, and what each of them actually wants:
 
       - ~~**Sobowtór**~~ — built 2026-09-04: `sobowtor: STRAZUJE()`.
-      - **Kometa** — one new op (`katastrofa`: a class swept off the Krąg,
-        Karty to the used pile, granted ones to none) and one new journal
-        kind: `clearField`'s line is the right sentence and the wrong kind —
-        `override` is the table correcting the game, and this is a printed
-        Karta doing what it says. `lost-card` reads „traci", which is a held
-        card. So: a kind for a Karta destroyed by a card, then the op.
+      - ~~**Kometa**~~ — built 2026-09-04: `katastrofa` (a class swept off the
+        acting seat's Krąg — every `field_cards` row that matches, and
+        whatever the turn already lifted into its own `drawn` and had not yet
+        resolved — to the used pile through `putOnPile`, chained through
+        `apply`; a `granted` card is only deleted) and a new journal kind,
+        `card-destroyed`, cited to nothing: it is the Karta's own text, the
+        way `lost-card` already is, and reads „giną" rather than „traci"
+        because nothing here was ever held.
       - **Turniej Rycerski** — needs a decision the script vocabulary lacks:
         „wyzwać każdą Postać" is a choice among however many Postacie are at
         the table now, and `wybor` is a fixed list re-walked by index. `Target`
