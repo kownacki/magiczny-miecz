@@ -166,10 +166,12 @@ is a **Status** (CONTEXT.md). The other three decisions, and the order:
       ordeal, not a live reader of its own.
 - [ ] **One Status vocabulary, two sources.** Staged, one reader at a time,
       so every step keeps the suite green:
-      1. `Ends` gains `{ kind: "held" }`; `heldStatuses(holdings, eqMode,
+      1. ~~`Ends` gains `{ kind: "held" }`; `heldStatuses(holdings, eqMode,
          nature)` projects a held card's abilities into `Status` rows at read
-         time; `allStatuses` includes them. `Ability` stays as the data shape
-         cards are written in — this step only reads it into the one list.
+         time.~~ Built 2026-09-04: `HELD_TWIN` is an exhaustive table over
+         `Ability["kind"]` — two twins (`punkty`→`points` with `tylkoWalka`,
+         `bez-zaklec`→`no-spells`) and a stated reason for every null — and
+         `seatView.standing` is applied plus held. No reader has moved yet.
       2. Readers move one at a time, each with tests: points
          (`bonusFromHoldings` → `bonusFrom` over all statuses, `tylkoWalka`
          as a field on `points`), spell limits (`bez-zaklec` → `no-spells`,

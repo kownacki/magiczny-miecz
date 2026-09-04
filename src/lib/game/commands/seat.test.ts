@@ -148,6 +148,35 @@ describe("what a character is under", () => {
   });
 });
 
+describe("standing: statuses plus what the held cards themselves stand for", () => {
+  /**
+   * Step 1 of "One Status vocabulary, two sources" (docs/TASKS.md):
+   * `standing` exists and agrees with the two halves it is built from, but no
+   * reader has switched to it yet — `statuses` still answers everything it
+   * always has.
+   */
+  it("is applied statuses plus held-card statuses, nothing more", () => {
+    const table = aTable({
+      seats: [aSeat({ id: "seat-a" })],
+      holdings: [aHolding({ id: "h1", seat_id: "seat-a", card_id: "miecz", kind: "item" })],
+      effects: [
+        {
+          id: "e1",
+          seat_id: "seat-a",
+          field_card_id: null,
+          source: "Eliksir",
+          label: "+2 Miecza",
+          modifier: { kind: "points", miecz: 2 },
+          ends: { kind: "turns", turns: 1 },
+        },
+      ],
+    });
+    const v = seatView(table, "seat-a");
+    expect(v.standing.length).toBe(v.statuses.length + 1);
+    expect(v.standing.some((s) => s.ends.kind === "held")).toBe(true);
+  });
+});
+
 /* --------------------------------------------------------------------------
  * The one Obszar that changes what a card is worth.
  * ----------------------------------------------------------------------- */

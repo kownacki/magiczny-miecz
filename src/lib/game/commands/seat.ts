@@ -14,9 +14,11 @@ import {
   allStatuses,
   bonusFrom,
   frozenBy,
+  heldStatuses,
   magiaCountsAsMiecz,
   spellsHushed,
   stillStone,
+  type HeldCard,
   type Status,
 } from "@/lib/engine/status";
 import { projectQueue } from "@/lib/engine/turnQueue";
@@ -66,6 +68,17 @@ export function activeSeat(snapshot: Snapshot): SeatRow {
 
 export function holdingsOf(snapshot: Snapshot, seatId: string): Holding[] {
   return snapshot.holdings.filter((h) => h.seat_id === seatId).map(asHolding);
+}
+
+/**
+ * The same holdings, with the one field `heldStatuses` needs beyond `Holding`
+ * — the row id, so two of the same card lend two rows a player can tell apart
+ * rather than one that silently stands for both.
+ */
+export function heldCardsOf(snapshot: Snapshot, seatId: string): HeldCard[] {
+  return snapshot.holdings
+    .filter((h) => h.seat_id === seatId)
+    .map((h) => ({ ...asHolding(h), id: h.id }));
 }
 
 /**
@@ -125,6 +138,16 @@ export interface SeatView {
 
   /** Everything the character is under, from both halves of the model. */
   statuses: Status[];
+
+  /**
+   * `statuses`, plus what the held cards themselves stand for (`heldStatuses`)
+   * — the one list docs/TASKS.md's "One Status vocabulary, two sources" is
+   * working towards. Nobody reads this yet; existing readers still read
+   * `statuses` and `holdings`/`abilities` separately, which is step 1's whole
+   * point — the projection has to exist and agree with them before anything
+   * is asked to trust it instead.
+   */
+  standing: Status[];
 
   /** The seat as the targeting rules see it. */
   asTarget: TargetSeat;
@@ -245,6 +268,8 @@ export function seatView(snapshot: Snapshot, seatId: string): SeatView {
    */
   const under = bonusFrom(statuses);
 
+  const standing = [...statuses, ...heldStatuses(heldCardsOf(snapshot, row.id), mode, nature)];
+
   return {
     row,
     id: row.id,
@@ -285,6 +310,7 @@ export function seatView(snapshot: Snapshot, seatId: string): SeatView {
           fromCards,
         ),
     statuses,
+    standing,
     asTarget: {
       seatIndex: row.seat_index,
       characterId: row.character_id,

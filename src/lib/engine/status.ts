@@ -1,6 +1,11 @@
 /** Things that are true of a character for a while, and what makes them stop being true. */
 
 import type { Nature } from "@/data/types";
+import type { Holding } from "./state";
+import type { EqMode } from "./slots";
+import { type Ability, abilitiesOf } from "./abilities";
+import { inEffect, type Reckoning } from "./holdings";
+import { cardName } from "./polish";
 
 /**
  * What ends an effect.
@@ -65,7 +70,18 @@ export type Ends =
    * `dispelled` either, because nothing else lifts it and a status nothing can
    * lift is a character nothing can move.
    */
-  | { kind: "roll"; upTo: number };
+  | { kind: "roll"; upTo: number }
+  /**
+   * For as long as the card is in effect (`inEffect`) — nothing ticks it and
+   * nothing dispels it.
+   *
+   * The fifth clock, and the only one that is not really the *status's* own:
+   * it ends when the holding does — dropped, sold, gone inert on a Natura that
+   * has since changed (5.3) — which `heldStatuses` re-derives from the holding
+   * at every read rather than this union counting anything down. See
+   * docs/TASKS.md, "One Status vocabulary, two sources".
+   */
+  | { kind: "held" };
 
 /**
  * The events that end something.
@@ -107,8 +123,16 @@ export function fromTestMode(source: string): boolean {
 }
 
 export type Modifier =
-  /** Added to the total at read time, never written to own points (1.2-1.5). */
-  | { kind: "points"; miecz?: number; magia?: number }
+  /**
+   * Added to the total at read time, never written to own points (1.2-1.5).
+   *
+   * `tylkoWalka` carries the same distinction the printed `punkty` Ability
+   * already makes (1.5's Troll: parametr 8, podczas walki 11) — a held weapon
+   * counts only in a fight, and `bonusFrom` has to be told which reading it is
+   * answering rather than adding a Miecz card's bonus to a character standing
+   * still. See `Reckoning` in `holdings.ts`.
+   */
+  | { kind: "points"; miecz?: number; magia?: number; tylkoWalka?: true }
   /** A hard cap on how far the holder may move, whatever the die says. Mgła. */
   | { kind: "move-max"; fields: number }
   /**
@@ -389,11 +413,22 @@ export interface Status {
  * expiry, and rule 1.3 would then refuse to take it back off, because own
  * points may never fall below where the character started.
  */
-export function bonusFrom(statuses: readonly Status[]): { miecz: number; magia: number } {
+export function bonusFrom(
+  statuses: readonly Status[],
+  /**
+   * Which of 1.5's two figures this is for. Defaults to `"walka"`, which is
+   * every call site there was before `heldStatuses` existed: an applied
+   * status has never carried `tylkoWalka`, so nothing was ever being asked to
+   * leave a row out. `"parametr"` is the one that has to ask, because a held
+   * weapon's `points` status now can be one — see the modifier's own note.
+   */
+  as: Reckoning = "walka",
+): { miecz: number; magia: number } {
   let miecz = 0;
   let magia = 0;
   for (const status of statuses) {
     if (status.modifier.kind !== "points") continue;
+    if (as === "parametr" && status.modifier.tylkoWalka) continue;
     miecz += status.modifier.miecz ?? 0;
     magia += status.modifier.magia ?? 0;
   }
@@ -801,6 +836,138 @@ export function allStatuses(
   round: number,
 ): Status[] {
   return [...fromColumns(seat, round), ...stored];
+}
+
+/* --------------------------------------------------------------------------
+ * The held half: a card's own Abilities, projected into Status rows.
+ *
+ * Step 1 of folding "ability" into "modifier" (CONTEXT.md's flagged
+ * ambiguity; docs/TASKS.md, "One Status vocabulary, two sources"). Nothing
+ * here changes what `allStatuses` answers — no existing reader is fed this
+ * yet — it only makes the projection possible to ask for.
+ * ----------------------------------------------------------------------- */
+
+/**
+ * A held card, as much of it as this file needs: enough to ask `inEffect`,
+ * plus the row id that makes each `Status` it produces stable.
+ *
+ * `Holding` itself (`state.ts`) has no id — nothing in the pure engine has
+ * ever needed to tell two holdings of the same card apart — so this is `Pick`
+ * plus the one field the database row actually has.
+ */
+export type HeldCard = Pick<Holding, "cardId" | "kind" | "slot"> & { id: string };
+
+/**
+ * Which of a card's Abilities also stand as a Status, and how.
+ *
+ * A `Record` over the whole `Ability["kind"]` union rather than a `Partial`,
+ * so a new kind added to `abilities.ts` fails this file's build until
+ * somebody says whether it is a standing fact too — `STACKING` in
+ * `statusRows.ts` already uses the same discipline for the same reason.
+ *
+ * Two kinds have a twin so far, and only these two — every other kind here is
+ * read at the moment it applies (a fight, a toll, a roll) rather than
+ * *standing* the way `points` or `frozen` do, or is already folded into some
+ * other reading (`carryLimit`, `spellAllowance`, `forbiddenNatures`) and would
+ * be counted twice by also producing a Status. `null` is deliberate rather
+ * than a guess at a Modifier nobody asked for — moving one of these is step 2
+ * or step 3's decision, one reader at a time, not this file's.
+ */
+const HELD_TWIN: Record<Ability["kind"], ((ability: Ability) => Modifier | null) | null> = {
+  // 1.5, 2.5: the points a held card lends, read as a Status like everything
+  // else that adds to a total. `tylkoWalka` survives the crossing untouched —
+  // see the modifier's own note and `bonusFrom`'s new second argument.
+  punkty: (ability) =>
+    ability.kind === "punkty"
+      ? {
+          kind: "points",
+          miecz: ability.miecz,
+          magia: ability.magia,
+          tylkoWalka: ability.tylkoWalka,
+        }
+      : null,
+  // Only the "may not cast" half. `no-spells` itself carries nothing about
+  // which Zaklęcia the holder resists or denies an opponent — it never has,
+  // see that modifier's own note — so the twin loses nothing this ability was
+  // actually enforcing here; the immunity half stays on the Karta's own text,
+  // same as before.
+  "bez-zaklec": (ability) => (ability.kind === "bez-zaklec" ? { kind: "no-spells" } : null),
+
+  "zabiera-zycie": null, // a one-off gain when a fight is won (Excalibur), not a standing fact
+  oslona: null, // read only when a fight is lost
+  bezpieczny: null, // read only when the named field is stepped on
+  ucieczka: null, // read only when a flight is attempted
+  udzwig: null, // folded into `carryLimit` already
+  "ruch-bonus": null, // read only at the movement roll
+  "magia-do-miecza": null, // its own reading, `addsMagiaToMiecz`
+  "ginie-zamiast-ciebie": null, // read only when a life would be lost
+  wymagany: null, // a key, not a fact about the holder
+  "bez-oplaty": null, // read only at the toll it waives
+  zakazane: null, // a restriction on what the CHARACTER may hold, not the card's own fact
+  "modyfikator-rzutu": null, // read only at the roll it shifts
+  "zaklecia-ponad-limit": null, // folded into `spellAllowance` already
+  "podglad-zaklec": null, // read only when a Zaklęcie is drawn
+  "odporny-na-zaklecie": null, // read only when a named Zaklęcie lands on the holder
+  "punkty-na-polach": null, // read only on the named Obszar
+  "przeprawa-kostki": null, // read only at the crossing
+  skup: null, // a desk's price, not a fact about the holder
+  "sprzedaj-w": null, // a card's own buyer, not a fact about the holder
+  "placi-za-przegrana": null, // read only when a duel is lost
+  "przeprawa-wszedzie": null, // consumed the moment it is used
+  uzdrowienie: null, // a visit's offer, not a fact about the holder
+  "oddaj-w": null, // a one-off offer, not a fact about the holder
+  "cena-przyjecia": null, // settled once, at the taking
+  "walczy-za-ciebie": null, // read only inside a fight (`fightsForYou`)
+  niedostepny: null, // where the card may be picked up, not a fact about holding it
+  "natura-dowolna": null, // a permission on the character, not a Modifier
+  "tylko-natura": null, // already folded into `forbiddenNatures`/`inEffect` (5.3)
+  "pokonuje-bez-walki": null, // read only when the fight would happen
+  przeciw: null, // read only inside a fight, against a named foe
+  "za-oplata": null, // false until paid and false again next turn — its own row when it lands, not a standing twin
+  "nosi-zaklecie": null, // the Zaklęcie itself is a `carried` holding, not a Modifier on this one
+};
+
+/**
+ * A held card's Abilities, projected into `Status` rows at read time.
+ *
+ * The held half of the one vocabulary: `fromColumns` is a seat's other
+ * *derived* half and `stored` (`seat_effects`) is the only one actually
+ * written down, and this one is worked out fresh every time on purpose — it
+ * is true for only as long as the card stays `inEffect`, and a card dropped,
+ * sold, or gone inert on a Natura that has since turned (5.3) simply produces
+ * nothing the next time this is asked. Nothing here needs tidying up when a
+ * card leaves; there is nothing stored to tidy.
+ *
+ * Trophies and a friend's own carried Zaklęcie are held, but they are not
+ * what 1.5 calls "cards a character has" — `bonusFromHoldings` excludes them
+ * from the same reading for the same reason (1.4, 9.3), and this filters the
+ * same way before asking `inEffect` at all.
+ *
+ * `id` is the holding's own id and the ability's index in its card's list —
+ * stable across reads and unique within one holder, which is all a `Status`
+ * needs to be told apart by (`foldStatuses`' key, a list's `key`).
+ */
+export function heldStatuses(
+  holdings: readonly HeldCard[],
+  eqMode: EqMode,
+  nature: Nature | null = null,
+): Status[] {
+  const lending = holdings.filter((held) => held.kind === "item" || held.kind === "friend");
+  const out: Status[] = [];
+  for (const holding of inEffect(lending, eqMode, nature)) {
+    abilitiesOf(holding.cardId).forEach((ability, index) => {
+      const twin = HELD_TWIN[ability.kind]?.(ability);
+      if (!twin) return;
+      out.push({
+        id: `${holding.id}:${index}`,
+        source: holding.cardId,
+        label: cardName(holding.cardId),
+        modifier: twin,
+        ends: { kind: "held" },
+      });
+    });
+  }
+  return out;
 }
 
 /**

@@ -11,7 +11,9 @@ import {
   dispel,
   forcedNature,
   frozen,
+  heldStatuses,
   movementCap,
+  type HeldCard,
   type Status,
 } from "./status";
 import { describeEnd, markOf } from "./statusRows";
@@ -222,6 +224,46 @@ describe("what a Karta lying on an Obszar is under (16.8)", () => {
   it("ignores rows held by a seat", () => {
     const seatHeld = { ...row("s", null), field_card_id: null };
     expect(cardStatuses([seatHeld], "fc-1")).toEqual([]);
+  });
+});
+
+describe("the held half: a card's own Abilities as Status rows", () => {
+  function heldCard(over: Partial<HeldCard> = {}): HeldCard {
+    return { id: "h1", cardId: "miecz", kind: "item", slot: null, ...over };
+  }
+
+  it("puts a held card's points beside an applied status, both as points (1.5, 2.5)", () => {
+    const applied = [status({ id: "eliksir", source: "eliksir-sily", label: "+2 Miecza" })];
+    const rows = [...applied, ...heldStatuses([heldCard()], "classic", null)];
+    expect(rows).toHaveLength(2);
+    expect(rows.every((row) => row.modifier.kind === "points")).toBe(true);
+  });
+
+  it("carries `tylkoWalka` across from the Ability untouched", () => {
+    // Miecz: "podczas walki dodaje właścicielowi 1 punkt Miecza" — a Karta
+    // that lends nothing to the parametr, only to a fight (1.5).
+    const [row] = heldStatuses([heldCard()], "classic", null);
+    expect(row.modifier).toMatchObject({ kind: "points", miecz: 1, tylkoWalka: true });
+    expect(row.ends).toEqual({ kind: "held" });
+  });
+
+  it("yields nothing for a card this Natura may not hold (5.3)", () => {
+    const forbidden = heldCard({ cardId: "topor-swiatla-i-ciemnosci" });
+    expect(heldStatuses([forbidden], "classic", "chaotic")).toEqual([]);
+    expect(heldStatuses([forbidden], "classic", "good").length).toBeGreaterThan(0);
+  });
+
+  it("in slotowy, a pack card lends nothing and a worn one does", () => {
+    const packed = heldCard({ slot: null });
+    const worn = heldCard({ slot: "main-hand" });
+    expect(heldStatuses([packed], "slots", null)).toEqual([]);
+    expect(heldStatuses([worn], "slots", null).length).toBeGreaterThan(0);
+  });
+
+  it("yields nothing for an Ability with no twin yet (the exhaustive mapping compiles)", () => {
+    // Hełm is `oslona`, read only when a fight is lost — not a standing fact,
+    // so `HELD_TWIN` maps it to null rather than guessing at a Modifier.
+    expect(heldStatuses([heldCard({ cardId: "helm" })], "classic", null)).toEqual([]);
   });
 });
 

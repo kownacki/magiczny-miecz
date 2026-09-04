@@ -51,6 +51,10 @@ export function describeEnd(ends: Ends): string {
       return "dopóki ktoś tego nie zdejmie";
     case "roll":
       return `dopóki nie wyrzucisz ${ends.upTo} lub mniej`;
+    // A held card's own status: nothing ticks it and nothing dispels it, it
+    // simply stops being produced the moment `inEffect` stops naming the card.
+    case "held":
+      return "dopóki ją masz";
   }
 }
 
