@@ -434,7 +434,7 @@ export function envelopeFor(
             ? (FIELDS.get(seat.field_id as FieldId)?.name ?? seat.field_id)
             : null,
           statuses: view.statuses,
-          abilities: view.abilities,
+          standing: view.standing,
         }),
         /**
          * The last time this Postać raised a hand, in words, or null.

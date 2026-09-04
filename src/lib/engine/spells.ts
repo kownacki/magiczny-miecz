@@ -4,7 +4,6 @@ import type { Effect } from "./cardScript";
 import { isFoeClass } from "@/data/types";
 import type { TurnPhase } from "./turn";
 import { frozenBy, spellsHushed, type Status } from "./status";
-import { cannotUseSpells, type Ability } from "./abilities";
 
 /**
  * The third card shape, and the one the app had nothing at all for.
@@ -852,12 +851,23 @@ export const CAST_VERB = "rzuć";
  * would hide the one card that gets you out. Kamień names no exemption, which
  * is what makes it a blanket case: 20.5 gives the Zaklęcia back after three
  * turns and not before.
+ *
+ * The Kryształ Magów's half of this used to read `abilities` for a bare
+ * `bez-zaklec` kind (`cannotUseSpells`). It reads `standing` for a `no-spells`
+ * status now — `HELD_TWIN` in `status.ts` already projects that ability's
+ * "may not cast" half onto a held card's row, through the same `inEffect` gate
+ * every other held status passes (a Kryształ sitting in the pack in slotowy,
+ * or on a Natura the card forbids, lends nothing) — so this reader gains that
+ * gate rather than adding a second copy of it. It is told apart from the
+ * Wojna Żywiołów's own `no-spells` above by `ends.kind === "held"`: the two
+ * checks share a modifier kind but not a sentence.
  */
 export function whyNoSpells(where: {
   fieldName: string | null;
   /** Everything true of the caster — both halves, so a projected freeze counts. */
   statuses: readonly Status[];
-  abilities: readonly Ability[];
+  /** `statuses` plus what held cards themselves stand for (`heldStatuses`). */
+  standing: readonly Status[];
 }): string | null {
   if (where.fieldName !== null) return `${where.fieldName}: tu nie rzuca się Zaklęć.`;
 
@@ -867,7 +877,10 @@ export function whyNoSpells(where: {
   const held = frozenBy(where.statuses);
   if (held && held.oprocz.length === 0) return `${held.label} — nie możesz nic zrobić.`;
 
-  if (cannotUseSpells(where.abilities)) {
+  const givenUpMagic = where.standing.some(
+    (status) => status.ends.kind === "held" && status.modifier.kind === "no-spells",
+  );
+  if (givenUpMagic) {
     return "Właściciel Kryształu Magów nie rzuca ani nie używa Zaklęć.";
   }
   return null;

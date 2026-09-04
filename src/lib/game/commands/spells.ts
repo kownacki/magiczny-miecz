@@ -673,7 +673,7 @@ export async function castSpell(
       ? fieldName(caster.field_id as FieldId)
       : null,
     statuses: allStatusesOf(snapshot, caster.id),
-    abilities: seatView(snapshot, caster.id).abilities,
+    standing: seatView(snapshot, caster.id).standing,
   });
   if (noSpells) throw new Error(noSpells);
 
