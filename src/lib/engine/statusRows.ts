@@ -233,6 +233,9 @@ const STACKING: Record<Modifier["kind"], Stacking> = {
   // A Hełm and a Tarcza worn together are not two rolls: `shieldUpTo` takes
   // the widest, and the reason it does is written there.
   oslona: "exclusive",
+  // A Koń and a Muł worn together really do carry twelve: `carryBonus` sums,
+  // unlike `oslona`'s roll against one Życie above.
+  udzwig: "sums",
   // `movementCap` takes the smaller of the caps, so a second one either tightens
   // it or does nothing. Never a further restriction than the tightest.
   "move-max": "exclusive",
@@ -334,6 +337,11 @@ export function markOf(status: Status): Mark {
     // `ocalenie`'s \u271A \u2014 nothing is worse about the character for wearing one.
     case "oslona":
       return { glyph: "\u26E8", tone: "dobry", title };
+    // A capacity opened rather than a weight carried \u2014 nothing is worse about
+    // the character for having somewhere to put a fifth Przedmiot, same
+    // reasoning as `oslona`'s and `ocalenie`'s marks above.
+    case "udzwig":
+      return { glyph: "\u25C8", tone: "dobry", title };
     case "frozen":
       return { glyph: "\u25A0", tone: "zly", title };
     // A Wr\u00F3g out of reach rather than a character stopped \u2014 neither good nor

@@ -154,6 +154,28 @@ export type Modifier =
    * then discarding what it found.
    */
   | { kind: "oslona"; upTo: number }
+  /**
+   * Raises the four-Przedmiot cap of 5.4 while this is held — a standing fact
+   * about the card, the way carrying a Miecz's point is, not something read
+   * only at a fight or a toll.
+   *
+   * Five cards print it, each with its own number: Koń „może nieść 8 twoich
+   * Przedmiotów", Muł „będzie do końca gry niósł twoje 4 Przedmioty", Magiczna
+   * Sakwa „pozwala nieść Postaci do 5 Przedmiotów ponad jej zwykłe
+   * możliwości", and the Tragarz — a Przyjaciel, not equipment — the same „4
+   * Przedmioty" as the Muł. Only the Zaprzęg is actually unbounded: „możesz
+   * przewozić dowolną liczbę Przedmiotów", which is why `items` carries the
+   * same `"bez-limitu"` case the printed `Ability` does rather than a very
+   * large number — `carryBonus`, below, is where that turns into `Infinity`.
+   *
+   * The Ability's other two fields do not cross to here, and stay read only at
+   * the moment they apply: `samaSieNieLiczy` (the Magiczna Sakwa not counting
+   * as one of the places it opens) is `fillsAPlace`'s business at the count
+   * itself, and `giniePrzyUtracie` (the Magiczna Sakwa and the Tragarz taking
+   * their load with them) is `overflow.ts`'s `lostContainerFor`'s at the loss.
+   * Neither is a standing fact about the holder the way the cap itself is.
+   */
+  | { kind: "udzwig"; items: number | "bez-limitu" }
   /** A hard cap on how far the holder may move, whatever the die says. Mgła. */
   | { kind: "move-max"; fields: number }
   /**
@@ -642,6 +664,28 @@ export function shieldUpTo(statuses: readonly Status[]): number {
 }
 
 /**
+ * How much these standing facts raise the four-Przedmiot cap of 5.4 —
+ * summed, not the widest: a Koń and a Muł worn together really do carry
+ * twelve, unlike `oslona`'s roll against one Życie, which is why
+ * `STACKING`'s `udzwig` entry (statusRows.ts) is `"sums"` and not
+ * `"exclusive"`. `Infinity` once any one of them is the Zaprzęg, since
+ * "dowolną liczbę" plus any other number is still "dowolną liczbę".
+ *
+ * `derive.ts`'s `carryLimit` adds this to the base the variant sets (four, or
+ * the slotted pack's own four) — the base itself has no business here, this
+ * file only ever answers what a card or an applied effect stands for.
+ */
+export function carryBonus(statuses: readonly Status[]): number {
+  let bonus = 0;
+  for (const status of statuses) {
+    if (status.modifier.kind !== "udzwig") continue;
+    if (status.modifier.items === "bez-limitu") return Infinity;
+    bonus += status.modifier.items;
+  }
+  return bonus;
+}
+
+/**
  * The thing standing between this character and the next point they would lose.
  *
  * Read at the one door every loss comes through, so an Ocalony spoken in
@@ -906,10 +950,10 @@ export type HeldCard = Pick<Holding, "cardId" | "kind" | "slot"> & { id: string 
  * somebody says whether it is a standing fact too — `STACKING` in
  * `statusRows.ts` already uses the same discipline for the same reason.
  *
- * Two kinds have a twin so far — every other kind here is read at the moment it
- * applies (a fight, a toll, a roll) rather than *standing* the way `points` or
- * `frozen` do, or is already folded into some other reading (`carryLimit`,
- * `spellAllowance`, `forbiddenNatures`) and would be counted twice by also
+ * Three kinds have a twin so far — every other kind here is read at the moment
+ * it applies (a fight, a toll, a roll) rather than *standing* the way `points`
+ * or `frozen` do, or is already folded into some other reading
+ * (`spellAllowance`, `forbiddenNatures`) and would be counted twice by also
  * producing a Status. `null` is deliberate rather than a guess at a Modifier
  * nobody asked for — moving one of these is step 2 or step 3's decision, one
  * reader at a time, not this file's.
@@ -939,7 +983,12 @@ const HELD_TWIN: Record<Ability["kind"], ((ability: Ability) => Modifier | null)
   oslona: (ability) => (ability.kind === "oslona" ? { kind: "oslona", upTo: ability.upTo } : null),
   bezpieczny: null, // read only when the named field is stepped on
   ucieczka: null, // read only when a flight is attempted
-  udzwig: null, // folded into `carryLimit` already
+  // Koń, Muł, Zaprzęg, Magiczna Sakwa and Tragarz are the only cards that
+  // print this ability, and holding one is a standing fact about the cap it
+  // raises the way carrying a Miecz is about the points it lends —
+  // `samaSieNieLiczy` and `giniePrzyUtracie` do not cross with it, and the
+  // Modifier's own note says why.
+  udzwig: (ability) => (ability.kind === "udzwig" ? { kind: "udzwig", items: ability.items } : null),
   "ruch-bonus": null, // read only at the movement roll
   "magia-do-miecza": null, // its own reading, `addsMagiaToMiecz`
   "ginie-zamiast-ciebie": null, // read only when a life would be lost

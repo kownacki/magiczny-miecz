@@ -2,14 +2,9 @@
 
 import type { Item, Nature } from "@/data/types";
 import type { Holding, Seat } from "./state";
-import { RELICS, STORAGE, inPlayAt, type EqMode, type Slot } from "./slots";
-import {
-  carryLimit as abilityCarryLimit,
-  fillsAPlace,
-  heldAbilities,
-  spellsOverLimit,
-  type Ability,
-} from "./abilities";
+import { RELICS, STORAGE, type EqMode, type Slot } from "./slots";
+import { fillsAPlace, spellsOverLimit, type Ability } from "./abilities";
+import { carryBonus, heldStatuses, type HeldCard } from "./status";
 
 /**
  * Rule 2.6, read straight off the printed table:
@@ -151,26 +146,36 @@ export const SLOTTED_PACK_LIMIT = BASE_CARRY_LIMIT;
  * to read that as *unlimited* for any of them. The cards are more careful: the
  * Koń carries eight, the Muł and the Tragarz four apiece, the Magiczna Sakwa
  * five over your own capacity, and only the Zaprzęg says "dowolną liczbę". So
- * the number comes from the card now, through the shared ability vocabulary.
+ * the number comes from the card now, read as the standing `udzwig` fact
+ * `heldStatuses` (status.ts) produces for it, through `carryBonus` — the same
+ * list `seatView` builds `standing` from, not a second reading of the cards.
  *
- * Trophies are excluded because a trophy is a beaten enemy's card kept for
- * trading (1.4), not a thing being carried — a Koń won as a trophy pulls no
- * cart.
+ * `heldStatuses` keeps only `item` and `friend` holdings, which is the trophy
+ * exclusion this used to spell out by hand — a trophy is a beaten enemy's card
+ * kept for trading (1.4), not a thing being carried, and it is neither kind —
+ * and nothing more: no carrier in the box is ever dealt as a Zaklęcie.
+ *
+ * No Natura passed to `heldStatuses`, on purpose and not by oversight: none of
+ * this function's four callers has one to give it, so threading the parameter
+ * through would be a parameter nobody fills. A Koń a character's Natura
+ * forbids still carries eight, exactly as it did before this reader moved —
+ * 5.3's inertness for a Natura-forbidden mount is a real gap, and closing it
+ * is a separate decision from moving this reader.
  */
 export function carryLimit(
   holdings: readonly Holding[],
   eqMode: EqMode = "classic",
 ): number {
-  // In the slotted variant a Koń pulls nothing while it is in the pack: the
-  // whole point of the variant is that a thing works where it is worn, and the
-  // mount place is where a mount is worn.
-  const counts = (held: Holding) =>
-    // `inPlayAt` rather than "has a place": a Koń in the Tajemna Sakwa is a
-    // Koń in a bag, and it pulls nothing from in there.
-    held.kind !== "trophy" && (eqMode === "classic" || inPlayAt(held.slot));
-  const carried = holdings.filter(counts).map((h) => h.cardId);
   const base = eqMode === "slots" ? SLOTTED_PACK_LIMIT : BASE_CARRY_LIMIT;
-  return abilityCarryLimit(heldAbilities(carried), base);
+  // `HeldCard` wants an `id` to key a Status by; this pure `Holding` has none,
+  // and the index is fine because nothing downstream of `carryBonus` reads it.
+  const carried: HeldCard[] = holdings.map((held, index) => ({
+    id: String(index),
+    cardId: held.cardId,
+    kind: held.kind,
+    slot: held.slot ?? null,
+  }));
+  return base + carryBonus(heldStatuses(carried, eqMode));
 }
 
 /**

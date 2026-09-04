@@ -168,6 +168,11 @@ describe("stackingOf: the four columns answer for themselves", () => {
     expect(stackingOf(buff(1, { modifier: { kind: "oslona", upTo: 1 }, source: "helm" }))).toBe(
       "exclusive",
     );
+    // A Koń and a Muł worn together really do carry twelve — `carryBonus`
+    // sums, unlike `oslona`'s widest above.
+    expect(stackingOf(buff(1, { modifier: { kind: "udzwig", items: 8 }, source: "kon" }))).toBe(
+      "sums",
+    );
   });
 });
 

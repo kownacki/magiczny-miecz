@@ -1069,6 +1069,10 @@ export function fillsAPlace(cardId: string): boolean {
   );
 }
 
+// Nothing in `src` calls this any more — `derive.ts`'s `carryLimit` reads
+// `carryBonus` over `standing` instead (`status.ts`'s `udzwig` twin). Left
+// here, with its tests, until the `udzwig` `Ability` kind retires with the
+// rest of them in step three of the fold (docs/WHERE.md, "A Status kind").
 export function carryLimit(abilities: readonly Ability[], base: number): number {
   let limit = base;
   for (const ability of abilities) {

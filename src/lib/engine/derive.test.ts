@@ -88,6 +88,21 @@ describe("how much a character can carry (5.4)", () => {
     expect(carryLimit([item("kon")], "slots")).toBe(SLOTTED_PACK_LIMIT);
     expect(carryLimit([item("kon", "mount")], "slots")).toBe(SLOTTED_PACK_LIMIT + 8);
   });
+
+  /**
+   * A behaviour change surfaced by this reader's move to `heldStatuses`
+   * (status.ts): the ad-hoc filter this function used to run by hand required
+   * every non-trophy holding to be `inPlayAt` in slotowy, and a Tragarz — a
+   * Przyjaciel, with no place the slotted variant ever puts one in — was
+   * never `inPlayAt` anything, so its `udzwig` was silently dead there.
+   * `inEffect` (holdings.ts), which `heldStatuses` reads instead, already
+   * treats a card nothing can wear as always in effect regardless of slot —
+   * the rule every other Przyjaciel's bonus already followed — so a held
+   * Tragarz now carries in slotowy too, same as in klasyczny.
+   */
+  it("a Tragarz carries in the slotted variant too, having nowhere to be worn", () => {
+    expect(carryLimit([of("friend", "tragarz")], "slots")).toBe(SLOTTED_PACK_LIMIT + 4);
+  });
 });
 
 describe("uzdrowienie (4.7)", () => {

@@ -12,6 +12,7 @@ import {
   dispel,
   forcedNature,
   frozen,
+  carryBonus,
   heldStatuses,
   movementCap,
   shieldUpTo,
@@ -73,6 +74,24 @@ describe("what a character is under", () => {
     ];
     expect(shieldUpTo(under)).toBe(3);
     expect(shieldUpTo([])).toBe(0);
+  });
+
+  it("sums udzwig, unlike osłona's widest", () => {
+    // A Koń and a Muł worn together really do carry twelve.
+    const under = [
+      status({ modifier: { kind: "udzwig", items: 8 } }),
+      status({ id: "b", modifier: { kind: "udzwig", items: 4 } }),
+    ];
+    expect(carryBonus(under)).toBe(12);
+    expect(carryBonus([])).toBe(0);
+  });
+
+  it("is unbounded once a Zaprzęg is among them, whatever else is summed in", () => {
+    const under = [
+      status({ modifier: { kind: "udzwig", items: 8 } }),
+      status({ id: "b", modifier: { kind: "udzwig", items: "bez-limitu" } }),
+    ];
+    expect(carryBonus(under)).toBe(Infinity);
   });
 
   it("knows when the holder cannot act at all", () => {
@@ -306,6 +325,55 @@ describe("the held half: a card's own Abilities as Status rows", () => {
     const worn = heldCard({ cardId: "helm", slot: "main-hand" });
     expect(heldStatuses([packed], "slots", null)).toEqual([]);
     expect(shieldUpTo(heldStatuses([worn], "slots", null))).toBe(1);
+  });
+
+  /**
+   * Koń, Muł, Zaprzęg, Magiczna Sakwa and the Tragarz (a Przyjaciel, filed
+   * `kind: "friend"` — see docs/TASKS.md) are the five udzwig carriers, and
+   * this is `derive.carryLimit`'s own reading of what they lend, moved.
+   */
+  it("puts Koń, Muł, Zaprzęg, Magiczna Sakwa and Tragarz on the standing list as `udzwig`", () => {
+    expect(heldStatuses([heldCard({ cardId: "kon" })], "classic", null)[0].modifier).toEqual({
+      kind: "udzwig",
+      items: 8,
+    });
+    expect(heldStatuses([heldCard({ cardId: "mul" })], "classic", null)[0].modifier).toEqual({
+      kind: "udzwig",
+      items: 4,
+    });
+    expect(heldStatuses([heldCard({ cardId: "zaprzeg" })], "classic", null)[0].modifier).toEqual({
+      kind: "udzwig",
+      items: "bez-limitu",
+    });
+    expect(
+      heldStatuses([heldCard({ cardId: "magiczna-sakwa" })], "classic", null)[0].modifier,
+    ).toEqual({ kind: "udzwig", items: 5 });
+    expect(
+      heldStatuses([heldCard({ cardId: "tragarz", kind: "friend" })], "classic", null)[0]
+        .modifier,
+    ).toEqual({ kind: "udzwig", items: 4 });
+  });
+
+  it("in slotowy, a packed Koń carries nothing and a worn one does", () => {
+    const packed = heldCard({ cardId: "kon", slot: null });
+    const worn = heldCard({ cardId: "kon", slot: "mount" });
+    expect(heldStatuses([packed], "slots", null)).toEqual([]);
+    expect(carryBonus(heldStatuses([worn], "slots", null))).toBe(8);
+  });
+
+  /**
+   * A behaviour change from the ad-hoc filter `derive.carryLimit` used to run
+   * by hand: that filter required `inPlayAt(held.slot)` of *every* holding in
+   * slotowy, and a Tragarz — a Przyjaciel, with nowhere the slotted variant
+   * ever puts one — has no slot to be in, so its `udzwig` never lent anything
+   * there. `inEffect` (holdings.ts), which `heldStatuses` reads instead,
+   * already treats a card `!isWearable` (slots.ts) as always in effect
+   * regardless of slot — the same rule every other Przyjaciel's bonus has
+   * followed all along — so a held Tragarz now carries in slotowy too.
+   */
+  it("a Tragarz carries in slotowy too, having nowhere to be worn", () => {
+    const carried = heldCard({ cardId: "tragarz", kind: "friend", slot: null });
+    expect(carryBonus(heldStatuses([carried], "slots", null))).toBe(4);
   });
 
   /**
