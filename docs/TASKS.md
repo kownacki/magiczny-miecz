@@ -25,9 +25,11 @@ their scans are deliberately untouched.
       card, `addCardEffect`); the migration is written in `db/migrations/`
       and applied to the shared database on 2026-09-04, read back from the
       catalog: `seat_id` nullable, `field_card_id` with its cascade, the
-      `seat_effects_one_holder` check. Krąg Płomieni and Władca Gromu are
-      wired (LANDED.md); the Wampir, the Ocalony and the Układ Planet are in
-      progress.
+      `seat_effects_one_holder` check. All five cards are wired (LANDED.md);
+      what stays manual is one clause each of the Krąg and the Ocalony, said
+      in `coverage.ts`. Follow-up: the browser's sheet reads a lying Wróg's
+      printed figure and does not yet show a Wampir's growth or a doubled
+      Demon.
 
       **What is inside a container — decided 2026-09-04: no storage UI.**
       Losing the Magiczna Sakwa or the Tragarz opens the overflow frame with
@@ -72,9 +74,8 @@ their scans are deliberately untouched.
         the table now, and `wybor` is a fixed list re-walked by index. `Target`
         has `inna-postac`, but `seatsTargeted` answers null for it and every op
         punts it to manual. A dynamic choice shape is a design, not a brief.
-      - **Wampir** — blocked. His Życie grows as he wins, which is a number
-        that has to live on the Karta lying on the Obszar. Same wall as the
-        three partial Zaklęcia (LANDED.md).
+      - ~~**Wampir**~~ — built 2026-09-04 on the card holder: his growth is a
+        `points` status on his own row, read before the dice.
       - **Tajemna Sakwa** — blocked. "W Sakwie możesz umieścić 1 Przedmiot" is
         the container link the Magiczna Sakwa and the Tragarz also want.
 

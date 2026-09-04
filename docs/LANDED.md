@@ -1141,3 +1141,19 @@ Karta has; a Krąg's `dispelled` is swept by nothing, on purpose. Left
 manual: nothing in the app lifts a card-held Krąg, and the Krąg cannot be
 aimed at the Wróg just drawn before the fight, since his row was lifted.
 Seventeen tests.
+
+## The last three cards on the holder
+
+Wampir, Ocalony and Układ Planet, 2026-09-04. The Wampir's stolen point
+joins his Magia as a `points` status on his own row, added only when a point
+of Życie was really taken and read back before the dice; his row goes when
+he dies. The Ocalony's cast already landed on a Wróg's row; `resolveFight`
+now spends the status instead of the death at the one gate every win
+consequence asks, so the Karta stays and no trophy, errand or stolen point
+follows. The Układ Planet is `magia-x2`, a multiplier on every Demon's row
+for the round, since a fixed bonus would be wrong the moment the Wampir
+grows again; `beginFight` reads bonus and multiplier at one door. The lift
+widened: a row carrying any card-held status stays unlifted, with the one
+honest consequence that a Wampir drawn and lost to in the same turn has no
+row yet and does not grow from that first fight. The five cards the missing
+column blocked this morning are all wired by evening.
