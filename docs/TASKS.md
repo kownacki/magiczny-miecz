@@ -18,20 +18,21 @@ their scans are deliberately untouched.
 - [ ] **Two decisions and three blockers**, written down here because they are
       what the remaining work is actually waiting on (2026-08-31).
 
-      **A status has nowhere to sit on a Karta lying on an Obszar.**
-      `seat_effects.seat_id` is `not null`. That one constraint stops the Krąg
-      Płomieni's burning Wróg, the Władca Gromu's paralysed creatures, half of
-      the Ocalony, and the Wampir's growing Życie. One migration, four cards —
-      **on the database three other projects share, so it is Michał's to
-      approve.**
+      **A status on a Karta lying on an Obszar — decided 2026-09-04: one
+      table, two holders.** `seat_effects.seat_id` is nullable and
+      `field_card_id` stands beside it under a check that exactly one is set.
+      The model landed (`cardStatuses`, the Envelope's `effects` on a field
+      card, `addCardEffect`); the migration is written in `db/migrations/`
+      and **not yet applied** to the shared database. Wiring the five cards
+      to it is the next brief: Krąg Płomieni and Władca Gromu first, then
+      the Wampir, the Ocalony and the Układ Planet.
 
-      **Nothing records which Przedmioty are inside a container.** The Magiczna
-      Sakwa and the Tragarz destroy what they carried and the app sheds the
-      overflow onto the Obszar instead, which is wrong in the player's favour;
-      the Tajemna Sakwa wants the same link. `carried_by` already does exactly
-      this for a Krzyżowiec's Zaklęcie — but putting a Przedmiot *into* a Sakwa
-      is something a player has to be able to do, so this is **a feature, and
-      wants Michał's say on whether it earns its UI.**
+      **What is inside a container — decided 2026-09-04: no storage UI.**
+      Losing the Magiczna Sakwa or the Tragarz opens the overflow frame with
+      `because: container-lost`; the way under for the surplus is `zniszcz`,
+      to the used pile through `putOnPile`, and the player still picks which.
+      Built — see LANDED.md. The Tajemna Sakwa keeps its storage place, which
+      was already built.
 
       **Cross-obstacle adjacency is not on the board.** The Łódź and the
       Latarnia land you at the crossing's printed exit rather than "na Obszarze

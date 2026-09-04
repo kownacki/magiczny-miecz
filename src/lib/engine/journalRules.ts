@@ -215,7 +215,14 @@ const REFINE: Partial<Record<JournalKind, (payload: Payload) => string | null>> 
    * has happen to them. A reader who follows the link off "zostawia PASTERZA"
    * should land on the sentence that allows it.
    */
-  discarded: (payload) => (payload?.kind === "friend" ? "6.4" : "5.5"),
+  /**
+   * `destroyed` is the Magiczna Sakwa's and the Tragarz's own text, not a
+   * printed rule — neither 5.5 nor 6.4 says a Karta can fail to reach the
+   * Obszar, so a line that cites either here would be citing the rule for the
+   * thing that did *not* happen.
+   */
+  discarded: (payload) =>
+    payload?.destroyed === true ? null : payload?.kind === "friend" ? "6.4" : "5.5",
 };
 
 /** What a journal row carries, as much of it as this file reads. */

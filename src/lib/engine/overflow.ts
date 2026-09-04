@@ -9,7 +9,7 @@ import { isUsable } from "./uses";
 import { RELICS, type EqMode, type Slot } from "./slots";
 import { pop, push, top, type TurnState } from "./stack";
 import type { TurnPhase } from "./turn";
-import { plural } from "./polish";
+import { cardName, plural } from "./polish";
 
 /**
  * How far over a seat is, or null when it is not.
@@ -74,7 +74,14 @@ export function overflowIn(
  * the pack satisfies it. Putting one down is only the obvious one.
  */
 export interface WayUnder {
-  kind: "odrzuc" | "uzyj" | "zaloz";
+  /**
+   * `zniszcz` only ever answers a `because: container-lost` frame — see
+   * `waysUnder`. The Magiczna Sakwa and the Tragarz both say, on their own
+   * faces, that what they carried does not survive them; „odrzuć" would put
+   * it down for the next visitor, which is exactly what the Karta says does
+   * not happen.
+   */
+  kind: "odrzuc" | "uzyj" | "zaloz" | "zniszcz";
   holdingId: string;
   cardId: string;
   /** Where the card ends up, in the language the rest of the app uses. */
@@ -117,6 +124,16 @@ export function waysUnder<T extends Holding & { id: string }>(
    * function only knows what would help.
    */
   canUse: (cardId: string) => boolean = isUsable,
+  /**
+   * Set when a Magiczna Sakwa or a Tragarz is what put this seat over.
+   *
+   * Turns `odrzuc` into `zniszcz` for every Przedmiot offered — the Karta
+   * still goes, but to the stos rather than onto the Obszar, because that is
+   * what carrying it in a container that just perished means. `uzyj` and
+   * `zaloz` are untouched: both are still ways to be carrying one fewer, and
+   * neither pretends the card survives by being put down somewhere safe.
+   */
+  lostContainer = false,
 ): WayUnder[] {
   if (what === "zaklecia") {
     return holdings
@@ -139,7 +156,11 @@ export function waysUnder<T extends Holding & { id: string }>(
     if (RELICS.has(held.cardId)) continue;
     if (eqMode === "slots" && held.slot != null) continue;
 
-    ways.push({ kind: "odrzuc", holdingId: held.id, cardId: held.cardId, gdzie: "obszar" });
+    ways.push(
+      lostContainer
+        ? { kind: "zniszcz", holdingId: held.id, cardId: held.cardId, gdzie: "stos" }
+        : { kind: "odrzuc", holdingId: held.id, cardId: held.cardId, gdzie: "obszar" },
+    );
     if (canUse(held.cardId)) {
       ways.push({ kind: "uzyj", holdingId: held.id, cardId: held.cardId, gdzie: "stos" });
     }
@@ -202,14 +223,24 @@ export function overflowOnTop(state: TurnState): OverflowFrame | null {
  * read by the player who has to act, and „Ania: 29 Zaklęć" to Ania is the app
  * talking about her in the third person while she is looking at it.
  */
-export function overflowSaid(over: Overflow, who: string | null): string {
+export function overflowSaid(
+  over: Overflow,
+  who: string | null,
+  /** Set when a lost Sakwa or Tragarz is why, so the sentence can say so. */
+  because?: OverflowFrame["because"],
+): string {
   const noun =
     over.what === "przedmioty"
       ? `${over.held} ${plural(over.held, "Przedmiot", "Przedmioty", "Przedmiotów")}`
       : `${over.held} ${plural(over.held, "Zaklęcie", "Zaklęcia", "Zaklęć")}`;
   const rule = over.what === "przedmioty" ? "5.6" : "2.6";
+  const lost =
+    because?.kind === "container-lost"
+      ? ` ${cardName(because.cardId)} przepadła, a to, co niosła, przepada razem z nią — nic z tego nie trafi na Obszar.`
+      : "";
   return (
     `${who === null ? `Masz ${noun}` : `${who}: ${noun}`} przy limicie ${over.limit}` +
-    ` — ${over.over} ${plural(over.over, "musi", "muszą", "musi")} zniknąć, zanim gra ruszy dalej (${rule}).`
+    ` — ${over.over} ${plural(over.over, "musi", "muszą", "musi")} zniknąć, zanim gra ruszy dalej (${rule}).` +
+    lost
   );
 }

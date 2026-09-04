@@ -2,8 +2,12 @@
 
 import { describe, expect, it } from "vitest";
 import { aHolding, aSeat, aTable } from "../fixture";
-import { only } from "@/lib/engine/stack";
-import { apply } from "../change";
+import { only, top } from "@/lib/engine/stack";
+import type { TurnPhase } from "@/lib/engine/turn";
+import { overflowSaid } from "@/lib/engine/overflow";
+import { apply, merge, type Changeset, type Snapshot } from "../change";
+import { EVENT_COPIES, decksOf } from "../decks";
+import { dropCard as dropCardOn } from "./holdings";
 import {
   holdOverflow,
   overflowOf,
@@ -128,5 +132,120 @@ describe("who waits", () => {
 
   it("stops nobody when there is no frame", () => {
     expect(() => refuseWhileOverflow(table(FOUR), "seat-a")).not.toThrow();
+  });
+});
+
+/**
+ * The Magiczna Sakwa and the Tragarz, whose own text says what they carried
+ * does not wait anywhere — it perishes with them (docs/COVERAGE.md's old
+ * MANUAL notes against both, now stale).
+ */
+describe("a container whose load perishes with it", () => {
+  // Six ordinary Przedmioty besides the Sakwa: under its boosted nine, over
+  // klasyczny's plain four once it is gone.
+  const SIX = ["helm", "zbroja", "eliksir-sily", "kij", "sznur", "namiot"];
+
+  const withSakwa = () =>
+    aTable({
+      game: { eq_mode: "classic", turn_state: only({ phase: "roll" }) },
+      seats: [aSeat({ id: "seat-a", seat_index: 0, character_id: "goblin" })],
+      holdings: [
+        aHolding({ id: "h-sakwa", seat_id: "seat-a", card_id: "magiczna-sakwa" }),
+        ...SIX.map((cardId, at) => aHolding({ id: `h${at}`, seat_id: "seat-a", card_id: cardId })),
+      ],
+    });
+
+  const discardOf = (writes: Changeset) =>
+    decksOf({ deck: writes.game?.deck ?? null }).events.discard;
+
+  /**
+   * `dropCard` here, exactly as `thenRelease` wraps it in `turnStore.ts`: the
+   * raw command's writes, merged with what `releaseOverflow` makes of them.
+   * The unwrapped command alone never opens or closes anything — that half
+   * of the door is `thenRelease`'s, which lives beside `change()` and cannot
+   * be called from a snapshot-only test.
+   */
+  const drop = (snapshot: Snapshot, holdingId: string): Changeset => {
+    const { writes } = dropCardOn(snapshot, { holdingId });
+    return merge(writes, releaseOverflow(snapshot, writes));
+  };
+
+  it("is not over while the Sakwa is still held", () => {
+    expect(overflowOf(withSakwa(), "seat-a")).toBeNull();
+  });
+
+  it("opens a fresh frame off the Sakwa's own loss, naming it as the cause", () => {
+    const at = withSakwa();
+    const after = apply(at, drop(at, "h-sakwa"));
+
+    expect(top(after.game.turn_state)).toMatchObject({
+      phase: "overflow",
+      seatId: "seat-a",
+      what: "przedmioty",
+      because: { kind: "container-lost", cardId: "magiczna-sakwa" },
+    });
+  });
+
+  it("offers zniszcz for the surplus instead of odrzuc, once the frame is open", () => {
+    const at = withSakwa();
+    const waiting = apply(at, drop(at, "h-sakwa"));
+
+    // Every Przedmiot offers `zniszcz`; the Eliksir also offers `uzyj` — being
+    // spent is still a perfectly good way to be carrying one fewer — and
+    // nothing offers the ordinary `odrzuc`.
+    const ways = waysOut(waiting, "seat-a");
+    expect(ways.filter((way) => way.kind === "zniszcz")).toHaveLength(SIX.length);
+    expect(ways.filter((way) => way.kind === "uzyj")).toHaveLength(1);
+    expect(ways.every((way) => way.kind !== "odrzuc")).toBe(true);
+    expect(ways.filter((way) => way.kind === "zniszcz").every((way) => way.gdzie === "stos")).toBe(
+      true,
+    );
+  });
+
+  it("destroys what it drops — deleted, on the used pile, never on the Obszar", () => {
+    const at = withSakwa();
+    // Dropping the Sakwa itself is an ordinary 5.5 discard — it lies on the
+    // Obszar like any other Przedmiot put down; it is only what it carried
+    // that the card destroys.
+    const waiting = apply(at, drop(at, "h-sakwa"));
+    expect(waiting.fieldCards.map((row) => row.card_id)).toEqual(["magiczna-sakwa"]);
+
+    const destroyWrites = drop(waiting, "h2"); // eliksir-sily
+    const after = apply(waiting, destroyWrites);
+
+    expect(after.holdings.some((h) => h.id === "h2")).toBe(false);
+    // Still only the Sakwa lying there — the Eliksir never joins it.
+    expect(after.fieldCards.map((row) => row.card_id)).toEqual(["magiczna-sakwa"]);
+    expect(discardOf(destroyWrites)).toEqual([EVENT_COPIES.get("eliksir-sily")![0]]);
+  });
+
+  it("keeps waiting while the seat is still over, and closes once it is shed enough", () => {
+    const at = withSakwa();
+    let waiting = apply(at, drop(at, "h-sakwa"));
+    expect(top(waiting.game.turn_state).phase).toBe("overflow");
+
+    for (const holdingId of ["h0", "h1"]) {
+      waiting = apply(waiting, drop(waiting, holdingId));
+    }
+
+    expect(overflowOf(waiting, "seat-a")).toBeNull();
+    expect(top(waiting.game.turn_state)).toEqual({ phase: "roll" });
+  });
+
+  it("says the Karty are lost with the Sakwa, not left on the Obszar", () => {
+    const at = withSakwa();
+    const waiting = apply(at, drop(at, "h-sakwa"));
+    const frame = top(waiting.game.turn_state) as Extract<TurnPhase, { phase: "overflow" }>;
+    const over = overflowOf(waiting, "seat-a")!;
+
+    const said = overflowSaid(over, null, frame.because);
+    expect(said).toMatch(/MAGICZNA SAKWA/);
+    expect(said).toMatch(/nic z tego nie trafi na Obszar/);
+  });
+
+  it("a plain over-limit — a fifth card taken, no container lost — still offers the ordinary drop", () => {
+    const ways = waysOut(table(FIVE), "seat-a");
+    expect(ways.every((way) => way.kind !== "zniszcz")).toBe(true);
+    expect(ways.some((way) => way.kind === "odrzuc" && way.gdzie === "obszar")).toBe(true);
   });
 });

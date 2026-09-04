@@ -10,8 +10,9 @@ import {
   type OverflowFrame,
   type WayUnder,
 } from "@/lib/engine/overflow";
-import { plural } from "@/lib/engine/polish";
+import { cardName, plural } from "@/lib/engine/polish";
 import { isUsable } from "@/lib/engine/uses";
+import { abilitiesOf } from "@/lib/engine/abilities";
 import { startingKit, asCharacterId } from "@/lib/engine/characters";
 import { apply, type Changeset, type Snapshot } from "../change";
 import { eqModeOf, holdingsOf, seatView } from "./seat";
@@ -74,13 +75,44 @@ export function waysOut(snapshot: Snapshot, seatId: string): WayUnder[] {
   // `Holding`, so it is put back from the rows themselves.
   const rows = snapshot.holdings.filter((row) => row.seat_id === seatId);
   const held = holdingsOf(snapshot, seatId).map((one, at) => ({ ...one, id: rows[at].id }));
+  const frame = overflowOnTop(snapshot.game.turn_state);
   return waysUnder(
     held,
     eqModeOf(snapshot.game),
     view.nature,
     over.what,
     isUsable,
+    frame?.seatId === seatId && frame.because?.kind === "container-lost",
   );
+}
+
+/**
+ * The container that going over is blamed on, if losing one is what did it.
+ *
+ * Only the Magiczna Sakwa and the Tragarz say their own load does not
+ * survive them — `giniePrzyUtracie` on their `udzwig` ability, checked in
+ * `abilities.test.ts` against both cards' text — so this is not "any carrier
+ * that vanished", it is "the one Karta whose own face says what it carried
+ * goes with it".
+ *
+ * Read off `soFar` and the snapshot *before* it, the way `spilled` reads the
+ * write that closed a place: a deleted holding is gone from `after`, so its
+ * `card_id` has to come from the row `snapshot` still has.
+ */
+function lostContainerFor(
+  snapshot: Snapshot,
+  soFar: Changeset,
+  seatId: string,
+): OverflowFrame["because"] {
+  const deleted = new Set(soFar.holdings?.delete ?? []);
+  for (const row of snapshot.holdings) {
+    if (row.seat_id !== seatId || !deleted.has(row.id)) continue;
+    const perishes = abilitiesOf(row.card_id).some(
+      (ability) => ability.kind === "udzwig" && ability.giniePrzyUtracie === true,
+    );
+    if (perishes) return { kind: "container-lost", cardId: row.card_id };
+  }
+  return undefined;
 }
 
 /**
@@ -100,12 +132,14 @@ export function holdOverflow(snapshot: Snapshot, soFar: Changeset = {}): Changes
   if (overflowOnTop(after.game.turn_state)) return {};
   const found = whoIsOver(after);
   if (!found) return {};
+  const because = lostContainerFor(snapshot, soFar, found.seatId);
   return {
     game: {
       turn_state: openOverflow(after.game.turn_state, {
         phase: "overflow",
         seatId: found.seatId,
         what: found.over.what,
+        ...(because ? { because } : {}),
       }),
     },
   };
@@ -126,20 +160,33 @@ export function holdOverflow(snapshot: Snapshot, soFar: Changeset = {}): Changes
  * If a *different* seat is now the problem — dropping a Koń on the Obszar you
  * share does not happen, but a Zaklęcie handed over does — the frame is
  * reopened on them rather than left naming somebody who is fine.
+ *
+ * **No frame yet is not the same as nothing to do.** The three verbs this
+ * wraps do not only answer a surplus already up — 5.5 lets a Przedmiot go at
+ * any moment — and putting the Sakwa down, or losing the Tragarz, can put a
+ * seat over on the strength of the very card that just left, with nothing on
+ * the stack to release. `holdOverflow` is the door that opens a frame from a
+ * clear stack; this falls through to it rather than answering "nothing was
+ * open" to a question it was never asked.
  */
 export function releaseOverflow(snapshot: Snapshot, soFar: Changeset = {}): Changeset {
   const after = apply(snapshot, soFar);
   const frame = overflowOnTop(after.game.turn_state);
-  if (!frame) return {};
+  if (!frame) return holdOverflow(snapshot, soFar);
   if (overflowOf(after, frame.seatId)) return {};
 
   const closed = closeOverflow(after.game.turn_state);
   const next = whoIsOver(after);
+  if (!next) return { game: { turn_state: closed } };
+  const because = lostContainerFor(snapshot, soFar, next.seatId);
   return {
     game: {
-      turn_state: next
-        ? openOverflow(closed, { phase: "overflow", seatId: next.seatId, what: next.over.what })
-        : closed,
+      turn_state: openOverflow(closed, {
+        phase: "overflow",
+        seatId: next.seatId,
+        what: next.over.what,
+        ...(because ? { because } : {}),
+      }),
     },
   };
 }
@@ -175,8 +222,15 @@ function tooMany(what: OverflowFrame["what"], over: number): string {
  * rule that lets an over-full hand shed one at all is 9.4 — which is the number
  * `dropCard`'s own refusal already cites when it stops you shedding one you are
  * allowed to keep.
+ *
+ * `because` narrows it a third way: a Sakwa or a Tragarz lost mid-carry does
+ * not offer „odrzucić" at all, because there is no Obszar to leave a Karta on
+ * — the card's own text destroys what it carried along with it.
  */
-function waysBack(what: OverflowFrame["what"]): string {
+function waysBack(what: OverflowFrame["what"], because?: OverflowFrame["because"]): string {
+  if (because?.kind === "container-lost") {
+    return `${cardName(because.cardId)} przepadła razem z tym, co niosła — możesz zniszczyć Kartę, użyć jej albo założyć.`;
+  }
   return what === "przedmioty"
     ? "Możesz odrzucić Kartę, użyć jej albo założyć (5.4)."
     : // „albo je rzucić" was here and was wrong twice over. `waysUnder` has
@@ -211,6 +265,6 @@ export function refuseWhileOverflow(snapshot: Snapshot, seatId: string | null): 
    * difference between a refusal you argue with and one you act on.
    */
   throw new Error(
-    `Gra czeka: masz o ${much} za dużo (${rule}). ${waysBack(frame.what)}`,
+    `Gra czeka: masz o ${much} za dużo (${rule}). ${waysBack(frame.what, frame.because)}`,
   );
 }

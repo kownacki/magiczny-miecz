@@ -8,6 +8,7 @@ import { abilitiesOf, carriesSpell, entryPrice, unavailableIn } from "@/lib/engi
 import { barredFromFriends } from "@/lib/engine/status";
 import { refuseWhileQueued, storedStatuses } from "./turn";
 import { refuseWhileOverflow } from "./overflow";
+import { overflowOnTop } from "@/lib/engine/overflow";
 import { FIELDS, requireFieldId, type FieldId } from "@/lib/engine/board";
 import { drawFrom } from "@/lib/engine/deck";
 import { isConsumedOnResolve, scriptFor, type Effect } from "@/lib/engine/cardScript";
@@ -696,8 +697,31 @@ export function dropCard(
     escorted.length > 0
       ? putOnPile(apply(snapshot, gone), "spells", escorted.map(asReturnable))
       : {};
+
+  /**
+   * The one way under an overflow the Sakwa or the Tragarz caused.
+   *
+   * Both cards say the same thing about themselves: what they carried does
+   * not wait for the next visitor, it goes with them. `waysUnder` already
+   * offers `zniszcz` instead of `odrzuc` while that frame is up, and this is
+   * where that choice is carried out — `dropCard` is the verb behind every
+   * one of the frame's ways out, so it reads the frame rather than needing a
+   * fourth verb of its own (see `overflowOf`'s file-level note on
+   * `holdOverflow`/`releaseOverflow`).
+   *
+   * Only a Przedmiot: a Zaklęcie or a Przyjaciel dropped while this frame is
+   * up is not what put the seat over, and 9.4/6.4 already say where those go.
+   */
+  const frame = overflowOnTop(snapshot.game.turn_state);
+  const destroyed =
+    held?.kind === "item" &&
+    frame !== null &&
+    frame.because?.kind === "container-lost" &&
+    frame.seatId === held.seat_id;
+
   const lies =
     held &&
+    !destroyed &&
     held.kind !== "spell" &&
     held.kind !== "trophy" &&
     held.kind !== "carried" &&
@@ -746,8 +770,11 @@ export function dropCard(
           payload: {
             cardId: held?.card_id,
             kind: held?.kind,
-            onField:
-              held?.kind !== "spell" && held?.kind !== "trophy" ? seat?.field_id : null,
+            onField: lies ? (seat?.field_id ?? null) : null,
+            // Read by `journalRules`'s `discarded` refine: 5.5 promises the
+            // Karta lies face up here for the next visitor, which is exactly
+            // what did not happen.
+            ...(destroyed ? { destroyed: true } : {}),
           },
         },
       ],

@@ -1098,3 +1098,27 @@ surfaces call; the console's own commands (`settle`,
 `endgame`, the `answer` ladder, `me`/`look`) moving home to `commands/` and an
 Envelope; one Polish inflection vocabulary in `polish.ts`; and, last and
 largest, fewer vocabularies for what a card does.
+
+## The two blockers, decided
+
+Both of the decisions "Two decisions and three blockers" waited on were
+taken on 2026-09-04, and the second landed the same day.
+
+- **A status on a Karta lying on an Obszar: one table, two holders.**
+  `seat_effects.seat_id` nullable, `field_card_id` beside it, a check that
+  exactly one is set. `cardStatuses` is `allStatuses`'s other half; the
+  Envelope carries a field card's `effects`; `addCardEffect` is the write
+  door. The migration is written and waits to be applied; the five cards
+  wait on the next brief.
+- **What is inside a container: nothing recorded, the loss asks.** The
+  Magiczna Sakwa and the Tragarz carry `giniePrzyUtracie` on their `udzwig`;
+  losing one opens the overflow frame with `because: container-lost`, the
+  ways under offer `zniszcz` instead of `odrzuć`, and `dropCard` sends the
+  Karta to the used pile rather than the Obszar, journalled „traci na
+  zawsze" with no rule cited, since 5.5 promises the square and that is what
+  did not happen. On the way the agent found that `releaseOverflow` never
+  opened a frame when nothing was open before the change, so dropping the
+  Sakwa while not yet over the limit had opened nothing; it falls through to
+  `holdOverflow` now. Seven tests pin it. The Envelope's surplus sentence,
+  the console's and the browser's drop confirmation all say the Karta is
+  destroyed.

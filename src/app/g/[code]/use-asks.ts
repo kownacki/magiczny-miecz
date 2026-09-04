@@ -25,6 +25,7 @@ import { asFieldId } from "@/lib/engine/board";
 import { fieldName } from "@/lib/engine/polish";
 import { askAbout, usageOf } from "@/lib/engine/uses";
 import { spellScript } from "@/lib/engine/spells";
+import { overflowOnTop } from "@/lib/engine/overflow";
 
 /**
  * What an Obszar is called, from an id that has not been narrowed yet.
@@ -159,8 +160,20 @@ export function useAsks({ game, seats, fieldCards, mySeatIndex, post, leave, ask
      * reading a button wants to know where the card is going.
      */
     const spell = held.kind === "spell";
+    /**
+     * A Przedmiot shed because its Sakwa or Tragarz perished does not lie
+     * anywhere — the two cards say what they carried goes with them — so the
+     * question must not promise the Obszar. The frame on top says why the
+     * seat is over; `dropCard` reads the same frame to send the Karta to the
+     * used pile instead of the square.
+     */
+    const perished =
+      held.kind === "item" && game !== null
+        ? overflowOnTop(game.turn_state)?.because
+        : undefined;
+    const destroyed = perished?.kind === "container-lost";
     setAsk({
-      title: `${spell ? "Odrzuć" : "Upuść"}: ${name}`,
+      title: `${spell ? "Odrzuć" : destroyed ? "Zniszcz" : "Upuść"}: ${name}`,
       /**
        * A Przyjaciel is left, not thrown away, and the rule is his own.
        *
@@ -177,8 +190,10 @@ export function useAsks({ game, seats, fieldCards, mySeatIndex, post, leave, ask
           `${name} trafi na stos Kart już zużytych — nie zostanie na Obszarze i nikt jej stąd nie weźmie (9.4, 9.6).`
         : held.kind === "friend"
           ? `Zostawisz jego Kartę ${where} — kto się tu zatrzyma, może go wziąć ze sobą (6.4, 12.1).`
-          : `${name} zostanie ${where}, odkryta — kto się tu zatrzyma, może ją wziąć (5.5, 16.8).`,
-      confirmLabel: spell ? "Odrzuć" : "Upuść",
+          : destroyed && perished
+            ? `${CARD_NAMES.get(perished.cardId) ?? perished.cardId} przepadła, a z nią to, co niosła: ${name} trafi na stos Kart już zużytych i nie zostanie na Obszarze.`
+            : `${name} zostanie ${where}, odkryta — kto się tu zatrzyma, może ją wziąć (5.5, 16.8).`,
+      confirmLabel: spell ? "Odrzuć" : destroyed ? "Zniszcz" : "Upuść",
       tone: "grave",
       onConfirm: () => {
         setAsk(null);

@@ -281,6 +281,18 @@ export type TurnPhase =
       seatId: string;
       /** 5.6's four, or 2.6's table. */
       what: "przedmioty" | "zaklecia";
+      /**
+       * Why this seat is over, when the reason changes what the ways under are.
+       *
+       * Absent for the ordinary shape of 5.6 and 2.6 — a card taken, a hand
+       * that outgrew 2.6's table — where „odrzuć" is exactly right: the Karta
+       * goes down and waits on the Obszar for whoever visits next. It is only
+       * ever set when a Magiczna Sakwa or a Tragarz left mid-carry: those two
+       * say, on their own faces, that what they carried does not wait
+       * anywhere — it is destroyed with them. `cardId` is the carrier that
+       * went, so the sentence and the ways under can both name it.
+       */
+      because?: { kind: "container-lost"; cardId: string };
     }
   | { phase: "end" };
 

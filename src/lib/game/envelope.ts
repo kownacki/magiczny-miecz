@@ -273,6 +273,9 @@ export function envelopeFor(
             ? null
             : (users.find((one) => one.seat_index === row.seat_index)?.name ??
                `Miejsce ${row.seat_index + 1}`),
+          // Why the seat is over, when a lost Sakwa or Tragarz is why: the
+          // sentence then says the surplus is destroyed, not put down.
+          frame.because,
         ),
       };
     })(),

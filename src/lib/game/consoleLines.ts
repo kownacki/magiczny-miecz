@@ -167,9 +167,15 @@ export function overflowLines(snapshot: Snapshot): string[] {
         ? "załóż  (na siebie)"
         : way.kind === "odrzuc"
           ? "odrzuć (na stos zużytych)"
-          : "użyj   (na stos zużytych)";
+          : way.kind === "zniszcz"
+            ? // The Sakwa's and the Tragarz's own way: the Karta still reaches
+              // the pile — 9.5 can reshuffle it back in — it just never lies
+              // on the Obszar for the next visitor, because the carrier it
+              // perished with is gone. See `waysUnder`'s `lostContainer`.
+              "zniszcz (na stos zużytych, nie na Obszar)"
+            : "użyj   (na stos zużytych)";
   return [
-    overflowSaid(over, whose),
+    overflowSaid(over, whose, frame.because),
     ...waysOut(snapshot, frame.seatId).map(
       (way) => `  ${said(way)}  ${cardName(way.cardId)}`,
     ),

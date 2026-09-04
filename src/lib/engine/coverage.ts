@@ -61,7 +61,16 @@ const MANUAL: Readonly<Partial<Record<CardId, string>>> = {
   // the way in. Only the destination is still the table's.
   lodz: "Przeprawa wysadza na Obszarze, na który wychodzi przeprawa — jeśli chcecie sąsiadującego z tym, z którego wszedłeś, przestawcie figurę sami.",
   latarnia: "Przeprawa wysadza na Obszarze, na który wychodzi przeprawa — jeśli chcecie sąsiadującego z tym, z którego wszedłeś, przestawcie figurę sami.",
-  "magiczna-sakwa": "Utrata Sakwy to utrata wszystkiego, co w niej niesiono — aplikacja zostawia nadmiar na Obszarze, a Karta mówi, że przepada.",
+  // The MAGICZNA SAKWA and the TRAGARZ were here too, for "Utrata Sakwy
+  // oznacza jednocześnie utratę wszystkich niesionych w niej Przedmiotów" and
+  // the Tragarz's own version of it — and both were stale in the opposite
+  // direction from the KOŃ/MUŁ/ZAPRZĘG note above them: those three leave
+  // what they carried on the Obszar, and these two do not. `giniePrzyUtracie`
+  // on their `udzwig` ability is what tells them apart in `overflow.ts`; the
+  // frame that opens when either is lost carries `because: container-lost`,
+  // `waysUnder` turns `odrzuc` into `zniszcz` for the surplus, and `dropCard`
+  // sends it to the used pile through `putOnPile` instead of the Obszar.
+  // Pinned in `overflow.test.ts`.
 
   // --- friends --------------------------------------------------------------
   // The ALCHEMIK was here for "zamiana jest nieodwracalna", which is not
@@ -69,8 +78,6 @@ const MANUAL: Readonly<Partial<Record<CardId, string>>> = {
   // `putOnPile` sends the Karta back, so the app *is* the irreversibility. The
   // Lichwiarz makes the identical trade with no note against his name, and one
   // of the two had to be wrong. A warning about a click belongs on the click.
-  tragarz:
-    "Tracąc go, tracisz też niesione przez niego Przedmioty — aplikacja nie wie, które to, i zostawia nadmiar na Obszarze zamiast go stracić.",
 
   // --- cards whose disposition is handled but whose body is not -------------
   //

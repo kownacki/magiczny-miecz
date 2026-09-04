@@ -127,6 +127,18 @@ export type Ability =
        * takes up room in your hands and says nothing to the contrary.
        */
       samaSieNieLiczy?: true;
+      /**
+       * What it carries goes with it.
+       *
+       * "Utrata Sakwy oznacza jednocześnie utratę wszystkich niesionych w niej
+       * Przedmiotów" and the Tragarz's own "jeśli stracisz go w jakiś sposób,
+       * przepadną również niesione przez niego Przedmioty" — only these two
+       * say it. A Koń, a Muł and a Zaprzęg lost the same way leave their load
+       * behind on the Obszar (5.5, 5.6); these two take it with them, which is
+       * why `overflow.ts` needs to tell the four apart rather than treating
+       * every `udzwig` carrier alike.
+       */
+      giniePrzyUtracie?: true;
     }
   /** Zaprzęg adds one to the movement roll; Wierzchowiec one to three. */
   | { kind: "ruch-bonus"; min: number; max: number }
@@ -454,7 +466,7 @@ export const ABILITIES: Readonly<Partial<Record<CardId, readonly Ability[]>>> = 
     { kind: "ruch-bonus", min: 1, max: 1 },
   ],
   wierzchowiec: [{ kind: "ruch-bonus", min: 1, max: 3 }],
-  "magiczna-sakwa": [{ kind: "udzwig", items: 5, samaSieNieLiczy: true }],
+  "magiczna-sakwa": [{ kind: "udzwig", items: 5, samaSieNieLiczy: true, giniePrzyUtracie: true }],
   // "Właściciel Kryształu nie może rzucać ani używać Zaklęć. Jest całkowicie
   // odporny na Zaklęcia: Krąg Płomieni, Fatum, Magia i Miecz, Golem, Pan
   // Bogactwa i Pan Przyjaciół. Przeciwnik właściciela Kryształu nie może
@@ -649,7 +661,7 @@ export const ABILITIES: Readonly<Partial<Record<CardId, readonly Ability[]>>> = 
   gnom: [{ kind: "nosi-zaklecie", cena: 1, znika: true, mozeszObejrzec: true }],
   tragarz: [
     { kind: "cena-przyjecia", zloto: 1, bezZaplaty: "odchodzi" },
-    { kind: "udzwig", items: 4 },
+    { kind: "udzwig", items: 4, giniePrzyUtracie: true },
   ],
   przewoznika: [{ kind: "bez-oplaty", fields: ["przeprawa-1", "przeprawa-2"] }],
   rycerz: [{ kind: "walczy-za-ciebie", miecz: 3, magia: 3 }],
