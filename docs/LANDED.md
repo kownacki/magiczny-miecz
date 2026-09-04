@@ -1054,9 +1054,22 @@ Three landed the same day, in order of leverage per unit of work:
   fails the build at every site. The unknown-action 400 stays behind the gate,
   as `permission.test.ts` records. Fifteen tests pin the coercions.
 
-Five are still open, in the order they were ranked: one wire type shared by
-`envelope.ts` and the browser; a console verb declared once so parsing,
-completion and help derive from it; the console's own commands (`settle`,
+- **One wire type.** `envelope.ts` built the Envelope and `use-table.ts` and
+  `table.ts` declared what arrived, and they disagreed in five places —
+  `spell_capacity` nullable on the way out and `number` on arrival, a card's
+  `kind` a `string` here and a union missing `carried` there, an index
+  signature on the seat letting eighteen fields go unchecked, `effects[].source`
+  nullable on one side only. `wire.ts` declares the Envelope once, with no
+  logic; `envelopeFor` returns it and `useTable` reads it, and the browser's
+  `Seat`, `Held`, `Game` and `Person` are aliases. Ids are narrowed on the way
+  out — a row naming a card the box does not have is a Failure, which is what
+  turned up two invented ids in the envelope test's own fixtures. The compiler
+  found every site the honest types touched: a null `source` two components
+  assumed was a string, and a `carried` Zaklęcie the label table had no word
+  for.
+
+Four are still open, in the order they were ranked: a console verb declared
+once so parsing, completion and help derive from it; the console's own commands (`settle`,
 `endgame`, the `answer` ladder, `me`/`look`) moving home to `commands/` and an
 Envelope; one Polish inflection vocabulary in `polish.ts`; and, last and
 largest, fewer vocabularies for what a card does.

@@ -24,18 +24,10 @@ export interface Said {
   face?: number;
   did?: string[];
 }
-import {
-  forgetSeatToken,
-  noteRemoved,
-  readSeatToken,
-  writeSeatToken,
-} from "@/lib/game/seatToken";
+import { forgetSeatToken, noteRemoved, readSeatToken, writeSeatToken } from "@/lib/game/seatToken";
 import { deviceId, forgetDevice } from "@/lib/game/deviceId";
 import { watchRevision } from "@/lib/game/liveRevision";
-import type { CardId } from "@/data/ids";
-import type { FieldId } from "@/lib/engine/board";
 import { RANDOM_CHARACTER_ID, isRandomPick, type SeatCharacter } from "@/lib/engine/characters";
-import type { TurnState } from "@/lib/engine/stack";
 import { fitsIn, isWearable, type Slot } from "@/lib/engine/slots";
 import { carriedCount, carryLimit } from "@/lib/engine/derive";
 import { announce, watch, type Announcement, type Watched } from "@/lib/engine/announcements";
@@ -43,6 +35,7 @@ import type { AnnouncedIntent, Intent } from "@/lib/engine/intentText";
 import { announcingWith, CHANNEL_MS } from "./channelling";
 import { watchIntent } from "@/lib/game/liveRevision";
 import { CARD_NAMES, asHoldings, asNature, type Seat } from "./table";
+import type { Envelope, EnvelopeFieldCard as FieldCard, EnvelopeGame as Game, EnvelopeUser as Person, EnvelopeSpoken as Spoken, EnvelopeSurplus } from "@/lib/game/wire";
 import { forbiddenIn, forbiddenSaid } from "@/lib/engine/holdings";
 import { isStale, standingMoves, standingPicks, standingRules } from "./reconcile";
 
@@ -66,108 +59,12 @@ import { isStale, standingMoves, standingPicks, standingRules } from "./reconcil
  * tests.
  */
 
-export interface FieldCard {
-  /** The row, because a field can hold two of the same Przedmiot. */
-  id: string;
-  fieldId: FieldId;
-  cardId: CardId;
-  /** Conjured by the test console, and marked with the wrench wherever it is drawn. */
-  granted?: boolean;
-  /**
-   * What is left beside a Miejsce that lays points out (16.7).
-   *
-   * Three Karty have one — Drzewo Życia, Jezioro Magiczne, Zaklęte Źródło — and
-   * it is the only count in the box belonging to a Karta rather than to a
-   * Postać. Absent on everything else.
-   */
-  pool?: number;
-}
-
-export interface Game {
-  id: string;
-  /** Which equipment variant this table plays (`EqMode`). */
-  eq_mode: string;
-  /** Whether the Wyposażenie pile can run out (21.2). One way only. */
-  endless_stock: boolean;
-  /**
-   * Which trofea rule the table plays (1.4) — see `docs/TROFEA.md`.
-   *
-   * "points" is the variant and the default — a beaten Wróg's Karta goes to the
-   * stos zużytych the moment he dies, and what the seat keeps is a copy of him.
-   * "cards" is 1.4 as printed: you hold the Karta until you trade it.
-   *
-   * Both keep the trophy as a holding and both count the sevens off it; the
-   * cardboard is the whole difference. Not `seat.trophy_points`, which this
-   * used to say and which nothing has written since „Punkty" stopped being a
-   * pool — see the column's own note in db/schema.sql.
-   *
-   * Still optional in the type, though the column is `not null`: a page held
-   * open across the deploy that added it would otherwise read `undefined` as a
-   * mode and draw the wrong section until the next refresh.
-   */
-  trophy_mode?: "cards" | "points";
-  join_code: string;
-  mode: string;
-  status: string;
-  active_seat: number | null;
-  /**
-   * Karty Postaci that are out of the game — 4.4's "odłożyć do pozostałych nie
-   * biorących udziału w grze", plus anything withdrawn for good.
-   *
-   * Public, and it has to be: the picker uses it to stop offering a Postać the
-   * server would refuse, and being told no after choosing is worse than not
-   * being offered.
-   */
-  characters_out: string[];
-  round: number;
-  revision: number;
-  die_source: string;
-  turn_state: TurnState;
-  /**
-   * What is left in each pile, and what has come back to it.
-   *
-   * Counts only — the orders themselves never leave the server, because the
-   * next Karta Zdarzeń is the one thing at this table nobody is allowed to
-   * know. Absent in companion mode, where both piles are physical.
-   */
-  deckCounts?: {
-    events: { draw: number; discard: number };
-    spells: { draw: number; discard: number };
-  } | null;
-  /**
-   * The card on top of each stos zużytych, by slice ref.
-   *
-   * Only the top one, and only ever this pile: what is next off the stos Kart
-   * Zdarzeń is the one thing at this table nobody may know, so the draw order
-   * never leaves the server. See the note in the route.
-   */
-  used?: { events: string | null; spells: string | null } | null;
-}
-
-/** Somebody at the table, as the wire carries them. See `EnvelopeUser`. */
-export interface Person {
-  id: string;
-  name: string;
-  isHost: boolean;
-  ready: boolean;
-  seatIndex: number | null;
-  away: boolean;
-}
-
-/**
- * A Zaklęcie spoken and hanging in the air, waiting to be answered (9.6).
- *
- * The window is a clock, so `until` is what the browser counts down against —
- * and it belongs to the table rather than to a seat, because answering one is
- * anybody's to do.
- */
-export interface Spoken {
-  spell: string;
-  name: string;
-  by: number | null;
-  at: number | null;
-  until: number;
-}
+export type {
+  EnvelopeFieldCard as FieldCard,
+  EnvelopeGame as Game,
+  EnvelopeUser as Person,
+  EnvelopeSpoken as Spoken,
+} from "@/lib/game/wire";
 
 export interface Table {
   game: Game | null;
@@ -180,12 +77,7 @@ export interface Table {
    * the sentence a player reads and the sentence the route refuses with rest on
    * one basis. `said` arrives already in the right voice for this device.
    */
-  surplus: {
-    seatIndex: number;
-    what: "przedmioty" | "zaklecia";
-    over: number;
-    said: string;
-  } | null;
+  surplus: EnvelopeSurplus | null;
   seats: Seat[];
   fieldCards: FieldCard[];
   /** Loose Sztuki Złota lying on an Obszar (12.1). */
@@ -399,7 +291,7 @@ async function saidWrong(response: Response): Promise<string> {
     const query = stored ? `?token=${encodeURIComponent(stored)}` : "";
     const response = await fetch(`/api/games/${code}${query}`);
     if (!response.ok) return setError(await saidWrong(response));
-    const data = await response.json();
+    const data = (await response.json()) as Envelope;
 
     // What this device believes, against what the server has just said. All
     // three rules are `reconcile.ts`'s, and every one of them is there because

@@ -151,20 +151,22 @@ function EffectMark({
    * behind it, and this one has the best Karta of the lot to open — four
    * printed lines saying precisely what being stone costs.
    */
-  const stone = mark.source === STONE;
-  const name = stone ? STONE_CARD.name : CARD_NAMES.get(mark.source);
-  const card: TileCard | null = name
-    ? {
-        cardId: stone ? STONE_CARD.cardId : mark.source,
-        name,
-        ...(stone ? { ref: STONE_CARD.ref, text: STONE_CARD.text } : { text: CARD_TEXTS.get(mark.source) }),
-        kindLabel: mark.title,
-      }
-    : null;
+  // Null for a status nothing put there — one of the column-projected four —
+  // which the wire says outright now rather than sending an empty string.
+  const source = mark.source;
+  const stone = source === STONE;
+  const name = stone ? STONE_CARD.name : source === null ? undefined : CARD_NAMES.get(source);
+  const card: TileCard | null = stone
+    ? { cardId: STONE_CARD.cardId, name: STONE_CARD.name, ref: STONE_CARD.ref, text: STONE_CARD.text, kindLabel: mark.title }
+    : source !== null && name
+      ? { cardId: source, name, text: CARD_TEXTS.get(source), kindLabel: mark.title }
+      : null;
   const { handlers, preview } = useCardPreview(card, false, "classic", nature);
   const art = stone
     ? cardArtUrl(STONE_CARD.cardId, STONE_CARD.ref)
-    : cardArtUrl(mark.source);
+    : source === null
+      ? null
+      : cardArtUrl(source);
   // The shape a card is drawn in everywhere else: the illustration export is
   // 240x155 and every slot in the pack and on the body takes that ratio, so a
   // mark that took it too stopped needing to crop. A square was cutting the

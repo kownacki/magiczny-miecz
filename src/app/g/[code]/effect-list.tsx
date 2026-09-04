@@ -83,7 +83,7 @@ export function EffectList({ effects }: { effects: readonly Effect[] }) {
                   is good or bad for the holder, and that is still true of an
                   effect the console conjured — the badge answers a different
                   question and should not repaint the answer to the first. */}
-              {fromTestMode(effect.source) && (
+              {effect.source !== null && fromTestMode(effect.source) && (
                 <span className="ml-1.5 text-[10px] text-ochre/70">{TEST_SOURCE}</span>
               )}
               {effect.count > 1 && (

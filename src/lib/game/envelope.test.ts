@@ -37,9 +37,9 @@ function twoHands() {
       aUser({ id: "usrb", name: "Ola", seat_index: 1, is_host: false }),
     ],
     holdings: [
-      aHolding({ id: "a-spell", seat_id: "seat-a", card_id: "blyskawica", kind: "spell", face: "hidden" }),
+      aHolding({ id: "a-spell", seat_id: "seat-a", card_id: "fatum", kind: "spell", face: "hidden" }),
       aHolding({ id: "a-helm", seat_id: "seat-a", card_id: "helm" }),
-      aHolding({ id: "b-spell", seat_id: "seat-b", card_id: "uzdrowienie", kind: "spell", face: "hidden" }),
+      aHolding({ id: "b-spell", seat_id: "seat-b", card_id: "formula-czasu", kind: "spell", face: "hidden" }),
       aHolding({ id: "b-helm", seat_id: "seat-b", card_id: "helm" }),
     ],
   });
@@ -51,7 +51,7 @@ const seatIn = (envelope: ReturnType<typeof envelopeFor>, id: string) =>
 describe("a concealed hand (9.3)", () => {
   it("sends a seat its own Zaklęcie in full", () => {
     const mine = seatIn(envelopeFor(twoHands(), "usra", NOW), "seat-a");
-    expect(mine.holdings.map((card) => card.cardId)).toEqual(["blyskawica", "helm"]);
+    expect(mine.holdings.map((card) => card.cardId)).toEqual(["fatum", "helm"]);
     expect(mine.hidden_count).toBe(0);
   });
 
@@ -76,10 +76,10 @@ describe("a concealed hand (9.3)", () => {
     const sees = (envelope: ReturnType<typeof envelopeFor>, seatId: string, cardId: string) =>
       seatIn(envelope, seatId).holdings.some((card) => card.cardId === cardId);
 
-    expect(sees(toA, "seat-a", "blyskawica")).toBe(true);
-    expect(sees(toB, "seat-b", "blyskawica")).toBe(false);
-    expect(sees(toB, "seat-b", "uzdrowienie")).toBe(true);
-    expect(sees(toA, "seat-b", "uzdrowienie")).toBe(false);
+    expect(sees(toA, "seat-a", "fatum")).toBe(true);
+    expect(sees(toB, "seat-b", "fatum")).toBe(false);
+    expect(sees(toB, "seat-b", "formula-czasu")).toBe(true);
+    expect(sees(toA, "seat-b", "formula-czasu")).toBe(false);
   });
 
   /**
@@ -91,8 +91,8 @@ describe("a concealed hand (9.3)", () => {
    */
   it("does not carry another seat's card anywhere in what is sent", () => {
     const wire = JSON.stringify(envelopeFor(twoHands(), "usra", NOW));
-    expect(wire).toContain("blyskawica");
-    expect(wire).not.toContain("uzdrowienie");
+    expect(wire).toContain("fatum");
+    expect(wire).not.toContain("formula-czasu");
   });
 
   it("conceals every hand from a device that has proved nothing", () => {
@@ -102,7 +102,7 @@ describe("a concealed hand (9.3)", () => {
     const anonymous = envelopeFor(twoHands(), null, NOW);
     expect(anonymous.mySeatIndex).toBeNull();
     expect(anonymous.seats.map((seat) => seat.hidden_count)).toEqual([1, 1]);
-    expect(JSON.stringify(anonymous)).not.toContain("blyskawica");
+    expect(JSON.stringify(anonymous)).not.toContain("fatum");
   });
 
   it("treats an id that is not at this table as nobody at all", () => {
@@ -117,7 +117,7 @@ describe("a concealed hand (9.3)", () => {
     const table = twoHands();
     table.game.mode = "companion";
     const theirs = seatIn(envelopeFor(table, "usra", NOW), "seat-b");
-    expect(theirs.holdings.map((card) => card.cardId)).toEqual(["uzdrowienie", "helm"]);
+    expect(theirs.holdings.map((card) => card.cardId)).toEqual(["formula-czasu", "helm"]);
     expect(theirs.hidden_count).toBe(0);
   });
 });
@@ -272,7 +272,7 @@ describe("the deck, which never travels", () => {
 
   it("sends the counts and not the order", () => {
     const { game } = envelopeFor(aTable({ game: { deck } }), null, NOW);
-    expect(game.deck).toBeUndefined();
+    expect("deck" in game).toBe(false);
     expect(game.deckCounts).toEqual({
       events: { draw: 3, discard: 2 },
       spells: { draw: 1, discard: 0 },

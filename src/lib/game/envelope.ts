@@ -6,7 +6,12 @@ import { fightsForYou } from "@/lib/engine/abilities";
 import { lastAggression, spokenSpell } from "@/lib/engine/status";
 import { describeAggression } from "@/lib/engine/abilityText";
 import { whyNoSpells } from "@/lib/engine/spells";
-import { FIELDS, type FieldId } from "@/lib/engine/board";
+import { FIELDS, requireFieldId, type FieldId } from "@/lib/engine/board";
+import { isCardId, type CardId } from "@/data/ids";
+import { Failure } from "./failure";
+import type { Envelope, EnvelopeSeat } from "./wire";
+
+export type * from "./wire";
 import { foldStatuses } from "@/lib/engine/statusRows";
 import { cardName } from "@/lib/engine/polish";
 import type { Slot } from "@/lib/engine/slots";
@@ -18,6 +23,22 @@ import type { Snapshot } from "./change";
 import {
   AWAY_AFTER_MS,
 } from "./commands/presence";
+
+/**
+ * A card id off a row, narrowed once on the way out.
+ *
+ * A holding or a field card names a card the box has, or the row is corrupt;
+ * the browser is the last place that should be asked to find out which.
+ */
+function cardIdOf(raw: string): CardId {
+  if (!isCardId(raw)) throw new Failure(`envelope: a row names a card the box does not have: ${raw}`);
+  return raw;
+}
+
+/** The same, for a column that may name nothing. */
+function cardIdOrNull(raw: string | null): CardId | null {
+  return raw === null ? null : cardIdOf(raw);
+}
 
 /**
  * The read model, and the counterpart to `Changeset`.
@@ -38,136 +59,6 @@ import {
  * Pure, so `now` is passed rather than read: presence is a comparison against
  * the clock, and a test that cannot fix the clock cannot check it.
  */
-
-/** A card as the wire carries it — the row id travels, because two can be alike. */
-export interface EnvelopeCard {
-  id: string;
-  cardId: string;
-  kind: string;
-  face: string | null;
-  slot: Slot | null;
-  granted: boolean;
-}
-
-export interface EnvelopeSeat {
-  id: string;
-  seat_index: number;
-  /** True only of a seat heard from once and then silent. See `away` below. */
-  away: boolean;
-  holdings: EnvelopeCard[];
-  hidden_count: number;
-  sword_total: number;
-  magic_total: number;
-  /** 2.6's cap, or null when the console has taken it off for this seat. */
-  spell_capacity: number | null;
-  /** Why no Zaklęcie may be spoken at all right now — see `whyNoSpells`. */
-  spells_blocked: string | null;
-  /** The last act of aggression, in words, or null — see `describeAggression`. */
-  aggression: string | null;
-  sword_in_fight: number;
-  magic_in_fight: number;
-  effects: { id: string; source: string | null; label: string; when: string }[];
-  [column: string]: unknown;
-}
-
-/**
- * Somebody at the table, as every device may see them.
- *
- * Public, all of it: who is here, what they are called, which chair they are
- * in, who runs the table and who has said they are ready are the things people
- * read off each other across a table, and none of them is a secret under 9.3.
- *
- * `device_id` is not here and never travels. It says which *browser* somebody
- * is, which is a fact about a person's machine rather than about the game, and
- * the only thing that ever needs it is the browser it belongs to.
- */
-export interface EnvelopeUser {
-  /** Four characters, and the only handle somebody driving no seat has. */
-  id: string;
-  name: string;
-  isHost: boolean;
-  ready: boolean;
-  /** The chair they are driving; null is watching, which is a thing to be. */
-  seatIndex: number | null;
-  /** True only of somebody heard from once and then silent. See `away`. */
-  away: boolean;
-}
-
-export interface Envelope {
-  game: Record<string, unknown>;
-  /**
-   * A Zaklęcie spoken and waiting to be answered (9.6), or null.
-   *
-   * Every device gets it, because answering it is anybody's to do and the
-   * window closes on a clock: the browser has to be able to show what is
-   * waiting and how long is left.
-   */
-  spoken: {
-    spell: string;
-    name: string;
-    /** The seat that spoke it. */
-    by: number | null;
-    /** The seat it was aimed at, where it was aimed at one. */
-    at: number | null;
-    until: number;
-  } | null;
-  /**
-   * The surplus the whole table is waiting on, if there is one.
-   *
-   * A table-level fact like `spoken`, and for the same reason: 5.6 and 2.6 both
-   * say *natychmiast*, so while this is set every other verb is being refused
-   * for everybody, not only for the seat that is over. Nothing 9.3 hides
-   * travels — a count, a limit and a seat index, all of which the refusal says
-   * out loud to whoever asks.
-   *
-   * `said` is worked out here rather than in the browser for the reason
-   * `spell_capacity` is: the sentence the table reads and the sentence the
-   * route refuses with have to rest on one basis rather than two that usually
-   * agree. It is also why the voice is chosen here — this envelope knows who is
-   * reading it, and „Ania: 29 Zaklęć" shown to Ania is the app talking about
-   * her in the third person while she is looking at it.
-   */
-  surplus: {
-    seatIndex: number;
-    what: "przedmioty" | "zaklecia";
-    /** How many have to go — the number to act on, not the number held. */
-    over: number;
-    said: string;
-  } | null;
-  /**
-   * Who this device is, as far as the table is concerned — and null when the
-   * table has never heard of it.
-   *
-   * The difference this draws is the one the browser could not draw before and
-   * kept getting wrong. A device holding a token and driving no seat used to be
-   * indistinguishable from a device whose token had gone stale, because
-   * `mySeatIndex` was null for both — so watching a table was rendered as
-   * having been thrown off one. Null here means exactly one thing: whoever you
-   * were, you are not at this table any more.
-   */
-  me: EnvelopeUser | null;
-  /** Everybody here, seated or watching, in join order. */
-  users: EnvelopeUser[];
-  mySeatIndex: number | null;
-  /**
-   * `granted` travels because the wrench does. A Karta the test console
-   * conjured is marked wherever it is drawn — in a hand, in a slot, in the
-   * turn, in a fight — and a card lying on an Obszar was the one place the
-   * mark could not reach, because the flag stopped at the server.
-   */
-  fieldCards: {
-    id: string;
-    fieldId: string | null;
-    cardId: string;
-    granted?: boolean;
-    /** What is left beside a Miejsce that lays out points (16.7). */
-    pool?: number;
-  }[];
-  /** Loose Sztuki Złota on an Obszar, by field (12.1). Public — 16.8's reasoning. */
-  fieldGold: { fieldId: string; gold: number }[];
-  stock: Record<string, number>;
-  seats: EnvelopeSeat[];
-}
 
 /**
  * The turn state with anything one seat alone may see taken out of it.
@@ -367,8 +258,8 @@ export function envelopeFor(
     // field can hold two of the same Przedmiot.
     fieldCards: fieldCards.map((row) => ({
       id: row.id,
-      fieldId: row.field_id,
-      cardId: row.card_id,
+      fieldId: requireFieldId(row.field_id),
+      cardId: cardIdOf(row.card_id),
       ...(row.granted ? { granted: true as const } : {}),
       // Sent only where there is one, so every other Karta stays three fields
       // wide on the wire. What is left beside a Drzewo Życia is public — 16.8
@@ -380,12 +271,12 @@ export function envelopeFor(
     // What the Wyposażenie pile still holds (21.2), so a shop shows what it has
     // rather than offering what will be refused.
     stock: shopStock({ holdings, fieldCards, game }),
-    seats: seats.map((seat) => {
+    seats: seats.map((seat): EnvelopeSeat => {
       const own = holdings
         .filter((holding) => holding.seat_id === seat.id)
         .map((holding) => ({
           id: holding.id,
-          cardId: holding.card_id,
+          cardId: cardIdOf(holding.card_id),
           kind: holding.kind,
           face: holding.face,
           // Where it is worn, in the slotted variant. Public like the card
@@ -502,7 +393,7 @@ export function envelopeFor(
         fights_for_you:
           fightsForYou(view.abilities) === null
             ? null
-            : cardLending(view, (held) => fightsForYou(held) !== null),
+            : cardIdOrNull(cardLending(view, (held) => fightsForYou(held) !== null)),
         /**
          * What a player is shown beside their name, already worked out: the
          * browser gets rows, not a modelling problem.

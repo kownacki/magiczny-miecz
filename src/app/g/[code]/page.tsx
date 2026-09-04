@@ -690,7 +690,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
                 onEndlessStock={(on) => setHouseRule({ endless_stock: on })}
                 /* Absent until the engine half lands, which is what keeps the
                    group off the panel rather than on it and refused. */
-                trophyMode={game.trophy_mode}
+                trophyMode={game.trophy_mode === "cards" ? "cards" : "points"}
                 onTrophyMode={(mode) => setHouseRule({ trophy_mode: mode })}
               />
             }

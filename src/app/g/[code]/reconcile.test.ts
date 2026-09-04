@@ -30,6 +30,7 @@ function held(over: Partial<Held> = {}): Held {
     kind: "item",
     face: "open",
     slot: null,
+    granted: false,
     ...over,
   };
 }

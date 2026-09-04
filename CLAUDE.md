@@ -140,6 +140,14 @@ anything.
   runs is a compile error. Adding an action is one name and one entry; the
   route itself is one line, `actions(route, table, gate)`, and the gate is the
   Permission the whole route stands behind.
+
+  The other direction is `src/lib/game/wire.ts`: the Envelope's types, declared
+  once with no logic, imported by `envelopeFor` on the way out and by
+  `useTable` on the way in. Ids are narrowed there — a holding's `card_id` and
+  a field card's `field_id` come out of the store as strings and become a
+  `CardId` and a `FieldId` before they travel, or the row is refused as a
+  Failure. The browser declares no wire type of its own; `Seat`, `Held`,
+  `Game`, `Person` are aliases of the Envelope's.
 - **A rule number is a promise you can keep, so only write one you checked.**
   `(5.3)` is not decoration: `WithRules` turns every one of them into a link
   into the Instrukcja, and a reader who follows one and lands on a rule about
