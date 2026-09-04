@@ -22,16 +22,17 @@
  *
  * The type is derived from the layers that make it up rather than restated —
  * the table as `use-table.ts` sends it, what is open from `use-surfaces.ts`,
- * the turn read once by `turn-view.ts` — plus the one interface below for what
- * this device holds of its own. `game` is narrowed to non-null here because
+ * the turn read once by `turn-view.ts`, the questions `use-asks.ts` asks before
+ * an irreversible act — plus the one interface below for what this device
+ * holds of its own. `game` is narrowed to non-null here because
  * the provider is only ever mounted once there is one.
  */
 
 import { createContext, useContext, type Dispatch, type SetStateAction } from "react";
-import type { Confirmation } from "./confirm";
 import type { Game, Said, Table } from "./use-table";
 import type { useSurfaces } from "./use-surfaces";
 import type { TurnView } from "./turn-view";
+import type { Asks } from "./use-asks";
 import type { writeTestMode } from "@/lib/game/testMode";
 
 /** What is open over the table — the return of `useSurfaces`. */
@@ -44,18 +45,9 @@ export interface Rolled {
   did: string[];
 }
 
-/** Where a Zaklęcie is aimed, as the hand hands it up. */
-export interface CastTarget {
-  seatIndex?: number;
-  fieldCardId?: string;
-  fieldId?: string;
-  /** Where the Karta goes, for the one Zaklęcie that moves one. */
-  destination?: string;
-}
-
 /**
- * This device's own state over the table, and the questions it asks before an
- * irreversible act. Each is documented where it is declared, in `page.tsx`.
+ * This device's own state over the table. Each is documented where it is
+ * declared, in `page.tsx`.
  */
 export interface Device {
   code: string;
@@ -73,8 +65,6 @@ export interface Device {
   setReborn: Dispatch<SetStateAction<boolean>>;
   pickerWavedOff: boolean;
   setPickerWavedOff: Dispatch<SetStateAction<boolean>>;
-  ask: Confirmation | null;
-  setAsk: Dispatch<SetStateAction<Confirmation | null>>;
   folded: boolean;
   setFolded: Dispatch<SetStateAction<boolean>>;
   waved: string[];
@@ -82,13 +72,9 @@ export interface Device {
   testing: boolean;
   testMode: boolean;
   setTestMode: typeof writeTestMode;
-  askToUse: (holdingId: string, cardId: string) => void;
-  askToLeave: () => void;
-  askToDrop: (holdingId: string) => void;
-  askToCast: (holdingId: string, cardId: string, target?: CastTarget) => void;
 }
 
-export type TableScreen = Omit<Table, "game"> & { game: Game } & Surfaces & TurnView & Device;
+export type TableScreen = Omit<Table, "game"> & { game: Game } & Surfaces & TurnView & Asks & Device;
 
 export const TheTable = createContext<TableScreen | null>(null);
 
