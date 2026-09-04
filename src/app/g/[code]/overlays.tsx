@@ -79,6 +79,7 @@ export function Overlays() {
     losing,
     showDie,
     setWaved,
+    strengths,
   } = useTheTable();
   return (
     <>
@@ -398,6 +399,7 @@ export function Overlays() {
             /* 1.5's fight total, for the Sobowtór, whose Miecz is whoever is
                opposite him and is therefore not on his Karta. */
             mySword={active.sword_in_fight}
+            strengths={strengths}
             seatIndex={active.seat_index}
             actor={{
               name: active.player_name ?? `Miejsce ${active.seat_index + 1}`,

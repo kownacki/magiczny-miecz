@@ -68,6 +68,7 @@ export function DrawModal({
   ring,
   occupied,
   mySword,
+  strengths,
   nature,
   eqMode,
   seatIndex,
@@ -209,6 +210,7 @@ export function DrawModal({
           ring={ring}
           occupied={occupied}
           mySword={mySword}
+          strengths={strengths}
           nature={nature}
           eqMode={eqMode}
           aggression={aggression}
@@ -337,6 +339,7 @@ export function DrawModal({
       ring={ring}
       occupied={occupied}
       mySword={mySword}
+      strengths={strengths}
       nature={nature}
       eqMode={eqMode}
       aggression={aggression}

@@ -520,3 +520,81 @@ describe("a status on a Karta, not only on a seat", () => {
     expect(seatIn(envelope, "seat-a").effects).toEqual([]);
   });
 });
+
+/**
+ * `strength` is the wire's other half of `fight.ts`'s own reading: what a
+ * lying Wróg is worth once WAMPIR's own growth and the Układ Planet's
+ * doubling are read off his row. Sent only where that differs from the
+ * printed figure, which is the same "changed, not present" discipline as
+ * `granted` and `pool` two blocks above.
+ */
+describe("what a lying Wróg is really worth", () => {
+  const wampirRow = { id: "fc-wampir", field_id: "wrzosowiska", card_id: "wampir", granted: false, pool: null };
+
+  it("is absent for a Wróg nothing has grown", () => {
+    const state = aTable({
+      seats: [aSeat({ id: "seat-a", seat_index: 0 })],
+      fieldCards: [wampirRow],
+    });
+    const envelope = envelopeFor(state, "usra", NOW);
+    expect(envelope.fieldCards.find((one) => one.id === "fc-wampir")?.strength).toBeUndefined();
+  });
+
+  it("is the grown total once WAMPIR has fed on a point of Życie", () => {
+    const state = aTable({
+      seats: [aSeat({ id: "seat-a", seat_index: 0 })],
+      fieldCards: [wampirRow],
+      effects: [
+        {
+          id: "eff-1",
+          seat_id: null,
+          field_card_id: "fc-wampir",
+          source: "wampir",
+          label: "Wampir rośnie w siłę",
+          modifier: { kind: "points", magia: 1 },
+          ends: { kind: "dispelled" },
+        },
+      ],
+    });
+    const envelope = envelopeFor(state, "usra", NOW);
+    // Printed Magia 4, plus the one point already taken — the same reading
+    // `beginFight` makes in `fight.test.ts`.
+    expect(envelope.fieldCards.find((one) => one.id === "fc-wampir")?.strength).toEqual({
+      kind: "magical",
+      total: 5,
+    });
+  });
+
+  it("doubles the grown total under the Układ Planet", () => {
+    const state = aTable({
+      seats: [aSeat({ id: "seat-a", seat_index: 0 })],
+      fieldCards: [wampirRow],
+      effects: [
+        {
+          id: "eff-1",
+          seat_id: null,
+          field_card_id: "fc-wampir",
+          source: "wampir",
+          label: "Wampir rośnie w siłę",
+          modifier: { kind: "points", magia: 1 },
+          ends: { kind: "dispelled" },
+        },
+        {
+          id: "eff-2",
+          seat_id: null,
+          field_card_id: "fc-wampir",
+          source: "uklad-planet",
+          label: "Układ Planet — Magia podwojona",
+          modifier: { kind: "magia-x2" },
+          ends: { kind: "round", round: 2 },
+        },
+      ],
+    });
+    const envelope = envelopeFor(state, "usra", NOW);
+    // (4 printed + 1 grown) × 2 — the same figure `fight.test.ts` pins.
+    expect(envelope.fieldCards.find((one) => one.id === "fc-wampir")?.strength).toEqual({
+      kind: "magical",
+      total: 10,
+    });
+  });
+});

@@ -3,18 +3,21 @@
 import type { TurnState } from "@/lib/engine/stack";
 import { suppressesSpells, visibleTo } from "@/lib/engine/holdings";
 import { fightsForYou } from "@/lib/engine/abilities";
-import { cardStatuses, lastAggression, spokenSpell } from "@/lib/engine/status";
+import { bonusFrom, cardStatuses, lastAggression, magiaDoubled, spokenSpell } from "@/lib/engine/status";
 import { describeAggression } from "@/lib/engine/abilityText";
 import { whyNoSpells } from "@/lib/engine/spells";
 import { FIELDS, requireFieldId, type FieldId } from "@/lib/engine/board";
 import { isCardId, type CardId } from "@/data/ids";
 import { Failure } from "./failure";
-import type { Envelope, EnvelopeEffect, EnvelopeSeat } from "./wire";
+import type { Envelope, EnvelopeEffect, EnvelopeFieldCard, EnvelopeSeat } from "./wire";
 
 export type * from "./wire";
 import { foldStatuses, type StatusRow } from "@/lib/engine/statusRows";
 import { cardName } from "@/lib/engine/polish";
 import type { Slot } from "@/lib/engine/slots";
+import { combatValueOf } from "@/lib/engine/cards";
+import type { EventCard } from "@/data/types";
+import { EVENTS } from "./decks";
 import { shopStock } from "./commands/draw";
 import { cardLending, seatView, turnQueueOf } from "./commands/seat";
 import { overflowOf } from "./commands/overflow";
@@ -63,6 +66,31 @@ function toEnvelopeEffect(row: StatusRow): EnvelopeEffect {
     stacking: row.stacking,
     certainty: row.lapse?.certainty ?? null,
   };
+}
+
+/**
+ * What a lying Wróg is really worth, once WAMPIR's own growth and the Układ
+ * Planet's doubling are read off his row — the same arithmetic `beginFight`
+ * does in `fight.ts`, done once here rather than trusted to every device that
+ * draws a fight button.
+ *
+ * `undefined` where the reading comes out exactly what the deck printed: not
+ * a Wróg at all, or a Wróg nothing has grown, which is every card just drawn
+ * and every Sobowtór — his total is whoever is opposite him, and no status in
+ * the box ever touches his row. Absence is the signal `drawnDecisionsFor`
+ * reads: only where the printed figure would be the *wrong* one does the wire
+ * carry a second number to prefer over it.
+ */
+function strengthOf(
+  card: Pick<EventCard, "cardClass" | "miecz" | "magia">,
+  statuses: ReturnType<typeof cardStatuses>,
+): EnvelopeFieldCard["strength"] {
+  const foe = combatValueOf(card);
+  if (!foe) return undefined;
+  const grown = bonusFrom(statuses);
+  const base = foe.total + (foe.kind === "magical" ? grown.magia : grown.miecz);
+  const total = foe.kind === "magical" ? base * magiaDoubled(statuses) : base;
+  return total === foe.total ? undefined : { kind: foe.kind, total };
 }
 
 /**
@@ -284,23 +312,31 @@ export function envelopeFor(
     mySeatIndex: mine?.seat_index ?? null,
     // The row id travels too: picking a card up names *which* card, and a
     // field can hold two of the same Przedmiot.
-    fieldCards: fieldCards.map((row) => ({
-      id: row.id,
-      fieldId: requireFieldId(row.field_id),
-      cardId: cardIdOf(row.card_id),
-      ...(row.granted ? { granted: true as const } : {}),
-      // Sent only where there is one, so every other Karta stays three fields
-      // wide on the wire. What is left beside a Drzewo Życia is public — 16.8
-      // makes what lies on an Obszar visible to everybody, and a well with one
-      // fruit on it is exactly the sort of thing a table plans around.
-      ...(row.pool !== null ? { pool: row.pool } : {}),
-      // What this Karta is under, folded the same way a seat's are. `at` is
-      // left off on purpose: `mine` has no meaning for a card nobody drives,
-      // and neither does a seat's own turn cycle — there is no queue position
-      // to walk a "turns" countdown against, so the round it lapses in is left
-      // unforecast rather than pinned to a seat it is not on.
-      effects: foldStatuses(cardStatuses(effects, row.id)).map(toEnvelopeEffect),
-    })),
+    fieldCards: fieldCards.map((row) => {
+      const statuses = cardStatuses(effects, row.id);
+      const known = EVENTS.find((one) => one.id === row.card_id);
+      const strength = known ? strengthOf(known, statuses) : undefined;
+      return {
+        id: row.id,
+        fieldId: requireFieldId(row.field_id),
+        cardId: cardIdOf(row.card_id),
+        ...(row.granted ? { granted: true as const } : {}),
+        // Sent only where there is one, so every other Karta stays three fields
+        // wide on the wire. What is left beside a Drzewo Życia is public — 16.8
+        // makes what lies on an Obszar visible to everybody, and a well with one
+        // fruit on it is exactly the sort of thing a table plans around.
+        ...(row.pool !== null ? { pool: row.pool } : {}),
+        // What this Karta is under, folded the same way a seat's are. `at` is
+        // left off on purpose: `mine` has no meaning for a card nobody drives,
+        // and neither does a seat's own turn cycle — there is no queue position
+        // to walk a "turns" countdown against, so the round it lapses in is left
+        // unforecast rather than pinned to a seat it is not on.
+        effects: foldStatuses(statuses).map(toEnvelopeEffect),
+        // What this Wróg is really worth, only where that differs from the
+        // printed figure — see `strengthOf`.
+        ...(strength ? { strength } : {}),
+      };
+    }),
     fieldGold: fieldGold.map((row) => ({ fieldId: row.field_id, gold: row.gold })),
     // What the Wyposażenie pile still holds (21.2), so a shop shows what it has
     // rather than offering what will be refused.

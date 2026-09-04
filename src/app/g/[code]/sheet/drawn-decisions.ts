@@ -19,8 +19,8 @@
 
 import events from "@/data/events.json";
 import type { EventCard, Nature } from "@/data/types";
-import { classOf, combatValueOf, roundsOf } from "@/lib/engine/cards";
-import { attackAsOne } from "@/lib/engine/combat";
+import { classOf, combatValueOf, roundsOf, type CombatValue } from "@/lib/engine/cards";
+import { attackAsOne, type CombatKind } from "@/lib/engine/combat";
 import { listed } from "@/lib/engine/state";
 import { kindForCard } from "@/lib/engine/holdings";
 import { intentSaid, type Intent } from "@/lib/engine/intentText";
@@ -53,6 +53,15 @@ export interface DrawnDecisionsInput {
   intent?: Intent | null;
   rolled?: Rolled | null;
   losing?: { cardId: string; kind: Held["kind"]; cards: Held[] } | null;
+  /**
+   * What a lying Wróg is really worth, by the `field_cards` row it is still
+   * on — WAMPIR's own growth and the Układ Planet's doubling, worked out once
+   * on the server (`envelope.ts`'s `strengthOf`) and sent only where it
+   * differs from the printed figure. Keyed by `TurnCard.fieldCardId`, which
+   * only a Wróg left lying carries; a card just drawn this turn has none, and
+   * `combatValueOf` off the static card is right for it as it always was.
+   */
+  strengths?: Record<string, { kind: CombatKind; total: number }>;
 }
 
 export type DrawnDecisions = NonNullable<ReturnType<typeof drawnDecisionsFor>>;
@@ -72,6 +81,7 @@ export function drawnDecisionsFor({
   intent,
   rolled,
   losing,
+  strengths = {},
 }: DrawnDecisionsInput) {
   const known = EVENTS.find((c) => c.id === card.cardId);
   if (!known) return null;
@@ -93,13 +103,23 @@ export function drawnDecisionsFor({
   // Whose Miecz the Sobowtór borrows — see `combatValueOf`. Harmless for every
   // other creature, which carries its own number.
   const mirror = { miecz: mySword };
-  const foe = combatValueOf(known, mirror);
+
+  /**
+   * What this Karta actually fights at — the wire's own reading where the
+   * card is a Wróg left lying and something has grown it, `combatValueOf` off
+   * the static card otherwise. See `strengths` above and `strengthOf` in
+   * `envelope.ts`, which is where the number was worked out.
+   */
+  const valueOf = (entry: TurnCard, def: EventCard): CombatValue | null =>
+    (entry.fieldCardId ? strengths[entry.fieldCardId] : undefined) ?? combatValueOf(def, mirror);
+
+  const foe = valueOf(card, known);
 
   // 17.5: several creatures attacking at once are one opponent — their Miecze
   // added and one die thrown for the lot, which is the difference between hard
   // and hopeless. Only when they are of a kind: an ordinary Wróg and a magical
   // one cannot be summed, because the sums are of different things.
-  const standing = cards
+  const standingEntries = cards
     /* The turn's own entry is kept beside the card, because `resolved` names a
        *copy* — two Wilki on one Obszar are two entries, and asking the lists
        with a bare id would settle both when one of them was dealt with. */
@@ -107,11 +127,11 @@ export function drawnDecisionsFor({
     .filter(
       (one): one is { entry: (typeof cards)[number]; card: EventCard } =>
         !!one.card &&
-        !!combatValueOf(one.card, mirror) &&
+        !!valueOf(one.entry, one.card) &&
         !listed(fought, one.entry) &&
         !listed(resolved, one.entry),
-    )
-    .map((one) => one.card);
+    );
+  const standing = standingEntries.map((one) => one.card);
   // 17.5 asked once, of the engine, rather than restated here — the server
   // refuses a mixed fight against this same answer. A creature that is several
   // fights rather than one cannot be in the pack either: his card asks for
@@ -119,7 +139,7 @@ export function drawnDecisionsFor({
   // than shown and refused.
   const asOne =
     standing.length > 1 && !standing.some((c) => roundsOf(c.id))
-      ? attackAsOne(standing.map((c) => combatValueOf(c, mirror)!))
+      ? attackAsOne(standingEntries.map((one) => valueOf(one.entry, one.card)!))
       : null;
   const keep = kindForCard(known);
 

@@ -37,6 +37,43 @@ describe("a Wróg", () => {
   });
 });
 
+describe("a lying Wróg's grown strength", () => {
+  // Printed Magia 4 — see `fight.ts`'s own WAMPIR test, which grows him to 5
+  // by the same arithmetic the wire is only ever repeating.
+  it("is preferred over the printed figure once the wire sends one", () => {
+    const lying = card("wampir", { fieldCardId: "fc-wampir" });
+    const d = drawnDecisionsFor(
+      input({
+        card: lying,
+        cards: [lying],
+        strengths: { "fc-wampir": { kind: "magical", total: 5 } },
+      }),
+    )!;
+    expect(d.foe).toMatchObject({ kind: "magical", total: 5 });
+  });
+
+  it("is the printed figure for a Wróg just drawn, with no row and no wire entry", () => {
+    const fresh = card("wampir");
+    const d = drawnDecisionsFor(input({ card: fresh, cards: [fresh] }))!;
+    expect(d.foe).toMatchObject({ kind: "magical", total: 4 });
+  });
+
+  it("carries the grown total into the pack (17.5)", () => {
+    const lying = card("wampir", { fieldCardId: "fc-wampir" });
+    // duch-ciemnosci: printed Magia 3 — a second Demon, so the two sum as one.
+    const other = card("duch-ciemnosci");
+    const d = drawnDecisionsFor(
+      input({
+        card: lying,
+        cards: [lying, other],
+        strengths: { "fc-wampir": { kind: "magical", total: 5 } },
+      }),
+    )!;
+    // 5 (grown) + 3 (printed), not 4 + 3.
+    expect(d.asOne).toMatchObject({ kind: "magical", total: 8 });
+  });
+});
+
 describe("a Przedmiot", () => {
   it("is picked up rather than fought", () => {
     const d = drawnDecisionsFor(input({ card: card("1-sztuka-zlota"), cards: [card("1-sztuka-zlota")] }))!;

@@ -43,7 +43,7 @@ import { DieMark } from "../die-mark";
 import { DieTable } from "./die-table";
 import { ObszarPicker } from "./obszar-picker";
 import { LosableTile } from "./losable-tile";
-import { drawnDecisionsFor } from "./drawn-decisions";
+import { drawnDecisionsFor, type DrawnDecisionsInput } from "./drawn-decisions";
 import { RollSaid, type Rolled } from "./roll-result";
 import { TileRow } from "../tile-row";
 import { CARD_NAMES, type Held } from "../table";
@@ -86,6 +86,11 @@ export interface DrawnActionsProps {
    * przeciwnik", so the button cannot say how strong he is without it.
    */
   mySword: number;
+  /**
+   * What a lying Wróg is really worth, by the row it is still on — see the
+   * matching field on `DrawnDecisionsInput`, which this only carries down to.
+   */
+  strengths?: DrawnDecisionsInput["strengths"];
   /**
    * The active character's Natura, for the three Nieznajomi whose whole content
    * is behind a `gdy natura` — see `pendingIn`. Null while it is unknown, which
@@ -172,6 +177,7 @@ export function DrawnActions({
   ring,
   occupied = [],
   mySword,
+  strengths,
   nature,
   eqMode,
   aggression,
@@ -253,6 +259,7 @@ export function DrawnActions({
     fought,
     beaten,
     mySword,
+    strengths,
     nature,
     aggression,
     reader,

@@ -381,6 +381,17 @@ export function turnViewOf({
         )
       : null;
 
+  /**
+   * What a lying Wróg is really worth, by the `field_cards` row it is still
+   * on — the wire's own reading (`envelope.ts`'s `strengthOf`), keyed the way
+   * `TurnCard.fieldCardId` names it. Read once here so the sheet always has
+   * the same map to prefer over `combatValueOf`, rather than filtering
+   * `fieldCards` again wherever a fight button is drawn.
+   */
+  const strengths = Object.fromEntries(
+    fieldCards.flatMap((card) => (card.strength ? [[card.id, card.strength] as const] : [])),
+  );
+
   return {
     mySeat,
     amHost,
@@ -406,5 +417,6 @@ export function turnViewOf({
     viewer,
     dealt,
     blockedHere,
+    strengths,
   };
 }
