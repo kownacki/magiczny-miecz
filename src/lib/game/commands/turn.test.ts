@@ -44,6 +44,7 @@ describe("passing the turn (10.1)", () => {
         {
           id: "eff-1",
           seat_id: "seat-a",
+          field_card_id: null,
           source: "FORMUŁA CZASU",
           label: "Formuła Czasu",
           modifier: { kind: "znowu" },
@@ -65,6 +66,7 @@ describe("passing the turn (10.1)", () => {
         {
           id: "eff-1",
           seat_id: "seat-b",
+          field_card_id: null,
           source: "FORMUŁA CZASU",
           label: "Formuła Czasu",
           modifier: { kind: "znowu" },
@@ -172,6 +174,7 @@ describe("effects counting down", () => {
         {
           id: "e1",
           seat_id: "seat-a",
+          field_card_id: null,
           source: "Eliksir",
           label: "+1 Miecza",
           modifier: { kind: "points", miecz: 1 },
@@ -197,6 +200,7 @@ describe("effects counting down", () => {
         {
           id: "e2",
           seat_id: "seat-a",
+          field_card_id: null,
           source: "Tarcza",
           label: "osłona",
           modifier: { kind: "frozen" },

@@ -35,7 +35,13 @@ const seat = (over: Partial<Seat> = {}) =>
   }) as unknown as Seat;
 
 const lying = (over: Partial<FieldCard> = {}): FieldCard =>
-  ({ id: "fc-1", fieldId: asFieldId("plaskowyz-mgiel")!, cardId: "grota", ...over }) as FieldCard;
+  ({
+    id: "fc-1",
+    fieldId: asFieldId("plaskowyz-mgiel")!,
+    cardId: "grota",
+    effects: [],
+    ...over,
+  }) as FieldCard;
 
 describe("who is driving a chair", () => {
   it("finds the person by the seat's driver_id", () => {

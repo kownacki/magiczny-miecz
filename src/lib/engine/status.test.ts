@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   allStatuses,
+  cardStatuses,
   fromColumns,
   stillStone,
   afterEvent,
@@ -192,6 +193,35 @@ describe("the four ad-hoc columns, read as effects", () => {
     const stored = [status({ id: "eliksir" })];
     const all = allStatuses(stored, { ...none, turnsLost: 1 }, 5);
     expect(all.map((s) => s.id)).toEqual(["tura-stracona", "eliksir"]);
+  });
+});
+
+describe("what a Karta lying on an Obszar is under (16.8)", () => {
+  const row = (id: string, fieldCardId: string | null) => ({
+    id,
+    field_card_id: fieldCardId,
+    source: "krag-plomieni",
+    label: "Krąg Płomieni",
+    modifier: { kind: "frozen" as const },
+    ends: { kind: "dispelled" as const },
+  });
+
+  it("returns only the rows held by that Karta", () => {
+    const effects = [row("a", "fc-1"), row("b", "fc-2"), row("c", "fc-1")];
+    expect(ids(cardStatuses(effects, "fc-1"))).toEqual(["a", "c"]);
+  });
+
+  it("has no columns of its own to project — a card has no `fromColumns`", () => {
+    // Unlike a seat, a Karta carries no turns-lost, Kamień, barred-Most or
+    // Natura-changed column: it sits on the board, not at the table, so there
+    // is no timed state beside `seat_effects` to fold in. A card with no rows
+    // is under nothing at all.
+    expect(cardStatuses([], "fc-1")).toEqual([]);
+  });
+
+  it("ignores rows held by a seat", () => {
+    const seatHeld = { ...row("s", null), field_card_id: null };
+    expect(cardStatuses([seatHeld], "fc-1")).toEqual([]);
   });
 });
 

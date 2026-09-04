@@ -3,16 +3,16 @@
 import type { TurnState } from "@/lib/engine/stack";
 import { suppressesSpells, visibleTo } from "@/lib/engine/holdings";
 import { fightsForYou } from "@/lib/engine/abilities";
-import { lastAggression, spokenSpell } from "@/lib/engine/status";
+import { cardStatuses, lastAggression, spokenSpell } from "@/lib/engine/status";
 import { describeAggression } from "@/lib/engine/abilityText";
 import { whyNoSpells } from "@/lib/engine/spells";
 import { FIELDS, requireFieldId, type FieldId } from "@/lib/engine/board";
 import { isCardId, type CardId } from "@/data/ids";
 import { Failure } from "./failure";
-import type { Envelope, EnvelopeSeat } from "./wire";
+import type { Envelope, EnvelopeEffect, EnvelopeSeat } from "./wire";
 
 export type * from "./wire";
-import { foldStatuses } from "@/lib/engine/statusRows";
+import { foldStatuses, type StatusRow } from "@/lib/engine/statusRows";
 import { cardName } from "@/lib/engine/polish";
 import type { Slot } from "@/lib/engine/slots";
 import { shopStock } from "./commands/draw";
@@ -38,6 +38,31 @@ function cardIdOf(raw: string): CardId {
 /** The same, for a column that may name nothing. */
 function cardIdOrNull(raw: string | null): CardId | null {
   return raw === null ? null : cardIdOf(raw);
+}
+
+/**
+ * One folded status, worked out into what a device is shown.
+ *
+ * Shared by a seat's own list and a Karta's — `foldStatuses` gives both the
+ * same `StatusRow` shape, and a status reads the same wherever it hangs.
+ */
+function toEnvelopeEffect(row: StatusRow): EnvelopeEffect {
+  return {
+    id: row.key,
+    // The card that put it there, so the browser can draw its picture rather
+    // than a shape standing in for it.
+    source: row.from[0].source,
+    glyph: row.mark.glyph,
+    tone: row.mark.tone,
+    // Not `markOf`'s own title: that one ends at `describeEnd`, which knows
+    // the duration and not the round it falls in.
+    title: `${row.label} — ${row.when}`,
+    label: row.label,
+    when: row.when,
+    count: row.count,
+    stacking: row.stacking,
+    certainty: row.lapse?.certainty ?? null,
+  };
 }
 
 /**
@@ -173,7 +198,7 @@ export function envelopeFor(
   myUserId: string | null,
   now: number,
 ): Envelope {
-  const { game, seats, users, holdings, fieldCards, fieldGold } = table;
+  const { game, seats, users, holdings, fieldCards, fieldGold, effects } = table;
   const me = users.find((one) => one.id === myUserId) ?? null;
   // The seat *they are driving*, which is what decides whose hidden cards they
   // may see (9.3). A spectator drives none and sees none.
@@ -266,6 +291,12 @@ export function envelopeFor(
       // makes what lies on an Obszar visible to everybody, and a well with one
       // fruit on it is exactly the sort of thing a table plans around.
       ...(row.pool !== null ? { pool: row.pool } : {}),
+      // What this Karta is under, folded the same way a seat's are. `at` is
+      // left off on purpose: `mine` has no meaning for a card nobody drives,
+      // and neither does a seat's own turn cycle — there is no queue position
+      // to walk a "turns" countdown against, so the round it lapses in is left
+      // unforecast rather than pinned to a seat it is not on.
+      effects: foldStatuses(cardStatuses(effects, row.id)).map(toEnvelopeEffect),
     })),
     fieldGold: fieldGold.map((row) => ({ fieldId: row.field_id, gold: row.gold })),
     // What the Wyposażenie pile still holds (21.2), so a shop shows what it has
@@ -413,22 +444,7 @@ export function envelopeFor(
           queue,
           seatIndex: seat.seat_index,
           mine: mine?.id === seat.id,
-        }).map((row) => ({
-          id: row.key,
-          // The card that put it there, so the browser can draw its picture
-          // rather than a shape standing in for it.
-          source: row.from[0].source,
-          glyph: row.mark.glyph,
-          tone: row.mark.tone,
-          // Not `markOf`'s own title: that one ends at `describeEnd`, which
-          // knows the duration and not the round it falls in.
-          title: `${row.label} — ${row.when}`,
-          label: row.label,
-          when: row.when,
-          count: row.count,
-          stacking: row.stacking,
-          certainty: row.lapse?.certainty ?? null,
-        })),
+        }).map(toEnvelopeEffect),
       };
     }),
   };

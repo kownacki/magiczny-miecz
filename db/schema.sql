@@ -377,22 +377,6 @@ create index if not exists holdings_seat_idx on magiczny_miecz.holdings(seat_id)
 -- would be a rewrite of turn order to gain nothing. They are projected into the
 -- same list at read time instead, so a player sees one set of effects whichever
 -- half of the model an effect happens to live in.
-create table if not exists magiczny_miecz.seat_effects (
-  id uuid primary key default gen_random_uuid(),
-  game_id uuid not null references magiczny_miecz.games(id) on delete cascade,
-  seat_id uuid not null references magiczny_miecz.seats(id) on delete cascade,
-  -- The card that put it there, for the journal and the hover.
-  source text not null,
-  -- What a player is shown, in the language the cards use.
-  label text not null,
-  modifier jsonb not null,
-  ends jsonb not null,
-  created_at timestamptz not null default now()
-);
-
-create index if not exists seat_effects_seat_idx on magiczny_miecz.seat_effects(seat_id);
-create index if not exists seat_effects_game_idx on magiczny_miecz.seat_effects(game_id);
-
 -- Cards left lying face-up on a board field (16.8), which the next character to
 -- stop there must deal with.
 create table if not exists magiczny_miecz.field_cards (
@@ -411,18 +395,44 @@ create table if not exists magiczny_miecz.field_cards (
   -- kto tu trafi, będzie mógł [...] zmniejszając tym samym liczbę punktów przy
   -- Drzewie [...] Po wykorzystaniu 4 punktów, Drzewo usycha".
   --
-  -- On the row and not in `seat_effects`, which is where every other running
-  -- count lives, because that table's `seat_id` is `not null` and this count
-  -- belongs to nobody: it is the Karta's, it outlives every visitor, and the
-  -- next character to stop here inherits whatever the last one left. A Karta
-  -- lying on an Obszar having nowhere to carry state is the same gap that
-  -- keeps KRĄG PŁOMIENI and WŁADCA GROMU at `czesciowe` in coverage.ts; this
-  -- column closes it for the one shape that needs only a number.
+  -- On the row and not in `seat_effects`, even though that table can now hold
+  -- a row for a Karta too: a status there is a source, a label, a Modifier and
+  -- an Ends, and a plain remaining count is none of those — forcing it into
+  -- that shape would be modelling for one table's sake. `seat_effects` gained
+  -- `field_card_id` for a different gap, a Karta having a *status* with
+  -- nowhere to be written down, which is what kept KRĄG PŁOMIENI and WŁADCA
+  -- GROMU at `czesciowe` in coverage.ts. This column stays the one shape that
+  -- needs only a number.
   pool int,
   created_at timestamptz not null default now()
 );
 
 create index if not exists field_cards_game_idx on magiczny_miecz.field_cards(game_id, field_id);
+
+-- A status can sit on a seat or on a Karta lying on an Obszar (16.8) — the
+-- Krąg Płomieni's burning Wróg, the Władca Gromu's paralysed creatures, a
+-- Wampir's growing Życie. One table with two nullable holder columns rather
+-- than a second table, because the row is the same shape either way and only
+-- the filter differs; the check constraint is what stops a row claiming both
+-- holders or neither.
+create table if not exists magiczny_miecz.seat_effects (
+  id uuid primary key default gen_random_uuid(),
+  game_id uuid not null references magiczny_miecz.games(id) on delete cascade,
+  seat_id uuid null references magiczny_miecz.seats(id) on delete cascade,
+  field_card_id uuid null references magiczny_miecz.field_cards(id) on delete cascade,
+  -- The card that put it there, for the journal and the hover.
+  source text not null,
+  -- What a player is shown, in the language the cards use.
+  label text not null,
+  modifier jsonb not null,
+  ends jsonb not null,
+  created_at timestamptz not null default now(),
+  constraint seat_effects_one_holder check ((seat_id is null) <> (field_card_id is null))
+);
+
+create index if not exists seat_effects_seat_idx on magiczny_miecz.seat_effects(seat_id);
+create index if not exists seat_effects_field_card_idx on magiczny_miecz.seat_effects(field_card_id);
+create index if not exists seat_effects_game_idx on magiczny_miecz.seat_effects(game_id);
 
 -- Loose Sztuki Złota lying on an Obszar (12.1, 20.2, and 4.4 by the reading in
 -- docs/TASKS.md).

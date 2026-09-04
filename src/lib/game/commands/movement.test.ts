@@ -226,6 +226,7 @@ describe("rzut na ruch (10.2)", () => {
         {
           id: "eff-1",
           seat_id: "seat-a",
+          field_card_id: null,
           source: "krag-plomieni",
           label: "Krąg Płomieni",
           modifier: { kind: "frozen", oprocz: ["wladca-zaklec"] },
@@ -264,6 +265,7 @@ describe("rzut na ruch (10.2)", () => {
       {
         id: "e1",
         seat_id: "seat-a",
+        field_card_id: null,
         source: "mgla",
         label: "Mgła",
         modifier: { kind: "move-max", fields: 1 },

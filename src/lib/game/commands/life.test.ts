@@ -49,6 +49,7 @@ describe("spending Życie", () => {
         {
           id: "eff-1",
           seat_id: "seat-a",
+          field_card_id: null,
           source: "klatwa",
           label: "-1 Miecza",
           modifier: { kind: "points", miecz: -1 },
@@ -72,6 +73,7 @@ describe("spending Życie", () => {
         {
           id: "eff-1",
           seat_id: "seat-a",
+          field_card_id: null,
           source: "OCALONY",
           label: "Ocalony",
           modifier: { kind: "ocalenie" },
@@ -94,6 +96,7 @@ describe("spending Życie", () => {
         {
           id: "eff-1",
           seat_id: "seat-a",
+          field_card_id: null,
           source: "OCALONY",
           label: "Ocalony",
           modifier: { kind: "ocalenie" },

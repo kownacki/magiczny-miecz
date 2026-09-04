@@ -133,6 +133,7 @@ describe("what a character is under", () => {
         {
           id: "e1",
           seat_id: "seat-a",
+          field_card_id: null,
           source: "Eliksir",
           label: "+2 Miecza",
           modifier: { kind: "points", miecz: 2 },

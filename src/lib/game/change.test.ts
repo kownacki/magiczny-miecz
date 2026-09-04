@@ -271,6 +271,7 @@ describe("whether a changeset asks for anything", () => {
           insert: [
             {
               seat_id: "seat-a",
+              field_card_id: null,
               source: "kamien",
               label: "Zamieniony w Kamień",
               modifier: { kind: "frozen" },

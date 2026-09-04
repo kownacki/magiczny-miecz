@@ -514,3 +514,43 @@ describe("committing nothing", () => {
     expect(game().revision).toBe(7);
   });
 });
+
+/**
+ * `seat_effects.seat_id` went nullable so a row can be held by a Karta lying
+ * on an Obszar instead of by a seat — see the migration and `EffectRow`'s own
+ * comment. Nothing in the app writes one of these yet; this is the fake's
+ * apply_change path proving the shape lands, ahead of the card that will.
+ */
+describe("a status held by a Karta rather than a seat", () => {
+  it("writes seat_id null and field_card_id set, through the same door as any other effect", async () => {
+    tables.field_cards.push({
+      id: "fc-1",
+      game_id: "g1",
+      field_id: "krag-ognia",
+      card_id: "cyklop",
+    });
+    await change("g1", () => ({
+      writes: {
+        effects: {
+          insert: [
+            {
+              seat_id: null,
+              field_card_id: "fc-1",
+              source: "krag-plomieni",
+              label: "Krąg Płomieni",
+              modifier: { kind: "frozen" },
+              ends: { kind: "dispelled" },
+            },
+          ],
+        },
+      },
+      result: undefined,
+    }), undefined);
+    expect(tables.seat_effects).toHaveLength(1);
+    expect(tables.seat_effects[0]).toMatchObject({
+      seat_id: null,
+      field_card_id: "fc-1",
+      source: "krag-plomieni",
+    });
+  });
+});

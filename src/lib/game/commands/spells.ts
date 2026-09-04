@@ -189,6 +189,11 @@ function standingSpell(
   decided: Decisions | undefined;
 } | null {
   for (const row of snapshot.effects) {
+    // A Zaklęcie is spoken by a player, never by a Karta lying on an Obszar —
+    // `seat_id` is narrowed rather than asserted, because the column is now
+    // shared with card-held statuses and this loop only ever means the other
+    // kind.
+    if (row.seat_id === null) continue;
     const modifier = row.modifier as { kind: string } & Record<string, unknown>;
     if (modifier.kind !== "spoken") continue;
     if ((modifier.until as number) <= now) continue;
@@ -713,6 +718,7 @@ export async function castSpell(
         insert: [
           {
             seat_id: caster.id,
+            field_card_id: null,
             source: spell?.name ?? held.card_id,
             label: `${spell?.name ?? held.card_id} — w powietrzu`,
             modifier: {

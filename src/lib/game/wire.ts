@@ -179,6 +179,14 @@ export interface EnvelopeFieldCard {
   granted?: boolean;
   /** What is left beside a Miejsce that lays points out (16.7). */
   pool?: number;
+  /**
+   * What this Karta is under — the Krąg Płomieni's burning Wróg, the Władca
+   * Gromu's paralysed creatures — the same `EnvelopeEffect` shape a seat gets,
+   * because a status reads the same whichever holder it is on. Public: 16.8
+   * makes what lies on an Obszar visible to everybody, same as the card
+   * itself.
+   */
+  effects: EnvelopeEffect[];
 }
 
 /** Loose Sztuki Złota lying on an Obszar (12.1). */

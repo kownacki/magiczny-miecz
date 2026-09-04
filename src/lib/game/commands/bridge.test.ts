@@ -141,6 +141,7 @@ describe("przeprawa między Kręgami (11.4, 11.8)", () => {
           {
             id: "eff-1",
             seat_id: "seat-a",
+            field_card_id: null,
             source: "PAN TRZĘSAWISK",
             label: przez === "trzesawiska" ? "Pan Trzęsawisk" : "Władca Lodu",
             modifier: { kind: "przeprawa", przez },

@@ -325,6 +325,7 @@ describe("a Zaklęcie waiting to be answered (9.6)", () => {
         {
           id: "eff-1",
           seat_id: "seat-a",
+          field_card_id: null,
           source: "SZALEŃSTWO",
           label: "SZALEŃSTWO — w powietrzu",
           modifier: { kind: "spoken", spell: "szalenstwo", until, target: { seatIndex: 1 } },
@@ -481,5 +482,41 @@ describe("what a character is under, sent as rows", () => {
     expect(out.find((one) => one.id === "fc-1")).toMatchObject({ granted: true });
     // And an ordinary one says nothing, so nothing is marked that was dealt.
     expect(out.find((one) => one.id === "fc-2")?.granted).toBeUndefined();
+  });
+});
+
+/**
+ * `seat_effects.seat_id` went nullable so a status can sit on a Karta lying
+ * on an Obszar rather than on the character standing there — the Krąg
+ * Płomieni's burning Wróg is the first of five cards this closes the gap for.
+ * The two holders read through different doors (`storedStatuses` for a seat,
+ * `cardStatuses` for a card), and this is the wire's half of that split: the
+ * row must arrive on the Karta it names and nowhere else.
+ */
+describe("a status on a Karta, not only on a seat", () => {
+  it("puts a Karta's own status on the Karta, and not on the seat standing there", () => {
+    const state = aTable({
+      seats: [aSeat({ id: "seat-a", seat_index: 0, field_id: "karczma" as never })],
+      users: [aUser({ id: "usra", name: "Michał", seat_index: 0 })],
+      fieldCards: [{ id: "fc-1", field_id: "karczma", card_id: "cyklop", granted: false, pool: null }],
+      effects: [
+        {
+          id: "eff-1",
+          seat_id: null,
+          field_card_id: "fc-1",
+          source: "krag-plomieni",
+          label: "Krąg Płomieni",
+          modifier: { kind: "frozen" },
+          ends: { kind: "dispelled" },
+        },
+      ],
+    });
+    const envelope = envelopeFor(state, "usra", NOW);
+    expect(envelope.fieldCards.find((one) => one.id === "fc-1")?.effects).toMatchObject([
+      { source: "krag-plomieni", label: "Krąg Płomieni" },
+    ]);
+    // The character standing on the same field is not under it — the row is
+    // the Karta's, not the seat's, even though the two share a square.
+    expect(seatIn(envelope, "seat-a").effects).toEqual([]);
   });
 });

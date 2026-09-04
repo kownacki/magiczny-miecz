@@ -564,7 +564,7 @@ export function addEffect(
 ): Changeset {
   const { source, label, modifier, ends } = command.effect;
   return {
-    effects: { insert: [{ seat_id: command.seatId, source, label, modifier, ends }] },
+    effects: { insert: [{ seat_id: command.seatId, field_card_id: null, source, label, modifier, ends }] },
     journal: [
       {
         seatId: command.seatId,
@@ -575,6 +575,40 @@ export function addEffect(
         // the one field that says where the effect came from rather than from
         // the caller remembering to pass a flag. A Karta's effect is not an
         // override and says nothing.
+        manual: fromTestMode(source),
+        payload: { source, label, ends },
+      },
+    ],
+  };
+}
+
+/**
+ * `addEffect`'s sibling: puts something under a Karta lying on an Obszar
+ * rather than under a character — the Krąg Płomieni's burning Wróg, the
+ * Władca Gromu's paralysed creatures, a Wampir's growing Życie. Not wired into
+ * any card yet; this is the write door, the same shape as `addEffect` with the
+ * other holder column set.
+ */
+export function addCardEffect(
+  snapshot: Snapshot,
+  command: {
+    fieldCardId: string;
+    effect: { source: string; label: string; modifier: Status["modifier"]; ends: Status["ends"] };
+  },
+): Changeset {
+  const { source, label, modifier, ends } = command.effect;
+  return {
+    effects: {
+      insert: [{ seat_id: null, field_card_id: command.fieldCardId, source, label, modifier, ends }],
+    },
+    journal: [
+      {
+        // No seat to name — the news belongs to the Karta, not to whoever is
+        // standing on it, which is exactly the distinction the second holder
+        // column exists to keep.
+        seatId: null,
+        round: snapshot.game.round,
+        kind: "effect",
         manual: fromTestMode(source),
         payload: { source, label, ends },
       },

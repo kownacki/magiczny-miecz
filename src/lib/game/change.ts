@@ -28,10 +28,19 @@ import { nextScripted, noteRolls } from "./record";
 import { serially } from "./queue";
 import { Failure } from "./failure";
 
-/** Something true of a seat for a while, as the row that records it. */
+/**
+ * Something true of a seat, or of a Karta lying on an Obszar, for a while — as
+ * the row that records it.
+ *
+ * Exactly one of `seat_id`/`field_card_id` is ever set — `seat_effects_one_holder`
+ * enforces it at the database and nothing here re-derives that; a reader picks
+ * a holder and filters (`storedStatuses` for a seat, `cardStatuses` for a
+ * card) rather than asking the row which kind it is.
+ */
 export interface EffectRow {
   id: string;
-  seat_id: string;
+  seat_id: string | null;
+  field_card_id: string | null;
   source: string;
   label: string;
   modifier: Modifier;
@@ -156,8 +165,15 @@ export interface FieldGoldPatch {
   patch: Partial<Omit<FieldGoldRow, "id">>;
 }
 
+/**
+ * `seat_id` and `field_card_id` are both required rather than the second being
+ * optional, so a caller writes down which holder it means instead of leaving
+ * the column to default — `addEffect` passes `field_card_id: null` and its
+ * card-held sibling passes `seat_id: null`, the same way the row will read.
+ */
 export interface NewEffect {
-  seat_id: string;
+  seat_id: string | null;
+  field_card_id: string | null;
   source: string;
   label: string;
   modifier: Modifier;
@@ -166,7 +182,7 @@ export interface NewEffect {
 
 export interface EffectPatch {
   id: string;
-  patch: Partial<Omit<EffectRow, "id" | "seat_id">>;
+  patch: Partial<Omit<EffectRow, "id" | "seat_id" | "field_card_id">>;
 }
 
 /**
@@ -526,7 +542,7 @@ export function apply(snapshot: Snapshot, writes: Changeset): Snapshot {
 export async function effectRowsFor(gameId: string, on: DbHandle = handleNow()): Promise<EffectRow[]> {
   const { data, error } = await on
     .from("seat_effects")
-    .select("id,seat_id,source,label,modifier,ends")
+    .select("id,seat_id,field_card_id,source,label,modifier,ends")
     .eq("game_id", gameId)
     .order("created_at");
   if (error) throw new Failure(`effectsFor: ${error.message}`);

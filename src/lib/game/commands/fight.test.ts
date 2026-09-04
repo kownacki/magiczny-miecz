@@ -470,6 +470,7 @@ describe("rzucenie Zaklęcia (9.6, 9.7, 17.3)", () => {
         {
           id: "eff-1",
           seat_id: "seat-a",
+          field_card_id: null,
           source: "krag-plomieni",
           label: "Krąg Płomieni",
           modifier: { kind: "frozen", oprocz: ["wladca-zaklec"] },
@@ -561,6 +562,7 @@ describe("rzucenie Zaklęcia (9.6, 9.7, 17.3)", () => {
         {
           id: "eff-1",
           seat_id: "seat-a",
+          field_card_id: null,
           source: "wojna-zywiolow",
           label: "Wojna Żywiołów",
           modifier: { kind: "no-spells" },
@@ -681,6 +683,7 @@ describe("rzucenie Zaklęcia (9.6, 9.7, 17.3)", () => {
         {
           id: "eff-1",
           seat_id: "seat-a",
+          field_card_id: null,
           source: "ODRODZENIE",
           label: "ODRODZENIE — w powietrzu",
           modifier: { kind: "spoken", spell: "odrodzenie", until: NOW - 1 },
@@ -702,6 +705,7 @@ describe("rzucenie Zaklęcia (9.6, 9.7, 17.3)", () => {
         {
           id: "eff-1",
           seat_id: "seat-a",
+          field_card_id: null,
           source: "ODRODZENIE",
           label: "ODRODZENIE — w powietrzu",
           modifier: { kind: "spoken", spell: "odrodzenie", until: NOW + 5_000 },
@@ -729,6 +733,7 @@ describe("rzucenie Zaklęcia (9.6, 9.7, 17.3)", () => {
         {
           id: "eff-1",
           seat_id: "seat-a",
+          field_card_id: null,
           source: "ODRODZENIE",
           label: "ODRODZENIE — w powietrzu",
           modifier: { kind: "spoken", spell: "odrodzenie", until: NOW + 5_000, target: { seatIndex: 1 } },
@@ -762,6 +767,7 @@ describe("rzucenie Zaklęcia (9.6, 9.7, 17.3)", () => {
         {
           id: "eff-1",
           seat_id: "seat-a",
+          field_card_id: null,
           source: "ODRODZENIE",
           label: "ODRODZENIE — w powietrzu",
           modifier: { kind: "spoken", spell: "odrodzenie", until: NOW + 5_000, target: { seatIndex: 1 } },
@@ -789,6 +795,7 @@ describe("rzucenie Zaklęcia (9.6, 9.7, 17.3)", () => {
         {
           id: "eff-1",
           seat_id: "seat-a",
+          field_card_id: null,
           source: "ODRODZENIE",
           label: "ODRODZENIE — w powietrzu",
           modifier: { kind: "spoken", spell: "odrodzenie", until: NOW + 5_000 },

@@ -97,6 +97,7 @@ describe("a Postać Zamieniona w Kamień", () => {
         insert: [
           {
             seat_id: "seat-b",
+            field_card_id: null,
             source: "Krąg Płomieni",
             label: "Krąg Płomieni",
             modifier: { kind: "frozen", oprocz: ["wladca-zaklec"] },
@@ -266,6 +267,7 @@ describe("a Postać in the Krąg Płomieni", () => {
         {
           id: "eff-1",
           seat_id: "seat-b",
+          field_card_id: null,
           source: "krag-plomieni",
           label: "Krąg Płomieni",
           modifier: { kind: "frozen", oprocz: ["wladca-zaklec"] },

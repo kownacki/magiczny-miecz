@@ -745,3 +745,39 @@ export function allStatuses(
 ): Status[] {
   return [...fromColumns(seat, round), ...stored];
 }
+
+/**
+ * The rows one Karta lying on an Obszar (16.8) is under.
+ *
+ * `allStatuses`'s other half, and simpler than it: a seat has four statuses
+ * with no row at all — `fromColumns` projects a lost turn, the Kamień, a
+ * barred Most, a Natura changed this turn off the seat's own timed columns —
+ * and a Karta has no such columns to begin with. It sits on the board, not at
+ * the table, so there is no seat clock underneath it to fold in. This is
+ * therefore just the filter, holder for holder.
+ *
+ * Structurally typed rather than importing `EffectRow`: the engine stays pure
+ * of the game layer's row shapes, and this only ever needs the five fields a
+ * status actually carries.
+ */
+export function cardStatuses(
+  effects: readonly {
+    id: string;
+    field_card_id: string | null;
+    source: string;
+    label: string;
+    modifier: Modifier;
+    ends: Ends;
+  }[],
+  fieldCardId: string,
+): Status[] {
+  return effects
+    .filter((row) => row.field_card_id === fieldCardId)
+    .map((row) => ({
+      id: row.id,
+      source: row.source,
+      label: row.label,
+      modifier: row.modifier,
+      ends: row.ends,
+    }));
+}
