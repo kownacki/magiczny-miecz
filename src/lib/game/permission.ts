@@ -1,6 +1,7 @@
 /** Which seat may press which button, on whose turn. */
 
 import type { GameRow, UserRow } from "./store";
+import type { TurnAction } from "./requests";
 
 /**
  * The gate on the turn route, written down.
@@ -39,7 +40,7 @@ export function mayAct(
   game: Pick<GameRow, "active_seat" | "mode">,
   /** The person asking, and the seat they are driving — null while watching. */
   who: Pick<UserRow, "is_host"> & { seat_index: number | null },
-  action: unknown,
+  action: TurnAction | undefined,
 ): Permission {
   const isActiveSeat = who.seat_index !== null && who.seat_index === game.active_seat;
   const tableScreen = game.mode === "companion" && who.is_host;
@@ -68,4 +69,18 @@ export function mayAct(
     allowed: isActiveSeat || tableScreen || isSpellWindow || isFlight || isStuck,
     tableScreen,
   };
+}
+
+/**
+ * The holdings route's gate: anybody seated, on anybody's pile.
+ *
+ * Deliberately not `mayAct`. At a table people hand each other cards and
+ * correct each other's mistakes, and a rule that only the owner — or only the
+ * active seat — may touch a pile is unusable in the moment somebody else
+ * notices. Whether the *act* is allowed right now is each command's to refuse
+ * (`refuseUnlessSettledHere` and its neighbours), against the table as it
+ * stands. Named so the route says which gate it stands behind.
+ */
+export function seated(): Permission {
+  return { allowed: true, tableScreen: false };
 }

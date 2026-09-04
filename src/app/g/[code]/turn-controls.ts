@@ -10,14 +10,16 @@
  * stopped one step early.
  */
 
+import type { Requests } from "@/lib/game/requests";
+
 /** One command for the turn in progress — a move, a crossing, a roll, a fight. */
-export type OnAction = (body: Record<string, unknown>) => void;
+export type OnAction = (body: Partial<Requests["turn"]>) => void;
 
 /** Applies a card's suggested bookkeeping to the active player's own seat. */
 export type OnSuggestion = (stat: string, delta: number, reason: string) => void;
 
 /** Buying, selling and paying a healer — see `fieldScript.ts`. */
-export type OnService = (body: Record<string, unknown>) => void;
+export type OnService = (body: Partial<Requests["holdings"]>) => void;
 
 /**
  * Whether the app owns the deck, the dice and the arithmetic.

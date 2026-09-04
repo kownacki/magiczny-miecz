@@ -3,6 +3,7 @@
 /** A field, opened: what it says, what is lying on it, and what the character standing here may do about it. */
 
 import { Fragment, useState } from "react";
+import type { OnAction, OnService } from "./turn-controls";
 
 import { fieldWithText } from "@/lib/view/fieldText";
 import { dealtOn, marksFor } from "@/lib/view/fieldMarks";
@@ -243,9 +244,9 @@ export function FieldModal({
   phase?: string;
   simulated?: boolean;
   typedRolls?: boolean;
-  onAction?: (body: Record<string, unknown>) => void;
+  onAction?: OnAction;
   onSuggestion?: (stat: string, delta: number, reason: string) => void;
-  onService?: (body: Record<string, unknown>) => void;
+  onService?: OnService;
   purse?: { gold: number; life: number };
   stock?: Record<string, number>;
   sellable?: { id: string; cardId: string }[];

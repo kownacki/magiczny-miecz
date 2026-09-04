@@ -131,6 +131,15 @@ anything.
   kicked themselves. Field names live in `Requests`; the client sends through
   `post` and the route reads through `bodyOf`. It is a shared vocabulary, not
   validation — every route still checks what it got.
+
+  The two routes whose body names an action — `turn` and `holdings` — go one
+  step further: the action names are lists in `requests.ts`, and each route is
+  a table in `src/lib/game/actions/` keyed on its list, one entry per action
+  with how it reads the body and what it runs. A name on the list with no
+  entry, an entry the list does not name, or a button posting an action nobody
+  runs is a compile error. Adding an action is one name and one entry; the
+  route itself is one line, `actions(route, table, gate)`, and the gate is the
+  Permission the whole route stands behind.
 - **A rule number is a promise you can keep, so only write one you checked.**
   `(5.3)` is not decoration: `WithRules` turns every one of them into a link
   into the Instrukcja, and a reader who follows one and lands on a rule about

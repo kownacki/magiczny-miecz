@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { mayAct } from "./permission";
 import { aTable, aUser } from "./fixture";
+import type { TurnAction } from "./requests";
 
 /**
  * "It is not your turn" is one sentence and five rules.
@@ -18,7 +19,7 @@ const waiting = aUser({ id: "usrb", seat_index: 1, is_host: false });
 
 describe("the seat whose turn it is", () => {
   it("may do anything", () => {
-    for (const action of ["roll", "move", "draw", "fight", "end"]) {
+    for (const action of ["roll", "move", "draw", "fight", "end"] as const) {
       expect(mayAct(playing(), active, action).allowed).toBe(true);
     }
   });
@@ -33,7 +34,7 @@ describe("the seat whose turn it is", () => {
 
 describe("a seat waiting its turn", () => {
   it("is refused the ordinary actions", () => {
-    for (const action of ["roll", "move", "draw", "fight", "end", "fight-done"]) {
+    for (const action of ["roll", "move", "draw", "fight", "end", "fight-done"] as const) {
       expect(mayAct(playing(), waiting, action).allowed).toBe(false);
     }
   });
@@ -69,7 +70,7 @@ describe("a table with nobody playing", () => {
   });
 
   it("does not let that become a licence to play out of turn", () => {
-    for (const action of ["roll", "move", "draw", "fight"]) {
+    for (const action of ["roll", "move", "draw", "fight"] as const) {
       expect(mayAct(playing({ active_seat: null }), waiting, action).allowed).toBe(false);
     }
   });
@@ -142,12 +143,15 @@ describe("an action nobody recognises", () => {
   it("is refused to a waiting seat like any other", () => {
     // The unknown-action 400 is the route's, and it is behind this gate: a
     // seat that may not act must not learn which actions exist.
-    expect(mayAct(playing(), waiting, "zjedz-smoka").allowed).toBe(false);
+    // Off the wire, so not a `TurnAction` — the type says what the client
+    // can send, and this is what anything else looks like on arrival.
+    const garbage = "zjedz-smoka" as never as TurnAction;
+    expect(mayAct(playing(), waiting, garbage).allowed).toBe(false);
     expect(mayAct(playing(), waiting, undefined).allowed).toBe(false);
-    expect(mayAct(playing(), waiting, null).allowed).toBe(false);
+    expect(mayAct(playing(), waiting, null as never).allowed).toBe(false);
   });
 
   it("reaches the active seat, which is where it gets its 400", () => {
-    expect(mayAct(playing(), active, "zjedz-smoka").allowed).toBe(true);
+    expect(mayAct(playing(), active, "zjedz-smoka" as never as TurnAction).allowed).toBe(true);
   });
 });

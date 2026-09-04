@@ -31,6 +31,70 @@
  * this app quietly agreed to.
  */
 
+/**
+ * Every action the turn route runs — the keys of `actions/turn.ts`.
+ *
+ * A list rather than a union written out, so the table is a `Record` over it:
+ * a name here with no entry there is a compile error, and so is an entry the
+ * list does not name. The client's `post` is typed against it too.
+ */
+export const TURN_ACTIONS = [
+  "roll",
+  "move",
+  "draw",
+  "fight",
+  "fight-total",
+  "fight-roll",
+  "attack",
+  "claim",
+  "free",
+  "ask",
+  "pay",
+  "friend-heal",
+  "friend-part",
+  "raid",
+  "cross",
+  "bridge",
+  "guardian",
+  "guardian-strength",
+  "ferry",
+  "escape",
+  "most-pole",
+  "beast",
+  "spell-claim",
+  "spell-release",
+  "fight-done",
+  "pole-tabela",
+  "karta-efekt",
+  "answer",
+  "end",
+] as const;
+export type TurnAction = (typeof TURN_ACTIONS)[number];
+
+/** Every action the holdings route runs — the keys of `actions/holdings.ts`. */
+export const HOLDINGS_ACTIONS = [
+  "take",
+  "take-field",
+  "take-gold",
+  "drop",
+  "use",
+  "order",
+  "buy",
+  "sell",
+  "heal-paid",
+  "equip",
+  "cast",
+  "settle-spell",
+  "spell",
+  "wand-spell",
+  "endless-stock",
+  "nature",
+  "heal",
+  "stone",
+  "trade",
+] as const;
+export type HoldingsAction = (typeof HOLDINGS_ACTIONS)[number];
+
 /** The token is added by `post` and read by every route, so it is not written per route. */
 export interface Requests {
   adjust: { seatId: string; stat: string; delta: number; fieldId: string; reason: string };
@@ -38,7 +102,7 @@ export interface Requests {
   character: { seatId: string; characterId: string; again: boolean; deal: boolean };
   debug: { action: string; seatId: string; cardId: string; fieldId: string; line: string };
   holdings: {
-    action: string;
+    action: HoldingsAction;
     seatId: string;
     cardId: string;
     fieldCardId: string;
@@ -141,7 +205,7 @@ export interface Requests {
   settings: { eqMode: string; endlessStock: boolean; trophyMode: string };
   start: Record<never, never>;
   turn: {
-    action: string;
+    action: TurnAction;
     /**
      * `fight-done`: what the winner of a duel takes (17.9) — "zycie", "zloto"
      * or "przedmiot", with `spoilsHoldingId` naming the one they point at.
@@ -183,7 +247,8 @@ export interface Requests {
     /** The friend's Karta being given up where she belongs, for gold. */
     holdingId: string;
     total: number;
-    value: number;
+    /** A die the table reports, or null where the app is to throw it. */
+    value: number | null;
     viaBridge: boolean;
   };
   /** `hard` bars the Karta for good; without it, it goes back in the pool. */

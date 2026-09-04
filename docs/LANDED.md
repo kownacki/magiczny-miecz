@@ -1024,3 +1024,39 @@ Not the rulebook's, which says nothing about a player leaving. It is the
 poczekalnia's other half: `leaveTable` puts the *person* out and leaves the
 Postać standing, and this is the act that takes the Postać off the board. See
 docs/LOBBY.md.
+
+## The architecture pass of 2026-09-04
+
+Four explorers surveyed the command path, the console, the engine's text and
+card layers, and the wire seam, and eight deepening candidates came out of it.
+Three landed the same day, in order of leverage per unit of work:
+
+- **A take that resolves lands in one Commit.** `takeCard`, `buyGoods` and
+  `takeFromField` ran two `change()` calls — the take, then `applyEffect` — so
+  a Conflict between them left a Sztuka Złota gone and the coin unpaid.
+  `thenResolve` in `turnStore.ts` cascades the effect through `apply` inside
+  the same change; `oneCommit.test.ts` reads the revision back and finds it
+  moved by one.
+- **The second implementations went.** `derive.ts`'s `bonusesFrom`,
+  `totalsFor` and `excessSpells` had no production caller — the seat view uses
+  `bonusFromHoldings` — and their tests were already pinned against the path
+  that runs. Two orphaned console comments, a duplicated header and `Actor`
+  between the console files, and an unused `tury` export went with them.
+  `viewerSeatId` in `journalText.ts` stays: its comment says why it is there.
+- **A verb declared once.** The `turn` and `holdings` routes were switches of
+  `String()` coercion around one store call each, and adding an action touched
+  seven to nine files. Each is now a table in `src/lib/game/actions/`, a
+  `Record` over the action list in `requests.ts`, with the coercion and what
+  it runs side by side; the routes are one line each behind a named gate
+  (`mayAct` for the turn, `seated` for the holdings — the latter deliberately
+  not `mayAct`, because at a table people hand each other cards). The client's
+  `post` and `mayAct` are typed against the same lists, so a renamed action
+  fails the build at every site. The unknown-action 400 stays behind the gate,
+  as `permission.test.ts` records. Fifteen tests pin the coercions.
+
+Five are still open, in the order they were ranked: one wire type shared by
+`envelope.ts` and the browser; a console verb declared once so parsing,
+completion and help derive from it; the console's own commands (`settle`,
+`endgame`, the `answer` ladder, `me`/`look`) moving home to `commands/` and an
+Envelope; one Polish inflection vocabulary in `polish.ts`; and, last and
+largest, fewer vocabularies for what a card does.
