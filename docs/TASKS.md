@@ -143,6 +143,38 @@ would read as noise; on the other hand a table that starts with a Plecak
 nobody expected has nothing to point at. Left as it is because it is the peer's
 command and the asymmetry is cosmetic, not because it is right.
 
+### Card vocabularies — decided 2026-09-04
+
+Six ways of saying what a card does, surveyed in the architecture pass (see
+LANDED.md). Three are different things and stay apart: an **Effect** is a
+happening, a **FieldScript** is a menu of them, and what a holder is *under*
+is a **Status** (CONTEXT.md). The other three decisions, and the order:
+
+- [ ] **The prose reader goes.** `cardEffects.ts` (`suggestActions`,
+      `parseRollTable`'s prose path) is superseded by the typed scripts and
+      still renders a second die table in the Obszar window beside the typed
+      one. Render from `fieldScript` only; companion's read-only table keeps
+      working from the typed source. Small; first.
+- [ ] **One Status vocabulary, two sources.** Staged, one reader at a time,
+      so every step keeps the suite green:
+      1. `Ends` gains `{ kind: "held" }`; `heldStatuses(holdings, eqMode,
+         nature)` projects a held card's abilities into `Status` rows at read
+         time; `allStatuses` includes them. `Ability` stays as the data shape
+         cards are written in — this step only reads it into the one list.
+      2. Readers move one at a time, each with tests: points
+         (`bonusFromHoldings` → `bonusFrom` over all statuses, `tylkoWalka`
+         as a field on `points`), spell limits (`bez-zaklec` → `no-spells`,
+         `zaklecia-ponad-limit`), protection (`oslona`/`ocalenie`), crossings
+         (`przeprawa-kostki` → `przeprawa`), carrying (`udzwig`), the rest.
+      3. `Ability` kinds whose reader has moved become `Modifier` kinds; what
+         is left of `Ability` is the per-card data that has no standing-effect
+         reading (`skup`, `sprzedaj-w`, `wymagany`, `zakazane`).
+- [ ] **A Zaklęcie's script is its truth.** Every one of the 27 gets a
+      `stosuje` — an Effect for a one-off, a Status with an `Ends` for a
+      lasting one — and `describeEffect` renders the sentence, as for every
+      other card. `timing` and `target` stay. What cannot be expressed stays
+      in MANUAL. In batches of about nine; the four partial ones last.
+
 ### Music
 
 Might and Magic VI's redbook tracks, exported and wired to nothing yet — see

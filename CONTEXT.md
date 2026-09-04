@@ -42,8 +42,19 @@ _Avoid_: race, collision, stale write
 
 **Seat view**:
 Everything a rule asks about one character, worked out once from a **Snapshot** —
-totals, limits, abilities, what it is under. Never stored; only own points are.
+totals, limits, what it is under. Never stored; only own points are.
 _Avoid_: player, profile, stats
+
+**Status**:
+Something true of a holder for a while — a seat, or a Karta lying on an
+Obszar — as a Modifier, where it came from, and when it ends. Two sources,
+one shape: an applied one is stored (`seat_effects`) and ends by its `Ends`;
+a held card's is produced at read time and ends when the card is no longer
+in effect. Every rule that asks "what is this holder under" reads one list of
+them. Decided 2026-09-04; the held-card half is being folded in one reader
+at a time — see docs/TASKS.md.
+_Avoid_: ability (the held-card half's own vocabulary, being retired), buff,
+effect (an **Effect** is a happening, walked once; a Status stands)
 
 **Apply**:
 Folding a **Changeset** into a **Snapshot** in memory, so a later step sees an
@@ -127,6 +138,15 @@ moment, which is the whole reason they are ports.
 > not change on a retry."
 
 ## Flagged ambiguities
+
+- "ability" and "modifier" were two vocabularies for one question — what is
+  this holder under — differing only in where the fact came from (a card in
+  hand, a status applied) and how long it lasts (while held, until an `Ends`).
+  A held Miecz was `Ability { punkty }`, an Eliksir `Modifier { points }`, and
+  two readers summed them. Resolved: both are a **Status**; `Ability` kinds
+  fold into `Modifier` kinds and a held card produces its Status at read time.
+  A Zaklęcie's script is its truth, with the prose rendered from it like every
+  other card's; the regex reader of card prose (`cardEffects.ts`) goes.
 
 - "state" meant the whole table, the `turn_state` column, and React's `useState`
   in three neighbouring files — resolved: the table is a **Snapshot**,
