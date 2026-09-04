@@ -1108,8 +1108,7 @@ taken on 2026-09-04, and the second landed the same day.
   `seat_effects.seat_id` nullable, `field_card_id` beside it, a check that
   exactly one is set. `cardStatuses` is `allStatuses`'s other half; the
   Envelope carries a field card's `effects`; `addCardEffect` is the write
-  door. The migration is written and waits to be applied; the five cards
-  wait on the next brief.
+  door. The migration is applied; the five cards wait on the next brief.
 - **What is inside a container: nothing recorded, the loss asks.** The
   Magiczna Sakwa and the Tragarz carry `giniePrzyUtracie` on their `udzwig`;
   losing one opens the overflow frame with `because: container-lost`, the

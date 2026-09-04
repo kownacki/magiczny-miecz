@@ -23,7 +23,9 @@ their scans are deliberately untouched.
       `field_card_id` stands beside it under a check that exactly one is set.
       The model landed (`cardStatuses`, the Envelope's `effects` on a field
       card, `addCardEffect`); the migration is written in `db/migrations/`
-      and **not yet applied** to the shared database. Wiring the five cards
+      and applied to the shared database on 2026-09-04, read back from the
+      catalog: `seat_id` nullable, `field_card_id` with its cascade, the
+      `seat_effects_one_holder` check. Wiring the five cards
       to it is the next brief: Krąg Płomieni and Władca Gromu first, then
       the Wampir, the Ocalony and the Układ Planet.
 
