@@ -7,9 +7,8 @@ import {
   askLines,
   cardLines,
   catalogue,
-  championLine,
   characterName,
-  effectLines,
+  envelopeEffectLines,
   fieldCardNamed,
   fieldName,
   fieldNamed,
@@ -34,7 +33,6 @@ import { helpLines, statReply, type Command } from "@/lib/engine/console";
 import { cardName, sztuki } from "@/lib/engine/polish";
 import { shelfFor, trophyPointsOf } from "@/lib/engine/trophies";
 import { carriesSpell } from "@/lib/engine/abilities";
-import { foldStatuses } from "@/lib/engine/statusRows";
 import { ADJUSTABLE, type Adjustable } from "./commands/adjust";
 import { STONE_TURNS } from "./commands/stone";
 import {
@@ -115,7 +113,8 @@ import { copiesRanked } from "./commands/holdings";
 import { listed, type TurnCard } from "@/lib/engine/state";
 import { requireTop, top, topIf } from "@/lib/engine/stack";
 import { askOnTop } from "@/lib/engine/ask";
-import { eqModeOf, seatView, trophyModeOf, turnQueueOf } from "./commands/seat";
+import { eqModeOf, seatView, trophyModeOf } from "./commands/seat";
+import { envelopeFor } from "./envelope";
 import { SLOT_LABEL, STORAGE, inPlayAt } from "@/lib/engine/slots";
 import { DEALABLE, PLACEABLE } from "@/lib/engine/console";
 import { figuresText } from "@/lib/engine/figures";
@@ -1454,9 +1453,14 @@ export const VERBS: { [K in Command["kind"]]: VerbRun<K> } = {
   },
 
   look: async (ctx) => {
-    const { gameId, named } = ctx;
+    const { gameId, actor, named } = ctx;
     const snapshot = await activeStore().load(gameId);
-    const game = snapshot.game;
+    // The same read model every other device gets, rather than a second one
+    // kept in step with it by hand — see the module header. `now` only
+    // matters for `away`, which `look` never prints, so the moment it is
+    // called at is not part of what this line says.
+    const envelope = envelopeFor(snapshot, actor.userId, Date.now());
+    const game = envelope.game;
 
     /**
      * The poczekalnia is a different question, and used to get the turn's
@@ -1480,9 +1484,9 @@ export const VERBS: { [K in Command["kind"]]: VerbRun<K> } = {
     }
 
     if (game.status !== "playing") {
-      const seatOfUser = (who: { seat_index: number | null }) =>
-        snapshot.seats.find((one) => one.seat_index === who.seat_index);
-      const waiting = snapshot.users.map((who) => {
+      const seatOfUser = (who: { seatIndex: number | null }) =>
+        envelope.seats.find((one) => one.seat_index === who.seatIndex);
+      const waiting = envelope.users.map((who) => {
         const seat = seatOfUser(who);
         // Somebody who stood up is watching, not undecided — `startGame`
         // never waits for them, and neither should this.
@@ -1490,12 +1494,12 @@ export const VERBS: { [K in Command["kind"]]: VerbRun<K> } = {
         const has = seat.character_id ? characterName(seat.character_id) : "no Postać";
         return `  ${who.name ?? "?"} — ${has}${who.ready ? " · ready" : ""}`;
       });
-      const owed = snapshot.users.filter((who) => {
+      const owed = envelope.users.filter((who) => {
         const seat = seatOfUser(who);
         return seat !== undefined && (!seat.character_id || !who.ready);
       });
       return [
-        `Lobby — ${snapshot.users.length} at the table.`,
+        `Lobby — ${envelope.users.length} at the table.`,
         ...waiting,
         owed.length === 0
           ? "Everyone ready — `start` begins the game."
@@ -1514,7 +1518,7 @@ export const VERBS: { [K in Command["kind"]]: VerbRun<K> } = {
      * "Brak aktywnego gracza".
      */
     if (game.active_seat === null) {
-      const out = snapshot.seats.filter((one) => one.character_id);
+      const out = envelope.seats.filter((one) => one.character_id);
       return [
         `Round ${game.round} — nobody is playing.`,
         ...out.map((one) => `  ${named(one)} — ${one.eliminated ? "dead" : "out of play"}`),
@@ -1523,12 +1527,15 @@ export const VERBS: { [K in Command["kind"]]: VerbRun<K> } = {
     }
 
     // Two questions: what is on screen at all, and the roll and options
-    // that only a `move` frame has.
+    // that only a `move` frame has. `game.turn_state` is the Envelope's own —
+    // only an `ask` frame is touched by `asSeenBy`, and neither `look` nor
+    // `waitingOn` reads inside one, so the stack reads exactly as it does off
+    // the raw Snapshot.
     const state = top(game.turn_state);
     const moving = topIf(game.turn_state, "move");
-    const active = snapshot.seats.find((one) => one.seat_index === game.active_seat);
-    const here = snapshot.fieldCards.filter((one) => one.field_id === active?.field_id);
-    const standing = snapshot.seats.filter(
+    const active = envelope.seats.find((one) => one.seat_index === game.active_seat);
+    const here = envelope.fieldCards.filter((one) => one.fieldId === active?.field_id);
+    const standing = envelope.seats.filter(
       (one) => one.field_id === active?.field_id && !one.eliminated,
     );
     const phase = state.phase;
@@ -1549,21 +1556,25 @@ export const VERBS: { [K in Command["kind"]]: VerbRun<K> } = {
         ? [`Reaches: ${moving.options.map((one) => one.fieldName).join(", ")}`]
         : []),
       ...(here.length
-        ? [`On the Obszar: ${here.map((one) => cardName(one.card_id)).join(", ")}`]
+        ? [`On the Obszar: ${here.map((one) => cardName(one.cardId)).join(", ")}`]
         : []),
       // Loose gold on its own line rather than at the end of that one: it is
       // not a Karta, and „TARGOWISKO, GROTA, 5 Sztuk Złota" reads as a third
       // card until you get to the end of it. 12.1 makes it as much everybody's
       // business as 16.8 makes the Karty.
       ...(((): string[] => {
-        const coins = snapshot.fieldGold.find((one) => one.field_id === active?.field_id);
+        const coins = envelope.fieldGold.find((one) => one.fieldId === active?.field_id);
         return coins && coins.gold > 0 ? [`Gold here: ${sztuki(coins.gold)}`] : [];
       })()),
       // The one thing the whole table is waiting on, spelled out with its
       // ways out — before `waitingOn`, because it is what everything else in
-      // this list has stopped for.
+      // this list has stopped for. Both still read the raw Snapshot: the ways
+      // out (`drop`/`use`/`equip`, one per card actually held) and the
+      // Obszar's kolejka are worked out fresh against what is drawn and held,
+      // and the Envelope was never asked to carry that level of detail — only
+      // whether somebody is over their limit and what a field is stuck asking.
       ...overflowLines(snapshot),
-      ...waitingOn(top(game.turn_state)),
+      ...waitingOn(state),
       ...(standing.length > 1
         ? [`Also here: ${standing.map((one) => named(one)).join(", ")}`]
         : []),
@@ -1574,17 +1585,19 @@ export const VERBS: { [K in Command["kind"]]: VerbRun<K> } = {
     const { gameId, actor, seatOf, named } = ctx;
     const seat = seatOf(command.who);
     const snapshot = await activeStore().load(gameId);
-    const mine = snapshot.holdings.filter((one) => one.seat_id === seat.id);
-    /**
-     * 9.3 keeps a hand of Zaklęcia concealed, and this prints your own —
-     * which is exactly what a player may look at. Somebody else's is counted
-     * and not named.
-     */
-    const own = seat.id === actor.seatId;
+    // The same read model every device is sent, worked out once and reused
+    // rather than reworked here from the rows — see the module header. A
+    // console asking about a seat it is not driving gets exactly what that
+    // seat's own screen would: 9.3's concealment is the Envelope's decision,
+    // not a second `own` test kept in step with it by hand.
+    const envelope = envelopeFor(snapshot, actor.userId, Date.now());
+    const envSeat = envelope.seats.find((one) => one.id === seat.id);
+    if (!envSeat) throw new Error("Nieznane miejsce.");
+    const own = envelope.mySeatIndex === envSeat.seat_index;
     /** Polish collation: ŁÓDŹ sorts after LIST, where somebody would look for it. */
-    const byName = (a: { card_id: string }, b: { card_id: string }) =>
-      cardName(a.card_id).localeCompare(cardName(b.card_id), "pl");
-    const spells = mine.filter((one) => one.kind === "spell").sort(byName);
+    const byName = (a: { cardId: string }, b: { cardId: string }) =>
+      cardName(a.cardId).localeCompare(cardName(b.cardId), "pl");
+    const spells = envSeat.holdings.filter((one) => one.kind === "spell").sort(byName);
     /**
      * Friends and trophies are not gear and do not belong under "Pack".
      *
@@ -1595,11 +1608,25 @@ export const VERBS: { [K in Command["kind"]]: VerbRun<K> } = {
      * to be traded for Miecz rather than carried, and was in there for the
      * same reason: everything that was not a Zaklęcie fell through to gear.
      */
-    const items = mine.filter((one) => one.kind === "item");
-    const friends = mine.filter((one) => one.kind === "friend").sort(byName);
-    const trophies = mine.filter((one) => one.kind === "trophy").sort(byName);
-    const escorted = mine.filter((one) => one.kind === "carried").sort(byName);
+    const items = envSeat.holdings.filter((one) => one.kind === "item");
+    const friends = envSeat.holdings.filter((one) => one.kind === "friend").sort(byName);
+    const trophies = envSeat.holdings.filter((one) => one.kind === "trophy").sort(byName);
+    /**
+     * Pack fullness and who a carried Zaklęcie rides with are not on the wire.
+     *
+     * `carried`/`carryLimit` are 5.4's own arithmetic over *every* card held,
+     * spells included where one lends an ability — and the Envelope strips a
+     * concealed hand's spells out of `holdings` before it ever reaches another
+     * seat's screen (9.3), so recomputing the pack off `envSeat.holdings` would
+     * silently drop that lending for a seat that is not your own. The browser
+     * never needs the true number for anybody but itself, and never asks for
+     * it either — this console does, because `me <somebody else>` is a thing
+     * only it can be told. `carried_by` — who a Przyjaciel is holding a spell
+     * for — is the same story: not a field the wire carries at all, because no
+     * device has ever needed to say whose hidden Zaklęcie is whose.
+     */
     const view = seatView(snapshot, seat.id);
+    const mirror = { miecz: envSeat.sword_total };
     /**
      * Sorted for reading, not kept in the order somebody arranged them.
      *
@@ -1633,13 +1660,13 @@ export const VERBS: { [K in Command["kind"]]: VerbRun<K> } = {
     // `shelfFor` is the one place this subtraction lives — the panel's and
     // the console's, since it moved into the engine where both may reach it.
     const leftHand = shelfFor(
-      seat.trophy_beaten,
-      trophies.map((one) => ({ holdingId: one.id, cardId: one.card_id })),
+      envSeat.trophy_beaten,
+      trophies.map((one) => ({ holdingId: one.id, cardId: one.cardId })),
     )
       .filter((one) => one.gone)
       .map((one) => one.cardId);
     return [
-      `${named(seat)}${seat.eliminated ? " — dead" : ""}`,
+      `${named(envSeat)}${envSeat.eliminated ? " — dead" : ""}`,
       /**
        * All three figures 1.5 quotes, in one line and in `figures.ts`'s
        * notation — the same one the browser draws.
@@ -1653,29 +1680,29 @@ export const VERBS: { [K in Command["kind"]]: VerbRun<K> } = {
        * the parametr in parentheses, where the notation leads with the
        * parametr and keeps the bazowe figure in them.
        */
-      `Sword ${figuresText(seat.sword_own, view.parametr.miecz, view.walka.miecz)}  ` +
-        `Magic ${figuresText(seat.magic_own, view.parametr.magia, view.walka.magia)}  ` +
-        `Life ${seat.life}  Gold ${seat.gold}`,
+      `Sword ${figuresText(envSeat.sword_own, envSeat.sword_total, envSeat.sword_in_fight)}  ` +
+        `Magic ${figuresText(envSeat.magic_own, envSeat.magic_total, envSeat.magic_in_fight)}  ` +
+        `Life ${envSeat.life}  Gold ${envSeat.gold}`,
       // Who is doing the fighting, when it is not you. The numbers above
       // already say what he brings; this says whose they are — and why the
-      // fight figure can be the smallest of the three.
-      ...(championLine(view) ? [`In a fight: ${championLine(view)}`] : []),
-      `Nature: ${seat.nature ?? "—"}   Obszar: ${fieldName(seat.field_id)}`,
+      // fight figure can be the smallest of the three. `fights_for_you` is
+      // the same fact `championLine` used to work out from `view.abilities`,
+      // arrived at once on the server instead of twice.
+      ...(envSeat.fights_for_you
+        ? [`In a fight: ${cardName(envSeat.fights_for_you)} fights for you`]
+        : []),
+      `Nature: ${envSeat.nature ?? "—"}   Obszar: ${fieldName(envSeat.field_id)}`,
       /**
        * What is true of this character for a while, and when it stops being.
        *
        * Above the pack on purpose: a Kamień or a Krąg Płomieni decides
        * whether the rest of this sheet can be acted on at all, and it was the
        * one thing about a character the console never printed — the browser
-       * had glyphs for it and a terminal had nothing.
+       * had glyphs for it and a terminal had nothing. `envSeat.effects` is
+       * `foldStatuses` already run, for this seat, from this viewer's side —
+       * the same fold this used to run again here.
        */
-      ...effectLines(
-        foldStatuses(view.statuses, {
-          queue: turnQueueOf(snapshot),
-          seatIndex: seat.seat_index,
-          mine: own,
-        }),
-      ),
+      ...envelopeEffectLines(envSeat.effects),
       // Worn and carried are different places — 5.1 and the slot variant both
       // turn on which — and listing a Hełm you are wearing under "Pack" said
       // equipping it had not worked.
@@ -1689,20 +1716,20 @@ export const VERBS: { [K in Command["kind"]]: VerbRun<K> } = {
        * find out was to try something and be told no.
        */
       ...(worn.length
-        ? [`Worn: ${worn.map((one) => `${cardName(one.card_id)} (${one.slot})`).join(", ")}`]
+        ? [`Worn: ${worn.map((one) => `${cardName(one.cardId)} (${one.slot})`).join(", ")}`]
         : []),
       ...(stowed.length
         ? [
             `Schowane: ${stowed
-              .map((one) => `${cardName(one.card_id)} (${SLOT_LABEL[one.slot as Slot]})`)
+              .map((one) => `${cardName(one.cardId)} (${SLOT_LABEL[one.slot as Slot]})`)
               .join(", ")} — nie liczy się do 5.4 i nikt tego nie zabierze`,
           ]
         : []),
-      `Pack ${view.carried}/${view.carryLimit} (${eqModeOf(snapshot.game)}): ` +
-        `${carried.length ? carried.map((one) => cardName(one.card_id)).join(", ") : "empty"}`,
+      `Pack ${view.carried}/${view.carryLimit} (${eqModeOf(envelope.game)}): ` +
+        `${carried.length ? carried.map((one) => cardName(one.cardId)).join(", ") : "empty"}`,
       // 6.2: friends lie face up, so everyone may read them — no `own` gate.
       ...(friends.length
-        ? [`Friends: ${friends.map((one) => cardName(one.card_id)).join(", ")}`]
+        ? [`Friends: ${friends.map((one) => cardName(one.cardId)).join(", ")}`]
         : []),
       /**
        * 1.4: held to be traded for Miecz, which is not the same as carried.
@@ -1724,10 +1751,10 @@ export const VERBS: { [K in Command["kind"]]: VerbRun<K> } = {
       ...(trophies.length
         ? [
             `Trophies: ${trophies
-              .map((one) => `${cardName(one.card_id)} ${trophyPointsOf(one.card_id, view.parametr)}`)
+              .map((one) => `${cardName(one.cardId)} ${trophyPointsOf(one.cardId, mirror)}`)
               .join(", ")}` +
-              trophyLedger(trophies.map((one) => one.card_id), view.parametr),
-            ...tradeMenu(trophies.map((one) => one.card_id), view.parametr),
+              trophyLedger(trophies.map((one) => one.cardId), mirror),
+            ...tradeMenu(trophies.map((one) => one.cardId), mirror),
           ]
         : []),
       /**
@@ -1747,18 +1774,27 @@ export const VERBS: { [K in Command["kind"]]: VerbRun<K> } = {
        *
        * Named only where the card says it may be: the Gnom's is "wolno ci ją
        * obejrzeć" and the Krzyżowiec's says no such thing, so his is listed
-       * as a Zaklęcie he has and not as a Zaklęcie you know.
+       * as a Zaklęcie he has and not as a Zaklęcie you know. Read off the
+       * Snapshot's own rows — see `carried_by`, above — because both `Holding`
+       * (`seatView`'s shape) and `EnvelopeCard` (the wire's) drop the column.
        */
-      ...(own && escorted.length
-        ? [
-            `Carried: ${escorted
-              .map((one) => {
-                const by = one.carried_by ?? "";
-                const may = carriesSpell([by])?.mozeszObejrzec ?? false;
-                return `${cardName(by)} — ${may ? cardName(one.card_id) : "1 Zaklęcie (face down)"}`;
-              })
-              .join(", ")}`,
-          ]
+      ...(own
+        ? (() => {
+            const escorted = snapshot.holdings.filter(
+              (one) => one.seat_id === seat.id && one.kind === "carried",
+            );
+            return escorted.length
+              ? [
+                  `Carried: ${escorted
+                    .map((one) => {
+                      const by = one.carried_by ?? "";
+                      const may = carriesSpell([by])?.mozeszObejrzec ?? false;
+                      return `${cardName(by)} — ${may ? cardName(one.card_id) : "1 Zaklęcie (face down)"}`;
+                    })
+                    .join(", ")}`,
+                ]
+              : [];
+          })()
         : []),
       own
         /**
@@ -1769,10 +1805,18 @@ export const VERBS: { [K in Command["kind"]]: VerbRun<K> } = {
          * Zaklęcie — so a hand that was legal a moment ago can be over
          * without anything having been drawn. Without the number here, the
          * refusal at the next roll is the first anybody hears of it.
+         *
+         * `∞` and not `Infinity` for no cap at all — the Envelope's own word
+         * for it (2.6 off, `bez-limitu-zaklec`), the way the browser's hand
+         * already prints it, so the two surfaces agree rather than one typing
+         * out what JSON does with a number it cannot carry.
          */
-        ? `Zaklęcia ${spells.length}/${view.spellCapacity}: ` +
-          `${spells.length ? spells.map((one) => cardName(one.card_id)).join(", ") : "none"}`
-        : `Zaklęcia ${spells.length}/${view.spellCapacity} (face down — 9.3)`,
+        ? `Zaklęcia ${spells.length}/${envSeat.spell_capacity ?? "∞"}: ` +
+          `${spells.length ? spells.map((one) => cardName(one.cardId)).join(", ") : "none"}`
+        : // The hand the Envelope would not send: 9.3 strips a concealed
+          // Zaklęcie out of `holdings` and counts it instead, so the number a
+          // watcher is owed is the count and not the length of what is left.
+          `Zaklęcia ${spells.length + envSeat.hidden_count}/${envSeat.spell_capacity ?? "∞"} (face down — 9.3)`,
     ].join("\n");
   },
 

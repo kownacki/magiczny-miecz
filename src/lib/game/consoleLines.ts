@@ -11,7 +11,6 @@ import { cardName } from "@/lib/engine/polish";
 import { trophyPointsOf } from "@/lib/engine/trophies";
 import { SPELL_BY_REF } from "./decks";
 import { TROPHY_RATE, offersFor } from "./commands/shop";
-import { fightsForYou, type Ability } from "@/lib/engine/abilities";
 import { TEST_SOURCE, fromTestMode, type Ends, type Modifier } from "@/lib/engine/status";
 import { type StatusRow } from "@/lib/engine/statusRows";
 import { nameOfSeat } from "./commands/lobby";
@@ -23,8 +22,8 @@ import { askOnTop } from "@/lib/engine/ask";
 import { overflowOnTop, overflowSaid } from "@/lib/engine/overflow";
 import { overflowOf, waysOut } from "./commands/overflow";
 import type { Snapshot } from "./change";
-import { cardLending } from "./commands/seat";
 import { fold } from "@/lib/engine/search";
+import type { EnvelopeEffect } from "./wire";
 
 
 /**
@@ -380,20 +379,6 @@ export async function holdingNamed(gameId: string, seatId: string, said: string)
 }
 
 /**
- * Who is doing the fighting, when it is not the character.
- *
- * Only the Rycerz does this, and without saying so the fight line reads as a
- * character who has mysteriously become 3 and 3 — worse for a player holding
- * one, because his figure is often *lower* than their own and looks like a bug
- * rather than the card working.
- */
-export function championLine(view: { abilities: readonly Ability[]; holdings: readonly { cardId: string }[] }): string {
-  if (!fightsForYou(view.abilities)) return "";
-  const who = cardLending(view, (held) => fightsForYou(held) !== null);
-  return who ? `${cardName(who)} fights for you` : "";
-}
-
-/**
  * What a second copy of an effect did, in the two words it takes to say it.
  *
  * Only ever printed where there *was* a second copy. A card that visibly did
@@ -428,6 +413,31 @@ export function effectRow(row: StatusRow): string {
 }
 
 /**
+ * The wire's own version of `effectRow`, for `me`.
+ *
+ * `envelopeFor` folds a seat's `StatusRow[]` into `EnvelopeEffect[]` once —
+ * `foldStatuses` run on the server, from the asking seat's own side — so this
+ * turns that shape into a line rather than running the fold a second time.
+ * `roster` prints `who`'s effects straight off `StatusRow[]` still, because it
+ * reads every seat off one Snapshot at once and `mine` there is deliberately
+ * false for all of them (see `consoleStore.ts`); `effectRow` stays theirs.
+ *
+ * The one place the two shapes disagree: `StatusRow.from` is every status a
+ * stacked row folds together, and `EnvelopeEffect.source` is only the first —
+ * the wire's own economy (see `envelope.ts`), not a shortcut taken here. A row
+ * stacked from more than one source reads as "tryb testowy" or not by its
+ * first entry alone, on both the browser's panel and this line.
+ */
+function envelopeEffectRow(effect: EnvelopeEffect): string {
+  return (
+    `${effect.glyph} ${effect.label}` +
+    (effect.count > 1 ? ` ×${effect.count} (${STACK_SAID[effect.stacking]})` : "") +
+    ` — ${effect.when}` +
+    (effect.source !== null && fromTestMode(effect.source) ? ` — ${TEST_SOURCE}` : "")
+  );
+}
+
+/**
  * A seat's effects as a block, with the one caveat that applies to all of them.
  *
  * The caveat is printed once and only where it is earned. A round taken off a
@@ -436,12 +446,12 @@ export function effectRow(row: StatusRow): string {
  * move every date after it. Saying so on every line would be noise, and noise
  * is what stops the real warnings being read.
  */
-export function effectLines(rows: readonly StatusRow[]): string[] {
-  if (rows.length === 0) return [];
+export function envelopeEffectLines(effects: readonly EnvelopeEffect[]): string[] {
+  if (effects.length === 0) return [];
   return [
     "Effects:",
-    ...rows.map((row) => `  ${effectRow(row)}`),
-    ...(rows.some((row) => row.lapse?.certainty === "prognoza")
+    ...effects.map((effect) => `  ${envelopeEffectRow(effect)}`),
+    ...(effects.some((effect) => effect.certainty === "prognoza")
       ? ["  (rundy liczone w turach są prognozą — jedna Karta może je przesunąć)"]
       : []),
   ];
