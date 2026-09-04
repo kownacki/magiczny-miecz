@@ -5,6 +5,7 @@ import { apply, merge, mergeAll, type Changeset, type Outcome, type Snapshot } f
 import { savedFromLoss } from "@/lib/engine/status";
 import { asReturnable, dropGold, putOnPile, trophiesToPile } from "./piles";
 import { passTurn } from "./turn";
+import { storedStatuses } from "./seat";
 import { isStone } from "./stone";
 
 /**
@@ -83,18 +84,24 @@ export function spendLife(
    * The whole loss and not one point of it: nothing in the box takes two at
    * once except the Bestia, and „ocalenie przed stratą" reads as the loss not
    * happening rather than as it happening by less.
+   *
+   * `storedStatuses` and deliberately not the whole `standing` list, which is
+   * the one place in the fold where reading less is the right answer: an
+   * Ocalony is *spent* here, by deleting its row, and only a row can be
+   * deleted. A held card's status is worked out fresh at every read and has no
+   * row to take away, so finding one here would produce a delete of an id that
+   * was never in the table — the effect saving a point it cannot pay for, over
+   * and over. Nothing held produces `ocalenie` today; this is what keeps that
+   * from becoming a bug the day something does.
+   *
+   * The three friends who die in your place are not this and do not belong
+   * here. „Jeżeli zostaniesz pokonany" (Rumak), „ilekroć poniesiesz porażkę"
+   * (Giermek) and the Poszukiwacz's own raid are all scoped to a defeat and
+   * cost a Karta; „jeżeli taka strata ma nastąpić" is any loss at all and
+   * costs the status. `diesForYou` reads them, in `fight.ts`, where a defeat
+   * is what just happened.
    */
-  const saved = savedFromLoss(
-    snapshot.effects
-      .filter((row) => row.seat_id === seatId)
-      .map((row) => ({
-        id: row.id,
-        source: row.source,
-        label: row.label,
-        modifier: row.modifier,
-        ends: row.ends,
-      })),
-  );
+  const saved = savedFromLoss(storedStatuses(snapshot, seatId));
   if (saved) {
     return {
       writes: {
