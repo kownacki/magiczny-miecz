@@ -22,8 +22,6 @@ import { FieldService, type OfferContext } from "./field-services";
 import { OfferList, offersHere } from "./field-offers";
 import type { Confirmation } from "./confirm";
 import { isFerry } from "@/lib/engine/board";
-import { RollTable } from "./roll-table";
-import { parseRollTable } from "@/lib/engine/rollTable";
 import type { CardId } from "@/data/ids";
 import type { EnvelopeEffect } from "@/lib/game/wire";
 import events from "@/data/events.json";
@@ -474,14 +472,18 @@ export function FieldModal({
    * Both were rendered on the gate alone — standing here, on your turn, in the
    * field phase — and both carry a `border-t`, so an Obszar that offers nothing
    * drew a rule across the window with nothing under it. Płaskowyż Mgieł draws
-   * three: it has no ferry, no die table, no shop, no crossing and no ordeal,
-   * and it showed three dividers stacked at the bottom, one per empty box.
+   * three: it has no ferry, no shop, no crossing and no ordeal, and it showed
+   * three dividers stacked at the bottom, one per empty box.
    *
-   * A rule is a separator, so it needs two things to separate.
+   * A rule is a separator, so it needs two things to separate. A die table used
+   * to be the other thing this checked for — `parseRollTable` against
+   * `field.text` — until the typed `rzut` inside `fieldScript` took over
+   * rendering it: `OfferList`/`FieldService` shows it for an Obszar with a
+   * scripted offer, and `compulsoryOffer` opens it by itself for one that has
+   * none. Prose that merely reads like a table is no longer a reason to draw
+   * this section.
    */
-  const hasOffers =
-    isFerry(fieldId) ||
-    (field.text !== undefined && parseRollTable(field.text) !== null);
+  const hasOffers = isFerry(fieldId);
   const hasCrossing =
     crossingFrom(fieldId) !== undefined ||
     BRIDGE_ORDEAL.has(fieldId) ||
@@ -1006,17 +1008,6 @@ export function FieldModal({
               {/* 11.2's toll, which is a thing this Obszar asks of you and so
                   belongs with the rest of what it asks. */}
               {isFerry(fieldId) && <Ferry busy={busy} onAction={onAction} />}
-
-              {/* The die table, where the field has one. */}
-              {field.text && (
-                <RollTable
-                  text={field.text}
-                  busy={busy}
-                  typedRolls={typedRolls}
-                  onSuggestion={onSuggestion}
-                />
-              )}
-
             </section>
           )}
 

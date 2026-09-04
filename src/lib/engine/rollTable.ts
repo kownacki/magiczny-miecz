@@ -1,4 +1,14 @@
-/** Reads a printed "rzuć kostką" table out of Polish prose, or refuses to when it cannot do so safely. */
+/**
+ * Reads a printed "rzuć kostką" table out of Polish prose, or refuses to when
+ * it cannot do so safely.
+ *
+ * Nothing renders what this returns any more — the die tables themselves are
+ * `fieldScript`'s and the Kamienny Most's ordeals', both typed. What is left
+ * is `fieldRollTable.test.ts`'s use of it as a detector: a way to notice, from
+ * the transcribed text alone, that an Obszar's prose reads as a six-face table
+ * so the test can check it was actually scripted rather than left for a
+ * player to compute by hand.
+ */
 
 export interface RollTable {
   /** Outcome text for each face of the die, 1 to 6. */

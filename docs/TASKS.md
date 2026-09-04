@@ -150,11 +150,17 @@ LANDED.md). Three are different things and stay apart: an **Effect** is a
 happening, a **FieldScript** is a menu of them, and what a holder is *under*
 is a **Status** (CONTEXT.md). The other three decisions, and the order:
 
-- [ ] **The prose reader goes.** `cardEffects.ts` (`suggestActions`,
-      `parseRollTable`'s prose path) is superseded by the typed scripts and
-      still renders a second die table in the Obszar window beside the typed
-      one. Render from `fieldScript` only; companion's read-only table keeps
-      working from the typed source. Small; first.
+- [x] **The prose reader goes.** `cardEffects.ts` (`suggestActions`) and the
+      `RollTable` component it fed are deleted; the Obszar window renders its
+      die table from `fieldScript`'s typed `rzut` `Effect` only, through
+      `OfferList`/`FieldService`. Companion's read-only table survives from
+      that same typed source — `field-services.tsx`'s `ScriptedRoll` already
+      covered both simulation (server rolls) and companion (pick the die face
+      your own die showed) before this landed, so nothing needed re-feeding.
+      `rollTable.ts`'s `parseRollTable` stays, narrowed to a detector for
+      `fieldRollTable.test.ts`'s coverage check — every Obszar whose prose
+      reads as a table now needs a typed `FieldOffer` or a Kamienny Most
+      ordeal, not a live reader of its own.
 - [ ] **One Status vocabulary, two sources.** Staged, one reader at a time,
       so every step keeps the suite green:
       1. `Ends` gains `{ kind: "held" }`; `heldStatuses(holdings, eqMode,
