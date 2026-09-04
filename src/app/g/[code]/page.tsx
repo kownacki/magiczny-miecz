@@ -10,7 +10,8 @@ import { useSurfaces } from "./use-surfaces";
 import { CHARACTERS, asNature, type Seat } from "./table";
 import { driverOf as driverOfSeat, pickingFor as whoIsPicking } from "./table-view";
 import { CardLibrary } from "./card-library";
-import { useTable, type Said } from "./use-table";
+import { useTable } from "./use-table";
+import type { Reply } from "@/lib/game/requests";
 import { turnViewOf } from "./turn-view";
 import { useAsks } from "./use-asks";
 import { TheTable, type TableScreen as TableScreenValue } from "./the-table";
@@ -253,7 +254,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
   /**
    * The die that was just thrown, held until the player who threw it says go on.
    *
-   * The one thing `post`'s reply is read for — see `Said` and `RollResult`. A
+   * The one thing `post`'s reply is read for — see `showDie` and `RollResult`. A
    * roll is the only act in the game the player has no part in: they press
    * „Rzuć kostką", the app throws, and by the time the table comes back the
    * Karta is settled and the kolejka has moved on. Without this the whole of it
@@ -282,10 +283,13 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
    * `wybor` answered, a Przedmiot taken, a Karta with no table — none of them
    * roll, so none of them have a `face`.
    */
-  const showDie = useCallback((cardId: string, said: Said | null) => {
-    if (!said || typeof said.face !== "number") return;
-    setRolled({ cardId, face: said.face, did: said.did ?? [] });
-  }, []);
+  const showDie = useCallback(
+    (cardId: string, said: Reply<"turn", "karta-efekt"> | Reply<"turn", "pole-tabela"> | null) => {
+      if (!said || typeof said.face !== "number") return;
+      setRolled({ cardId, face: said.face, did: said.did ?? [] });
+    },
+    [],
+  );
   /** Whether the "choose again" modal was *asked* for (4.4). */
   const [reborn, setReborn] = useState(false);
   /**

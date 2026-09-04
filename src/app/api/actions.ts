@@ -3,7 +3,7 @@
 import { NextResponse } from "next/server";
 import { handle } from "@/app/api/handle";
 import type { Route } from "@/lib/game/requests";
-import type { Actions } from "@/lib/game/actions/shape";
+import type { Action } from "@/lib/game/actions/shape";
 import type { Permission } from "@/lib/game/permission";
 import type { GameRow, UserRow } from "@/lib/game/store";
 
@@ -26,11 +26,20 @@ export type Gate<Name extends string> = (
  * reads the body and runs. A name the table does not know is refused with the
  * same „Nieznana akcja" the switches used to fall through to.
  */
-export function actions<R extends Route, Name extends string>(
-  route: R,
-  table: Actions<R, Name>,
-  gate: Gate<Name>,
-) {
+/**
+ * `Name` comes off the table itself (`keyof T`) rather than being named
+ * separately, so `TURN` and `HOLDINGS` can be declared `satisfies
+ * Actions<R, Name>` — which keeps each entry's own inferred `Reply` instead of
+ * the table's `unknown` (see `RepliesOf`) — and still be handed straight to
+ * this function: a `satisfies`-typed object is assignable to the shape this
+ * asks for, `Record<string, Action<R, any, unknown>>`, without being widened
+ * back to it first.
+ */
+export function actions<
+  R extends Route,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  T extends Record<string, Action<R, any, unknown>>,
+>(route: R, table: T, gate: Gate<keyof T & string>) {
   return async function POST(request: Request, { params }: { params: Promise<{ code: string }> }) {
     return handle(request, params, route, async ({ game, actor, body }) => {
       const seat = actor.seat;
@@ -41,9 +50,9 @@ export function actions<R extends Route, Name extends string>(
       // The gate first, and the unknown-action 400 behind it: a seat that may
       // not act must not learn which actions exist. `mayAct` copes with a name
       // off the wire it has never heard of — that is what the wire is.
-      const { allowed, tableScreen } = gate(game, actor.user, name as Name);
+      const { allowed, tableScreen } = gate(game, actor.user, name as keyof T & string);
       if (!allowed) return NextResponse.json({ error: "To nie twoja tura." }, { status: 409 });
-      const one = typeof name === "string" ? table[name as Name] : undefined;
+      const one = typeof name === "string" ? table[name as keyof T & string] : undefined;
       if (!one) return NextResponse.json({ error: "Nieznana akcja." }, { status: 400 });
       return one.run(game.id, one.from(body, { game, user: actor.user, seat, tableScreen }));
     });

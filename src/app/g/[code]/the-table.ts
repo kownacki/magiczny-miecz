@@ -29,11 +29,12 @@
  */
 
 import { createContext, useContext, type Dispatch, type SetStateAction } from "react";
-import type { Game, Said, Table } from "./use-table";
+import type { Game, Table } from "./use-table";
 import type { useSurfaces } from "./use-surfaces";
 import type { TurnView } from "./turn-view";
 import type { Asks } from "./use-asks";
 import type { writeTestMode } from "@/lib/game/testMode";
+import type { Reply } from "@/lib/game/requests";
 
 /** What is open over the table — the return of `useSurfaces`. */
 export type Surfaces = ReturnType<typeof useSurfaces>;
@@ -60,7 +61,12 @@ export interface Device {
   dealKey: string | null;
   setDealSeen: Dispatch<SetStateAction<string | null>>;
   setRolled: Dispatch<SetStateAction<Rolled | null>>;
-  showDie: (cardId: string, said: Said | null) => void;
+  /**
+   * `post` answers `karta-efekt` and `pole-tabela` with the same shape a
+   * throw leaves behind — see `showDie` in `page.tsx`, the one caller that
+   * reads it.
+   */
+  showDie: (cardId: string, said: Reply<"turn", "karta-efekt"> | Reply<"turn", "pole-tabela"> | null) => void;
   reborn: boolean;
   setReborn: Dispatch<SetStateAction<boolean>>;
   pickerWavedOff: boolean;

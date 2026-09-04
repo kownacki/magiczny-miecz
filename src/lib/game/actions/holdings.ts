@@ -13,7 +13,7 @@
 import type { Slot } from "@/lib/engine/slots";
 import { requireFieldId } from "@/lib/engine/board";
 import type { Body, HoldingsAction } from "../requests";
-import { action, type ActionContext, type Actions } from "./shape";
+import { action, type ActionContext, type Actions, type RepliesOf } from "./shape";
 import {
   endlessStock,
   buyGoods,
@@ -44,7 +44,7 @@ type Natura = Parameters<typeof changeNature>[2];
 /** Whose pile: the seat named, or the presser's own. */
 const seatOr = (body: Body<"holdings">, { seat }: ActionContext) => String(body.seatId ?? seat.id);
 
-export const HOLDINGS: Actions<"holdings", HoldingsAction> = {
+export const HOLDINGS = {
   take: holdings({
     from: (body, ctx) => ({ seatId: seatOr(body, ctx), cardId: String(body.cardId) }),
     run: (gameId, { seatId, cardId }) => takeCard(gameId, seatId, cardId),
@@ -196,4 +196,7 @@ export const HOLDINGS: Actions<"holdings", HoldingsAction> = {
     }),
     run: async (gameId, { seatId, deal }) => ({ gained: await tradeTrophies(gameId, seatId, deal) }),
   }),
-};
+} satisfies Actions<"holdings", HoldingsAction>;
+
+/** What each entry in `HOLDINGS` answers on the wire — see `RepliesOf`. */
+export type HoldingsReplies = RepliesOf<typeof HOLDINGS>;

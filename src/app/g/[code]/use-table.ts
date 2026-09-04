@@ -6,24 +6,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { Notice } from "./toast";
 import { useSettled } from "./settle";
 import { useRouter } from "next/navigation";
-import type { Requests, Route } from "@/lib/game/requests";
-
-/**
- * What a command hands back, as much of it as anybody here reads.
- *
- * The commands return a good deal more — what was drawn, what is still owed,
- * which copy was settled — and none of it is wanted on this side: the table
- * that comes back from `refresh` is the truth about all of it. `face` and `did`
- * are the exception, because a die is gone by the time the state arrives: what
- * is left of it is a number in a journal line, and the player who threw it is
- * owed the number itself. `card` and `offer` are what to head the notice with.
- */
-export interface Said {
-  card?: string;
-  offer?: string;
-  face?: number;
-  did?: string[];
-}
+import type { ActionOf, Reply, Requests, Route } from "@/lib/game/requests";
 import { forgetSeatToken, noteRemoved, readSeatToken, writeSeatToken } from "@/lib/game/seatToken";
 import { deviceId, forgetDevice } from "@/lib/game/deviceId";
 import { watchRevision } from "@/lib/game/liveRevision";
@@ -65,6 +48,21 @@ export type {
   EnvelopeUser as Person,
   EnvelopeSpoken as Spoken,
 } from "@/lib/game/wire";
+
+/**
+ * `post`'s body, for the two routes an action name picks apart.
+ *
+ * `Requests[R]["action"]` is already the right union — `TurnAction` or
+ * `HoldingsAction` — but typed flatly it only *checks* the name, it does not
+ * *narrow* `A` to the one literal a caller wrote. Dropping it and re-adding it
+ * as `{ action?: A }` is what lets `post("turn", { action: "roll" })` come
+ * back typed as `Reply<"turn", "roll">` rather than the reply of every action
+ * `turn` has. Every other route has no name to narrow, so its body is exactly
+ * what it always was.
+ */
+type PostBody<R extends Route, A extends ActionOf<R>> = ActionOf<R> extends never
+  ? Partial<Requests[R]>
+  : Partial<Omit<Requests[R], "action">> & { action?: A };
 
 export interface Table {
   game: Game | null;
@@ -124,13 +122,21 @@ export interface Table {
   intent: AnnouncedIntent | null;
   refresh: () => Promise<void>;
   /**
-   * One request, with its body checked against what that route reads.
+   * One request, with its body checked against what that route reads and its
+   * reply checked against what that route answers — see `Reply` in
+   * `requests.ts`, which is where the type lives rather than here:
+   * `turn`/`holdings`'s replies are read off the action tables, and importing
+   * those as values (rather than the type-only `Reply` does) would pull
+   * `turnStore` and the commands into this bundle.
    *
    * Settles when the table it changed is on screen — `post` refreshes before it
    * returns — and hands back what the command said, for the one caller that
-   * needs the die (see `Said`).
+   * needs the die: `showDie`, in `page.tsx`.
    */
-  post: <R extends Route>(path: R, body?: Partial<Requests[R]>) => Promise<Said | null>;
+  post: <R extends Route, A extends ActionOf<R> = ActionOf<R>>(
+    path: R,
+    body?: PostBody<R, A>,
+  ) => Promise<Reply<R, A> | null>;
   runConsole: (line: string) => Promise<string>;
   leave: () => Promise<void>;
   join: (name: string) => Promise<void>;
@@ -606,7 +612,10 @@ async function saidWrong(response: Response): Promise<string> {
    * the host came to kick themselves.
    */
   const post = useCallback(
-    async <R extends Route>(path: R, body: Partial<Requests[R]> = {}) => {
+    async <R extends Route, A extends ActionOf<R> = ActionOf<R>>(
+      path: R,
+      body: PostBody<R, A> = {} as PostBody<R, A>,
+    ): Promise<Reply<R, A> | null> => {
       setBusy(true);
       setError(null);
       try {
@@ -656,7 +665,9 @@ async function saidWrong(response: Response): Promise<string> {
          * state this reply describes, so the body is taken first and the caller
          * gets it once the table it belongs to is on screen.
          */
-        const said = response.ok ? ((await response.json().catch(() => null)) as Said) : null;
+        const said = response.ok
+          ? ((await response.json().catch(() => null)) as Reply<R, A> | null)
+          : null;
         await refresh();
         return said;
       } finally {

@@ -5,7 +5,7 @@ import type { CardClass } from "@/data/types";
 import type { Decisions } from "../turnStore";
 import { asFieldId } from "@/lib/engine/board";
 import type { Body, Requests, TurnAction } from "../requests";
-import { action, type Actions } from "./shape";
+import { action, type Actions, type RepliesOf } from "./shape";
 import {
   attackSeat,
   sendRaider,
@@ -77,7 +77,7 @@ function spoilsIn(body: Partial<Requests["turn"]>): Spoils | undefined {
 /** A die the table reports, or nothing — a simulation never types one. */
 const rolled = (value: unknown) => (typeof value === "number" ? value : null);
 
-export const TURN: Actions<"turn", TurnAction> = {
+export const TURN = {
   roll: turn({
     from: (body) => rolled(body.value),
     run: (gameId, value) => rollForMove(gameId, value),
@@ -276,4 +276,7 @@ export const TURN: Actions<"turn", TurnAction> = {
         : answerScript(gameId, answer.decided),
   }),
   end: turn({ from: () => undefined, run: (gameId) => finishTurn(gameId) }),
-};
+} satisfies Actions<"turn", TurnAction>;
+
+/** What each entry in `TURN` answers on the wire — see `RepliesOf`. */
+export type TurnReplies = RepliesOf<typeof TURN>;

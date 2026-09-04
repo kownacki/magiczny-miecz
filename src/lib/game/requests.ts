@@ -31,6 +31,13 @@
  * this app quietly agreed to.
  */
 
+// Type-only: erased at build, so none of these pull `turnStore`, the
+// commands or Supabase into a bundle that imports this file — see `Reply`.
+import type { TurnReplies } from "./actions/turn";
+import type { HoldingsReplies } from "./actions/holdings";
+import type { LeaveResult } from "./commands/lobby";
+import type { Removed } from "./commands/withdraw";
+
 /**
  * Every action the turn route runs — the keys of `actions/turn.ts`.
  *
@@ -280,3 +287,66 @@ export async function bodyOf<R extends Route>(request: Request, route: R): Promi
   void route;
   return (await request.json().catch(() => ({}))) as Body<R>;
 }
+
+/**
+ * Which action name a route's body carries, for the two routes dispatched by
+ * one — see `actions/shape.ts`. Everything else does one thing per route, so
+ * there is nothing here to narrow.
+ */
+export type ActionOf<R extends Route> = R extends "turn"
+  ? TurnAction
+  : R extends "holdings"
+    ? HoldingsAction
+    : never;
+
+/**
+ * `join`'s reply, flattened rather than the three-way discriminated union
+ * `join/route.ts` actually sends.
+ *
+ * Which fields are set depends on whether `resume` was asked and whether it
+ * found anybody: `resumed`/`live` only answer a resume, and a resume that
+ * found nobody stops there — no `userId`, no `token`. Modelling the three
+ * shapes precisely would buy nothing here, because nothing on the client reads
+ * this beyond the token a seated caller gets, so every field is optional and
+ * `token` is the one to trust when it is there.
+ */
+type JoinReply = {
+  resumed?: boolean;
+  live?: boolean;
+  userId?: string;
+  name?: string | null;
+  seatIndex?: number | null;
+  token?: string;
+};
+
+/**
+ * What a route answers, read off what it actually sends rather than
+ * hand-copied.
+ *
+ * `turn` and `holdings` are dispatched by action name (`actions/shape.ts`), so
+ * their replies come from `TurnReplies`/`HoldingsReplies` — type-only imports
+ * of the action tables, which vanish at build and never pull `turnStore` or
+ * the commands into a client bundle (verify with `npm run build` after
+ * touching this). `A` narrows the reply to the one action named; left off, it
+ * is every reply the route can give.
+ *
+ * Every other route does one thing, so its whole reply is named here by hand
+ * against the route file that answers it. `bye` and `intent` are not among
+ * them for the reason `use-table.ts` never spends this on them: both go
+ * around `post` entirely — `bye` on `navigator.sendBeacon`, `intent` on a bare
+ * `fetch` — and both answer an empty 204 rather than JSON, so there is
+ * nothing here worth being honest about beyond the harmless default.
+ */
+export type Reply<R extends Route, A extends ActionOf<R> = ActionOf<R>> = R extends "turn"
+  ? TurnReplies[A & TurnAction]
+  : R extends "holdings"
+    ? HoldingsReplies[A & HoldingsAction]
+    : R extends "join"
+      ? JoinReply
+      : R extends "leave"
+        ? LeaveResult
+        : R extends "withdraw"
+          ? Removed
+          : R extends "debug"
+            ? { ok: true } | { said: string }
+            : { ok: true };

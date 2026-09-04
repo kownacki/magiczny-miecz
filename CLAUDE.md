@@ -148,6 +148,10 @@ anything.
   `CardId` and a `FieldId` before they travel, or the row is refused as a
   Failure. The browser declares no wire type of its own; `Seat`, `Held`,
   `Game`, `Person` are aliases of the Envelope's.
+  Replies are typed the same way: `Reply<R, A>` in `requests.ts` is read off
+  each action's `run` (`RepliesOf` in `actions/shape.ts`), so `post("turn",
+  { action: "friend-heal" })` comes back as `{ healed: number }` and a `run`
+  that changes shape fails the build at the reader, not at the table.
 - **A rule number is a promise you can keep, so only write one you checked.**
   `(5.3)` is not decoration: `WithRules` turns every one of them into a link
   into the Instrukcja, and a reader who follows one and lands on a rule about

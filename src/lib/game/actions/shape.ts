@@ -54,3 +54,25 @@ export type Actions<R extends Route, Name extends string> = Record<Name, Action<
 export function action<R extends Route>() {
   return <Args, Reply>(one: Action<R, Args, Reply>): Action<R, Args, Reply> => one;
 }
+
+/**
+ * `run`'s reply, as `handle.ts` actually answers it on the wire.
+ *
+ * A `run` that resolves `void` has nothing to say and `handle.ts` answers
+ * `{ ok: true }` for it — see the `said ?? { ok: true }` there. Everything
+ * else is answered as JSON exactly as `run` returned it.
+ */
+type WireReply<T> = [T] extends [void] ? { ok: true } : T;
+
+/**
+ * Every action's reply, keyed the same as the table that runs it.
+ *
+ * `TURN` and `HOLDINGS` are declared with `satisfies Actions<R, Name>` rather
+ * than typed as one, precisely so `typeof TURN` keeps each entry's own
+ * inferred `Reply` instead of the table's `unknown` — this reads it back out,
+ * one property per action, so a route's client-side reply type is never
+ * hand-copied from what `run` does.
+ */
+export type RepliesOf<T extends Record<string, { run: (...args: never[]) => Promise<unknown> }>> = {
+  [K in keyof T]: WireReply<Awaited<ReturnType<T[K]["run"]>>>;
+};
