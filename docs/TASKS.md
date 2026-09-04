@@ -178,8 +178,9 @@ is a **Status** (CONTEXT.md). The other three decisions, and the order:
          card so a printed corner counts too, and honours the two
          suspensions; the spell cap stays on the held half alone;
          `bonusFromHoldings` survives for `fight.ts`'s single-card
-         correction, reading the same map), spell limits (`bez-zaklec` → `no-spells`,
-         `zaklecia-ponad-limit`), protection (`oslona`/`ocalenie`), crossings
+         correction, reading the same map), ~~spell limits~~ (done: `whyNoSpells`
+         reads `standing`; `zaklecia-ponad-limit` stays in `spellAllowance`),
+         protection (`oslona`/`ocalenie`), crossings
          (`przeprawa-kostki` → `przeprawa`), carrying (`udzwig`), the rest.
       3. `Ability` kinds whose reader has moved become `Modifier` kinds; what
          is left of `Ability` is the per-card data that has no standing-effect
