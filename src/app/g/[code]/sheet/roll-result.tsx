@@ -2,9 +2,9 @@
 
 /** What the die did, where the button that threw it was standing. */
 
-import { ActionButton } from "./action-button";
-import { DieMark } from "./die-mark";
-import { WithRules } from "./rule-ref";
+import { ActionButton } from "../action-button";
+import { DieMark } from "../die-mark";
+import { WithRules } from "../rule-ref";
 
 /**
  * A die that has been thrown and not yet read.

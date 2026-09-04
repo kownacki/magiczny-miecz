@@ -6,15 +6,15 @@
  */
 
 import Image from "next/image";
-import { CardMark, Corner, MARK_SIZE } from "./card-mark";
-import { Overlay } from "./overlay";
-import { ChromeButton } from "./chrome";
+import { CardMark, Corner, MARK_SIZE } from "../card-mark";
+import { Overlay } from "../overlay";
+import { ChromeButton } from "../chrome";
 import { seatColour } from "@/lib/view/boardMap";
-import { CARD_RATIO, PICTURE_WIDTH } from "./card-preview";
+import { CARD_RATIO, PICTURE_WIDTH } from "../card-preview";
 import { CHARACTER_ART_RATIO, characterStandeeUrl } from "@/lib/view/cardImages";
-import { Lookable } from "./lookable";
-import { PlayerName } from "./player-name";
-import { WithRules } from "./rule-ref";
+import { Lookable } from "../lookable";
+import { PlayerName } from "../player-name";
+import { WithRules } from "../rule-ref";
 
 /**
  * What the sheet wears whichever question is on it.

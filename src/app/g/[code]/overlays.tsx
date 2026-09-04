@@ -15,7 +15,7 @@ import { RebornModal } from "./reborn-modal";
 import { CHARACTERS, asNature } from "./table";
 import { TurnFab, owedLabel } from "./turn-fab";
 import { TheReader } from "./card-facts";
-import { DrawModal } from "./draw-modal";
+import { DrawModal } from "./sheet/draw-modal";
 import { ScriptFramePanel } from "./script-frame";
 import { AskFramePanel } from "./ask-frame";
 import { useTheTable } from "./the-table";

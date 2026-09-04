@@ -8,9 +8,9 @@
 import { useEffect, useState } from "react";
 import { DrawSheet, type SheetChrome } from "./draw-sheet";
 import { FightControls } from "./fight-controls";
-import { SpellHand, type HeldSpell } from "./spell-hand";
-import type { TileCard } from "./card-tile";
-import type { OnAction, Simulated } from "./turn-controls";
+import { SpellHand, type HeldSpell } from "../spell-hand";
+import type { TileCard } from "../card-tile";
+import type { OnAction, Simulated } from "../turn-controls";
 import { cardImageUrl } from "@/lib/view/cardImages";
 import { castableNow, spellScript, type SpellTiming } from "@/lib/engine/spells";
 import type { Fight } from "@/lib/engine/turn";

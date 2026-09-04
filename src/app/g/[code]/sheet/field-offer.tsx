@@ -8,8 +8,8 @@ import { summariseEffect } from "@/lib/engine/effectText";
 import { sentence } from "@/lib/engine/polish";
 import { pendingIn } from "@/lib/engine/resolve";
 import type { Effect } from "@/lib/engine/cardScript";
-import { ActionButton } from "./action-button";
-import { DieMark } from "./die-mark";
+import { ActionButton } from "../action-button";
+import { DieMark } from "../die-mark";
 import { RollSaid, type Rolled } from "./roll-result";
 
 /**

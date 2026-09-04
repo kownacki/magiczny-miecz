@@ -7,15 +7,15 @@
 
 import { useEffect } from "react";
 import { DrawSheet, type SheetChrome } from "./draw-sheet";
-import { dismissableOpen } from "./overlay";
+import { dismissableOpen } from "../overlay";
 import events from "@/data/events.json";
 import { CARD_CLASS_LABEL, type EventCard } from "@/data/types";
 import { cardImageUrl } from "@/lib/view/cardImages";
 import { numeralMeaning, numeralOf } from "@/lib/engine/cards";
-import { KolejkaStrip, worthShowing } from "./kolejka-strip";
+import { KolejkaStrip, worthShowing } from "../kolejka-strip";
 import { scriptFor, describeDisposition } from "@/lib/engine/cardScript";
 import { itemProfile, staysAs } from "@/lib/engine/abilityText";
-import { CardFacts } from "./card-facts";
+import { CardFacts } from "../card-facts";
 import { DrawnActions, type DrawnActionsProps } from "./drawn-actions";
 import { coverageOf, manualNote, NOT_HANDLED } from "@/lib/engine/coverage";
 

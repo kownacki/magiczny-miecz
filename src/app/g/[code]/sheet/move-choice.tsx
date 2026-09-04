@@ -6,8 +6,8 @@
  */
 
 import { DrawSheet, type SheetChrome } from "./draw-sheet";
-import { BridgeControls } from "./crossing-controls";
-import type { OnAction, Simulated } from "./turn-controls";
+import { BridgeControls } from "../crossing-controls";
+import type { OnAction, Simulated } from "../turn-controls";
 import { DIRECTION_LABEL, type TurnMoveOption } from "@/lib/engine/turn";
 
 /**
