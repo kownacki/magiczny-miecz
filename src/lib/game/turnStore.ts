@@ -26,7 +26,7 @@ import {
   shuffleFor,
   type Decks,
 } from "./decks";
-import { change, effectRowsFor, merge, type EffectRow, type Handler } from "./change";
+import { apply, change, effectRowsFor, merge, type EffectRow, type Handler } from "./change";
 import { holdOverflow, refuseWhileOverflow, releaseOverflow } from "./commands/overflow";
 import { closeFight, resume } from "./commands/frames";
 import { finishTurn as finishTurnOn, resetTurn as resetTurnOn } from "./commands/turn";
@@ -79,6 +79,7 @@ import {
   placeCard as placeCardOn,
   placeGold as placeGoldOn,
   takeCard as takeCardOn,
+  type Taken,
   takeFieldGold as takeFieldGoldOn,
   takeFromField as takeFromFieldOn,
 } from "./commands/holdings";
@@ -686,13 +687,9 @@ export async function takeCard(
    */
   granted?: boolean,
 ): Promise<void> {
-  const taken = await change(gameId, thenHold(takeCardOn), { seatId, cardId, granted });
-  // A Sztuka Złota is not luggage — taking it resolves it. The command does the
-  // writes it owns and hands back the script rather than guessing at a rule
-  // `applyEffect` owns.
-  if (taken.resolve) {
-    await applyEffect(gameId, seatId, taken.resolve.effect, taken.resolve.reason);
-  }
+  // A Sztuka Złota is not luggage — taking it resolves it, in the same Commit;
+  // see `thenResolve`.
+  await change(gameId, thenResolve(thenHold(takeCardOn)), { seatId, cardId, granted });
 }
 
 /**
@@ -743,6 +740,39 @@ function thenHold<C, T>(handler: Handler<C, T>): Handler<C, T> {
   return async (snapshot, command, ports) => {
     const { writes, result } = await handler(snapshot, command, ports);
     return { writes: merge(writes, holdOverflow(snapshot, writes)), result };
+  };
+}
+
+/**
+ * A Karta that resolves on being taken, finished in the same Commit as the take.
+ *
+ * A Sztuka Złota is not luggage: `takeCard` lifts it and hands its script back
+ * rather than walking it, because walking an `Effect` is `applyEffect`'s job.
+ * This used to be finished with a *second* `change()`, which is the one shape
+ * CONTEXT.md rules out — a Conflict between the two left the card taken and
+ * the coin never paid, and a Commit is supposed to land whole or not at all.
+ *
+ * So the effect is applied to the snapshot with the take already folded in,
+ * through `apply`, and the two changesets go over together. The shuffle is
+ * minted off that folded game, which is what a second change would have read.
+ */
+function thenResolve<C extends { seatId: string }>(handler: Handler<C, Taken>): Handler<C, Taken> {
+  return async (snapshot, command, ports) => {
+    const taken = await handler(snapshot, command, ports);
+    if (!taken.result.resolve) return taken;
+    const after = apply(snapshot, taken.writes);
+    const applied = await applyEffectOn(
+      after,
+      {
+        seatId: command.seatId,
+        effect: taken.result.resolve.effect,
+        reason: taken.result.resolve.reason,
+        decided: {},
+        shuffle: shuffleFor(after.game),
+      },
+      ports,
+    );
+    return { writes: merge(taken.writes, applied.writes), result: taken.result };
   };
 }
 
@@ -1272,10 +1302,7 @@ export async function buyGoods(
   seatId: string,
   cardId: string,
 ): Promise<void> {
-  const bought = await change(gameId, thenHold(buyGoodsFor), { seatId, cardId });
-  if (bought.resolve) {
-    await applyEffect(gameId, seatId, bought.resolve.effect, bought.resolve.reason);
-  }
+  await change(gameId, thenResolve(thenHold(buyGoodsFor)), { seatId, cardId });
 }
 
 /**
@@ -1544,10 +1571,10 @@ export async function takeFromField(
   seatId: string,
   fieldCardId: string,
 ): Promise<void> {
-  const taken = await change(gameId, takeFromFieldOn, { seatId, fieldCardId });
-  if (taken.resolve) {
-    await applyEffect(gameId, seatId, taken.resolve.effect, taken.resolve.reason);
-  }
+  // Wearing `thenHold` like the other two doors a Karta arrives through: 5.6
+  // is the table's rule, and a Przedmiot off the Obszar can overload a pack
+  // exactly as one off the shelf can.
+  await change(gameId, thenResolve(thenHold(takeFromFieldOn)), { seatId, fieldCardId });
 }
 
 /**
