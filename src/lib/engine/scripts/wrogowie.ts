@@ -57,6 +57,10 @@ export const WROGOWIE: Readonly<Record<string, CardScript>> = {
   "przybysz-z-krainy-cieni": STRAZUJE(),
   "trogglowy-smok": STRAZUJE(),
   cyklop: STRAZUJE(),
+  // "Posiada zawsze tyle punktów Miecza, ile jego przeciwnik" is
+  // `MIRRORS_ITS_OPPONENT` in `cards.ts`, read by `combatValueOf` — this card
+  // only has to say what STRAZUJE() says of every other fixture.
+  sobowtor: STRAZUJE(),
   "czarna-hybryda": STRAZUJE(),
   "czerwona-hybryda": STRAZUJE(),
   fomoraig: STRAZUJE(),

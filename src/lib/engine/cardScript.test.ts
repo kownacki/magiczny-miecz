@@ -10,6 +10,7 @@ import {
   valenceOf,
   type Effect,
 } from "./cardScript";
+import { coverageOf } from "./coverage";
 
 const EVENTS = events as EventCard[];
 const BY_ID = new Map<string, EventCard>(EVENTS.map((card) => [card.id, card]));
@@ -91,6 +92,22 @@ describe("the card that prompted the vocabulary", () => {
     expect(script.optional).toBeUndefined();
     // His leaving is not a choice, and neither answer changes it.
     expect(script.disposition).toEqual({ kind: "odloz" });
+  });
+});
+
+describe("the Sobowtór", () => {
+  it("is a fixture like the other Wrogowie who guard until beaten", () => {
+    // "Posiada zawsze tyle punktów Miecza, ile jego przeciwnik" is
+    // `MIRRORS_ITS_OPPONENT` in cards.ts, already read by `combatValueOf`;
+    // what the script had to add was "Pozostanie tu, aż ktoś go pokona".
+    expect(scriptFor("sobowtor")).toEqual({
+      effect: { op: "nic" },
+      disposition: { kind: "zostaje" },
+    });
+  });
+
+  it("is now fully covered", () => {
+    expect(coverageOf("sobowtor")).toBe("pelne");
   });
 });
 
