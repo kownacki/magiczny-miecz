@@ -853,7 +853,7 @@ export const CAST_VERB = "rzuć";
  * turns and not before.
  *
  * The Kryształ Magów's half of this used to read `abilities` for a bare
- * `bez-zaklec` kind (`cannotUseSpells`). It reads `standing` for a `no-spells`
+ * `bez-zaklec` kind, through a reader of its own. It reads `standing` for a `no-spells`
  * status now — `HELD_TWIN` in `status.ts` already projects that ability's
  * "may not cast" half onto a held card's row, through the same `inEffect` gate
  * every other held status passes (a Kryształ sitting in the pack in slotowy,

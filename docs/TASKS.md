@@ -182,14 +182,14 @@ is a **Status** (CONTEXT.md). The other three decisions, and the order:
          reads `standing`; `zaklecia-ponad-limit` stays in `spellAllowance`),
          ~~osłona~~ (done 2026-09-04: Hełm/Tarcza/Zbroja's `oslona` is a
          `points`-shaped twin, `shieldUpTo` takes the widest; `shieldSaves`
-         reads `standing` and `bestShield` stays, unused, for its tests),
+         reads `standing`; `bestShield` deleted once nothing called it),
          ~~carrying~~ (done 2026-09-04: Koń/Muł/Zaprzęg/Magiczna
          Sakwa/Tragarz's `udzwig` is a standing twin, `carryBonus` sums and
          goes `Infinity` for the Zaprzęg; `derive.carryLimit` builds
          `heldStatuses` itself so its four callers stay unchanged, and a
          Tragarz — which `inPlayAt` alone never puts anywhere in slotowy —
          now carries there too, matching every other Przyjaciel's bonus;
-         `abilityCarryLimit` stays, unused, for its tests), ~~crossings~~
+         `abilities.ts`'s own `carryLimit` deleted with it), ~~crossings~~
          (settled 2026-09-04, and **not** by folding: `przeprawa-kostki` is
          printed on Rusałka, a Postać, so nothing held can produce it and
          there is no second spelling to retire — `przeprawa` is a *granted*

@@ -1805,7 +1805,7 @@ describe("osłona (17.4, 18.2b)", () => {
 
   /**
    * Wearing all three is one roll against the widest, not three rolls — this
-   * is now `shieldUpTo` over `standing` (`status.ts`) rather than `bestShield`
+   * is now `shieldUpTo` over `standing` (`status.ts`) rather than an ability
    * over `abilities`, and this pins the reading survived the move.
    */
   it("rolls against the widest when more than one is worn", async () => {

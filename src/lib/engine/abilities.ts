@@ -1035,11 +1035,6 @@ export function crossingDice(
  * is one roll against the widest of them, not three rolls. Returns 0 when there
  * is nothing to roll for.
  */
-/** Whether this character has given up magic entirely (Kryształ Magów). */
-export function cannotUseSpells(abilities: readonly Ability[]): boolean {
-  return abilities.some((ability) => ability.kind === "bez-zaklec");
-}
-
 /**
  * Spells an opponent fighting this character may not use — the Kryształ
  * Magów's third clause, "przeciwnik ... nie może ... użyć Zaklęcia Odrodzenie".
@@ -1063,37 +1058,11 @@ export function spellWards(abilities: readonly Ability[]): Set<string> {
   return deniedToOpponent;
 }
 
-// Nothing in `src` calls this any more — `shieldSaves` (fight.ts) reads
-// `shieldUpTo` over `standing` instead (`status.ts`'s `oslona` twin). Left
-// here, with its tests, until the `oslona` `Ability` kind retires with the
-// rest of them in step three of the fold (docs/WHERE.md, "A Status kind").
-export function bestShield(abilities: readonly Ability[]): number {
-  let best = 0;
-  for (const ability of abilities) {
-    if (ability.kind === "oslona" && ability.upTo > best) best = ability.upTo;
-  }
-  return best;
-}
-
 /** Whether holding this card costs one of the places it opens (5.4). */
 export function fillsAPlace(cardId: string): boolean {
   return !abilitiesOf(cardId).some(
     (ability) => ability.kind === "udzwig" && ability.samaSieNieLiczy === true,
   );
-}
-
-// Nothing in `src` calls this any more — `derive.ts`'s `carryLimit` reads
-// `carryBonus` over `standing` instead (`status.ts`'s `udzwig` twin). Left
-// here, with its tests, until the `udzwig` `Ability` kind retires with the
-// rest of them in step three of the fold (docs/WHERE.md, "A Status kind").
-export function carryLimit(abilities: readonly Ability[], base: number): number {
-  let limit = base;
-  for (const ability of abilities) {
-    if (ability.kind !== "udzwig") continue;
-    if (ability.items === "bez-limitu") return Infinity;
-    limit += ability.items;
-  }
-  return limit;
 }
 
 /** The most a Wierzchowiec or Zaprzęg may add to a movement roll. */

@@ -9,7 +9,6 @@ import {
   ABILITIES,
   abilitiesOf,
   canEscapeAt,
-  carryLimit,
   crossingDice,
   tollIsWaived,
   heldAbilities,
@@ -19,7 +18,6 @@ import {
   rollModifier,
   spellsOverLimit,
   skipsRollAt,
-  bestShield,
   buyerFor,
 } from "./abilities";
 import { abilitiesOfCharacter } from "./characters";
@@ -151,16 +149,6 @@ describe("keys to the two places that need one", () => {
 });
 
 describe("carrying and moving", () => {
-  it("adds each transport's stated capacity", () => {
-    expect(carryLimit(abilitiesOf("kon"), 4)).toBe(12);
-    expect(carryLimit(abilitiesOf("magiczna-sakwa"), 4)).toBe(9);
-  });
-
-  it("treats only the Zaprzęg as unbounded", () => {
-    expect(carryLimit(abilitiesOf("zaprzeg"), 4)).toBe(Infinity);
-    expect(carryLimit(heldAbilities(["kon", "zaprzeg"]), 4)).toBe(Infinity);
-  });
-
   it("reports the movement bonus a mount allows", () => {
     expect(moveBonusRange(abilitiesOf("wierzchowiec"))).toEqual({ min: 1, max: 3 });
     expect(moveBonusRange(abilitiesOf("zaprzeg"))).toEqual({ min: 1, max: 1 });
@@ -277,23 +265,6 @@ describe("carrying more Zaklęcia than Magia allows", () => {
   it("counts the Różdżka and nothing else", () => {
     expect(spellsOverLimit(abilitiesOf("rozdzka-zaklec"))).toBe(1);
     expect(spellsOverLimit(abilitiesOf("pierscien-mocy"))).toBe(0);
-  });
-});
-
-describe("osłona against the point of Życie (17.4)", () => {
-  it("gives nothing when nothing is worn", () => {
-    expect(bestShield([])).toBe(0);
-  });
-
-  it("takes the widest save rather than adding them up", () => {
-    // A Hełm saves on a 1, a Tarcza on 1-2, a Zbroja on 1-3. Wearing all three
-    // is one roll against three, not three rolls — the cards each grant "the
-    // right to roll", singular, for the same point of Życie.
-    expect(bestShield(abilitiesOf("helm"))).toBe(1);
-    expect(bestShield(abilitiesOf("tarcza"))).toBe(2);
-    expect(bestShield(abilitiesOf("zbroja"))).toBe(3);
-    expect(bestShield(heldAbilities(["helm", "tarcza", "zbroja"]))).toBe(3);
-    expect(bestShield(heldAbilities(["helm", "tarcza"]))).toBe(2);
   });
 });
 
