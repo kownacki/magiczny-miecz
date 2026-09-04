@@ -84,6 +84,24 @@ describe("the ways back under", () => {
     ]);
   });
 
+  /**
+   * 8.1: `equipCard` would refuse this the moment it was tried, so offering it
+   * here would be a button that fails at the server — the same trap `fits`
+   * already keeps a Natura-forbidden card out of two lines up.
+   */
+  it("does not offer wearing a card the Charakterystyka forbids", () => {
+    const ways = waysUnder(
+      pack(),
+      "slots",
+      "good",
+      "przedmioty",
+      undefined,
+      false,
+      [{ kind: "zakazane", cardIds: ["miecz"] }],
+    );
+    expect(ways.filter((one) => one.kind === "zaloz").map((one) => one.cardId)).toEqual(["helm"]);
+  });
+
   /** The two relics never counted, so shedding one would free nothing. */
   it("leaves the relics out of it", () => {
     const ways = waysUnder(

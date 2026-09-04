@@ -286,6 +286,34 @@ describe("taking a card", () => {
   });
 
   /**
+   * 8.1: „Nie możesz używać Miecza, Sztyletu, Hełmu ani Zbroi" — a
+   * Charakterystyka's own restriction, converted into a possession refusal by
+   * 5.3 the same way a Natura's is, at the same door.
+   */
+  it("refuses the four the Pustelnik's Charakterystyka forbids (5.3, 8.1)", () => {
+    const pustelnik = table({
+      seats: [aSeat({ id: "seat-a", field_id: HERE, character_id: "pustelnik" })],
+    });
+    for (const [cardId, name] of [
+      ["miecz", "MIECZ"],
+      ["sztylet", "SZTYLET"],
+      ["helm", "HEŁM"],
+      ["zbroja", "ZBROJA"],
+    ] as const) {
+      expect(() => takeCard(pustelnik, { seatId: "seat-a", cardId })).toThrow(
+        `${name} — twoja Charakterystyka nie pozwala ci tego nieść (5.3, 8.1).`,
+      );
+    }
+  });
+
+  it("lets a non-Pustelnik take all four freely", () => {
+    const goblin = table({ seats: [aSeat({ id: "seat-a", field_id: HERE })] });
+    for (const cardId of ["miecz", "sztylet", "helm", "zbroja"] as const) {
+      expect(takeCard(goblin, { seatId: "seat-a", cardId }).result.kind).toBe("item");
+    }
+  });
+
+  /**
    * The Topór restricts the *third* Natura, not the usual two, and the coverage
    * note used to say the opposite outright — "Tylko dla Chaotycznych" against a
    * card reading "nie może być w posiadaniu Chaotycznych Postaci". The ability
@@ -616,6 +644,34 @@ describe("wearing a Przedmiot (slotowy)", () => {
     expect(
       equipCard(evil, { holdingId: "h1", slot: "main-hand" }).writes.holdings?.patch,
     ).toEqual([{ id: "h1", patch: { slot: "main-hand" } }]);
+  });
+
+  /**
+   * 8.1's own restriction, the same way — reachable only the same way the
+   * Natura one is: `takeCard` already refuses the four to a Pustelnik, so this
+   * fires on a card that arrived some other way (the console's `grantCard`, or
+   * an old save).
+   */
+  it("refuses a card the wearer's Charakterystyka forbids (5.3, 8.1)", () => {
+    const pustelnik = aTable({
+      game: { eq_mode: "slots" },
+      seats: [aSeat({ id: "seat-a", character_id: "pustelnik" })],
+      holdings: [aHolding({ id: "h1", card_id: "miecz" })],
+    });
+    expect(() => equipCard(pustelnik, { holdingId: "h1", slot: "main-hand" })).toThrow(
+      "MIECZ — twoja Charakterystyka nie pozwala ci tego użyć (5.3, 8.1).",
+    );
+  });
+
+  it("still lets a Pustelnik take the same card off", () => {
+    const pustelnik = aTable({
+      game: { eq_mode: "slots" },
+      seats: [aSeat({ id: "seat-a", character_id: "pustelnik" })],
+      holdings: [aHolding({ id: "h1", card_id: "miecz", slot: "main-hand" })],
+    });
+    expect(
+      equipCard(pustelnik, { holdingId: "h1", slot: null }).writes.holdings?.patch,
+    ).toEqual([{ id: "h1", patch: { slot: null } }]);
   });
 
   it("puts a Hełm on the head", () => {

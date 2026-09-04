@@ -1,7 +1,8 @@
 /** What a settled fight comes to: who takes what, what it costs, and what the trophy is worth (17.4, 17.9, 1.4).*/
 
 
-import { abilitiesOf, stealsLife } from "@/lib/engine/abilities";
+import { abilitiesOf, isForbidden, stealsLife } from "@/lib/engine/abilities";
+import { abilitiesOfCharacter, asCharacterId } from "@/lib/engine/characters";
 import { combatValueOf } from "@/lib/engine/cards";
 import {
   advanceLoop,
@@ -705,6 +706,15 @@ function takeSpoils(
     (one) => one.id === spoils.holdingId && one.seat_id === loser.id && one.kind === "item",
   );
   if (!held) throw new Error("Pokonany nie ma takiego Przedmiotu (17.9).");
+
+  // 5.3/8.1, sibling of `takeCard`'s: 17.9 hands the winner an item exactly as
+  // finding one does, so a Pustelnik still may not come to possess a Miecz —
+  // it stays where 17.9 could not move it, on the loser.
+  if (isForbidden(abilitiesOfCharacter(asCharacterId(winner.character_id)), held.card_id)) {
+    throw new Error(
+      `${cardName(held.card_id)} — twoja Charakterystyka nie pozwala ci tego nieść (5.3, 8.1).`,
+    );
+  }
 
   const slot = slotOnArrival({
     cardId: held.card_id,

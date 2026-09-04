@@ -83,6 +83,7 @@ export function waysOut(snapshot: Snapshot, seatId: string): WayUnder[] {
     over.what,
     isUsable,
     frame?.seatId === seatId && frame.because?.kind === "container-lost",
+    view.abilities,
   );
 }
 

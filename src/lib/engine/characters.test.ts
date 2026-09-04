@@ -59,6 +59,21 @@ describe("the character registries against the real character cards", () => {
     }
   });
 
+  /**
+   * 5.3/8.1 forbids a Charakterystyka's own four cards to their holder — a
+   * `STARTING_KIT` entry naming one of them would deal a character a Przedmiot
+   * their own Karta says they may not use. Nothing does today (the Pustelnik
+   * has no `STARTING_KIT` entry at all), and this is what keeps it that way.
+   */
+  it("never deals a character equipment its own Charakterystyka forbids", () => {
+    for (const [id, kit] of Object.entries(STARTING_KIT)) {
+      const abilities = abilitiesOfCharacter(asCharacterId(id));
+      for (const cardId of kit.items ?? []) {
+        expect(isForbidden(abilities, cardId), `${id} -> ${cardId}`).toBe(false);
+      }
+    }
+  });
+
   it("says something about every character it does not fully carry", () => {
     // A character with neither encoded abilities nor notes is a claim that the
     // app handles all of its powers, which is true of none of them.

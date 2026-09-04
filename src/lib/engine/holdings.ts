@@ -3,7 +3,7 @@
 import events from "@/data/events.json";
 import type { EventCard } from "@/data/types";
 import { bonusOf, combatValueOf, isMagicalItem } from "./cards";
-import { ABILITIES } from "./abilities";
+import { ABILITIES, isForbidden, type Ability } from "./abilities";
 import { forbiddenNatures } from "./abilityText";
 import { isUsable } from "./uses";
 import type { EqMode } from "./slots";
@@ -382,18 +382,42 @@ export function forbiddenIn(
   nature: Nature | null,
   eqMode: EqMode,
 ): boolean {
-  if (!forbiddenTo(cardId, nature)) return false;
-  /**
-   * The Plecak is not a destination this rule has anything to say about.
-   *
-   * A card already held is already held — and `null` is also how a card comes
-   * *off* the body, which must never be refused: 7.2 can turn a Natura under a
-   * Zbroja, and a rule that trapped the card on its wearer would be 5.3
-   * enforcing the opposite of what it says. The app's answer to "you may no
-   * longer use this" is to grey it, not to take it away (see `inEffect`).
-   */
+  return forbiddenTo(cardId, nature) && countsAsUsing(slot, eqMode);
+}
+
+/**
+ * The other half of 5.3's "using": what counts as it, regardless of *which*
+ * rule does the forbidding.
+ *
+ * `forbiddenIn` and `characterForbiddenIn` both ask this — a Natura and a
+ * Charakterystyka forbid different cards, but neither cares whether a
+ * Przedmiot is worn or tucked in a Sakwa any differently, so the place-logic
+ * itself has one spelling. See `forbiddenIn`'s own note for why the Plecak and
+ * the Tajemna Sakwa are exempt.
+ */
+function countsAsUsing(slot: Slot | null, eqMode: EqMode): boolean {
   if (slot === null) return false;
   return !(STORAGE.includes(slot) && eqMode === "slots");
+}
+
+/**
+ * 5.3 again, off 8.1's Charakterystyka rather than a Natura — the Pustelnik's
+ * „Nie możesz używać Miecza, Sztyletu, Hełmu ani Zbroi" and anything printed
+ * the same way. Takes `abilities` rather than a character id so the caller
+ * decides the source, the same contract `isForbidden` keeps.
+ */
+export function characterForbiddenIn(
+  abilities: readonly Ability[],
+  cardId: string,
+  slot: Slot | null,
+  eqMode: EqMode,
+): boolean {
+  return isForbidden(abilities, cardId) && countsAsUsing(slot, eqMode);
+}
+
+/** 5.3's refusal off a Charakterystyka, worded the way `forbiddenSaid` is. */
+export function characterForbiddenSaid(name: string): string {
+  return `${name} — twoja Charakterystyka nie pozwala ci tego użyć (5.3, 8.1).`;
 }
 
 /**

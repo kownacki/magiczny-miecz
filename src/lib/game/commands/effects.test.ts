@@ -387,6 +387,41 @@ describe("losing what you carry (strata)", () => {
       });
     });
 
+    /**
+     * 5.3/8.1, asked of the taker rather than the victim: a Pan Bogactwa cast
+     * by a Pustelnik must not be able to hand its caster a Miecz. Left out of
+     * the pool of candidates rather than refused after picking one, so the
+     * victim's gold — the card's own fallback — is what changes hands instead.
+     */
+    it("takes the gold instead when the only Przedmiot is forbidden to the taker", async () => {
+      const withGold = aTable({
+        seats: [
+          aSeat({ id: "seat-a", seat_index: 0, gold: 1 }),
+          aSeat({ id: "seat-b", seat_index: 1, character_id: asSeatCharacter("pustelnik"), gold: 0 }),
+        ],
+        holdings: [aHolding({ id: "safe", seat_id: "seat-a", card_id: "miecz", kind: "item" })],
+      });
+      const { writes } = await applyEffect(
+        withGold,
+        {
+          seatId: "seat-a",
+          toSeatId: "seat-b",
+          effect: { op: "zabierz", co: "przedmiot-lub-zloto" } as Effect,
+          reason: "PAN BOGACTWA",
+          decided: { choices: [0] },
+          shuffle: asIs,
+        },
+        ports(),
+      );
+      expect(writes.holdings).toBeUndefined();
+      expect(writes.seats).toEqual(
+        expect.arrayContaining([
+          { id: "seat-a", patch: { gold: 0 } },
+          { id: "seat-b", patch: { gold: 1 } },
+        ]),
+      );
+    });
+
     it("leaves an empty Sakwa takeable, because the card protects a pair", async () => {
       // "Przedmiot ten i Sakwę" — the bag is safe as the container of
       // something. With nothing in it there is no „ten Przedmiot" to be the

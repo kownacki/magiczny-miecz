@@ -1249,12 +1249,15 @@ square the player takes *is* how much the mount added, with no separate ask. The
 bare roll stays on the list because both cards say „możesz". The cap binds the
 total, options dedupe on the destination, and the Most still ignores the die.
 
-**The sweep.** Of 34 `Ability` kinds, exactly one was genuinely unenforced, and
-it is the one above. `przeprawa-wszedzie` looked unread but the Łódź and
-Latarnia are carried by `SCRIPTS` and `USES`; `tylko-natura` is read from
-`abilityText.ts`. At field level nothing beyond the Kryształ's two. So the
-vocabulary is otherwise honest — worth knowing, since it makes this a check to
-run after touching `ABILITIES` rather than a standing suspicion.
+**The sweep, and the sweep's own bug.** The first pass said exactly one kind
+was unenforced and that the vocabulary was otherwise honest. That was wrong,
+and wrong in an instructive way: it matched the bare string `"zakazane"`, found
+it in `characters.ts`, and counted the **data literal that defines the ability**
+as evidence something read it. A kind vouching for itself. Matching on the
+branch instead — `kind === "x"`, `case "x"` — turns up a third gap, the
+Pustelnik below. `przeprawa-wszedzie` and `tylko-natura` stay false positives:
+the Łódź and Latarnia are carried by `SCRIPTS` and `USES`, and `forbiddenNatures`
+reads the other from `abilityText.ts`. So: three of 34, not one.
 
 **And the docs it caught.** Counting `MANUAL` afterwards turned up three stale
 claims: COVERAGE.md still named two blockers that fell on 2026-09-04, still said
@@ -1263,3 +1266,41 @@ not knowing which Przedmioty are *Magiczne* — months after `magical` was
 transcribed onto twenty-three Kartas and wired through `seatView` as
 `noMagical`. A comment about code rots loudly; a comment about data rots in
 silence.
+
+## The Pustelnik may not pick up a Miecz after all
+
+2026-09-04, the third clause found by the same check. „Nie możesz używać
+Miecza, Sztyletu, Hełmu ani Zbroi" is `zakazane` on his Charakterystyka, read
+only by `isForbidden`, which had no callers — so he could take all four and
+fight with them.
+
+The rule connection is the interesting half. The card says *używać*, not
+*posiadać*, so refusing at the moment a card is taken has to be justified, and
+5.3 is what justifies it: „Żadna Postać nie może posiadać Przedmiotów, którymi
+na mocy zasad nie wolno się jej posługiwać." It does not say *which* rule
+forbids the use, and 8.1 gives a Charakterystyka the same standing a Natura
+has. So the new refusal is a sibling of the Natura one, at the same door, and
+5.3's second sentence — the card is left face up where it was found — is
+already what refusing there does.
+
+Then every other way a holding can arrive: `buyGoods` inherits it through
+`takeCard`; 17.9's spoils refuse it, so a won Miecz stays on the loser; the Pan
+Bogactwa leaves a forbidden Przedmiot out of the taker's pool rather than
+refusing after the choice, since an index into a shorter list is still honest;
+5.6's „załóż" stops offering it as a way under the limit; and `equipCard`
+refuses it, sharing `forbiddenIn`'s own exemptions through a new
+`countsAsUsing` — taking a card *off* is never refused, and the Tajemna Sakwa
+still does nothing rather than being barred. The console's `grantCard` is
+deliberately left alone, on the precedent it already sets for the Natura check.
+
+Two things checked rather than assumed. No card prints `zakazane`, only this
+one character, so no held-card path needs it. And the claim that 4.4's rebirth
+could carry old gear onto a new Pustelnik does not hold — `killSeat` deletes
+every holding, and `reviveCharacter` is console-only and returns nothing — so
+an already-illegal hand really is only reachable by console fiat or an old
+save, which is what the comment there says.
+
+Left open and worth naming: `inEffect` knows a Natura and not a Charakterystyka,
+so if a Pustelnik ever does hold one of the four, it would still count toward
+his points. Closing that means threading abilities through eleven call sites
+including `fight.ts`, which is its own job.

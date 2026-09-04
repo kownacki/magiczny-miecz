@@ -3,7 +3,7 @@
 import type { Holding } from "./state";
 import type { Nature } from "@/data/types";
 import { carriedCount, carryLimit, spellAllowance } from "./derive";
-import type { Ability } from "./abilities";
+import { isForbidden, type Ability } from "./abilities";
 import { slotOnArrival } from "./holdings";
 import { isUsable } from "./uses";
 import { RELICS, type EqMode, type Slot } from "./slots";
@@ -134,6 +134,17 @@ export function waysUnder<T extends Holding & { id: string }>(
    * neither pretends the card survives by being put down somewhere safe.
    */
   lostContainer = false,
+  /**
+   * The seat's own Charakterystyka, for `zaloz`'s sake.
+   *
+   * `slotOnArrival` below already keeps a Natura-forbidden card off this list
+   * — `forbiddenTo` is its business — but it knows nothing of 8.1, so a
+   * Pustelnik already holding a Miecz some other way (the console, an old
+   * save) was offered "put it on" as a way out of a surplus, which `equipCard`
+   * would then refuse. Defaults to none: a caller that does not pass a
+   * character's abilities gets the answer it always got.
+   */
+  abilities: readonly Ability[] = [],
 ): WayUnder[] {
   if (what === "zaklecia") {
     return holdings
@@ -165,7 +176,7 @@ export function waysUnder<T extends Holding & { id: string }>(
       ways.push({ kind: "uzyj", holdingId: held.id, cardId: held.cardId, gdzie: "stos" });
     }
     const fits = slotOnArrival({ cardId: held.cardId, kind: "item", eqMode, nature, worn });
-    if (fits !== null) {
+    if (fits !== null && !isForbidden(abilities, held.cardId)) {
       ways.push({ kind: "zaloz", holdingId: held.id, cardId: held.cardId, gdzie: "na-sobie" });
     }
   }

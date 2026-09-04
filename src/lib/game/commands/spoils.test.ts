@@ -23,6 +23,8 @@ const duel = (
     theirs?: ReturnType<typeof aHolding>[];
     /** Which way the asker's duel went. */
     outcome?: "wygrana" | "przegrana";
+    /** The winner's Postać — `awanturnik` unless a test's Charakterystyka matters. */
+    winnerCharacter?: string;
   } = {},
 ) =>
   aTable({
@@ -49,7 +51,13 @@ const duel = (
       } as unknown as TurnPhase,
     },
     seats: [
-      aSeat({ id: "seat-a", seat_index: 0, character_id: asSeatCharacter("awanturnik"), field_id: "wrzosowiska", gold: 1 }),
+      aSeat({
+        id: "seat-a",
+        seat_index: 0,
+        character_id: asSeatCharacter(over.winnerCharacter ?? "awanturnik"),
+        field_id: "wrzosowiska",
+        gold: 1,
+      }),
       aSeat({ id: "seat-b", seat_index: 1, character_id: asSeatCharacter("elf"), field_id: "wrzosowiska", life: 4, gold: over.theirGold ?? 2 }),
     ],
     holdings: over.theirs ?? [
@@ -102,6 +110,19 @@ describe("what the winner of a duel takes (17.9)", () => {
     await expect(
       settle(duel(), { spoils: { take: "przedmiot", holdingId: "nope" } }),
     ).rejects.toThrow(/17\.9/);
+  });
+
+  /**
+   * 5.3/8.1, sibling of `takeCard`'s: 17.9 hands the winner an item the same
+   * way finding one does, so a Pustelnik still may not come to possess a
+   * Miecz off a beaten rival.
+   */
+  it("refuses the Miecz to a Pustelnik winner (5.3, 8.1)", async () => {
+    await expect(
+      settle(duel({ winnerCharacter: "pustelnik" }), {
+        spoils: { take: "przedmiot", holdingId: "h1" },
+      }),
+    ).rejects.toThrow("MIECZ — twoja Charakterystyka nie pozwala ci tego nieść (5.3, 8.1).");
   });
 });
 

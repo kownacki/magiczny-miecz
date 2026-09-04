@@ -4,7 +4,8 @@ import items from "@/data/items.json";
 import { CARD_CLASS_LABEL } from "@/data/types";
 import type { CardClass, EventCard, Item, Nature } from "@/data/types";
 import { forbiddenNatures } from "@/lib/engine/abilityText";
-import { abilitiesOf, carriesSpell, entryPrice, unavailableIn } from "@/lib/engine/abilities";
+import { abilitiesOf, carriesSpell, entryPrice, isForbidden, unavailableIn } from "@/lib/engine/abilities";
+import { abilitiesOfCharacter, asCharacterId } from "@/lib/engine/characters";
 import { barredFromFriends } from "@/lib/engine/status";
 import { refuseWhileQueued, storedStatuses } from "./turn";
 import { refuseWhileOverflow } from "./overflow";
@@ -447,6 +448,21 @@ export function takeCard(snapshot: Snapshot, command: TakeCard): Outcome<Taken> 
     throw new Error(`${card.name} — twoja Natura nie pozwala ci tego nieść (5.3).`);
   }
 
+  /**
+   * 5.3 again, this time off the Charakterystyka rather than the Natura.
+   *
+   * „Żadna Postać nie może posiadać Przedmiotów, którymi na mocy zasad nie
+   * wolno się jej posługiwać" does not say *which* rule forbids the use — 8.1
+   * gives a Charakterystyka the same standing a Natura has: „Charakterystyka
+   * często zawiera także ograniczenia, jakim podlega dana Postać." The
+   * Pustelnik's „Nie możesz używać Miecza, Sztyletu, Hełmu ani Zbroi" is
+   * exactly that shape, so it belongs at the same door and stays a Postać
+   * property read off `abilitiesOfCharacter` — not off what is held, which is
+   * the fact this check exists to keep from ever being true.
+   */
+  if (isForbidden(abilitiesOfCharacter(asCharacterId(taker?.character_id ?? null)), cardId)) {
+    throw new Error(`${cardName(cardId)} — twoja Charakterystyka nie pozwala ci tego nieść (5.3, 8.1).`);
+  }
 
   /**
    * "Miecza nie można otrzymać w Krainie Dolnego Kręgu."

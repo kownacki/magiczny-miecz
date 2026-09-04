@@ -30,7 +30,7 @@ import { Hand } from "./hand";
 import { TrophySection } from "./trophy-section";
 import { PLACES_ON_THE_BODY, SlotPanel } from "./slot-panel";
 import { CHARACTERS, asNature, type Seat, wornBySlot } from "./table";
-import { forbiddenIn } from "@/lib/engine/holdings";
+import { characterForbiddenIn, forbiddenIn } from "@/lib/engine/holdings";
 import Image from "next/image";
 import { characterKind } from "@/lib/engine/polish";
 import { seatColour } from "@/lib/view/boardMap";
@@ -191,7 +191,15 @@ export function SeatCard({
    * which is nothing.
    */
   const mayPut = (cardId: string, slot: Slot | null) =>
-    !forbiddenIn(cardId, slot, asNature(seat.nature), slotted ? "slots" : "classic");
+    !forbiddenIn(cardId, slot, asNature(seat.nature), slotted ? "slots" : "classic") &&
+    // 8.1: the same question, off a Charakterystyka rather than a Natura —
+    // the Pustelnik's forbidden four among them.
+    !characterForbiddenIn(
+      abilitiesOfCharacter(asCharacterId(seat.character_id)),
+      cardId,
+      slot,
+      slotted ? "slots" : "classic",
+    );
 
   const place = (slot: Slot | null) => {
     if (!carried) return;

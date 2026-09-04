@@ -2,7 +2,8 @@
 
 import type { Nature } from "@/data/types";
 import { carriedCount, carryLimit } from "@/lib/engine/derive";
-import { forbiddenIn, forbiddenSaid } from "@/lib/engine/holdings";
+import { characterForbiddenIn, characterForbiddenSaid, forbiddenIn, forbiddenSaid } from "@/lib/engine/holdings";
+import { abilitiesOfCharacter, asCharacterId } from "@/lib/engine/characters";
 import {
   SLOT_LABEL,
   STORAGE,
@@ -158,6 +159,19 @@ export function equipCard(
     )
   ) {
     throw new Error(forbiddenSaid(cardName(held.card_id)));
+  }
+
+  /**
+   * 8.1's restriction, the same way — a Pustelnik's own Charakterystyka rather
+   * than a Natura, but the same door: `takeCard` refuses the card before it is
+   * ever held, so this too is only reachable through the console's fiat or an
+   * old save. `characterForbiddenIn` shares `forbiddenIn`'s own exemptions —
+   * `null` (taking a card off) always allowed, and the Tajemna Sakwa doing
+   * nothing rather than being refused.
+   */
+  const wearerAbilities = abilitiesOfCharacter(asCharacterId(wearer?.character_id ?? null));
+  if (characterForbiddenIn(wearerAbilities, held.card_id, command.slot, eqModeOf(snapshot.game))) {
+    throw new Error(characterForbiddenSaid(cardName(held.card_id)));
   }
 
   if (!fitsIn(held.card_id, command.slot)) {

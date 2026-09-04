@@ -10,7 +10,13 @@ import type { ActionOf, Reply, Requests, Route } from "@/lib/game/requests";
 import { forgetSeatToken, noteRemoved, readSeatToken, writeSeatToken } from "@/lib/game/seatToken";
 import { deviceId, forgetDevice } from "@/lib/game/deviceId";
 import { watchRevision } from "@/lib/game/liveRevision";
-import { RANDOM_CHARACTER_ID, isRandomPick, type SeatCharacter } from "@/lib/engine/characters";
+import {
+  RANDOM_CHARACTER_ID,
+  abilitiesOfCharacter,
+  asCharacterId,
+  isRandomPick,
+  type SeatCharacter,
+} from "@/lib/engine/characters";
 import { fitsIn, isWearable, type Slot } from "@/lib/engine/slots";
 import { carriedCount, carryLimit } from "@/lib/engine/derive";
 import { announce, watch, type Announcement, type Watched } from "@/lib/engine/announcements";
@@ -19,7 +25,7 @@ import { announcingWith, CHANNEL_MS } from "./channelling";
 import { watchIntent } from "@/lib/game/liveRevision";
 import { CARD_NAMES, asHoldings, asNature, type Seat } from "./table";
 import type { Envelope, EnvelopeFieldCard as FieldCard, EnvelopeGame as Game, EnvelopeUser as Person, EnvelopeSpoken as Spoken, EnvelopeSurplus } from "@/lib/game/wire";
-import { forbiddenIn, forbiddenSaid } from "@/lib/engine/holdings";
+import { characterForbiddenIn, characterForbiddenSaid, forbiddenIn, forbiddenSaid } from "@/lib/engine/holdings";
 import { isStale, standingMoves, standingPicks, standingRules } from "./reconcile";
 
 /**
@@ -906,6 +912,18 @@ async function saidWrong(response: Response): Promise<string> {
     const eqMode = (houseRules.eq_mode ?? game?.eq_mode) === "slots" ? "slots" : "classic";
     if (slot !== null && forbiddenIn(held.cardId, slot, asNature(mineNow.nature), eqMode)) {
       return setError(forbiddenSaid(CARD_NAMES.get(held.cardId) ?? held.cardId));
+    }
+    // 8.1's restriction, worked out the same way — a Charakterystyka rather
+    // than a Natura, same reason to ask it before the card moves.
+    if (
+      characterForbiddenIn(
+        abilitiesOfCharacter(asCharacterId(mineNow.character_id)),
+        held.cardId,
+        slot,
+        eqMode,
+      )
+    ) {
+      return setError(characterForbiddenSaid(CARD_NAMES.get(held.cardId) ?? held.cardId));
     }
     if (slot === null && held.slot != null) {
       const mineCards = asHoldings(mineNow.holdings);

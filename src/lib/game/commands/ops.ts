@@ -38,7 +38,8 @@ import { only, replaceTop, requireTop, top } from "@/lib/engine/stack";
 import { keepOnly, storedStatuses, addEffect } from "./turn";
 import { turnToStone } from "./stone";
 import { seatView } from "./seat";
-import { isSpared } from "@/lib/engine/abilities";
+import { isForbidden, isSpared } from "@/lib/engine/abilities";
+import { abilitiesOfCharacter, asCharacterId } from "@/lib/engine/characters";
 import { BY_REF, decksOf, EVENTS } from "../decks";
 
 /**
@@ -512,8 +513,27 @@ const OPS: { [K in LeafOp]: OpRun<K> } = {
     // "jeden Przedmiot lub jedną Sztukę Złota" — the coin is the simpler half
     // and is taken when the victim has no Przedmiot to give.
     const kind = effect.co === "przedmiot-lub-zloto" ? "item" : reachableBy(effect.co);
+    /**
+     * 5.3/8.1, asked of the taker rather than the victim.
+     *
+     * A Pan Bogactwa cast by a Pustelnik must not be able to hand its caster a
+     * Miecz — the taker is the one who would come to possess it, so it is the
+     * taker's own Charakterystyka this checks, not the victim's Natura. Left
+     * out of the choice rather than refused after it: an index into a shorter
+     * list is still an honest index, and "nie ma czego zabrać" already covers
+     * a victim with nothing left to give.
+     */
+    const takerAbilities =
+      kind === "item"
+        ? abilitiesOfCharacter(
+            asCharacterId(snapshot.seats.find((s) => s.id === taker)?.character_id ?? null),
+          )
+        : [];
     const mine = snapshot.holdings.filter(
-      (held) => held.seat_id === seatId && held.kind === kind,
+      (held) =>
+        held.seat_id === seatId &&
+        held.kind === kind &&
+        !(kind === "item" && isForbidden(takerAbilities, held.card_id)),
     );
 
     if (mine.length === 0) {
