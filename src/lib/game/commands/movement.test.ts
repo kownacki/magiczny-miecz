@@ -479,6 +479,50 @@ describe("ruch (10.2, 13.4)", () => {
     ]);
   });
 
+  /**
+   * WAMPIR's own growth (16.2) is the other reason a row survives a lift —
+   * `points`, not `unieruchomiony`, so unlike the Krąg's victim he stays fully
+   * attackable: only the row is kept, not the fight refused.
+   */
+  it("leaves a WAMPIR carrying his own growth lying too, but fully attackable", () => {
+    const table = aTable({
+      game: {
+        active_seat: 0,
+        round: 3,
+        turn_state: afterRoll(asFieldId("zaczarowane-wzgorza")!, 2),
+      },
+      seats: [aSeat({ seat_index: 0, field_id: asFieldId("zaczarowane-wzgorza")! })],
+      fieldCards: [
+        { id: "fc-1", field_id: "plaskowyz-mgiel", card_id: "helm", granted: false, pool: null },
+        { id: "fc-wampir", field_id: "plaskowyz-mgiel", card_id: "wampir", granted: false, pool: null },
+      ],
+      effects: [
+        {
+          id: "eff-1",
+          seat_id: null,
+          field_card_id: "fc-wampir",
+          source: "wampir",
+          label: "Wampir rośnie w siłę",
+          modifier: { kind: "points", magia: 1 },
+          ends: { kind: "dispelled" },
+        },
+      ],
+    });
+    const { writes } = moveTo(table, { destination: "plaskowyz-mgiel" });
+
+    expect(writes.fieldCards).toEqual({ delete: ["fc-1"] });
+    const state = top(writes.game!.turn_state!) as { drawn: unknown[] };
+    expect(state.drawn).toMatchObject([
+      { cardId: "wampir", cardClass: "demon", fieldCardId: "fc-wampir" },
+      { cardId: "helm", cardClass: "item" },
+    ]);
+    // Not `unieruchomiony`, so nothing marks him out of reach.
+    expect(
+      (state.drawn as { cardId: string; unattackable?: true }[]).find((c) => c.cardId === "wampir")
+        ?.unattackable,
+    ).toBeUndefined();
+  });
+
   describe("turning onto the Kamienny Most (11.10)", () => {
     const table = () =>
       walking("urwisko-1", {

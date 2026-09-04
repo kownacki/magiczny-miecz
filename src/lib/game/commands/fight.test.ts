@@ -240,6 +240,89 @@ describe("otwarcie walki (17.4, 17.5)", () => {
     });
     expect(() => beginFight(burning, { cardIds: ["wilk"] })).toThrow(/nie można zaatakować \(19\.1\)/);
   });
+
+  /**
+   * WAMPIR keeps whatever he has already taken (16.2): his row carries a
+   * `points` status per win, and the fight this opens has to include it or
+   * his next opponent would face the number the deck printed rather than the
+   * number he has actually grown to.
+   */
+  it("adds a lying WAMPIR's own growth to his printed Magia (16.2)", async () => {
+    const grown = aTable({
+      game: {
+        active_seat: 0,
+        turn_state: {
+          ...pole(),
+          fieldId: "wrzosowiska",
+          drawn: [{ cardId: "wampir", cardClass: "foe", fieldCardId: "fc-wampir" }],
+        } as TurnPhase,
+      },
+      seats: [aSeat({ magic_own: 1, field_id: asFieldId("wrzosowiska") })],
+      fieldCards: [
+        { id: "fc-wampir", field_id: "wrzosowiska", card_id: "wampir", granted: false, pool: null },
+      ],
+      effects: [
+        {
+          id: "eff-1",
+          seat_id: null,
+          field_card_id: "fc-wampir",
+          source: "wampir",
+          label: "Wampir rośnie w siłę",
+          modifier: { kind: "points", magia: 1 },
+          ends: { kind: "dispelled" },
+        },
+      ],
+    });
+    const { writes } = beginFight(grown, { cardIds: ["wampir"] });
+    // Printed Magia 4, plus the one point he has already taken.
+    expect(fightIn(writes)).toMatchObject({ kind: "magical", enemyTotal: 5, playerTotal: 1 });
+  });
+
+  /**
+   * UKŁAD PLANET: "Magia wszystkich Demonów jest przez tę turę podwojona" —
+   * doubles whatever a Demon is worth *then*, WAMPIR's own growth included,
+   * which is why the multiplier is read after the bonus rather than folded
+   * into a fixed number added once.
+   */
+  it("doubles a lying Demon's Magia under UKŁAD PLANET, growth included", async () => {
+    const doubled = aTable({
+      game: {
+        active_seat: 0,
+        turn_state: {
+          ...pole(),
+          fieldId: "wrzosowiska",
+          drawn: [{ cardId: "wampir", cardClass: "foe", fieldCardId: "fc-wampir" }],
+        } as TurnPhase,
+      },
+      seats: [aSeat({ magic_own: 1, field_id: asFieldId("wrzosowiska") })],
+      fieldCards: [
+        { id: "fc-wampir", field_id: "wrzosowiska", card_id: "wampir", granted: false, pool: null },
+      ],
+      effects: [
+        {
+          id: "eff-1",
+          seat_id: null,
+          field_card_id: "fc-wampir",
+          source: "wampir",
+          label: "Wampir rośnie w siłę",
+          modifier: { kind: "points", magia: 1 },
+          ends: { kind: "dispelled" },
+        },
+        {
+          id: "eff-2",
+          seat_id: null,
+          field_card_id: "fc-wampir",
+          source: "uklad-planet",
+          label: "Układ Planet — Magia podwojona",
+          modifier: { kind: "magia-x2" },
+          ends: { kind: "round", round: 2 },
+        },
+      ],
+    });
+    const { writes } = beginFight(doubled, { cardIds: ["wampir"] });
+    // (4 printed + 1 grown) × 2.
+    expect(fightIn(writes)).toMatchObject({ kind: "magical", enemyTotal: 10, playerTotal: 1 });
+  });
 });
 
 /* --------------------------------------------------------------------------
@@ -1169,6 +1252,168 @@ describe("kostki w walce (17.3, 17.4)", () => {
     expect(pileIn(writes, "events").discard).toHaveLength(1);
     // No trophy: the Karta was not beaten by the character (1.4).
     expect(writes.holdings?.insert ?? []).toEqual([]);
+  });
+
+  /**
+   * WAMPIR: "jeżeli Wampir pokona Postać, zabiera jej Życie i dodaje je do
+   * swoich punktów" (16.2) — the point he took joins his own Magia, on the
+   * row `resolveFight` reads it back off in `beginFight` (see the growth test
+   * above).
+   */
+  describe("WAMPIR grows on what he takes (16.2)", () => {
+    const losing = (extra: { holdings?: ReturnType<typeof aHolding>[] } = {}) =>
+      aTable({
+        game: {
+          active_seat: 0,
+          turn_state: walka({
+            cardId: "wampir",
+            kind: "magical",
+            enemyTotal: 4,
+            playerTotal: 1,
+            fieldId: "wrzosowiska",
+            fought: ["wampir"],
+            result: { outcome: "przegrana", winner: "WAMPIR", loser: "Michał", kind: "magical" },
+          }),
+        },
+        seats: [aSeat({ id: "seat-a", seat_index: 0, field_id: asFieldId("wrzosowiska"), life: 4 })],
+        fieldCards: [
+          { id: "fc-wampir", field_id: "wrzosowiska", card_id: "wampir", granted: false, pool: null },
+        ],
+        ...(extra.holdings ? { holdings: extra.holdings } : {}),
+      });
+
+    it("adds a point to his row when the character actually loses Życie to him", async () => {
+      const { writes } = await resolveFight(losing(), undefined, ports());
+      expect(writes.effects?.insert).toEqual([
+        expect.objectContaining({
+          field_card_id: "fc-wampir",
+          source: "wampir",
+          modifier: { kind: "points", magia: 1 },
+        }),
+      ]);
+      // 17.4's own point, taken as always.
+      expect(writes.seats).toEqual([{ id: "seat-a", patch: { life: 3 } }]);
+    });
+
+    it("does not grow him when the point is saved instead of taken", async () => {
+      const saved = losing({
+        holdings: [aHolding({ id: "h-1", seat_id: "seat-a", card_id: "giermek", kind: "friend" })],
+      });
+      // The Giermek's one-in-six stands in — nothing was taken, so nothing grew.
+      const { writes } = await resolveFight(saved, undefined, ports({ random: scriptedRandom([1]) }));
+      expect(writes.effects?.insert ?? []).toEqual([]);
+      expect(writes.seats ?? []).toEqual([]);
+    });
+
+    it("does not grow him the first time he is fought, before his row exists", async () => {
+      const fresh = aTable({
+        game: {
+          active_seat: 0,
+          turn_state: walka({
+            cardId: "wampir",
+            kind: "magical",
+            enemyTotal: 4,
+            playerTotal: 1,
+            fieldId: "wrzosowiska",
+            fought: ["wampir"],
+            result: { outcome: "przegrana", winner: "WAMPIR", loser: "Michał", kind: "magical" },
+          }),
+        },
+        // No `fieldCards` row: drawn fresh off the deck this same turn.
+        seats: [aSeat({ id: "seat-a", seat_index: 0, field_id: asFieldId("wrzosowiska"), life: 4 })],
+      });
+      const { writes } = await resolveFight(fresh, undefined, ports());
+      expect(writes.effects?.insert ?? []).toEqual([]);
+    });
+
+    it("buries his row when he is finally beaten", async () => {
+      const beats = aTable({
+        game: {
+          active_seat: 0,
+          turn_state: walka({
+            cardId: "wampir",
+            kind: "magical",
+            enemyTotal: 5,
+            playerTotal: 6,
+            fieldId: "wrzosowiska",
+            fought: ["wampir"],
+            result: { outcome: "wygrana", winner: "Michał", loser: "WAMPIR", kind: "magical" },
+          }),
+        },
+        seats: [aSeat({ id: "seat-a", seat_index: 0, field_id: asFieldId("wrzosowiska") })],
+        fieldCards: [
+          { id: "fc-wampir", field_id: "wrzosowiska", card_id: "wampir", granted: false, pool: null },
+        ],
+        effects: [
+          {
+            id: "eff-1",
+            seat_id: null,
+            field_card_id: "fc-wampir",
+            source: "wampir",
+            label: "Wampir rośnie w siłę",
+            modifier: { kind: "points", magia: 1 },
+            ends: { kind: "dispelled" },
+          },
+        ],
+      });
+      const { writes } = await resolveFight(beats, undefined, ports());
+      expect(writes.fieldCards?.delete).toEqual(["fc-wampir"]);
+      expect(writes.effects?.delete).toEqual(["eff-1"]);
+      // A Demon: 1.4 pays no trophy for a fight fought with Magia.
+      expect(writes.holdings?.insert ?? []).toEqual([]);
+    });
+  });
+
+  /**
+   * OCALONY, cast on a Wróg lying on an Obszar: "ratuje go od śmierci" — the
+   * death a win would otherwise cost him is spent instead of him.
+   */
+  describe("OCALONY spends the death instead of the Wróg (9.6)", () => {
+    const winning = () =>
+      aTable({
+        game: {
+          active_seat: 0,
+          turn_state: walka({
+            cardId: "wilk",
+            enemyTotal: 4,
+            playerTotal: 6,
+            fieldId: "wrzosowiska",
+            fought: ["wilk"],
+            result: { outcome: "wygrana", winner: "Michał", loser: "WILK", kind: "ordinary" },
+          }),
+        },
+        seats: [aSeat({ id: "seat-a", seat_index: 0, field_id: asFieldId("wrzosowiska") })],
+        fieldCards: [
+          { id: "fc-wilk", field_id: "wrzosowiska", card_id: "wilk", granted: false, pool: null },
+        ],
+        effects: [
+          {
+            id: "eff-1",
+            seat_id: null,
+            field_card_id: "fc-wilk",
+            source: "ocalony",
+            label: "Ocalony",
+            modifier: { kind: "ocalenie" },
+            ends: { kind: "dispelled" },
+          },
+        ],
+      });
+
+    it("leaves his row standing and spends the status rather than him", async () => {
+      const { writes } = await resolveFight(winning(), undefined, ports());
+      expect(writes.fieldCards?.delete ?? []).toEqual([]);
+      expect(writes.effects?.delete).toEqual(["eff-1"]);
+      // No trophy — he was not beaten, he was saved.
+      expect(writes.holdings?.insert ?? []).toEqual([]);
+    });
+
+    it("names what was saved on the fight-end line", async () => {
+      const { writes } = await resolveFight(winning(), undefined, ports());
+      expect(writes.journal?.[0]).toMatchObject({
+        kind: "fight-end",
+        payload: { outcome: "wygrana", saved: "Ocalony" },
+      });
+    });
   });
 
   it("waits while somebody holds the floor (17.3, 17.7)", async () => {

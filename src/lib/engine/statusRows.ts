@@ -257,6 +257,9 @@ const STACKING: Record<Modifier["kind"], Stacking> = {
   // `moveMultiplier` answers 2 or 1. Never 4.
   "move-x2": "refreshes",
   attacker: "exclusive",
+  // `magiaDoubled` answers 2 or 1 the same way — a second UKŁAD PLANET drawn
+  // onto a board already doubled changes nothing, not four times the Magia.
+  "magia-x2": "refreshes",
 };
 
 /**
@@ -378,6 +381,11 @@ export function markOf(status: Status): Mark {
     // and one Nieznajomy will want to know.
     case "attacker":
       return { glyph: "\u2694", tone: "obojetny", title };
+    // A Karta's own mark, not a character's: a Demon worth more is bad news
+    // for whoever reads the board, the opposite of `move-x2`'s upward triangle
+    // even though both double a number.
+    case "magia-x2":
+      return { glyph: "\u00d7", tone: "zly", title };
     case "note":
       return { glyph: NOTE_GLYPH[status.source] ?? "\u25CB", tone: "obojetny", title };
   }

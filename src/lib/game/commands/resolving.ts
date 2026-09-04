@@ -21,10 +21,12 @@ import { putOnPile } from "./piles";
 import { replaceTop, requireTop, topIf } from "@/lib/engine/stack";
 import { activeSeat, seatView } from "./seat";
 import { skipsRollAt } from "@/lib/engine/abilities";
-import { addEffect, refuseWhileQueuedFor, refuseWhileUndrawn } from "./turn";
+import { addCardEffect, addEffect, refuseWhileQueuedFor, refuseWhileUndrawn } from "./turn";
 import { keyOf, listed } from "@/lib/engine/state";
 import type { Decisions } from "./ops";
 import { applyEffect, heldAt, markResolved, markRolled, type ApplyEffect } from "./effects";
+import { classOf } from "@/lib/engine/cards";
+import { cardStatuses, magiaDoubled } from "@/lib/engine/status";
 
 export interface UseResult {
   card: string;
@@ -276,6 +278,59 @@ export async function resolveFieldOffer(
 }
 
 /**
+ * UKŁAD PLANET's own half: "Magia wszystkich Demonów jest przez tę turę
+ * podwojona" — every Demon already lying on the board, not one a Zaklęcie was
+ * aimed at, which is why this walks `fieldCards` itself rather than going
+ * through `applyCardEfekt`'s one-row door the way Krąg Płomieni and Władca
+ * Gromu do.
+ *
+ * `magia-x2` and not another `points` bonus: doubling has to apply to
+ * whatever a Demon is worth *when the dice are thrown*, WAMPIR's own growth
+ * (16.2) included, and a fixed number added now would be the wrong one the
+ * moment he grows again — `fight.ts`'s `beginFight` is where the two are read
+ * together.
+ *
+ * On the round clock, one round out — the same shape `paralyseFoesOn`
+ * (`commands/spells.ts`) uses for the Władca Gromu's paralysis: "przez tę
+ * turę" is the table's own circuit and not a seat's countdown, so nothing
+ * here is ticked by a turn ending.
+ *
+ * Bespoke to this one card id rather than a new `Effect` op, the same choice
+ * `landSpell` makes for the Władca Gromu: the op tree only ever lands on a
+ * seat, and a card that reaches every Demon on the board instead has nowhere
+ * to fit in it without touching `cardScript.ts`.
+ */
+function doubleDemons(
+  snapshot: Snapshot,
+  input: { round: number },
+): { writes: Changeset; did: string[] } {
+  const demons = snapshot.fieldCards.filter((row) => classOf(row.card_id) === "demon");
+  let writes: Changeset = {};
+  const did: string[] = [];
+  for (const row of demons) {
+    const soFar = apply(snapshot, writes);
+    // Already doubled — a second UKŁAD PLANET drawn the same round changes
+    // nothing (`magiaDoubled` answers 2 or 1, never 4), so skip rather than
+    // write a second row for the same fact.
+    if (magiaDoubled(cardStatuses(soFar.effects, row.id)) === 2) continue;
+    writes = merge(
+      writes,
+      addCardEffect(soFar, {
+        fieldCardId: row.id,
+        effect: {
+          source: "uklad-planet",
+          label: "Układ Planet — Magia podwojona",
+          modifier: { kind: "magia-x2" },
+          ends: { kind: "round", round: input.round + 1 },
+        },
+      }),
+    );
+    did.push(`${cardName(row.card_id)}: Magia podwojona`);
+  }
+  return { writes, did };
+}
+
+/**
  * Carries out a Karta that was drawn onto this Obszar (16.1).
  *
  * One die, and only when the card's script is a table.
@@ -453,7 +508,19 @@ export async function resolveDrawnCard(
     };
   })();
 
-  const soFar = mergeAll(rolled, done.writes, kept, drunk);
+  /**
+   * UKŁAD PLANET's own board-wide half — see `doubleDemons`. Its script is a
+   * plain `{ op: "nic" }`, so `done` never suspends and never asks anything;
+   * this runs unconditionally once the card is actually the one drawn.
+   */
+  const planets =
+    command.cardId === "uklad-planet" && !done.result.pending && !done.result.suspended
+      ? doubleDemons(apply(snapshot, mergeAll(rolled, done.writes, kept, drunk)), {
+          round: snapshot.game.round,
+        })
+      : { writes: {} as Changeset, did: [] as string[] };
+
+  const soFar = mergeAll(rolled, done.writes, kept, drunk, planets.writes);
   const noted =
     done.result.pending || done.result.suspended
       ? {}
@@ -484,6 +551,7 @@ export async function resolveDrawnCard(
       card: cardName(command.cardId),
       ...(face !== undefined ? { face } : {}),
       ...done.result,
+      ...(planets.did.length > 0 ? { did: [...done.result.did, ...planets.did] } : {}),
     },
   };
 }

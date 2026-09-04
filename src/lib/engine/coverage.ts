@@ -85,9 +85,14 @@ const MANUAL: Readonly<Partial<Record<CardId, string>>> = {
   // turę" is a `move-max` of 1 on every seat, which is the modifier the console
   // has been able to conjure under that Karta's own name since `EFFECTS.fog`
   // was written.
-  "uklad-planet":
-    "Magia wszystkich Demonów jest przez tę turę podwojona — aplikacja liczy tury, ale nie podwaja: liczba na Karcie leżącej na Obszarze nie ma gdzie mieszkać.",
-
+  //
+  // UKŁAD PLANET moved to `pelne` the same way: the number now has somewhere
+  // to live — `magia-x2` on every Demon's `field_cards` row, one round out —
+  // and `fight.ts`'s `beginFight` reads it back before the dice are thrown.
+  // `resolveDrawnCard` (`commands/resolving.ts`) applies it bespoke to the one
+  // card id, the same choice `landSpell` makes for the Władca Gromu, because
+  // "every Demon on the board" has nowhere to fit in `cardScript.ts`'s
+  // seat-only op tree.
 
   // --- Zaklęcia the app carries out in part ---------------------------------
   //
@@ -110,9 +115,22 @@ const MANUAL: Readonly<Partial<Record<CardId, string>>> = {
   // it by hand — a manual override, the same door every tracked value has.
   "krag-plomieni":
     "Dopóki ktoś nie zdejmie Kręgu, nikt nie zdejmuje go w aplikacji — Władca Zaklęć nie ma jak trafić w Kartę na Obszarze. Rzucić go można na Wroga leżącego na Obszarze albo w trakcie walki; nie na dopiero co dobranego, zanim walka się zacznie.",
+  /**
+   * Narrowed rather than cleared: rzucony na Wroga leżącego na Obszarze teraz
+   * ratuje go od śmierci — `applyCardEfekt` (od 740c2e8) kładzie `ocalenie` na
+   * jego rząd, i `resolveFight` (`commands/spoils.ts`) wydaje ten status
+   * zamiast jego zgonu, gdy walkę wygrywa Postać: Karta zostaje, trofeum nie
+   * ma. To samo ograniczenie co Krąg Płomieni — nie na Wroga dopiero co
+   * dobranego, zanim ma swój rząd.
+   *
+   * Co zostaje: rzucony na Przyjaciela ratuje go od śmierci — Przyjaciel jest
+   * kartą przy graczu, nie na Obszarze, i ten drugi cel nie ma jeszcze swojego
+   * gniazda. I użyty w trakcie walki czyni jej wynik nierozstrzygniętym — to
+   * zmiana wyniku rzuconych już kości, którą aplikacja jeszcze czyta jako
+   * zwykłą wygraną albo przegraną.
+   */
   ocalony:
-    "Rzucony na Przyjaciela lub Wroga ratuje go od śmierci; użyty w walce czyni jej wynik nierozstrzygniętym.",
-
+    "Rzucony na Przyjaciela ratuje go od śmierci — to wciąż wasze. Użyty w walce, by uczynić jej wynik nierozstrzygniętym — też wasze.",
 };
 
 export function coverageOf(cardId: string): Coverage {

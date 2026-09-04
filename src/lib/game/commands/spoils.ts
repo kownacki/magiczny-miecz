@@ -30,8 +30,8 @@ import { activeSeat, eqModeOf, holdingsOf, seatView, trophyModeOf } from "./seat
 import { slotOnArrival } from "@/lib/engine/holdings";
 import type { Nature } from "@/data/types";
 import type { Slot } from "@/lib/engine/slots";
-import { afterFight, missionOf } from "@/lib/engine/status";
-import { keepOnly, storedStatuses } from "./turn";
+import { afterFight, cardStatuses, missionOf, savedFromLoss } from "@/lib/engine/status";
+import { addCardEffect, keepOnly, storedStatuses } from "./turn";
 import type { SeatRow } from "../store";
 import { settleBridge, settleCrossing } from "./bridge";
 import { spendLife } from "./life";
@@ -132,6 +132,37 @@ export async function resolveFight(
     return { writes: merge(soFar, cost.writes), result: undefined };
   }
 
+  /**
+   * OCALONY, spent instead of the Wróg it was cast on (9.6).
+   *
+   * "Rzucony na Przyjaciela lub Wroga ratuje go od śmierci" — checked at the
+   * one door a Wróg's death actually comes through: `kill` already answers
+   * "would this fight, settled right now, be the one that kills him" for
+   * every other consequence of a win (the trophy, the Władca's errand,
+   * Excalibur's stolen point), so this asks it the same way rather than
+   * opening a second one.
+   *
+   * Only where a row exists to have carried the status at all — `applyCardEfekt`
+   * needs a `fieldCardId` to land on and refuses a Wróg just drawn this turn
+   * (`coverage.ts`'s own note on the Krąg Płomieni says why) — so a card fresh
+   * off the deck can never have been ocalony in the first place. 17.5's pack
+   * is not split: casting it on one member of a group fighting as one saves
+   * the whole roll, because the box has no reading of a duel half decided.
+   */
+  const savedRow =
+    fight.result.outcome === "wygrana" && kill && fight.opponentSeat === undefined && !fight.raid && !fight.guardian
+      ? (fight.fought ?? [fight.cardId])
+          .map((cardId) =>
+            snapshot.fieldCards.find((row) => row.card_id === cardId && row.field_id === seat.field_id),
+          )
+          .find(
+            (row): row is NonNullable<typeof row> =>
+              row !== undefined && savedFromLoss(cardStatuses(snapshot.effects, row.id)) !== null,
+          )
+      : undefined;
+  const ocalony = savedRow ? savedFromLoss(cardStatuses(snapshot.effects, savedRow.id)) : null;
+  const ocalonySpent: Changeset = ocalony ? { effects: { delete: [ocalony.id] } } : {};
+
   // In a duel the loser may be either side; against a card only the character
   // can lose.
   const loser =
@@ -215,6 +246,10 @@ export async function resolveFight(
       : undefined;
 
   let paid: Changeset = {};
+  // Set only where a point of Życie was actually taken off the character —
+  // WAMPIR's own growth reads this below, because "zabiera jej Życie" is
+  // conditional on the taking, not on the fight merely being lost.
+  let lifeReallyLost = false;
   if (diamond && loser && victor) {
     paid = takeSpoils(snapshot, victor, loser, { take: "przedmiot", holdingId: diamond.id });
   } else if (robbing && loser && spoils) {
@@ -250,15 +285,60 @@ export async function resolveFight(
         ports,
       );
       const upToNow = mergeAll(cleared, save.writes, stoodIn.writes);
-      paid = stoodIn.result
-        ? merge(save.writes, stoodIn.writes)
-        : mergeAll(
-            save.writes,
-            stoodIn.writes,
-            spendLife(apply(snapshot, upToNow), loser.id, 1).writes,
-          );
+      if (stoodIn.result) {
+        paid = merge(save.writes, stoodIn.writes);
+      } else {
+        paid = mergeAll(
+          save.writes,
+          stoodIn.writes,
+          spendLife(apply(snapshot, upToNow), loser.id, 1).writes,
+        );
+        lifeReallyLost = true;
+      }
     }
   }
+
+  /**
+   * WAMPIR's own bookkeeping: "zabiera jej Życie i dodaje je do swoich
+   * punktów" — the point he just took joins his own Magia (16.3 fights
+   * Demony magically), which has nowhere to live but the row he is lying on
+   * (`addCardEffect`'s own note). `points` because two wins are two points,
+   * each taken on its own turn and each worth summing — `fight.ts` is where
+   * the total is read back for his next fight.
+   *
+   * Only against the character's own loss, never a raid: the Poszukiwacz
+   * fighting on his own account costs his own Przyjaciel, not the character's
+   * Życie, and nothing was taken from anybody for WAMPIR to keep.
+   *
+   * Only where his row already exists. A WAMPIR drawn and lost to in the same
+   * turn has no `field_cards` row yet — the same wall `applyCardEfekt` hits —
+   * so his first-ever fight does not grow him; every fight after the first
+   * time he is left lying overnight does, because `liftFieldCards` now keeps
+   * a Wróg's row wherever it finds any status on it, growth included.
+   */
+  const wampirGrown: Changeset =
+    !fight.raid &&
+    fight.opponentSeat === undefined &&
+    fight.result.outcome === "przegrana" &&
+    lifeReallyLost &&
+    (fight.fought ?? [fight.cardId]).includes("wampir")
+      ? (() => {
+          const lying = snapshot.fieldCards.find(
+            (row) => row.card_id === "wampir" && row.field_id === seat.field_id,
+          );
+          return lying
+            ? addCardEffect(apply(snapshot, mergeAll(cleared, paid)), {
+                fieldCardId: lying.id,
+                effect: {
+                  source: "wampir",
+                  label: "Wampir rośnie w siłę",
+                  modifier: { kind: "points", magia: 1 },
+                  ends: { kind: "dispelled" },
+                },
+              })
+            : {};
+        })()
+      : {};
 
   /**
    * The Władca's errand, if this fight was it.
@@ -273,8 +353,11 @@ export async function resolveFight(
    * A raid does not count. The Poszukiwacz Przygód fights on his own account —
    * it is his three points against them — and the Władca asked *you* to beat
    * somebody.
+   *
+   * Nor does a fight OCALONY has just spent the death of: "pokonasz Wroga" has
+   * not happened, only "would have".
    */
-  const errand = fight.raid || !kill ? {} : missionDone(snapshot, seat, fight);
+  const errand = fight.raid || !kill || ocalony ? {} : missionDone(snapshot, seat, fight);
 
   /**
    * Excalibur's point of Życie, taken after everything the loss already cost.
@@ -283,10 +366,39 @@ export async function resolveFight(
    * is off a Życie the lines above may already have moved — `paid` spends the
    * loser's for losing — and `merge` resolves two writes to one column as later
    * wins rather than as a sum.
+   *
+   * Nothing to take off a Wróg OCALONY just saved, for the same reason
+   * `errand` above stands down: 1.4's whole trophy machinery (the point of
+   * Życie included) is for a Wróg who actually died.
    */
-  const upToNow = mergeAll(cleared, paid, errand);
-  const stolen = kill ? stolenLife(apply(snapshot, upToNow), seat, fight) : {};
+  const upToNow = mergeAll(cleared, paid, errand, wampirGrown, ocalonySpent);
+  const stolen = kill && !ocalony ? stolenLife(apply(snapshot, upToNow), seat, fight) : {};
   const cleared_ = beatenOffTheBoard(apply(snapshot, mergeAll(upToNow, stolen)), fight);
+  /**
+   * WAMPIR's own row, gone the moment he actually dies.
+   *
+   * `beatenOffTheBoard` only ever reaches a raid's `field_cards` row; every
+   * other Wróg this app has fought had none to clean up, because a row was
+   * only ever kept for one carrying a status. WAMPIR is the one Wróg that can
+   * now be lying with a real row *and* be beaten outright — his own growth is
+   * exactly what kept the row alive — so this is the other half of the same
+   * bargain: whoever grows him also has to bury him.
+   */
+  const wampirDefeated: Changeset = ((): Changeset => {
+    if (ocalony || fight.opponentSeat !== undefined || fight.raid || fight.guardian) return {};
+    if (fight.result.outcome !== "wygrana") return {};
+    if (!(fight.fought ?? [fight.cardId]).includes("wampir")) return {};
+    const lying = snapshot.fieldCards.find(
+      (row) => row.card_id === "wampir" && row.field_id === seat.field_id,
+    );
+    if (!lying) return {};
+    return {
+      fieldCards: { delete: [lying.id] },
+      effects: {
+        delete: snapshot.effects.filter((row) => row.field_card_id === lying.id).map((row) => row.id),
+      },
+    };
+  })();
 
   /**
    * What the stack does with a settled round.
@@ -376,6 +488,10 @@ export async function resolveFight(
   const swept = ((): TurnState => {
     if (fight.result?.outcome !== "wygrana") return closed.state;
     if (fight.opponentSeat !== undefined || fight.raid || fight.guardian) return closed.state;
+    // OCALONY: he was not killed, so he is not crossed off — the Karta a
+    // player checks the kolejka against would show a struck-through Wróg
+    // still lying on the board.
+    if (ocalony) return closed.state;
     const state = top(closed.state);
     if (state.phase !== "field") return closed.state;
     const dead = fight.fought ?? [fight.cardId];
@@ -385,7 +501,7 @@ export async function resolveFight(
     return replaceTop(closed.state, { ...state, beaten: [...already, ...fresh] });
   })();
 
-  const beaten = mergeAll(upToNow, stolen, cleared_, {
+  const beaten = mergeAll(upToNow, stolen, cleared_, wampirDefeated, {
     game: { turn_state: swept },
   });
   const toll =
@@ -400,17 +516,33 @@ export async function resolveFight(
     // column as later-wins, and the toll's own question is a frame pushed onto
     // the state the close produced. Merged before it, the close would put the
     // state back and the question would be gone.
-    writes: mergeAll(upToNow, stolen, cleared_, kill ? trophiesFrom(snapshot, seat, fight) : {}, {
-      game: { turn_state: swept },
-      journal: [
-        {
-          seatId: seat.id,
-          round: snapshot.game.round,
-          kind: "fight-end",
-          payload: { cardId: fight.cardId, outcome: fight.result.outcome, ...closed.said },
-        },
-      ],
-    }, toll),
+    writes: mergeAll(
+      upToNow,
+      stolen,
+      cleared_,
+      wampirDefeated,
+      kill && !ocalony ? trophiesFrom(snapshot, seat, fight) : {},
+      {
+        game: { turn_state: swept },
+        journal: [
+          {
+            seatId: seat.id,
+            round: snapshot.game.round,
+            kind: "fight-end",
+            payload: {
+              cardId: fight.cardId,
+              outcome: fight.result.outcome,
+              // OCALONY named beside the win/loss it changed, rather than a
+              // second line: `journalText.ts` (held elsewhere) still has the
+              // words for it, but the fact is on the row either way.
+              ...(ocalony ? { saved: ocalony.label } : {}),
+              ...closed.said,
+            },
+          },
+        ],
+      },
+      toll,
+    ),
     result: undefined,
   };
 }

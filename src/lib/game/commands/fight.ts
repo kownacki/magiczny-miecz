@@ -62,7 +62,7 @@ import { refuseAgainstStone } from "./stone";
 import { slotsFor } from "@/lib/engine/slots";
 import { floorOf } from "./spellFloor";
 import { addEffect, refuseAgainst13_2, refuseWhileUndrawn, storedStatuses } from "./turn";
-import { cardStatuses, cardUntouchable } from "@/lib/engine/status";
+import { bonusFrom, cardStatuses, cardUntouchable, magiaDoubled } from "@/lib/engine/status";
 
 /**
  * The one Zaklęcie the rules name inside another rule.
@@ -283,7 +283,25 @@ export function beginFight(snapshot: Snapshot, command: BeginFight): Outcome<voi
     // against.
     const foe = combatValueOf(card, { miecz: mine.miecz });
     if (!foe) throw new Error(`${card.name} nie jest Wrogiem.`);
-    return { card, foe };
+
+    /**
+     * What a lying Wróg is worth beyond what the deck printed — WAMPIR's own
+     * growing points (16.2) and UKŁAD PLANET's doubling.
+     *
+     * Only a Karta `liftFieldCards` left lying (a `fieldCardId` on its
+     * `TurnCard`) has anything to read here: a Wróg drawn fresh this turn has
+     * no row yet, and neither number has anywhere to live until one exists —
+     * see `liftFieldCards`'s own note. This is the one place the server works
+     * out a lying Wróg's real strength before the dice are thrown; the
+     * browser's own `sheet` still reads the printed figure straight off
+     * `EVENTS` and does not yet show either bonus.
+     */
+    const fieldCardId = state.drawn.find((entry) => entry.cardId === cardId)?.fieldCardId;
+    const statuses = fieldCardId ? cardStatuses(snapshot.effects, fieldCardId) : [];
+    const grown = bonusFrom(statuses);
+    const base = foe.total + (foe.kind === "magical" ? grown.magia : grown.miecz);
+    const total = foe.kind === "magical" ? base * magiaDoubled(statuses) : base;
+    return { card, foe: total === foe.total ? foe : { ...foe, total } };
   });
 
   /**

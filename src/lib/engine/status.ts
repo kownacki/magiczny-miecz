@@ -350,7 +350,25 @@ export type Modifier =
       round?: number;
       /** 13.3's two forms: a fight, or an ability used in place of one. */
       how?: "atak" | "zdolnosc";
-    };
+    }
+  /**
+   * A Demon's Magia is doubled this round (UKŁAD PLANET).
+   *
+   * "Magia wszystkich Demonów jest przez tę turę podwojona" — a multiplier
+   * and not another `points` bonus, because the number it doubles keeps
+   * changing: WAMPIR grows his own (`points`, source `wampir`) fight to
+   * fight, and a fixed bonus written down when the Karta was drawn would be
+   * the wrong number the moment he grows again. `points` sums two of a kind;
+   * this instead scales whatever `points` and the printed figure already come
+   * to, which is why the two are read at the same door in `fight.ts` rather
+   * than folded into one.
+   *
+   * Card-held only — no Postać in the box multiplies their own Magia this
+   * way — but it lives in the same union everything else here does, because
+   * `cardStatuses` reads one list and a second `Modifier` type for the board
+   * half would be the "ability"/"modifier" split this file already retired.
+   */
+  | { kind: "magia-x2" };
 
 export interface Status {
   /** Unique per holder, so two of the same card can be told apart. */
@@ -605,6 +623,14 @@ export function playsAgain(statuses: readonly Status[]): boolean {
 /** How much the movement roll is multiplied by (Formuła Przestrzeni). */
 export function moveMultiplier(statuses: readonly Status[]): number {
   return statuses.some((status) => status.modifier.kind === "move-x2") ? 2 : 1;
+}
+
+/**
+ * How much a lying Wróg's Magia is multiplied by (UKŁAD PLANET), asked of a
+ * Karta's own `cardStatuses` the way `moveMultiplier` is asked of a seat's.
+ */
+export function magiaDoubled(statuses: readonly Status[]): number {
+  return statuses.some((status) => status.modifier.kind === "magia-x2") ? 2 : 1;
 }
 
 /** Whether something is barring this character from gaining Przyjaciele (Zły Duch). */

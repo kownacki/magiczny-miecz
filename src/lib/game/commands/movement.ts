@@ -534,14 +534,17 @@ export function moveTo(snapshot: Snapshot, command: MoveTo): Outcome<void> {
  * has no class to be resolved in 15.2 order, so it cannot join the turn.
  *
  * One row is left where it is rather than lifted: a Wróg `cardUntouchable`
- * (19.1, Krąg Płomieni, Władca Gromu) does nothing and cannot be fought, and
+ * (19.1, Krąg Płomieni, Władca Gromu) does nothing and cannot be fought, and a
+ * Wróg carrying any other card-held status — WAMPIR's own growing points
+ * (16.2), UKŁAD PLANET's doubling — is the same problem from the other side:
  * lifting it anyway would mean deleting its row and later writing a fresh one
- * back in `leaveCardsBehind` — which has no way to put the same status on the
+ * back in `leaveCardsBehind`, which has no way to put the same status on the
  * new row, a `Changeset` never learns a real id `apply` only mints in memory.
- * So its `field_cards` row and whatever is on it stay exactly as they were;
- * `TurnCard.fieldCardId` carries the row's own id along so `beginFight` and the
- * kolejka can still ask about it, and it still counts toward 13.4's draw
- * arithmetic the same as any other Karta lying here.
+ * So a row carrying *anything* stays exactly where it is; `TurnCard.fieldCardId`
+ * carries the row's own id along so `beginFight` and the kolejka can still ask
+ * about it, and it still counts toward 13.4's draw arithmetic the same as any
+ * other Karta lying here. `unattackable` stays narrower than that — only
+ * `cardUntouchable`'s own kind stops a fight from opening at all.
  */
 export function liftFieldCards(
   snapshot: Snapshot,
@@ -554,8 +557,10 @@ export function liftFieldCards(
   const cards = waiting.flatMap((row) => {
     const card = EVENTS.find((c) => c.id === row.card_id);
     if (!card) return [];
-    const held = cardUntouchable(cardStatuses(snapshot.effects, row.id));
-    if (!held) toLift.push(row.id);
+    const statuses = cardStatuses(snapshot.effects, row.id);
+    const held = cardUntouchable(statuses);
+    const keepRow = held !== null || statuses.length > 0;
+    if (!keepRow) toLift.push(row.id);
     /**
      * Both marks travel back off the board, and only one of them used to.
      *
@@ -582,7 +587,8 @@ export function liftFieldCards(
         lying: true,
         ...(row.granted ? { granted: true } : {}),
         ...(row.pool !== null ? { pool: row.pool } : {}),
-        ...(held ? { fieldCardId: row.id, unattackable: true as const } : {}),
+        ...(keepRow ? { fieldCardId: row.id } : {}),
+        ...(held ? { unattackable: true as const } : {}),
       },
     ];
   });
