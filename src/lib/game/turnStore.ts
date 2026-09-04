@@ -39,6 +39,7 @@ import {
 } from "./commands/turn";
 import { healSeat as healCommand } from "./commands/life";
 import { fightBeast as fightBeastCommand } from "./commands/beast";
+import { settleFight as settleFightOn, endGame as endGameOn } from "./commands/settling";
 import { applyEffect as applyEffectOn, type Decisions, type Resolution } from "./commands/effects";
 import { resolveDrawnCard as resolveDrawnCardOn, resolveFieldOffer as resolveFieldOfferOn, spendHolding as spendHoldingOn, type UseResult } from "./commands/resolving";
 import {
@@ -667,6 +668,17 @@ export async function resolveFight(gameId: string, spoils?: Spoils): Promise<voi
 }
 
 /**
+ * Writes a fight's result without rolling for it — the test console's
+ * shortcut for a total no pair of dice can reach.
+ */
+export async function settleFight(
+  gameId: string,
+  outcome: "wygrana" | "przegrana" | "remis",
+): Promise<string> {
+  return change(gameId, settleFightOn, { outcome });
+}
+
+/**
  * Takes a card off the field's stack once somebody has claimed it.
  *
  * What is still listed when the turn ends is exactly what nobody took, which is
@@ -1164,6 +1176,15 @@ export async function fightBeast(
   await change(gameId, fightBeastCommand, undefined, {
     random: supplied([kindRoll, strengthRoll, playerRoll, beastRoll], appRandom()),
   });
+}
+
+/**
+ * Ends the game outright, for the test console — the win or the loss
+ * `fightBeast` would leave behind, without walking the Kamienny Most to get
+ * there.
+ */
+export async function endGame(gameId: string, seatId: string, won: boolean): Promise<void> {
+  await change(gameId, endGameOn, { seatId, won });
 }
 
 /**

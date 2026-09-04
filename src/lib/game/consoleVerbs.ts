@@ -35,7 +35,6 @@ import { cardName, sztuki } from "@/lib/engine/polish";
 import { shelfFor, trophyPointsOf } from "@/lib/engine/trophies";
 import { carriesSpell } from "@/lib/engine/abilities";
 import { foldStatuses } from "@/lib/engine/statusRows";
-import { change } from "./change";
 import { ADJUSTABLE, type Adjustable } from "./commands/adjust";
 import { STONE_TURNS } from "./commands/stone";
 import {
@@ -93,7 +92,9 @@ import {
   removeCharacter,
   resolveFight,
   reviveCharacter,
+  settleFight,
   settleSpell,
+  endGame,
   spendHolding,
   clearField,
   stackCard,
@@ -112,7 +113,7 @@ import { activeStore } from "./gameStore";
 import { compulsoryOffer } from "@/lib/engine/fieldScript";
 import { copiesRanked } from "./commands/holdings";
 import { listed, type TurnCard } from "@/lib/engine/state";
-import { only, replaceTop, requireTop, top, topIf } from "@/lib/engine/stack";
+import { requireTop, top, topIf } from "@/lib/engine/stack";
 import { askOnTop } from "@/lib/engine/ask";
 import { eqModeOf, seatView, trophyModeOf, turnQueueOf } from "./commands/seat";
 import { SLOT_LABEL, STORAGE, inPlayAt } from "@/lib/engine/slots";
@@ -1248,53 +1249,7 @@ export const VERBS: { [K in Command["kind"]]: VerbRun<K> } = {
 
   settle: async (ctx, command) => {
     const { gameId } = ctx;
-    /**
-     * Decides the fight you are in, without arranging dice to do it.
-     *
-     * Rolling until the answer comes out right is what a tester would
-     * otherwise have to do, and against a Wilkołak with Miecz 10 there are
-     * totals no pair of dice can reach — so the result is written and then
-     * *applied* by `resolveFight`, the same function the last die calls. What
-     * follows a loss follows here too: 17.4's Zbroja rolled against the point
-     * of Życie, 4.4 if it was the last one, the guardian's own price on the
-     * Kamienny Most.
-     */
-    const fightName = await change(
-      gameId,
-      (snapshot) => {
-        const state = top(snapshot.game.turn_state);
-        if (state.phase !== "fight") throw new Error("No fight is happening.");
-        const fight = state.fight;
-        const settled =
-          command.outcome === "remis"
-            ? ({ outcome: "remis", kind: fight.kind } as const)
-            : ({
-                outcome: command.outcome,
-                kind: fight.kind,
-                winner: command.outcome === "wygrana" ? "Postać" : fight.cardName,
-                loser: command.outcome === "wygrana" ? fight.cardName : "Postać",
-              } as const);
-        return {
-          writes: {
-            game: {
-              turn_state: replaceTop(snapshot.game.turn_state, {
-                ...state,
-                // The dice are filled in as well, because everything
-                // downstream reads a settled fight as one that was rolled.
-                fight: {
-                  ...fight,
-                  playerRoll: fight.playerRoll ?? 0,
-                  enemyRoll: fight.enemyRoll ?? 0,
-                  result: settled,
-                },
-              }),
-            },
-          },
-          result: fight.cardName,
-        };
-      },
-      undefined,
-    );
+    const fightName = await settleFight(gameId, command.outcome);
     await resolveFight(gameId);
     return command.outcome === "remis"
       ? "Fight drawn."
@@ -1305,60 +1260,12 @@ export const VERBS: { [K in Command["kind"]]: VerbRun<K> } = {
 
   endgame: async (ctx, command) => {
     const { gameId, seatOf, named } = ctx;
-    /**
-     * The end of the whole thing, which in this box has only one door.
-     *
-     * "CEL GRY" makes beating the Bestia the win and there is no other, so
-     * winning is that: the game finished, the turn over, and the victory in
-     * the journal — the state `fightBeast` leaves behind, without walking the
-     * Kamienny Most to get there.
-     *
-     * Losing is not its mirror, because the rulebook has no losing condition.
-     * What it has is 14.7 — the Bestia takes two points of Życie from
-     * whoever loses to it, and 4.4 does the rest if that was the last of
-     * them. So `losegame` loses to the Bestia rather than inventing a defeat
-     * the game does not have.
-     */
     const seat = seatOf(null);
     if (command.won) {
-      await change(
-        gameId,
-        (snapshot) => ({
-          writes: {
-            game: { status: "finished", turn_state: only({ phase: "end" }) },
-            journal: [
-              {
-                seatId: seat.id,
-                round: snapshot.game.round,
-                kind: "victory" as const,
-                payload: { kind: "ordinary", beastTotal: 0 },
-              },
-            ],
-          },
-          result: undefined,
-        }),
-        undefined,
-      );
+      await endGame(gameId, seat.id, true);
       return `${named(seat)} beats the Bestia. Game over.`;
     }
-    await change(
-      gameId,
-      (snapshot) => ({
-        writes: {
-          journal: [
-            {
-              seatId: seat.id,
-              round: snapshot.game.round,
-              kind: "beast-loss" as const,
-              payload: { kind: "ordinary", beastTotal: 0 },
-            },
-          ],
-        },
-        result: undefined,
-      }),
-      undefined,
-    );
-    await adjust(gameId, seat.id, "life", -2, null);
+    await endGame(gameId, seat.id, false);
     const after = (await seatsFor(gameId)).find((s) => s.id === seat.id);
     return after?.eliminated
       ? `${named(seat)} loses to the Bestia and dies (14.7, 4.4).`
