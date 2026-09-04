@@ -1168,3 +1168,23 @@ table correcting the game, `lost-card` reads „traci" — so `card-destroyed`
 cites nothing and reads „KOMETA: giną — X, Y". Its `moves_kind_check`
 migration was applied the same day and read back from the catalog; the
 drift check reports the schema file and the database in step.
+
+## Ten recipes, so a brief does not have to list the files again
+
+2026-09-04. [WHERE.md](WHERE.md): to add an action, a Command, a request or
+reply field, a console verb, a wire field, a journal kind, a card script, a
+Status, an id or a column — which files, in what order, and what fails if a
+step is skipped. Every brief written for this repo opened by listing those
+files by hand and got them slightly different each time; this is that list,
+once, checked against the code rather than remembered.
+
+The thing worth writing down turned out not to be the file lists but what
+holds them together: four exhaustive `Record`s keyed on a union — `TURN` and
+`HOLDINGS` over the action lists, `SPECS` and `VERBS` over `Command["kind"]`,
+`HELD_TWIN` over `Ability["kind"]`, `RULE_FOR` over `JournalKind` — so the
+honest answer to "did I forget a file?" is usually `tsc`. The page's real
+value is the four places where that is *not* true, and nothing but a reader
+will catch the omission: an action nobody posts to, a body field declared and
+never read, a wire field nothing fills, and above all a journal kind with no
+sentence, which `journalText.ts` renders as silence because its switch ends in
+`default: return null`.

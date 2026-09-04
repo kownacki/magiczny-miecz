@@ -13,6 +13,9 @@ anything.
 
 ## Read these first
 
+- **[docs/WHERE.md](docs/WHERE.md)** — to add an action, a Command, a console verb,
+  a card script, a Status, a wire field, a journal kind, an id or a column: which
+  files, in what order, and what fails if you skip one. Start here when writing code
 - **[CONTEXT.md](CONTEXT.md)** — the referee's own vocabulary: Snapshot, Changeset, Command
 - **[docs/TASKS.md](docs/TASKS.md)** — what is open, and what is settled and must not be
   re-derived. Short on purpose; read it every session
