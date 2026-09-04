@@ -1188,3 +1188,39 @@ will catch the omission: an action nobody posts to, a body field declared and
 never read, a wire field nothing fills, and above all a journal kind with no
 sentence, which `journalText.ts` renders as silence because its switch ends in
 `default: return null`.
+
+## Two more readers on the one list, and the one that should not move
+
+2026-09-04, after the points and spell-limit readers. **Osłona**: the Hełm,
+Tarcza and Zbroja produce an `oslona` Modifier and `shieldSaves` reads
+`shieldUpTo(standing)`. Three things checked rather than assumed before
+trusting the move, because the two paths filter holdings differently — no
+character prints `oslona`, a shield can never arrive as a trophy
+(`kindForCard` returns "trophy" only for a foe or demon class), and the
+`suppressesItems`/Wojna Żywiołów guards wrap only the points block inside
+`heldStatuses`. 18.2b still returns before anything is read in a magical fight.
+
+**Carrying**: `udzwig` becomes a standing Modifier, `carryBonus` sums and goes
+`Infinity` for the Zaprzęg, and `derive.carryLimit` keeps its signature —
+building `heldStatuses` itself so its four callers stay put, one of them being
+the browser, which has holdings and no Status list. The comparison found a bug
+that had been there since slotowy landed: the old filter was
+`inPlayAt(held.slot)`, false for anything with no body place, so **a Tragarz
+carried nothing in slotowy**. `inEffect` asks `inPlayAt(slot) ||
+!isWearable(cardId)`, which is how every other Przyjaciel's bonus already
+worked, so the fix arrives by agreement rather than by a special case.
+`samaSieNieLiczy` and `giniePrzyUtracie` stay on the Ability, read at the count
+and at the loss; no Natura is threaded through, so a Natura-forbidden Koń still
+carries eight — a real 5.3 gap, written down rather than closed on the way past.
+
+**Crossings**, which was on the list and comes off it. `przeprawa-kostki` and
+`przeprawa` are not two spellings of one fact: one is how many dice the
+Trzęsawiska take, the other is a crossing granted to be walked from anywhere.
+Only Rusałka prints the first, and she is a Postać — nothing held can produce
+it, so a twin could never fire, and there is no second vocabulary to retire.
+It stays on the Ability with that reason beside it instead of the old comment,
+which was true about the reading and wrong about the reason. What did move is
+`grantedCrossing`, off `storedStatuses` and onto the whole `standing` list:
+which of two places a row happens to live in was never the rule. Whether a
+Postać's own printed text belongs on the Status list is deferred to step three,
+where it can be answered for all of them at once.
