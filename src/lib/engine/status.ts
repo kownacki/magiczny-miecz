@@ -4,7 +4,9 @@ import type { Nature } from "@/data/types";
 import type { Holding } from "./state";
 import type { EqMode } from "./slots";
 import { type Ability, abilitiesOf } from "./abilities";
-import { inEffect, type Reckoning } from "./holdings";
+import { isMagicalItem } from "./cards";
+import { inEffect, lentBy, suppressesItems, type Reckoning } from "./holdings";
+import type { FieldId } from "./board";
 import { cardName } from "./polish";
 
 /**
@@ -865,27 +867,24 @@ export type HeldCard = Pick<Holding, "cardId" | "kind" | "slot"> & { id: string 
  * somebody says whether it is a standing fact too — `STACKING` in
  * `statusRows.ts` already uses the same discipline for the same reason.
  *
- * Two kinds have a twin so far, and only these two — every other kind here is
- * read at the moment it applies (a fight, a toll, a roll) rather than
- * *standing* the way `points` or `frozen` do, or is already folded into some
- * other reading (`carryLimit`, `spellAllowance`, `forbiddenNatures`) and would
- * be counted twice by also producing a Status. `null` is deliberate rather
- * than a guess at a Modifier nobody asked for — moving one of these is step 2
- * or step 3's decision, one reader at a time, not this file's.
+ * One kind has a twin so far — every other kind here is read at the moment it
+ * applies (a fight, a toll, a roll) rather than *standing* the way `points` or
+ * `frozen` do, or is already folded into some other reading (`carryLimit`,
+ * `spellAllowance`, `forbiddenNatures`) and would be counted twice by also
+ * producing a Status. `null` is deliberate rather than a guess at a Modifier
+ * nobody asked for — moving one of these is step 2 or step 3's decision, one
+ * reader at a time, not this file's.
+ *
+ * `punkty` is `null` here too, and for a different reason than the rest: it is
+ * real, and it is `heldStatuses`'s own doing rather than a per-ability twin.
+ * Reading the *ability* would miss the Relikwiarz, whose points are a printed
+ * corner number and never became a `punkty` Ability at all — `bonusFromHoldings`
+ * has always read both through one map (`lentBy`, `holdings.ts`), and a twin
+ * keyed off `Ability["kind"]` has no branch for a card with no ability.
+ * `heldStatuses` asks `lentBy` once per holding instead, alongside this loop.
  */
 const HELD_TWIN: Record<Ability["kind"], ((ability: Ability) => Modifier | null) | null> = {
-  // 1.5, 2.5: the points a held card lends, read as a Status like everything
-  // else that adds to a total. `tylkoWalka` survives the crossing untouched —
-  // see the modifier's own note and `bonusFrom`'s new second argument.
-  punkty: (ability) =>
-    ability.kind === "punkty"
-      ? {
-          kind: "points",
-          miecz: ability.miecz,
-          magia: ability.magia,
-          tylkoWalka: ability.tylkoWalka,
-        }
-      : null,
+  punkty: null, // read from `lentBy`, per holding — see the note above
   // Only the "may not cast" half. `no-spells` itself carries nothing about
   // which Zaklęcia the holder resists or denies an opponent — it never has,
   // see that modifier's own note — so the twin loses nothing this ability was
@@ -943,18 +942,52 @@ const HELD_TWIN: Record<Ability["kind"], ((ability: Ability) => Modifier | null)
  * from the same reading for the same reason (1.4, 9.3), and this filters the
  * same way before asking `inEffect` at all.
  *
- * `id` is the holding's own id and the ability's index in its card's list —
- * stable across reads and unique within one holder, which is all a `Status`
- * needs to be told apart by (`foldStatuses`' key, a list's `key`).
+ * `id` is the holding's own id, plus either `:points` (the one row `lentBy`
+ * can produce) or the ability's index in its card's list — both stable across
+ * reads and unique within one holder, which is all a `Status` needs to be
+ * told apart by (`foldStatuses`' key, a list's `key`).
  */
 export function heldStatuses(
   holdings: readonly HeldCard[],
   eqMode: EqMode,
   nature: Nature | null = null,
+  /**
+   * Where the character is standing, since a Przedmiot's points can be
+   * suppressed by the square under it (`suppressesItems`) without anything
+   * else it does going quiet — the Zaczarowane Wzgórza and Rozstajne Drogi.
+   * Mirrors `bonusFromHoldings`'s `standingOn`.
+   */
+  standingOn: FieldId | null = null,
+  /**
+   * The Wojna Żywiołów, which silences a Magiczny Przedmiot's points the same
+   * way. Mirrors `bonusFromHoldings`'s `noMagical` — see that parameter's own
+   * note for the rule it is reading.
+   */
+  noMagical = false,
 ): Status[] {
   const lending = holdings.filter((held) => held.kind === "item" || held.kind === "friend");
+  const noItems = suppressesItems(standingOn);
   const out: Status[] = [];
   for (const holding of inEffect(lending, eqMode, nature)) {
+    const suppressed =
+      (noItems && holding.kind === "item") || (noMagical && isMagicalItem(holding.cardId));
+    if (!suppressed) {
+      const lent = lentBy(holding.cardId);
+      if (lent && (lent.walka.miecz !== 0 || lent.walka.magia !== 0)) {
+        out.push({
+          id: `${holding.id}:points`,
+          source: holding.cardId,
+          label: cardName(holding.cardId),
+          modifier: {
+            kind: "points",
+            miecz: lent.walka.miecz,
+            magia: lent.walka.magia,
+            ...(lent.tylkoWalka ? { tylkoWalka: true as const } : {}),
+          },
+          ends: { kind: "held" },
+        });
+      }
+    }
     abilitiesOf(holding.cardId).forEach((ability, index) => {
       const twin = HELD_TWIN[ability.kind]?.(ability);
       if (!twin) return;

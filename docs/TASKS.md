@@ -172,9 +172,13 @@ is a **Status** (CONTEXT.md). The other three decisions, and the order:
          `Ability["kind"]` — two twins (`punkty`→`points` with `tylkoWalka`,
          `bez-zaklec`→`no-spells`) and a stated reason for every null — and
          `seatView.standing` is applied plus held. No reader has moved yet.
-      2. Readers move one at a time, each with tests: points
-         (`bonusFromHoldings` → `bonusFrom` over all statuses, `tylkoWalka`
-         as a field on `points`), spell limits (`bez-zaklec` → `no-spells`,
+      2. Readers move one at a time, each with tests: ~~points~~ (done
+         2026-09-04: `seatView`'s `parametr` and `walka` are
+         `bonusFrom(standing, as)`; the held projection reads `lentBy` per
+         card so a printed corner counts too, and honours the two
+         suspensions; the spell cap stays on the held half alone;
+         `bonusFromHoldings` survives for `fight.ts`'s single-card
+         correction, reading the same map), spell limits (`bez-zaklec` → `no-spells`,
          `zaklecia-ponad-limit`), protection (`oslona`/`ocalenie`), crossings
          (`przeprawa-kostki` → `przeprawa`), carrying (`udzwig`), the rest.
       3. `Ability` kinds whose reader has moved become `Modifier` kinds; what

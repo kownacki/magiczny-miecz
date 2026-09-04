@@ -191,11 +191,19 @@ export const CLASS_NAME: Record<string, string> = {
  * number says how much and never when — so a card nobody has encoded counts
  * towards both, which is what it did before this existed.
  */
-interface Lent {
+export interface Lent {
   /** The character's parameter (1.5): what they are worth standing still. */
   parametr: HeldTotals;
   /** What they are worth in a fight, which is the same or more. */
   walka: HeldTotals;
+  /**
+   * Whether `parametr` was suppressed relative to `walka` — the same fact the
+   * printed `punkty` Ability calls `tylkoWalka`, carried alongside rather than
+   * left for a reader to reconstruct by comparing the two totals, which gives
+   * the wrong answer for a card whose bonus happens to be zero on both anyway.
+   * `heldStatuses` (`status.ts`) is the reader that needs it verbatim.
+   */
+  tylkoWalka?: true;
 }
 
 const NOTHING: HeldTotals = { miecz: 0, magia: 0 };
@@ -213,6 +221,7 @@ for (const [cardId, abilities] of Object.entries(ABILITIES)) {
     BONUS_BY_ID.set(cardId, {
       parametr: points.tylkoWalka ? { miecz: 0, magia: 0 } : lent,
       walka: lent,
+      ...(points.tylkoWalka ? { tylkoWalka: true as const } : {}),
     });
   }
 }
@@ -241,6 +250,19 @@ for (const [cardId, abilities] of Object.entries(ABILITIES)) {
 export interface HeldTotals {
   miecz: number;
   magia: number;
+}
+
+/**
+ * What one card lends, by id — the single map both readers of "does this card
+ * lend points" consult: `bonusFromHoldings` below, summing a whole hand, and
+ * `heldStatuses` (`status.ts`), projecting one card's own points into a
+ * `Status` row. Exported rather than duplicated, because the map is the part
+ * that is easy to get subtly wrong twice — the printed-corner fallback for a
+ * card nobody has encoded an ability for (the Relikwiarz) is exactly the kind
+ * of fact a second, hand-rolled lookup would quietly drop.
+ */
+export function lentBy(cardId: string): Lent | undefined {
+  return BONUS_BY_ID.get(cardId);
 }
 
 /**
@@ -383,7 +405,7 @@ export function forbiddenIn(
  * that is not a fight — the Pułapka of 14.5, the number on their card — reads
  * high. The compiler asking is cheaper than either.
  */
-export type Reckoning = keyof Lent;
+export type Reckoning = "parametr" | "walka";
 
 /**
  * The Obszary where a Przedmiot lends nothing.
@@ -451,7 +473,7 @@ export function bonusFromHoldings(
     if (holding.kind !== "item" && holding.kind !== "friend") continue;
     if (noItems && holding.kind === "item") continue;
     if (noMagical && isMagicalItem(holding.cardId)) continue;
-    const bonus = BONUS_BY_ID.get(holding.cardId);
+    const bonus = lentBy(holding.cardId);
     if (!bonus) continue;
     miecz += bonus[as].miecz;
     magia += bonus[as].magia;

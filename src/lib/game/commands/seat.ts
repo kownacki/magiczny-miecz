@@ -8,7 +8,7 @@ import {
   heldAbilities,
   type Ability,
 } from "@/lib/engine/abilities";
-import { bonusFromHoldings, inEffect, type Reckoning } from "@/lib/engine/holdings";
+import { inEffect, type Reckoning } from "@/lib/engine/holdings";
 import { carriedCount, carryLimit, spellAllowance } from "@/lib/engine/derive";
 import {
   allStatuses,
@@ -251,24 +251,24 @@ export function seatView(snapshot: Snapshot, seatId: string): SeatView {
    * by the board's own words.
    */
   const noMagical = spellsHushed(statuses) !== null;
-  const parametr = bonusFromHoldings(holdings, mode, "parametr", row.field_id, nature, noMagical);
-  const walka = bonusFromHoldings(holdings, mode, "walka", row.field_id, nature, noMagical);
+  const held = heldStatuses(heldCardsOf(snapshot, row.id), mode, nature, row.field_id, noMagical);
 
   /**
-   * Points a character is under rather than points its cards lend (1.2, 2.2).
-   *
-   * An Eliksir drunk this turn and a Najemnik paid this turn both land here,
-   * and until now both were *displayed* and never fought with: `bonusFrom` was
-   * called in `envelope.ts` alone, so the browser drew a Miecz of 7 while every
-   * rule — the fight, the Pułapka, the Trap on the bridge — went on reading 5.
-   *
-   * Added before `inFight` gets it, so the Rycerz still replaces the lot: he
-   * "nie może używać twoich Zaklęć ani Przedmiotów", and an Eliksir you drank
-   * is no more his to swing with than your Excalibur is.
+   * `parametr` and `walka` read from one list now — applied statuses (an
+   * Eliksir drunk this turn, a Najemnik paid this turn — 1.2, 2.2) and what
+   * the held cards themselves stand for, both `Status` rows, both `bonusFrom`.
+   * Before `heldStatuses` existed, a held card's points and an applied
+   * status's points were two sums (`bonusFromHoldings`, `bonusFrom(statuses)`)
+   * added together by hand here; the two are one reckoning now, and
+   * `bonusFrom`'s `tylkoWalka` handling is what keeps a held Miecz from
+   * counting towards `parametr` while standing still, same as before.
    */
-  const under = bonusFrom(statuses);
-
-  const standing = [...statuses, ...heldStatuses(heldCardsOf(snapshot, row.id), mode, nature)];
+  const standing = [...statuses, ...held];
+  const parametr = bonusFrom(standing, "parametr");
+  const walka = bonusFrom(standing, "walka");
+  // The held-cards' own share of `parametr`, without what an applied status
+  // adds — `spellCapacity` below wants this half alone, not the two summed.
+  const heldMagia = bonusFrom(held, "parametr").magia;
 
   return {
     row,
@@ -282,22 +282,23 @@ export function seatView(snapshot: Snapshot, seatId: string): SeatView {
     abilities: [...heldAbilities(inEffect(holdings, mode, nature).map((h) => h.cardId)), ...mine],
     fromCards,
     parametr: {
-      miecz: row.sword_own + parametr.miecz + under.miecz,
-      magia: row.magic_own + parametr.magia + under.magia,
+      miecz: row.sword_own + parametr.miecz,
+      magia: row.magic_own + parametr.magia,
     },
     walka: inFight(
       {
-        miecz: row.sword_own + walka.miecz + under.miecz,
-        magia: row.magic_own + walka.magia + under.magia,
+        miecz: row.sword_own + walka.miecz,
+        magia: row.magic_own + walka.magia,
       },
       heldAbilities(inEffect(holdings, mode, nature).map((h) => h.cardId)),
       statuses,
     ),
     carried: carriedCount(holdings, mode),
     carryLimit: carryLimit(holdings, mode),
-    // Deliberately without `under`: a Zaklęcie's own bonus is not in the basis
-    // the draw is refused against, and a cap that moved when a spell landed
-    // would be a cap nothing honoured. Same reasoning the envelope had.
+    // Deliberately without an applied status's own share: a Zaklęcie's bonus is
+    // not in the basis the draw is refused against, and a cap that moved when a
+    // spell landed would be a cap nothing honoured. Same reasoning the envelope
+    // had — `heldMagia` is `parametr.magia` without it, held cards alone.
     // `Infinity` and not a large number: every reader of this asks whether
     // something is over the cap, and „over infinity" is false everywhere at
     // once — `overflowIn`, `dropCard`'s 9.4 guard, the fold's tally. See the
@@ -305,7 +306,7 @@ export function seatView(snapshot: Snapshot, seatId: string): SeatView {
     spellCapacity: statuses.some((one) => one.modifier.kind === "bez-limitu-zaklec")
       ? Infinity
       : spellAllowance(
-          row.magic_own + parametr.magia,
+          row.magic_own + heldMagia,
           startingKit(asCharacterId(row.character_id)).spells ?? 0,
           fromCards,
         ),

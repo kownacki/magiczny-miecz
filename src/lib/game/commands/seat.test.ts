@@ -175,6 +175,24 @@ describe("standing: statuses plus what the held cards themselves stand for", () 
     expect(v.standing.length).toBe(v.statuses.length + 1);
     expect(v.standing.some((s) => s.ends.kind === "held")).toBe(true);
   });
+
+  /**
+   * Step 2: `parametr` and `walka` now read `standing` alone
+   * (`bonusFrom(standing, as)`), in place of the two sums —
+   * `bonusFromHoldings` over the holdings and `bonusFrom(statuses)` over the
+   * applied ones — that used to be added together by hand in `seatView`. A
+   * held Miecz produces exactly one `standing` row (`heldStatuses`), and this
+   * pins that reading it back out counts it once rather than twice.
+   */
+  it("counts a held Miecz once in parametr, not twice", () => {
+    const v = view({ sword_own: 3 }, [
+      aHolding({ id: "h1", card_id: "miecz", kind: "item" }),
+    ]);
+    // "Miecz podczas walki dodaje właścicielowi 1 punkt Miecza" — tylkoWalka,
+    // so it lends nothing standing still and exactly 1 in a fight, once.
+    expect(v.parametr.miecz).toBe(3);
+    expect(v.walka.miecz).toBe(4);
+  });
 });
 
 /* --------------------------------------------------------------------------

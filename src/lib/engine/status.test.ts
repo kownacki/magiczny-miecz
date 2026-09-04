@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { asFieldId } from "./board";
 import {
   allStatuses,
   cardStatuses,
@@ -264,6 +265,45 @@ describe("the held half: a card's own Abilities as Status rows", () => {
     // Hełm is `oslona`, read only when a fight is lost — not a standing fact,
     // so `HELD_TWIN` maps it to null rather than guessing at a Modifier.
     expect(heldStatuses([heldCard({ cardId: "helm" })], "classic", null)).toEqual([]);
+  });
+
+  /**
+   * `lentBy` is the map both readers of "does this card lend points" consult
+   * — `bonusFromHoldings`, summing a whole hand, and this file, projecting one
+   * card's own points into a `Status` row. No card in the box today only has a
+   * printed corner number and no encoded `punkty` Ability — every one of them
+   * is either encoded, spent (`isUsable`), or a friend who fights on their own
+   * account — so this pins the two readers agreeing on every card that *does*
+   * lend something, rather than asserting a case nothing in `events.json`
+   * exercises yet. If a future transcription adds a printed-only card, this
+   * fails the moment `heldStatuses` stops reading `lentBy` for it.
+   */
+  it("agrees with bonusFromHoldings on every lending card in the box", async () => {
+    const { bonusFromHoldings } = await import("./holdings");
+    const events = (await import("@/data/events.json")).default as { id: string; cardClass: string }[];
+    const lending = events.filter((c) => c.cardClass === "item" || c.cardClass === "friend");
+    for (const card of lending) {
+      const kind = card.cardClass === "friend" ? "friend" : "item";
+      const held = heldCard({ cardId: card.id, kind: kind as "item" | "friend" });
+      for (const as of ["parametr", "walka"] as const) {
+        const fromStanding = bonusFrom(heldStatuses([held], "classic", null), as);
+        const fromHoldings = bonusFromHoldings([{ ...held, face: "open" }], "classic", as);
+        expect(fromStanding, card.id).toEqual(fromHoldings);
+      }
+    }
+  });
+
+  it("suppresses a held Przedmiot's points on the Zaczarowane Wzgórza, same as bonusFromHoldings", () => {
+    const armed = [heldCard({ cardId: "srebrna-strzala" })];
+    expect(heldStatuses(armed, "classic", null, asFieldId("zaczarowane-wzgorza"))).toEqual([]);
+    expect(heldStatuses(armed, "classic", null, asFieldId("mroczna-polana")).length).toBeGreaterThan(0);
+  });
+
+  it("suppresses a Magiczny Przedmiot under the Wojna Żywiołów, same as bonusFromHoldings", () => {
+    const magical = [heldCard({ cardId: "excalibur" })];
+    expect(heldStatuses(magical, "classic", null, null, true)).toEqual([]);
+    // A plain Miecz is not magical and keeps lending.
+    expect(heldStatuses([heldCard({ cardId: "miecz" })], "classic", null, null, true).length).toBe(1);
   });
 });
 
