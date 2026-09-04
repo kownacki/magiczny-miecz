@@ -26,25 +26,33 @@ printed on them.
 The counts move, so trust the code over this paragraph — `coverage.ts` and
 `fieldScript.ts` are where the truth is, and both are checked by tests.
 
-**The seven clauses still left to the table**, and they are three problems
-rather than seven (2026-08-31, down from twenty-two that morning):
+**Five cards are left to the table**, and after 2026-09-04 they are one
+problem rather than three. The list was seven clauses on 2026-08-31, down from
+twenty-two that morning; two of the three walls it named have since come down.
 
-- **A status has nowhere to sit on a Karta lying on an Obszar.**
-  `seat_effects.seat_id` is `not null`, so the Krąg Płomieni's burning Wróg,
-  the Władca Gromu's paralysed creatures and the Ocalony's rescued Przyjaciel
-  all stop at the same wall. One migration clears all three, and it is a
-  migration on a database three other projects share.
-- **Nothing records which Przedmioty are inside a container.** The Magiczna
-  Sakwa and the Tragarz both destroy what they were carrying, and the app can
-  only shed the overflow onto the Obszar — wrong in the player's favour. The
-  mechanism to generalise already exists (`carried_by`, which a Krzyżowiec's
-  Zaklęcie uses), but putting a Przedmiot *into* a Sakwa is a thing a player
-  has to be able to do, and that is a feature rather than a fix.
+- ~~**A status has nowhere to sit on a Karta lying on an Obszar.**~~ Cleared
+  2026-09-04. `seat_effects.seat_id` is nullable with `field_card_id` beside it
+  under a check that exactly one is set; the migration is applied and read back
+  from the catalog. The Krąg Płomieni keeps a narrower note of its own — the
+  Władca Zaklęć has no way to aim at a Karta on an Obszar — and the Ocalony
+  keeps two clauses that were never about this wall.
+- ~~**Nothing records which Przedmioty are inside a container.**~~ Decided
+  2026-09-04, and decided *away*: there is no storage UI, because putting a
+  Przedmiot into a Sakwa is a feature and the rule does not need one. Losing
+  the Magiczna Sakwa or the Tragarz opens the overflow frame with
+  `because: container-lost`, and the surplus goes to the used pile through
+  `putOnPile` rather than onto the Obszar. `giniePrzyUtracie` is what tells
+  those two apart from the Koń and the Muł.
 - **Cross-obstacle adjacency is not on the board.** The Łódź and the Latarnia
   land you at the crossing's printed exit rather than "na Obszarze
   sąsiadującym", because the three rings are 14, 16 and 18 fields and do not
   line up. Everything else about both cards — the turn's delay, the discard —
-  is carried.
+  is carried. The one wall still standing.
+
+The fifth card is the **Wierzchowiec**, added 2026-09-04 when its „od 1 do 3
+punktów" was wired: „twoi Przyjaciele muszą poruszać się w zwykły sposób" is
+beyond the app for a reason that is not a wall at all, since a Przyjaciel is a
+Karta in front of a player rather than a figure with a square of its own.
 
 The Ocalony has a fourth thing of its own: "użyty w walce sprawia, że rezultat
 starcia pozostanie nierozstrzygnięty" wants a card that can rewrite a settled
@@ -167,7 +175,7 @@ loss on death are the same either way, so nothing above this line changes.
 
 | | rule | status | where |
 |---|---|---|---|
-| 9.1 | a spell's effect is on its card | ✅ | every spell's timing, target and effect are typed, and **all twenty-seven are carried out** — through `SpellScript.stosuje`, `applies` or `reactive`. Four are carried in part and say which part in `MANUAL` (`coverage.ts`), so they read `czesciowe` and print the rest where a player reads the card: KRĄG PŁOMIENI and WŁADCA GROMU cannot hold a status on a Karta lying on an Obszar, WOJNA ŻYWIOŁÓW cannot know which Przedmioty are *Magiczne* because the word was never transcribed, and OCALONY's Przyjaciel and „remis" thirds are the table's |
+| 9.1 | a spell's effect is on its card | ✅ | every spell's timing, target and effect are typed, and **all twenty-seven are carried out** — through `SpellScript.stosuje`, `applies` or `reactive`. **Two** are carried in part and say which part in `MANUAL` (`coverage.ts`), so they read `czesciowe` and print the rest where a player reads the card: KRĄG PŁOMIENI, because the Władca Zaklęć has no way to aim at a Karta lying on an Obszar, and OCALONY, whose Przyjaciel and „remis" thirds are the table's. This said four until 2026-09-04: the WŁADCA GROMU's half landed with the `field_card_id` migration, and the WOJNA ŻYWIOŁÓW's was already carried and nobody had noticed — `magical` is a transcribed field on twenty-three Kartas, `isMagicalItem` reads it, and `seatView` hands it to `heldStatuses` as `noMagical` |
 | 9.2 | held only up to the Magia limit | ✅ | |
 | 9.3 | held concealed from the other players | ✅ | enforced server-side — `visibleTo` for a hand, and `asSeenBy` for the two Karty the CHOCHLIK's `ask` frame is holding out, which are the top of a pile no device ever sees |
 | 9.4 | may not be discarded unless over the limit | ✅ | `dropCard` refuses under the limit |

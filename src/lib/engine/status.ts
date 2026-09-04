@@ -210,12 +210,16 @@ export type Modifier =
    * No Zaklęcia may be spoken while this holds — the Wojna Żywiołów.
    *
    * „Żaden gracz, łącznie z tobą, nie będzie mógł używać Zaklęć i Magicznych
-   * Przedmiotów ani ciągnąć z nich żadnych korzyści." Only the first half is
-   * enforced, and the reason is in the data rather than here: the deck does not
-   * say which Przedmioty are *Magiczne*. The word is printed on the card and
-   * was never transcribed, so „item" covers a Miecz and a Pierścień Mocy alike
-   * — and suppressing every Przedmiot would be a harder rule than the one on
-   * the card. The other half stays on the card's sentence for the table.
+   * Przedmiotów ani ciągnąć z nich żadnych korzyści." This kind carries the
+   * first half. The second is enforced too, and elsewhere: `magical` is a
+   * transcribed field on twenty-three Kartas, `isMagicalItem` reads it, and
+   * `seatView` turns this status into `heldStatuses`' `noMagical`, which stops
+   * a Magiczny Przedmiot lending its points while the war lasts.
+   *
+   * This comment said the opposite for a long time — that the word „Magiczny"
+   * was never transcribed and the other half was the table's. It was true when
+   * written and stopped being true without anything here noticing, which is
+   * the failure mode a comment about *data* has and one about code does not.
    *
    * The Obszary that forbid spells do it by field id (`NO_SPELLS`); this is the
    * same prohibition arriving as a status, so both are asked at one door.
