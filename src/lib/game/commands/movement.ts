@@ -3,7 +3,7 @@
 import { FIELDS, requireFieldId } from "@/lib/engine/board";
 import type { FieldId } from "@/lib/engine/board";
 import { heldAbilities, opensTheWayTo } from "@/lib/engine/abilities";
-import { movementCap, moveMultiplier } from "@/lib/engine/status";
+import { cardStatuses, cardUntouchable, movementCap, moveMultiplier } from "@/lib/engine/status";
 import { storedStatuses } from "./turn";
 import { asCharacterId, startingKit, withoutItems } from "@/lib/engine/characters";
 import { type EqMode, type Slot } from "@/lib/engine/slots";
@@ -532,6 +532,16 @@ export function moveTo(snapshot: Snapshot, command: MoveTo): Outcome<void> {
  * A row naming a card the app does not know is still lifted off the board — it
  * would otherwise be picked up again by everyone who ever stopped here — but it
  * has no class to be resolved in 15.2 order, so it cannot join the turn.
+ *
+ * One row is left where it is rather than lifted: a Wróg `cardUntouchable`
+ * (19.1, Krąg Płomieni, Władca Gromu) does nothing and cannot be fought, and
+ * lifting it anyway would mean deleting its row and later writing a fresh one
+ * back in `leaveCardsBehind` — which has no way to put the same status on the
+ * new row, a `Changeset` never learns a real id `apply` only mints in memory.
+ * So its `field_cards` row and whatever is on it stay exactly as they were;
+ * `TurnCard.fieldCardId` carries the row's own id along so `beginFight` and the
+ * kolejka can still ask about it, and it still counts toward 13.4's draw
+ * arithmetic the same as any other Karta lying here.
  */
 export function liftFieldCards(
   snapshot: Snapshot,
@@ -540,40 +550,45 @@ export function liftFieldCards(
   const waiting = snapshot.fieldCards.filter((row) => row.field_id === fieldId);
   if (waiting.length === 0) return { writes: {}, cards: [] };
 
+  const toLift: string[] = [];
+  const cards = waiting.flatMap((row) => {
+    const card = EVENTS.find((c) => c.id === row.card_id);
+    if (!card) return [];
+    const held = cardUntouchable(cardStatuses(snapshot.effects, row.id));
+    if (!held) toLift.push(row.id);
+    /**
+     * Both marks travel back off the board, and only one of them used to.
+     *
+     * `leaveCardsBehind` is careful to write `granted` onto the row — its
+     * comment says why, a conjured Karta must not become a real one — and
+     * this, the other half of the same round trip, dropped it. A staged
+     * Cyklop left lying on an Obszar came back off it clean, and the next
+     * character to pick him up put a phantom on the used pile. `pool` would
+     * have gone the same way: a Drzewo Życia refilled itself to four every
+     * time somebody stopped on its Obszar.
+     */
+    return [
+      {
+        cardId: card.id,
+        cardClass: card.cardClass,
+        /**
+         * Off the board, which is a different thing from being drawn.
+         *
+         * 15.1 is a draw-time rule, so a Karta that sends itself to a
+         * named Obszar says one thing on the way there and another once
+         * it is lying on it — and this is the only moment either side
+         * can tell which. See `instructionIn` and `placedFirst`.
+         */
+        lying: true,
+        ...(row.granted ? { granted: true } : {}),
+        ...(row.pool !== null ? { pool: row.pool } : {}),
+        ...(held ? { fieldCardId: row.id, unattackable: true as const } : {}),
+      },
+    ];
+  });
+
   return {
-    writes: { fieldCards: { delete: waiting.map((row) => row.id) } },
-    cards: waiting.flatMap((row) => {
-      const card = EVENTS.find((c) => c.id === row.card_id);
-      /**
-       * Both marks travel back off the board, and only one of them used to.
-       *
-       * `leaveCardsBehind` is careful to write `granted` onto the row — its
-       * comment says why, a conjured Karta must not become a real one — and
-       * this, the other half of the same round trip, dropped it. A staged
-       * Cyklop left lying on an Obszar came back off it clean, and the next
-       * character to pick him up put a phantom on the used pile. `pool` would
-       * have gone the same way: a Drzewo Życia refilled itself to four every
-       * time somebody stopped on its Obszar.
-       */
-      return card
-        ? [
-            {
-              cardId: card.id,
-              cardClass: card.cardClass,
-              /**
-               * Off the board, which is a different thing from being drawn.
-               *
-               * 15.1 is a draw-time rule, so a Karta that sends itself to a
-               * named Obszar says one thing on the way there and another once
-               * it is lying on it — and this is the only moment either side
-               * can tell which. See `instructionIn` and `placedFirst`.
-               */
-              lying: true,
-              ...(row.granted ? { granted: true } : {}),
-              ...(row.pool !== null ? { pool: row.pool } : {}),
-            },
-          ]
-        : [];
-    }),
+    writes: toLift.length > 0 ? { fieldCards: { delete: toLift } } : {},
+    cards,
   };
 }

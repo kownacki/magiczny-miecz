@@ -232,6 +232,9 @@ const STACKING: Record<Modifier["kind"], Stacking> = {
   // `frozen` asks only whether there is one. Note this is the general answer:
   // the two column-born freezes below say otherwise for themselves.
   frozen: "exclusive",
+  // Burning twice or paralysed twice is still just out of reach: `cardUntouchable`
+  // asks only whether there is one.
+  unieruchomiony: "exclusive",
   "no-spells": "exclusive",
   przeprawa: "exclusive",
   // Two Formuły Czasu do not make six turns: `playsAgain` is a question with a
@@ -319,6 +322,10 @@ export function markOf(status: Status): Mark {
     }
     case "frozen":
       return { glyph: "\u25A0", tone: "zly", title };
+    // A Wr\u00F3g out of reach rather than a character stopped \u2014 neither good nor
+    // bad for whoever is reading the board, only a fact about the Karta.
+    case "unieruchomiony":
+      return { glyph: "\u25A3", tone: "obojetny", title };
     // A door closed on one kind of card, like `barred` on one place: nothing is
     // worse about the character, there is simply something they may not speak.
     case "no-spells":

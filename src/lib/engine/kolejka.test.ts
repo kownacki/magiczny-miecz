@@ -27,6 +27,18 @@ describe("owesAFrame — what the turn must stop for", () => {
   });
 
   /**
+   * 19.1: a Wróg the Krąg Płomieni or the Władca Gromu has put out of reach
+   * does nothing and cannot be fought, so it owes the kolejka no frame — set
+   * from the card's own status at the lift, not from its class. No printed
+   * Wróg's own script ever sets `optional`, so `mayWalkPast` could not have
+   * answered this on its own.
+   */
+  it("does not stop for a Wróg out of reach, whatever its class", () => {
+    expect(owesAFrame({ ...onField("wilk")[0], unattackable: true })).toBe(false);
+    expect(owesAFrame({ ...onField("demon")[0], unattackable: true })).toBe(false);
+  });
+
+  /**
    * 16.6 is the one class whose own rule says "może", and 12.1 gives the taking
    * the run of the turn. Loot is offered, never queued.
    */

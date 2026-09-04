@@ -107,13 +107,19 @@ const nameOf = (cardId: string) => EVENTS.find((card) => card.id === cardId)?.na
  * each Karta's own text decides, through `mayWalkPast`.
  */
 export function whyQueuedHere(
-  lying: readonly { cardId: string }[],
+  lying: readonly { cardId: string; unattackable?: true }[],
   settled: readonly string[],
 ): string | null {
   const cards: TurnCard[] = [];
   for (const one of lying) {
     const card = EVENTS.find((event) => event.id === one.cardId);
-    if (card) cards.push({ cardId: card.id, cardClass: card.cardClass });
+    if (card) {
+      cards.push({
+        cardId: card.id,
+        cardClass: card.cardClass,
+        ...(one.unattackable ? { unattackable: true as const } : {}),
+      });
+    }
   }
   const frame = nextFrame(resolutionOrder(cards), settled);
   if (!frame) return null;

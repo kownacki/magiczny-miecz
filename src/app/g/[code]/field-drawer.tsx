@@ -91,13 +91,21 @@ export function FieldDrawer() {
        * Obszar on the one turn anybody is reading it.
        *
        * The turn's copy is added only for the seat whose turn it is and
-       * only on the Obszar they are standing on, which is the one case the
-       * two cannot both be populated.
+       * only on the Obszar they are standing on, which used to be the one
+       * case the two could not both be populated — until a Wróg out of
+       * reach (19.1) stopped being lifted at all. `fieldCardId` on a
+       * `drawn` entry says its row is still standing in the first list, so
+       * it is filtered out of the second rather than shown twice.
        */
       cards={[
         ...fieldCards
           .filter((card) => card.fieldId === inspecting)
-          .map((card) => ({ id: card.id, cardId: card.cardId, granted: card.granted })),
+          .map((card) => ({
+            id: card.id,
+            cardId: card.cardId,
+            granted: card.granted,
+            effects: card.effects,
+          })),
         ...(onField && myTurn && mySeat?.field_id === inspecting
           ? onField.drawn
               /**
@@ -115,7 +123,7 @@ export function FieldDrawer() {
                     card,
                     [...(onField.resolved ?? []), ...(onField.fought ?? [])],
                     onField.beaten ?? [],
-                  ),
+                  ) && card.fieldCardId === undefined,
               )
               .map((card, at) => ({
               // No row to name, so the key is the turn's own position. See

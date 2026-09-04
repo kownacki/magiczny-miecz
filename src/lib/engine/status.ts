@@ -123,6 +123,23 @@ export type Modifier =
    */
   | { kind: "frozen"; oprocz?: readonly string[] }
   /**
+   * A Wróg on the board that may not be attacked and does nothing (19.1): the
+   * Krąg Płomieni's flames, the Władca Gromu's paralysis.
+   *
+   * Not `frozen` again, on purpose. `frozen()` and `frozenBy()` are read by the
+   * turn engine to decide whether a *seat* may act — cast a Zaklęcie, take a
+   * turn — and a Wróg lying on an Obszar has no turn to take and nothing to be
+   * exempted into doing (`oprocz` is a Postać's own way out, by speaking a
+   * Zaklęcie the Wróg cannot). Folding the two into one kind would make a
+   * change meant for a character's turn silently reach a card, or the other
+   * way round. `cardUntouchable` is this one's own door, the way `untouchable`
+   * is `frozen`'s.
+   *
+   * The word is the rulebook's: 19.1 itself calls the Krąg's victim
+   * „unieruchomiona w Kręgu Płomieni".
+   */
+  | { kind: "unieruchomiony" }
+  /**
    * No Zaklęcia may be spoken while this holds — the Wojna Żywiołów.
    *
    * „Żaden gracz, łącznie z tobą, nie będzie mógł używać Zaklęć i Magicznych
@@ -408,6 +425,20 @@ export function untouchable(statuses: readonly Status[]): string | null {
   const held = statuses.find(
     (status) => status.modifier.kind === "frozen" && status.source !== "tura-stracona",
   );
+  return held ? held.label : null;
+}
+
+/**
+ * `untouchable`'s twin for a Karta lying on an Obszar (19.1, Krąg Płomieni,
+ * Władca Gromu).
+ *
+ * Asked of `cardStatuses`' output rather than a seat's, because a Wróg carries
+ * `unieruchomiony` rather than `frozen` — see that kind's own note for why the
+ * two are not one. A Wróg out of reach this way is also `mayWalkPast`'s
+ * business (kolejka.ts): it does nothing, so a turn owes it no frame.
+ */
+export function cardUntouchable(statuses: readonly Status[]): string | null {
+  const held = statuses.find((status) => status.modifier.kind === "unieruchomiony");
   return held ? held.label : null;
 }
 

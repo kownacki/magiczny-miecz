@@ -94,15 +94,22 @@ const MANUAL: Readonly<Partial<Record<CardId, string>>> = {
   // Each of these applies the half that has a seat to land on. What is left is
   // what the model has nowhere to put: a state on a Karta lying on an Obszar,
   // or a distinction the deck does not record.
-  // The fight is the app's now: a Krąg spoken into one ends it, whichever side
-  // it was aimed at, and the loop beneath goes with it. What is left is the
-  // creature *afterwards* — `seat_effects.seat_id` is `not null`, so a Karta
-  // lying on an Obszar has nowhere to carry a status, and until it does the
-  // table has to remember the flames are still round him.
+  //
+  // The Krąg Płomieni and the Władca Gromu both moved to `pelne`: a Wróg lying
+  // on an Obszar now carries `unieruchomiony` the same way a Postać carries
+  // `frozen` (`seat_effects.field_card_id`), so `beginFight` and `sendRaider`
+  // refuse him, the kolejka lets a turn walk past him rather than holding it
+  // open, and `liftFieldCards` leaves his row exactly where it is rather than
+  // lifting it, so a status put on him outlasts whoever visits next.
+  //
+  // One clause of the Krąg's stays here, and only one: „dopóki ktoś nie zdejmie
+  // Kręgu" needs something to *lift* it, and the only card that lifts anything
+  // is the Władca Zaklęć — which only ever reads a status off the seat that
+  // spoke it (`castSpell`'s own "nothing in the air" branch). Nobody has a
+  // seat to speak Władca Zaklęć *at* a Wróg, so a table freeing one still does
+  // it by hand — a manual override, the same door every tracked value has.
   "krag-plomieni":
-    "Wróg zostaje w płomieniach na Obszarze: dopóki ktoś nie zdejmie Kręgu, nie wolno go atakować i nic nie robi.",
-  "wladca-gromu":
-    "Wrogowie i inne istoty na tym Obszarze też są sparaliżowane — nie wolno ich atakować.",
+    "Dopóki ktoś nie zdejmie Kręgu, nikt nie zdejmuje go w aplikacji — Władca Zaklęć nie ma jak trafić w Kartę na Obszarze. Rzucić go można na Wroga leżącego na Obszarze albo w trakcie walki; nie na dopiero co dobranego, zanim walka się zacznie.",
   ocalony:
     "Rzucony na Przyjaciela lub Wroga ratuje go od śmierci; użyty w walce czyni jej wynik nierozstrzygniętym.",
 

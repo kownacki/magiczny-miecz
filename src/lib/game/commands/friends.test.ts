@@ -316,6 +316,39 @@ describe("sending a Przyjaciel out (Poszukiwacz Przygód)", () => {
     });
     expect(() => sendRaider(midMove, { targetSeatId: "seat-a" })).toThrow(/po ruchu/);
   });
+
+  /**
+   * 19.1: a raid target never went through `liftFieldCards` — the Obszar it
+   * stands on is not the one the sender moved to — so its row is exactly as
+   * current as it always was, and this is the same check `beginFight` makes
+   * off a different snapshot.
+   */
+  it("refuses a Wróg out of reach the same way an ordinary attack does (19.1)", () => {
+    const table = aTable({
+      game: { turn_state: onField(), active_seat: 0 },
+      seats: [aSeat({ id: "seat-a", seat_index: 0, field_id: "mroczna-polana", sword_own: 5 })],
+      holdings: [
+        aHolding({ id: "h", seat_id: "seat-a", card_id: "poszukiwacz-przygod", kind: "friend" }),
+      ],
+      fieldCards: [
+        { id: "fc-wilk", field_id: "przelecz-wichrow", card_id: "wilk", granted: false, pool: null },
+      ],
+      effects: [
+        {
+          id: "eff-1",
+          seat_id: null,
+          field_card_id: "fc-wilk",
+          source: "krag-plomieni",
+          label: "Krąg Płomieni",
+          modifier: { kind: "unieruchomiony" },
+          ends: { kind: "dispelled" },
+        },
+      ],
+    });
+    expect(() => sendRaider(table, { fieldCardId: "fc-wilk" })).toThrow(
+      /nie można zaatakować \(19\.1\)/,
+    );
+  });
 });
 
 

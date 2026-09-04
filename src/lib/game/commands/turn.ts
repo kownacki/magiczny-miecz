@@ -1,7 +1,15 @@
 /** Passing the turn on: what expires, what is left lying on the Obszar, and whose turn is next (10.1, 16.8). */
 
 import { nextSeat, startTurn } from "@/lib/engine/turn";
-import { afterAnyTurn, afterTurn, fromTestMode, playsAgain, type Status } from "@/lib/engine/status";
+import {
+  afterAnyTurn,
+  afterTurn,
+  cardStatuses,
+  cardUntouchable,
+  fromTestMode,
+  playsAgain,
+  type Status,
+} from "@/lib/engine/status";
 import { drawsFromPool, poolRemains, startingPool } from "@/lib/engine/pools";
 import { leavesWhenResolved, mayWalkPast } from "@/lib/engine/kolejka";
 import { whyQueuedHere } from "@/lib/engine/holdings";
@@ -101,12 +109,24 @@ export function refuseWhileQueued(snapshot: Snapshot, seatId: string): void {
   const state = top(snapshot.game.turn_state);
   if (state.phase !== "field") return;
   const seat = snapshot.seats.find((one) => one.id === seatId);
+  // A Wróg `liftFieldCards` left where it was (19.1) is already in
+  // `state.drawn`, carrying its own `fieldCardId` — the raw re-scan below is
+  // for Karty that reached this field some other way, and must not name that
+  // same row a second time.
+  const already = new Set(
+    state.drawn.flatMap((card) => (card.fieldCardId ? [card.fieldCardId] : [])),
+  );
   const why = whyQueuedHere(
     [
       ...state.drawn,
       ...snapshot.fieldCards
-        .filter((row) => row.field_id === seat?.field_id)
-        .map((row) => ({ cardId: row.card_id })),
+        .filter((row) => row.field_id === seat?.field_id && !already.has(row.id))
+        .map((row) => ({
+          cardId: row.card_id,
+          ...(cardUntouchable(cardStatuses(snapshot.effects, row.id))
+            ? { unattackable: true as const }
+            : {}),
+        })),
     ],
     [...(state.resolved ?? []), ...(state.fought ?? []), ...(state.beaten ?? [])],
   );
@@ -320,7 +340,15 @@ export function leaveCardsBehind(
     })),
   );
 
-  if (stays.length === 0) return discarded;
+  /**
+   * A Wróg `liftFieldCards` left where it was rather than lifting (19.1) is
+   * still on the board this whole time — its `fieldCardId` says so — so
+   * writing a fresh row for it here would be a second Karta where there is
+   * only one. It was never "left behind" either: it never left.
+   */
+  const newlyLying = stays.filter((card) => card.fieldCardId === undefined);
+
+  if (newlyLying.length === 0) return discarded;
 
   return merge(discarded, {
     fieldCards: {
@@ -328,7 +356,7 @@ export function leaveCardsBehind(
       // staged is one the deck never gave up, and left lying here without it it
       // becomes a real card the moment somebody picks it up — and then a
       // phantom on the used pile the moment they put it down.
-      insert: stays.map((card) => ({
+      insert: newlyLying.map((card) => ({
         field_id: input.fieldId,
         card_id: card.cardId,
         granted: card.granted === true,
@@ -351,7 +379,7 @@ export function leaveCardsBehind(
         seatId: input.seatId,
         round: input.round,
         kind: "left-behind",
-        payload: { fieldId: input.fieldId, cardIds: stays.map((card) => card.cardId) },
+        payload: { fieldId: input.fieldId, cardIds: newlyLying.map((card) => card.cardId) },
       },
     ],
   });
@@ -517,8 +545,34 @@ export function passTurn(snapshot: Snapshot, force = false): Changeset {
   // Stone timer counts. A seat's own goes are counted elsewhere and
   // separately — `tickEffects` below is the other one.
   const wrapped = !again && next !== null && next <= (game.active_seat ?? 0);
+  const newRound = wrapped ? game.round + 1 : game.round;
 
-  return mergeAll(expired, endedWithTurn, left, spentTurns, {
+  /**
+   * A Wróg's paralysis on the round clock (Władca Gromu), spent as the round
+   * it names arrives.
+   *
+   * `tickEffects` and `afterAnyTurn` above are a seat's own countdowns and
+   * ticked off *that* seat's turn; this is a Karta's, and nothing about it is
+   * "whoever's turn just ended" — a burning or paralysed Wróg's row may sit on
+   * an Obszar nobody visits for rounds. `games.round` is the only clock a
+   * Karta has (`Ends.round`'s own note), so this is the one place it is ever
+   * read for one: the moment the round it names arrives.
+   *
+   * Krąg Płomieni's own `dispelled` is not here — nothing sweeps it, on
+   * purpose, the same as a Postać's own (`dispel`).
+   */
+  const cardEffectsExpired: Changeset = {
+    effects: {
+      delete: snapshot.effects
+        .filter(
+          (row) =>
+            row.field_card_id !== null && row.ends.kind === "round" && row.ends.round <= newRound,
+        )
+        .map((row) => row.id),
+    },
+  };
+
+  return mergeAll(expired, endedWithTurn, left, spentTurns, cardEffectsExpired, {
     game: {
       active_seat: again ? game.active_seat : next,
       round: wrapped ? game.round + 1 : game.round,
@@ -597,6 +651,10 @@ export function addCardEffect(
   },
 ): Changeset {
   const { source, label, modifier, ends } = command.effect;
+  // The Karta itself, for the journal to name as the subject — `journalText`
+  // has nobody's seat to fall back to here, which is `addEffect`'s whole
+  // difference from this one.
+  const lying = snapshot.fieldCards.find((row) => row.id === command.fieldCardId);
   return {
     effects: {
       insert: [{ seat_id: null, field_card_id: command.fieldCardId, source, label, modifier, ends }],
@@ -610,7 +668,7 @@ export function addCardEffect(
         round: snapshot.game.round,
         kind: "effect",
         manual: fromTestMode(source),
-        payload: { source, label, ends },
+        payload: { source, label, ends, ...(lying ? { card: lying.card_id } : {}) },
       },
     ],
   };

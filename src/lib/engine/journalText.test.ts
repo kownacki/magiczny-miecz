@@ -830,4 +830,19 @@ suite("something a character is under", () => {
   it("still says something when the shape is older than the sentence", () => {
     expect(text("effect", { label: "coś" })).toBe("Michał (GOBLIN): coś.");
   });
+
+  /**
+   * A Karta lying on an Obszar (16.8) carries no seat — `who` would say
+   * "Ktoś" — so `addCardEffect` puts the card's own id in `data.card` and
+   * that names the subject instead.
+   */
+  it("names the Karta rather than nobody, for a status that sits on one", () => {
+    expect(
+      text(
+        "effect",
+        { source: "krag-plomieni", label: "Krąg Płomieni", ends: { kind: "dispelled" }, card: "wilk" },
+        { seatId: null },
+      ),
+    ).toBe("WILK: Krąg Płomieni — dopóki ktoś tego nie zdejmie.");
+  });
 });

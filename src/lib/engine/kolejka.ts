@@ -156,6 +156,12 @@ export function isSpent(
  * side: what does not earn a frame is exactly what that window offers.
  */
 export function owesAFrame(card: TurnCard): boolean {
+  // A Wróg out of reach (19.1, Krąg Płomieni, Władca Gromu) does nothing and
+  // cannot be fought, so there is nothing here for the kolejka to make
+  // compulsory — set once, at the lift, from the card's own status. No printed
+  // card ever sets `optional` for a foe class, so `mayWalkPast` could not have
+  // answered this on its own.
+  if (card.unattackable) return false;
   // 15.1 sits above the numerals, and a Karta that relocates itself has to be
   // dealt with before it can be anywhere else. Only on the way there: one that
   // has landed is an ordinary Karta of its own class — `placedFirst`.

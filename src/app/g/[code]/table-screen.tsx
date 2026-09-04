@@ -437,7 +437,9 @@ export function TableScreen({ library }: { library: React.ReactNode }) {
              * exactly as long as somebody is shopping at it.
              *
              * The Obszar's own window merges the same two lists and says so at
-             * length; this is the fifth thing to need it. See `offerOn`.
+             * length; this is the fifth thing to need it. See `offerOn` — and,
+             * since it, the same `fieldCardId` filter for a Wróg out of reach
+             * (19.1) that never left the first list to begin with.
              */
             cardsOnFields={[
               ...fieldCards.map((card) => ({
@@ -453,7 +455,7 @@ export function TableScreen({ library }: { library: React.ReactNode }) {
                           card,
                           [...(onField.resolved ?? []), ...(onField.fought ?? [])],
                           onField.beaten ?? [],
-                        ),
+                        ) && card.fieldCardId === undefined,
                     )
                     .map((card, at) => ({
                       fieldId: asFieldId(active.field_id),

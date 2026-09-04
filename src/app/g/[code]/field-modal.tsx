@@ -25,6 +25,7 @@ import { isFerry } from "@/lib/engine/board";
 import { RollTable } from "./roll-table";
 import { parseRollTable } from "@/lib/engine/rollTable";
 import type { CardId } from "@/data/ids";
+import type { EnvelopeEffect } from "@/lib/game/wire";
 import events from "@/data/events.json";
 import items from "@/data/items.json";
 import type { EventCard, Item } from "@/data/types";
@@ -120,6 +121,15 @@ export interface FieldCardHere {
   justDrawn?: boolean;
   /** Which slice came off the pile, so the picture is the copy that was dealt. */
   ref?: string;
+  /**
+   * What this Karta is under — the Krąg Płomieni's burning Wróg, the Władca
+   * Gromu's paralysed creatures (19.1). Public the same way the Karta itself
+   * is (16.8), and absent rather than empty for a card `viaTurn`: one of
+   * those has no `field_cards` row left to carry a status on, and a card that
+   * did would not have been lifted off it in the first place
+   * (`liftFieldCards`'s own note).
+   */
+  effects?: EnvelopeEffect[];
 }
 
 /**
@@ -907,6 +917,28 @@ export function FieldModal({
                                   weź
                                 </button>
                               )}
+                              {/**
+                               * What this Karta is under (19.1) — a glyph
+                               * rather than `EffectMark`'s whole picture,
+                               * which is sized for a name-and-parameters row
+                               * and would crowd out the caption a tile like
+                               * this shares with the "weź" button.
+                               */}
+                              {lying.effects?.map((effect) => (
+                                <span
+                                  key={effect.id}
+                                  title={effect.title}
+                                  className={`ml-1 cursor-help ${
+                                    effect.tone === "dobry"
+                                      ? "text-verdigris"
+                                      : effect.tone === "zly"
+                                        ? "text-vermilion"
+                                        : "text-muted"
+                                  }`}
+                                >
+                                  {effect.glyph}
+                                </span>
+                              ))}
                             </CardTile>
                           );
                         })}

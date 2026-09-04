@@ -164,6 +164,96 @@ describe("passing the turn (10.1)", () => {
       { field_id: "mroczna-polana", card_id: "wilkolak", granted: true, pool: null },
     ]);
   });
+
+  /**
+   * 19.1: a Wróg the Krąg Płomieni or the Władca Gromu has put out of reach
+   * was never lifted off its row in the first place (`liftFieldCards`'s own
+   * note) — its `fieldCardId` says so — so putting a fresh row down for it
+   * here would be a second Karta where there is only one. It was never "left
+   * behind" either, in the sense the journal line means: it never left.
+   */
+  it("does not write a second row for a Wróg that was never lifted", () => {
+    const table = two({
+      game: {
+        active_seat: 0,
+        round: 3,
+        turn_state: {
+          phase: "field",
+          fieldId: asFieldId("mroczna-polana")!,
+          from: null,
+          draw: 0,
+          drawn: [{ cardId: "wilk", cardClass: "foe", fieldCardId: "fc-wilk", unattackable: true }],
+        },
+      },
+    });
+    const writes = passTurn(table);
+    expect(writes.fieldCards).toBeUndefined();
+    expect(writes.journal?.map((line) => line.kind)).toEqual(["turn-end"]);
+  });
+});
+
+/**
+ * 19.1's other half: a Wróg out of reach does nothing, so the kolejka owes it
+ * no frame (`owesAFrame` in `kolejka.test.ts`) and `finishTurn`'s own gate,
+ * `refuseWhileOwed`, must agree — it reads the same `state.drawn` `nextFrame`
+ * does.
+ */
+describe("ending a turn with a Wróg out of reach still lying there (19.1)", () => {
+  it("lets the turn end rather than holding it for a Karta that does nothing", () => {
+    const table = aTable({
+      game: {
+        active_seat: 0,
+        round: 3,
+        turn_state: {
+          phase: "field",
+          fieldId: asFieldId("mroczna-polana")!,
+          from: null,
+          draw: 0,
+          drawn: [{ cardId: "wilk", cardClass: "foe", fieldCardId: "fc-wilk", unattackable: true }],
+        },
+      },
+      seats: [
+        aSeat({ id: "seat-a", seat_index: 0, field_id: asFieldId("mroczna-polana")! }),
+        aSeat({ id: "seat-b", seat_index: 1 }),
+      ],
+    });
+    expect(() => finishTurn(table)).not.toThrow();
+    expect(finishTurn(table).result).toBe("passed");
+  });
+});
+
+/**
+ * The Władca Gromu's paralysis is on the round clock — the only one a Karta
+ * has (`Ends.round`'s own note) — and nothing lazily filters a stored row by
+ * it the way `stillStone` reads a column: this sweep is what actually spends
+ * it, the moment the round it names arrives. Krąg Płomieni's own `dispelled`
+ * is deliberately not swept here, the same as a Postać's own (`dispel`).
+ */
+describe("a Karta's own paralysis, spent on the round clock", () => {
+  const withCardEffect = (round: number) =>
+    two({
+      game: { active_seat: 1, round: 3 }, // wraps past seat 0 on this pass
+      effects: [
+        {
+          id: "e1",
+          seat_id: null,
+          field_card_id: "fc-1",
+          source: "wladca-gromu",
+          label: "Władca Gromu",
+          modifier: { kind: "unieruchomiony" },
+          ends: { kind: "round", round },
+        },
+      ],
+    });
+
+  it("lifts it once the round it names arrives", () => {
+    // The pass above wraps to round 4, and this one names exactly that round.
+    expect(passTurn(withCardEffect(4)).effects).toEqual({ delete: ["e1"] });
+  });
+
+  it("leaves it alone while its round has not come yet", () => {
+    expect(passTurn(withCardEffect(5)).effects?.delete ?? []).toEqual([]);
+  });
 });
 
 describe("effects counting down", () => {

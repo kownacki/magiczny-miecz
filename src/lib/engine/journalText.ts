@@ -877,10 +877,15 @@ export function describe(
     // Something a character is now under, and how long for. Public: 5.2 puts
     // what somebody carries on the table, and what they are under is weighed
     // the same way by anyone deciding whether to attack them.
+    // A Karta lying on an Obszar (16.8) carries no seat, so `who` here would
+    // say "Ktoś" — `addCardEffect` puts the card's own id in `data.card`
+    // instead, and that is the subject: "WILK: w płomieniach", not "Ktoś:
+    // w płomieniach" about a creature nobody is playing.
     case "effect": {
       const what = typeof data.label === "string" ? data.label : "efekt";
       const ends = data.ends as Ends | undefined;
-      return line(`${who}: ${what}${ends ? ` — ${describeEnd(ends)}` : ""}.`);
+      const subject = typeof data.card === "string" && data.card ? card(data.card) : who;
+      return line(`${subject}: ${what}${ends ? ` — ${describeEnd(ends)}` : ""}.`);
     }
 
     case "stone":

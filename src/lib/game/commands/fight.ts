@@ -62,6 +62,7 @@ import { refuseAgainstStone } from "./stone";
 import { slotsFor } from "@/lib/engine/slots";
 import { floorOf } from "./spellFloor";
 import { addEffect, refuseAgainst13_2, refuseWhileUndrawn, storedStatuses } from "./turn";
+import { cardStatuses, cardUntouchable } from "@/lib/engine/status";
 
 /**
  * The one Zaklęcie the rules name inside another rule.
@@ -233,6 +234,21 @@ export function beginFight(snapshot: Snapshot, command: BeginFight): Outcome<voi
   // outrank him (15.1, 15.2) or carry the character off the Obszar (16.8).
   refuseWhileUndrawn(snapshot);
   if (command.cardIds.length === 0) throw new Error("Nie ma z kim walczyć.");
+
+  /**
+   * A Wróg the Krąg Płomieni or the Władca Gromu has put out of reach (19.1).
+   *
+   * Its row was never lifted — `liftFieldCards` leaves it exactly where it
+   * was — so the copy of it sitting in `state.drawn` carries `fieldCardId` and
+   * `unattackable` from that same moment, and this is the door those two
+   * fields exist for.
+   */
+  for (const cardId of command.cardIds) {
+    const lying = state.drawn.find((entry) => entry.cardId === cardId && entry.unattackable);
+    if (!lying?.fieldCardId) continue;
+    const why = cardUntouchable(cardStatuses(snapshot.effects, lying.fieldCardId));
+    if (why) throw new Error(`${why} — ${cardName(cardId)} nie można zaatakować (19.1).`);
+  }
 
   // 17.4 ends the fight when the dice are compared, whatever the result. A card
   // already rolled against this turn is settled — beaten and waiting to be
@@ -898,6 +914,11 @@ export function sendRaider(snapshot: Snapshot, command: SendRaider): Outcome<voi
 
   const lying = snapshot.fieldCards.find((row) => row.id === command.fieldCardId);
   if (!lying) throw new Error("Wskaż Postać albo Kartę Wroga na planszy.");
+  // A raid target is never something this turn lifted — it stands on an
+  // Obszar the sender has not moved to — so its row, and whatever is on it,
+  // is exactly current.
+  const why = cardUntouchable(cardStatuses(snapshot.effects, lying.id));
+  if (why) throw new Error(`${why} — ${cardName(lying.card_id)} nie można zaatakować (19.1).`);
   if (!within(asFieldId(lying.field_id))) {
     throw new Error(`Zbyt daleko — wyprawa sięga ${RAID_RANGE} Obszary.`);
   }

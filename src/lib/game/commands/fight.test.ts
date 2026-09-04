@@ -207,6 +207,39 @@ describe("otwarcie walki (17.4, 17.5)", () => {
     const { writes } = beginFight(staged, { cardIds: ["cyklop"] });
     expect(fightIn(writes).granted).toBe(true);
   });
+
+  /**
+   * 19.1: a Wróg the Krąg Płomieni or the Władca Gromu has put out of reach
+   * cannot be attacked at all. `liftFieldCards` leaves its row exactly where
+   * it was rather than lifting it — see that function's own note — so
+   * `state.drawn` carries the row's id along and this is where it is read.
+   */
+  it("refuses to attack a Wróg the Krąg Płomieni has put out of reach (19.1)", async () => {
+    const burning = aTable({
+      game: {
+        active_seat: 0,
+        turn_state: {
+          ...pole(),
+          fieldId: "wrzosowiska",
+          drawn: [{ cardId: "wilk", cardClass: "foe", fieldCardId: "fc-wilk", unattackable: true }],
+        } as TurnPhase,
+      },
+      seats: [aSeat({ sword_own: 2, field_id: asFieldId("wrzosowiska") })],
+      fieldCards: [{ id: "fc-wilk", field_id: "wrzosowiska", card_id: "wilk", granted: false, pool: null }],
+      effects: [
+        {
+          id: "eff-1",
+          seat_id: null,
+          field_card_id: "fc-wilk",
+          source: "krag-plomieni",
+          label: "Krąg Płomieni",
+          modifier: { kind: "unieruchomiony" },
+          ends: { kind: "dispelled" },
+        },
+      ],
+    });
+    expect(() => beginFight(burning, { cardIds: ["wilk"] })).toThrow(/nie można zaatakować \(19\.1\)/);
+  });
 });
 
 /* --------------------------------------------------------------------------
@@ -501,7 +534,7 @@ describe("rzucenie Zaklęcia (9.6, 9.7, 17.3)", () => {
     });
   });
 
-  it("does not set the caster alight when it is thrown at a Wróg", async () => {
+  it("burns the Wróg it is thrown at rather than setting the caster alight", async () => {
     const atACard = aTable({
       game: { active_seat: 0, turn_state: { phase: "roll" } },
       seats: [aSeat({ id: "seat-a", seat_index: 0 })],
@@ -515,9 +548,16 @@ describe("rzucenie Zaklęcia (9.6, 9.7, 17.3)", () => {
       { seatId: "seat-a", holdingId: "s-1", target: { fieldCardId: "fc1" } },
       ports(),
     );
-    // Announced, like every Zaklęcie the app cannot carry out — and above all
-    // not applied to whoever spoke it.
-    expect(writes.effects).toBeUndefined();
+    // Not applied to whoever spoke it — the Karta's own row carries it, with
+    // `unieruchomiony` rather than the `frozen` a Postać wears, because a Wróg
+    // has no act for `oprocz` to exempt.
+    expect(writes.effects?.insert?.[0]).toMatchObject({
+      seat_id: null,
+      field_card_id: "fc1",
+      source: "krag-plomieni",
+      modifier: { kind: "unieruchomiony" },
+      ends: { kind: "dispelled" },
+    });
   });
 
   it("refuses every Zaklęcie but the one the card names", async () => {
@@ -606,6 +646,52 @@ describe("rzucenie Zaklęcia (9.6, 9.7, 17.3)", () => {
     expect(writes.effects?.insert).toEqual([
       expect.objectContaining({ seat_id: "seat-b", modifier: { kind: "frozen" } }),
     ]);
+  });
+
+  /**
+   * "Wrogowie i inne istoty na tym Obszarze też są sparaliżowane — nie wolno
+   * ich atakować" — the half `worked` above cannot reach, because a Wróg
+   * lying on the board has no seat to carry a status.
+   */
+  it("paralyses every foe lying on the Obszar too, on the round clock", async () => {
+    const storm = aTable({
+      game: { active_seat: 0, round: 5, turn_state: { phase: "roll" } },
+      seats: [
+        aSeat({ id: "seat-a", seat_index: 0, field_id: asFieldId("wrzosowiska") }),
+        aSeat({ id: "seat-b", seat_index: 1, field_id: asFieldId("dolina-cienia") }),
+      ],
+      users: duellists(),
+      fieldCards: [
+        { id: "fc-wilk", field_id: "dolina-cienia", card_id: "wilk", granted: false, pool: null },
+        { id: "fc-demon", field_id: "dolina-cienia", card_id: "demon", granted: false, pool: null },
+        // Somewhere else entirely — the storm does not reach it.
+        { id: "fc-elsewhere", field_id: "wrzosowiska", card_id: "cyklop", granted: false, pool: null },
+      ],
+      holdings: [
+        aHolding({ id: "s-1", seat_id: "seat-a", card_id: "wladca-gromu", kind: "spell", face: "hidden" }),
+      ],
+    });
+    const { writes } = await castSpell(
+      storm,
+      { seatId: "seat-a", holdingId: "s-1", target: { fieldId: asFieldId("dolina-cienia")! } },
+      ports(),
+    );
+    expect(writes.effects?.insert).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          seat_id: null,
+          field_card_id: "fc-wilk",
+          source: "wladca-gromu",
+          modifier: { kind: "unieruchomiony" },
+          ends: { kind: "round", round: 6 },
+        }),
+        expect.objectContaining({ field_card_id: "fc-demon", modifier: { kind: "unieruchomiony" } }),
+      ]),
+    );
+    expect(writes.effects?.insert).toHaveLength(3); // seat-b's own, plus the two foes.
+    expect(
+      writes.effects?.insert?.some((row) => (row as { field_card_id: string }).field_card_id === "fc-elsewhere"),
+    ).toBe(false);
   });
 
   it("reaches only the Krąg the caster is walking", async () => {

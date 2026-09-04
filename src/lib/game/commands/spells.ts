@@ -3,8 +3,10 @@
 import { immuneToSpell } from "@/lib/engine/abilities";
 import { KAMIENNY_MOST, ringFields, ringOf, type FieldId } from "@/lib/engine/board";
 import type { Shuffle } from "@/lib/engine/deck";
-import { refusesArms } from "@/lib/engine/cards";
+import { classOf, refusesArms } from "@/lib/engine/cards";
+import { isFoeClass } from "@/data/types";
 import { suppressesSpells } from "@/lib/engine/holdings";
+import { cardStatuses, cardUntouchable } from "@/lib/engine/status";
 import {
   castableNow,
   momentsIn,
@@ -34,7 +36,7 @@ import { allStatusesOf, refuseWhileHeld, seatView } from "./seat";
 import { refuseAgainstStone } from "./stone";
 import { FLOOR_MS, floorOf } from "./spellFloor";
 
-import { storedStatuses } from "./turn";
+import { addCardEffect, storedStatuses } from "./turn";
 import type { SeatRow } from "../store";
 import { shutFight } from "./fight";
 import { refuseWhileOverflow } from "./overflow";
@@ -318,6 +320,96 @@ async function answerSpell(
 }
 
 /**
+ * `applyEffect`'s `op: "efekt"`, read onto a Karta lying on an Obszar rather
+ * than a seat — `addCardEffect`'s own door, opened for the first time.
+ *
+ * Generic on the op rather than on the spell's id: any future Zaklęcie shaped
+ * "puts the victim under X" and aimed at "postać-lub-wrog" is carried the same
+ * way without a second branch remembering it. Only Krąg Płomieni is that shape
+ * today.
+ */
+function applyCardEfekt(
+  snapshot: Snapshot,
+  input: { fieldCardId: string; source: string; efekt: Extract<Effect, { op: "efekt" }> },
+): { writes: Changeset; did: string[] } | null {
+  const lying = snapshot.fieldCards.find((row) => row.id === input.fieldCardId);
+  if (!lying) return null;
+  // Already under it. `unieruchomiony` is `exclusive` (`statusRows.ts`), so a
+  // second Krąg would do nothing but leave the Karta with two rows for one
+  // fact — this is where that gets stopped rather than left to the table to
+  // notice.
+  if (cardUntouchable(cardStatuses(snapshot.effects, lying.id))) {
+    return { writes: {}, did: [`${cardName(lying.card_id)}: już unieruchomiony.`] };
+  }
+  /**
+   * `frozen` translated to `unieruchomiony`, the way a card's own `stosuje`
+   * cannot say it.
+   *
+   * Krąg Płomieni's script writes one `modifier` for a Postać and a Wróg
+   * alike — "Ofiara nie może nic robić poza rzuceniem Władcy Zaklęć" reads the
+   * same on both — but `frozen` and its `oprocz` are the turn engine's own way
+   * of exempting a *seat's* next act, and a Wróg has no act to exempt one from.
+   * `status.ts`'s note on `unieruchomiony` is the one place that argument is
+   * made at length; this is where it is acted on.
+   */
+  const modifier =
+    input.efekt.modifier.kind === "frozen" ? ({ kind: "unieruchomiony" } as const) : input.efekt.modifier;
+  return {
+    writes: addCardEffect(snapshot, {
+      fieldCardId: input.fieldCardId,
+      effect: {
+        source: input.source,
+        label: input.efekt.label,
+        modifier,
+        ends: input.efekt.ends,
+      },
+    }),
+    did: [`${cardName(lying.card_id)}: ${input.efekt.label}`],
+  };
+}
+
+/**
+ * Władca Gromu's other half: "Wrogowie i inne istoty" on the named Obszar.
+ * `worked` (below, in `landSpell`) only ever reaches the Postacie standing
+ * there — `wszyscy-tutaj` is a seat target — so this is bespoke to the one
+ * card in the box aimed at a whole Obszar rather than at one thing on it.
+ *
+ * Marked `unieruchomiony` and not `frozen`: a Wróg here has no turn of its own
+ * to lose, which is exactly why the two are different kinds (`status.ts`).
+ * Ends on the round clock — the only one a Karta has — one round out, which is
+ * the same scale as what the card gives the Postacie standing there (their own
+ * immediate next turn).
+ */
+function paralyseFoesOn(
+  snapshot: Snapshot,
+  input: { fieldId: FieldId; round: number },
+): { writes: Changeset; did: string[] } {
+  const foes = snapshot.fieldCards.filter(
+    (row) => row.field_id === input.fieldId && isFoeClass(classOf(row.card_id)),
+  );
+  let writes: Changeset = {};
+  const did: string[] = [];
+  for (const row of foes) {
+    const soFar = apply(snapshot, writes);
+    if (cardUntouchable(cardStatuses(soFar.effects, row.id))) continue;
+    writes = merge(
+      writes,
+      addCardEffect(soFar, {
+        fieldCardId: row.id,
+        effect: {
+          source: "wladca-gromu",
+          label: "Władca Gromu",
+          modifier: { kind: "unieruchomiony" },
+          ends: { kind: "round", round: input.round + 1 },
+        },
+      }),
+    );
+    did.push(`${cardName(row.card_id)}: sparaliżowany`);
+  }
+  return { writes, did };
+}
+
+/**
  * What a Zaklęcie does once it is going to happen.
  *
  * Split out of `castSpell` because there are now two moments it can be reached
@@ -427,6 +519,32 @@ async function landSpell(
       : null;
 
   /**
+   * The other half of "na inną Postać lub Wroga": a Karta on the board rather
+   * than a seat. `aimedAtCard` stopped `worked` above from firing for it —
+   * there is no seat to hand `applyEffect` — and this is what fires instead.
+   */
+  const cardEfekt =
+    aimedAtCard &&
+    target.fieldCardId !== undefined &&
+    script.stosuje !== undefined &&
+    script.stosuje.op === "efekt"
+      ? applyCardEfekt(apply(snapshot, applied?.writes ?? {}), {
+          fieldCardId: target.fieldCardId,
+          source: input.cardId,
+          efekt: script.stosuje,
+        })
+      : null;
+
+  /** Władca Gromu's istoty, on top of the Postacie `worked` already reaches. */
+  const foesParalysed =
+    input.cardId === "wladca-gromu" && target.fieldId !== undefined
+      ? paralyseFoesOn(apply(snapshot, mergeAll(applied?.writes ?? {}, worked?.writes ?? {})), {
+          fieldId: target.fieldId,
+          round: snapshot.game.round,
+        })
+      : null;
+
+  /**
    * A Zaklęcie that ends the fight it was spoken into (law 4, docs/STACK.md).
    *
    * "Ofiary nie można zaatakować, jednak można się jej wymknąć" — so a fight
@@ -447,7 +565,15 @@ async function landSpell(
    * its window lands through `settleSpell`, and a second copy of this rule
    * would be two Kręgi Płomieni.
    */
-  const running = apply(snapshot, mergeAll(applied?.writes ?? {}, worked?.writes ?? {}));
+  const running = apply(
+    snapshot,
+    mergeAll(
+      applied?.writes ?? {},
+      worked?.writes ?? {},
+      cardEfekt?.writes ?? {},
+      foesParalysed?.writes ?? {},
+    ),
+  );
   const frame = top(running.game.turn_state);
   const stopped =
     frame.phase === "fight" &&
@@ -462,9 +588,17 @@ async function landSpell(
     : {};
 
   return {
-    writes: mergeAll(applied?.writes ?? {}, worked?.writes ?? {}, broke),
+    writes: mergeAll(
+      applied?.writes ?? {},
+      worked?.writes ?? {},
+      cardEfekt?.writes ?? {},
+      foesParalysed?.writes ?? {},
+      broke,
+    ),
     did: [
       ...(worked?.result.did ?? []),
+      ...(cardEfekt?.did ?? []),
+      ...(foesParalysed?.did ?? []),
       ...(stopped ? [`walka przerwana — ${frame.fight.cardName} nie da się zaatakować (19.1)`] : []),
     ],
     ...(applied ? { took: applied.took } : {}),

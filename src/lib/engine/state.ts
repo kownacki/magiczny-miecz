@@ -129,6 +129,33 @@ export interface TurnCard {
    * Karta nobody dealt with goes back onto the board at the end of the turn.
    */
   lying?: boolean;
+  /**
+   * The `field_cards` row this copy still lives in, for a Wróg `liftFieldCards`
+   * left where it was rather than lifting.
+   *
+   * Every other Karta in a frame has its row deleted on arrival — see `lying`'s
+   * own note — and this is the one exception: a Wróg `cardUntouchable`
+   * (19.1, Krąg Płomieni, Władca Gromu) does nothing and cannot be fought, so
+   * deleting its row and writing a fresh one back when the turn ends would
+   * either lose the status (no way to link a brand-new row's id to a status
+   * row in the same Changeset) or invent one. Left alone instead: the row, and
+   * whatever is on it, is exactly as current as it always was, and
+   * `leaveCardsBehind` knows from this field not to write a second one.
+   *
+   * Absent for every ordinary card, which is every card whose row really was
+   * lifted.
+   */
+  fieldCardId?: string;
+  /**
+   * This copy may not be attacked and owes the kolejka no frame (19.1).
+   *
+   * Set once, at the lift, from `cardUntouchable` reading the row's own
+   * statuses — so a status added mid-turn to a card already sitting in `drawn`
+   * (which cannot happen: a card in `drawn` has no live row left to add one to,
+   * `fieldCardId` above being the one exception) never has to be re-checked.
+   * `owesAFrame` reads this before it reads the card's class at all.
+   */
+  unattackable?: true;
 }
 
 /**

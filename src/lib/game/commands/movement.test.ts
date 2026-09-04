@@ -432,6 +432,53 @@ describe("ruch (10.2, 13.4)", () => {
     });
   });
 
+  /**
+   * 19.1: a Wróg the Krąg Płomieni or the Władca Gromu has put out of reach
+   * does nothing and cannot be fought, so `liftFieldCards` leaves its row
+   * where it was rather than deleting it — see that function's own note. It
+   * still joins the turn as an ordinary Karta would, carrying its own row's
+   * id along, and it still counts toward 13.4's draw arithmetic: the Obszar
+   * does not print fewer Karty for one of them being unieruchomiony.
+   */
+  it("leaves an unieruchomiony Wróg's row alone rather than lifting it", () => {
+    const table = aTable({
+      game: {
+        active_seat: 0,
+        round: 3,
+        turn_state: afterRoll(asFieldId("zaczarowane-wzgorza")!, 2),
+      },
+      seats: [aSeat({ seat_index: 0, field_id: asFieldId("zaczarowane-wzgorza")! })],
+      fieldCards: [
+        { id: "fc-1", field_id: "plaskowyz-mgiel", card_id: "helm", granted: false, pool: null },
+        { id: "fc-wilk", field_id: "plaskowyz-mgiel", card_id: "wilk", granted: false, pool: null },
+      ],
+      effects: [
+        {
+          id: "eff-1",
+          seat_id: null,
+          field_card_id: "fc-wilk",
+          source: "krag-plomieni",
+          label: "Krąg Płomieni",
+          modifier: { kind: "unieruchomiony" },
+          ends: { kind: "dispelled" },
+        },
+      ],
+    });
+    const { writes } = moveTo(table, { destination: "plaskowyz-mgiel" });
+
+    // Only the Hełm's row is lifted; the Wilk's stays exactly where it was.
+    expect(writes.fieldCards).toEqual({ delete: ["fc-1"] });
+    // Płaskowyż Mgieł prints 3, and two Karty are already lying here — the
+    // burning Wilk counts the same as any other — so one is still owed.
+    const state = top(writes.game!.turn_state!) as { draw: number; drawn: unknown[] };
+    expect(state.draw).toBe(1);
+    // A Wróg's numeral (II) sorts before a Przedmiot's (V) — 15.2.
+    expect(state.drawn).toMatchObject([
+      { cardId: "wilk", cardClass: "foe", fieldCardId: "fc-wilk", unattackable: true },
+      { cardId: "helm", cardClass: "item" },
+    ]);
+  });
+
   describe("turning onto the Kamienny Most (11.10)", () => {
     const table = () =>
       walking("urwisko-1", {
