@@ -1224,3 +1224,42 @@ which was true about the reading and wrong about the reason. What did move is
 which of two places a row happens to live in was never the rule. Whether a
 Postać's own printed text belongs on the Status list is deferred to step three,
 where it can be answered for all of them at once.
+
+## Two cards that were only pretending to work
+
+2026-09-04, found by the same check twice: an engine reader with **no callers**
+usually means a printed clause nobody wired, not dead code to delete.
+
+**Kryształ Magów.** It prints three clauses and one worked. „Jest całkowicie
+odporny na Zaklęcia: Krąg Płomieni, Fatum, Magia i Miecz, Golem, Pan Bogactwa i
+Pan Przyjaciół" and „przeciwnik ... nie może walcząc z nim użyć Zaklęcia
+Odrodzenie" both sat on `bez-zaklec` fields read only by `spellWards`, which had
+zero callers anywhere. The immunity needed no new door, only the right one:
+`odporny-na-zaklecie` already means "immune to these named Zaklęcia" and
+`immuneToSpell` already asks it of the victim, which is how both Talizmany work.
+The denial turned out enforceable too — `state.fight.opponentSeat` already knows
+both sides of a duel — so it is asked of the *other* seat at the same door.
+
+**Wierzchowiec and Zaprzęg.** „Od 1 do 3 punktów do wyniku rzutu kostką" and
+„możesz także dodać 1" were `ruch-bonus`, read only by `moveBonusRange`, no
+callers; the move roll applied the Formuła's multiplier and the Mgła's cap and
+nothing else. A mount now widens the destination list rather than the die —
+`afterRoll` runs once for the bare roll and once per point on offer — so which
+square the player takes *is* how much the mount added, with no separate ask. The
+bare roll stays on the list because both cards say „możesz". The cap binds the
+total, options dedupe on the destination, and the Most still ignores the die.
+
+**The sweep.** Of 34 `Ability` kinds, exactly one was genuinely unenforced, and
+it is the one above. `przeprawa-wszedzie` looked unread but the Łódź and
+Latarnia are carried by `SCRIPTS` and `USES`; `tylko-natura` is read from
+`abilityText.ts`. At field level nothing beyond the Kryształ's two. So the
+vocabulary is otherwise honest — worth knowing, since it makes this a check to
+run after touching `ABILITIES` rather than a standing suspicion.
+
+**And the docs it caught.** Counting `MANUAL` afterwards turned up three stale
+claims: COVERAGE.md still named two blockers that fell on 2026-09-04, still said
+four Zaklęcia are `czesciowe` when two are, and `status.ts` still apologised for
+not knowing which Przedmioty are *Magiczne* — months after `magical` was
+transcribed onto twenty-three Kartas and wired through `seatView` as
+`noMagical`. A comment about code rots loudly; a comment about data rots in
+silence.
