@@ -885,6 +885,32 @@ building for a mode nobody runs is how you get two guesses instead of one:
   seat named in the body rather than taken from the actor. That is the shape of
   the work, and it is not small.
 
+- [x] **`page.tsx` fed from a provider rather than cut into props.** 2,806
+      lines became 985, and the cut is a data-flow change taken on purpose:
+      the handoff measured that the three JSX blocks closed over 24, 46 and
+      44 names, so extracting them as components would have made each one
+      props hell. Instead `the-table.ts` provides one object — the table as
+      `use-table.ts` sends it, what is open from `use-surfaces.ts`, the turn
+      read once by the new pure `turn-view.ts`, and the device's own state —
+      and three orchestrators read it: `overlays.tsx` (452 lines of JSX),
+      `field-drawer.tsx` (246) and `table-screen.tsx` (749). Each passes the
+      same explicit props to the same leaves as before; nothing below them
+      reads the context, and that is the rule to keep.
+
+      Verified rather than asserted: each of the three JSX blocks diffs
+      byte-identical against its old self in `page.tsx`, with exactly two
+      substitutions in the table's — `{overlays}` and `{fieldDrawer}` became
+      the two components. `turn-view.ts` has ten tests for the gating that
+      had gone wrong before (13.4's held-back sheet, the reveal, a thrown
+      die keeping the Karta up, fought counting as settled). What is left in
+      `page.tsx` is the hooks, this device's state, the four questions asked
+      before an irreversible act, and the choice among the five screens.
+
+      Left for later, each a seam of its own: `askToUse`/`askToDrop`/
+      `askToCast`/`askToLeave` as a `use-asks.ts` hook (~200 lines), and
+      grouping the draw-flow files into a folder once the die-on-the-frame
+      work in `drawn-actions.tsx` settles.
+
 ## Two decisions a fresh session would otherwise re-derive
 
 Both are now built, and both are still worth reading before touching either.
