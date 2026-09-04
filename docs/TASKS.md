@@ -157,10 +157,11 @@ LANDED.md for what is built (`src/lib/music/`, `/music`).
       `card-facts`, `crossing-controls` and `die-mark` stay out because the
       field side reads them too; the boundary was measured off the import
       graph, not guessed.
-- [ ] `sheet/drawn-actions.tsx` is 1,050 lines: three hundred of derivation
-      from props, then three renders (the watcher's, the loss picker, the
-      actor's buttons). The seam is the one `turn-view.ts` took — the
-      decisions as a pure function with tests — and the two local leaves.
+- [x] `sheet/drawn-actions.tsx` 1,050 → 756: its decisions are
+      `drawn-decisions.ts`, a pure function with tests, the way `turn-view.ts`
+      is for the screen; the die table, the Obszar dropdown and the pack tile
+      are leaves of their own. The three renders diff byte-identical apart
+      from the die table becoming a component.
 - [ ] `sweep.py`, the end-to-end harness against the real routes, is worth
       rewriting rather than restoring — what it is *for* is asserting against
       the routes, and that is the part worth keeping.
