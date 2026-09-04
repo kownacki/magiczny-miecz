@@ -1,6 +1,6 @@
 /** A Zaklęcie from the moment it is spoken to the moment it lands or lapses (9.6, 9.7). */
 
-import { immuneToSpell } from "@/lib/engine/abilities";
+import { immuneToSpell, spellWards } from "@/lib/engine/abilities";
 import { KAMIENNY_MOST, ringFields, ringOf, type FieldId } from "@/lib/engine/board";
 import type { Shuffle } from "@/lib/engine/deck";
 import { classOf, refusesArms } from "@/lib/engine/cards";
@@ -709,6 +709,42 @@ export async function castSpell(
    */
   if (state.phase === "fight" && refusesArms(state.fight.fought ?? [state.fight.cardId])) {
     throw new Error(`${state.fight.cardName}: nie można tu używać Zaklęć.`);
+  }
+
+  /**
+   * The Kryształ Magów's third clause, aimed at the *other* side of a duel.
+   *
+   * "Przeciwnik właściciela Kryształu nie może walcząc z nim użyć Zaklęcia
+   * Odrodzenie" — unlike the card's other two clauses, this one is not a fact
+   * about the owner's own casting or the owner's own immunity: it bans a named
+   * spell to whoever the owner is fighting. `state.fight.opponentSeat` is
+   * exactly "is this a duel, and who is the other Postać" (17.6, `escape`'s
+   * `duelWith` reads it the same way) — set only when this fight is Postać
+   * przeciw Postaci, naming the defender's seat against the attacker's
+   * `active_seat`. No new frame needed: a duel already knows both seats, and
+   * an ordinary fight against a Wróg or a Zdarzenie has no `opponentSeat` to
+   * ask, so this clause is silently moot there — there is no "przeciwnik" to
+   * bind. `spellWards` is asked of the *other* seat's own abilities, the same
+   * way `immuneToSpell` two clauses up is asked of a victim rather than a
+   * caster: the ban belongs to whoever holds the Kryształ, not to whoever is
+   * casting.
+   */
+  if (state.phase === "fight" && state.fight.opponentSeat !== undefined) {
+    const otherSeatIndex =
+      caster.seat_index === snapshot.game.active_seat
+        ? state.fight.opponentSeat
+        : caster.seat_index === state.fight.opponentSeat
+          ? snapshot.game.active_seat
+          : null;
+    const other =
+      otherSeatIndex !== null
+        ? snapshot.seats.find((s) => s.seat_index === otherSeatIndex)
+        : undefined;
+    if (other && spellWards(seatView(snapshot, other.id).abilities).has(held.card_id)) {
+      throw new Error(
+        "Przeciwnik właściciela Kryształu Magów nie może walcząc z nim użyć Zaklęcia Odrodzenie.",
+      );
+    }
   }
 
   // 9.1: a Zaklęcie has a moment it may be spoken in. The interface greys the

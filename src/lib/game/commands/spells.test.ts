@@ -297,3 +297,103 @@ describe("Władca Zdarzeń, and the answer it waits for", () => {
     expect(after.fieldCards.map((row) => row.field_id)).toEqual(["mroczna-polana"]);
   });
 });
+
+/**
+ * The Kryształ Magów's bargain: give up magic entirely and nothing magical
+ * touches you — plus a third clause that binds not the owner but whoever is
+ * fighting them.
+ */
+describe("the Kryształ Magów", () => {
+  it("is immune to the six named Zaklęcia, read off the victim (odporny-na-zaklecie)", async () => {
+    const { after, out } = await cast("krag-plomieni", {
+      target: { seatIndex: 1 },
+      victim: ["krysztal-magow"],
+    });
+    expect(out.result.did?.join(" ")).toMatch(/odporność/);
+    expect(after.effects).toHaveLength(0);
+    // 9.6 spends the Karta as it is spoken, whatever it did.
+    expect(after.holdings.some((h) => h.id === "s1")).toBe(false);
+  });
+
+  it("does not shield anyone else — the immunity is the owner's card, not the spell's", async () => {
+    const { after } = await cast("krag-plomieni", { target: { seatIndex: 1 } });
+    expect(after.effects.length).toBeGreaterThan(0);
+  });
+
+  it("still refuses its own owner every Zaklęcie, as before", async () => {
+    await expect(
+      cast("krag-plomieni", { mine: ["krysztal-magow"], target: { seatIndex: 1 } }),
+    ).rejects.toThrow(/Kryształu Magów/);
+  });
+
+  /**
+   * The third clause, which is not a fact about the owner's own abilities:
+   * "Przeciwnik właściciela Kryształu nie może walcząc z nim użyć Zaklęcia
+   * Odrodzenie." Needs a duel in progress — `state.fight.opponentSeat` — since
+   * outside a fight there is no "przeciwnik" to bind.
+   */
+  describe("and the duel it is fought in", () => {
+    const duel = (owner: "attacker" | "defender") =>
+      aTable({
+        game: {
+          active_seat: 0,
+          turn_state: {
+            phase: "fight",
+            fight: {
+              cardId: "seat:1",
+              cardName: "Bartek",
+              kind: "ordinary",
+              enemyTotal: 4,
+              playerTotal: 3,
+              playerRoll: null,
+              enemyRoll: null,
+              result: null,
+              fieldId: "wrzosowiska",
+              draw: 0,
+              drawn: [],
+              opponentSeat: 1,
+            },
+          } as TurnPhase,
+        },
+        seats: [
+          aSeat({ id: "seat-a", seat_index: 0, field_id: "wrzosowiska", life: 2 }),
+          aSeat({ id: "seat-b", seat_index: 1, field_id: "wrzosowiska", life: 2 }),
+        ],
+        holdings: [
+          aHolding({
+            id: "s-odr",
+            seat_id: owner === "attacker" ? "seat-b" : "seat-a",
+            card_id: "odrodzenie",
+            kind: "spell",
+          }),
+          aHolding({
+            id: "h-kry",
+            seat_id: owner === "attacker" ? "seat-a" : "seat-b",
+            card_id: "krysztal-magow",
+            kind: "item",
+          }),
+        ],
+      });
+
+    it("stops the attacker's own opponent using Odrodzenie against them", async () => {
+      const t = duel("attacker");
+      await expect(
+        castSpell(t, { seatId: "seat-b", holdingId: "s-odr" }, ports()),
+      ).rejects.toThrow(/Odrodzenie/);
+    });
+
+    it("stops the defender's own opponent using Odrodzenie against them", async () => {
+      const t = duel("defender");
+      await expect(
+        castSpell(t, { seatId: "seat-a", holdingId: "s-odr" }, ports()),
+      ).rejects.toThrow(/Odrodzenie/);
+    });
+
+    it("does not reach outside a duel", async () => {
+      const t = table("odrodzenie", ["krysztal-magow"]);
+      const out = await castSpell(t, { seatId: "seat-a", holdingId: "s1" }, ports());
+      const after = apply(t, out.writes);
+      expect(seat(after, "seat-a").life).toBe(4);
+    });
+  });
+});

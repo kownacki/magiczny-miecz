@@ -67,14 +67,19 @@ export type Ability =
    */
   | { kind: "oslona"; upTo: number }
   /**
-   * The Kryształ Magów: its owner "nie może rzucać ani używać Zaklęć" and is
-   * "całkowicie odporny" to the six named ones, and an opponent may not use
-   * Odrodzenie against them.
+   * The Kryształ Magów's first and third clauses: its owner "nie może rzucać
+   * ani używać Zaklęć", and an opponent fighting them may not use the named
+   * one against them.
    *
-   * Both halves of one bargain, so both live on one ability: give up magic
-   * entirely and nothing magical touches you.
+   * The middle clause — "całkowicie odporny" to six named ones — used to live
+   * here too as `odpornyNa`, read by nothing (`spellWards` had zero callers).
+   * It is `odporny-na-zaklecie` now, the door the two Talizmany already open,
+   * so immunity is asked the one way the app asks it anywhere: of the victim,
+   * at the one cast door. `przeciwnikBez` is this ability's alone because it
+   * is not immunity — it is a ban on a spell an *opponent* would otherwise be
+   * free to cast on themselves, which `odporny-na-zaklecie` has no shape for.
    */
-  | { kind: "bez-zaklec"; odpornyNa: readonly string[]; przeciwnikBez: readonly string[] }
+  | { kind: "bez-zaklec"; przeciwnikBez: readonly string[] }
   /**
    * Passes a named field without what it normally does to you. `rzut` skips a
    * field's die roll entirely (Opiekun, Przewodnik); `life` keeps the point it
@@ -472,9 +477,10 @@ export const ABILITIES: Readonly<Partial<Record<CardId, readonly Ability[]>>> = 
   // Bogactwa i Pan Przyjaciół. Przeciwnik właściciela Kryształu nie może
   // walcząc z nim użyć Zaklęcia Odrodzenie."
   "krysztal-magow": [
+    { kind: "bez-zaklec", przeciwnikBez: ["odrodzenie"] },
     {
-      kind: "bez-zaklec",
-      odpornyNa: [
+      kind: "odporny-na-zaklecie",
+      zaklecia: [
         "krag-plomieni",
         "fatum",
         "magia-i-miecz",
@@ -482,7 +488,6 @@ export const ABILITIES: Readonly<Partial<Record<CardId, readonly Ability[]>>> = 
         "pan-bogactwa",
         "pan-przyjaciol",
       ],
-      przeciwnikBez: ["odrodzenie"],
     },
   ],
   "bojowy-rumak": [{ kind: "magia-do-miecza" }, { kind: "ginie-zamiast-ciebie" }],
@@ -1035,19 +1040,27 @@ export function cannotUseSpells(abilities: readonly Ability[]): boolean {
   return abilities.some((ability) => ability.kind === "bez-zaklec");
 }
 
-/** Spells this character is immune to, and spells an opponent may not use on it. */
-export function spellWards(abilities: readonly Ability[]): {
-  immune: Set<string>;
-  deniedToOpponent: Set<string>;
-} {
-  const immune = new Set<string>();
+/**
+ * Spells an opponent fighting this character may not use — the Kryształ
+ * Magów's third clause, "przeciwnik ... nie może ... użyć Zaklęcia Odrodzenie".
+ *
+ * Used to also collect an `immune` set off the same ability's `odpornyNa`,
+ * which had zero callers anywhere in `src`: nothing asked a holder's own
+ * abilities whether a spell landing on *someone else* should bounce, because
+ * that question belongs to the victim, not this card. Immunity moved to
+ * `odporny-na-zaklecie`, read by `immuneToSpell` at the one cast door — the
+ * same door the two Talizmany already used. This half stays, because a
+ * `deniedToOpponent` opponent is asked here for the first time, at the same
+ * door: `castSpell` calls it on the *other* side of a duel to enforce the
+ * Kryształ's ban on Odrodzenie.
+ */
+export function spellWards(abilities: readonly Ability[]): Set<string> {
   const deniedToOpponent = new Set<string>();
   for (const ability of abilities) {
     if (ability.kind !== "bez-zaklec") continue;
-    for (const id of ability.odpornyNa) immune.add(id);
     for (const id of ability.przeciwnikBez) deniedToOpponent.add(id);
   }
-  return { immune, deniedToOpponent };
+  return deniedToOpponent;
 }
 
 // Nothing in `src` calls this any more — `shieldSaves` (fight.ts) reads

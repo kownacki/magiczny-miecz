@@ -752,7 +752,9 @@ export function describeAbility(ability: Ability): string {
     case "zakazane":
       return "nie wolno ci nosić niektórych Przedmiotów";
     case "bez-zaklec":
-      return "nie rzucasz Zaklęć; odporność na wybrane Zaklęcia";
+      return `nie rzucasz ani nie używasz Zaklęć; przeciwnik nie użyje w walce z tobą: ${ability.przeciwnikBez
+        .map((id) => cardName(id))
+        .join(", ")}`;
     case "przeprawa-kostki":
       return `przeprawa przez Trzęsawiska: ${ability.dice} kostki`;
     case "skup":
