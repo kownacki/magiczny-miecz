@@ -1000,7 +1000,13 @@ const HELD_TWIN: Record<Ability["kind"], ((ability: Ability) => Modifier | null)
   "podglad-zaklec": null, // read only when a Zaklęcie is drawn
   "odporny-na-zaklecie": null, // read only when a named Zaklęcie lands on the holder
   "punkty-na-polach": null, // read only on the named Obszar
-  "przeprawa-kostki": null, // read only at the crossing
+  // Not "read only at the crossing", which is what this said and was the wrong
+  // reason. Rusałka is the only thing in the box that prints it and she is a
+  // Postać, not a Karta — nothing held produces it, so a twin here could never
+  // fire. It stays on the Ability because there is no second spelling of it to
+  // retire: `przeprawa` is a *granted* crossing, which is a different fact, and
+  // nothing else in the game says how many dice one takes. See `crossingDice`.
+  "przeprawa-kostki": null,
   skup: null, // a desk's price, not a fact about the holder
   "sprzedaj-w": null, // a card's own buyer, not a fact about the holder
   "placi-za-przegrana": null, // read only when a duel is lost

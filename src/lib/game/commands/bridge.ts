@@ -502,7 +502,17 @@ export async function crossRing(
    * the character is in. Each obstacle has one in each direction, so where they
    * land is the far side of the one they are taking rather than a choice.
    */
-  const granted = grantedCrossing(storedStatuses(snapshot, seat.id));
+  /**
+   * The whole standing list rather than the stored half.
+   *
+   * Nothing held grants a crossing today, so this finds exactly what it found
+   * before — but asking `storedStatuses` was asking "which of the two places a
+   * crossing could be written down is it in", and the answer to that is not a
+   * rule, it is where the row happens to live. A Karta that opens the
+   * Trzęsawiska would be read now without this line changing again.
+   */
+  const view = seatView(snapshot, seat.id);
+  const granted = grantedCrossing(view.standing);
 
   /**
    * Where a granted crossing puts you: „do Obszaru graniczącego z tym, z
@@ -556,11 +566,10 @@ export async function crossRing(
     //
     // Rusałka's friendship is exactly this: one die at the Trzęsawiska instead
     // of two, which is the difference between a hard crossing and a likely one.
-    const count = crossingDice(
-      seatView(snapshot, seat.id).abilities,
-      crossing.obstacle,
-      crossing.test.dice,
-    );
+    // Still the abilities and not `standing`: `przeprawa-kostki` is printed on
+    // Rusałka herself, and a Postać's own text is not on the Status list — see
+    // the note beside its `HELD_TWIN` entry for why it stays where it is.
+    const count = crossingDice(view.abilities, crossing.obstacle, crossing.test.dice);
     dice = await rollDice(ports.random, count, "trzęsawiska");
     // `parametr`, not `walka`: the Trzęsawiska are a threshold and not a fight,
     // so a Krzyżowiec's fight-only points have no business in the number.

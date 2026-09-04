@@ -189,8 +189,15 @@ is a **Status** (CONTEXT.md). The other three decisions, and the order:
          `heldStatuses` itself so its four callers stay unchanged, and a
          Tragarz — which `inPlayAt` alone never puts anywhere in slotowy —
          now carries there too, matching every other Przyjaciel's bonus;
-         `abilityCarryLimit` stays, unused, for its tests), `ocalenie`,
-         crossings (`przeprawa-kostki` → `przeprawa`), the rest.
+         `abilityCarryLimit` stays, unused, for its tests), ~~crossings~~
+         (settled 2026-09-04, and **not** by folding: `przeprawa-kostki` is
+         printed on Rusałka, a Postać, so nothing held can produce it and
+         there is no second spelling to retire — `przeprawa` is a *granted*
+         crossing, a different fact. It stays on the Ability with that reason
+         written beside it, and what did move is `grantedCrossing`, from the
+         stored half to the whole `standing` list. Folding a Postać's own
+         printed text onto the list is a separate question, and the one to
+         answer for all of them at once in step 3), `ocalenie`, the rest.
       3. `Ability` kinds whose reader has moved become `Modifier` kinds; what
          is left of `Ability` is the per-card data that has no standing-effect
          reading (`skup`, `sprzedaj-w`, `wymagany`, `zakazane`).
