@@ -1802,6 +1802,25 @@ describe("osłona (17.4, 18.2b)", () => {
     );
     expect(result).toBe(false);
   });
+
+  /**
+   * Wearing all three is one roll against the widest, not three rolls — this
+   * is now `shieldUpTo` over `standing` (`status.ts`) rather than `bestShield`
+   * over `abilities`, and this pins the reading survived the move.
+   */
+  it("rolls against the widest when more than one is worn", async () => {
+    const layered = table([
+      aHolding({ id: "h-1", card_id: "helm" }),
+      aHolding({ id: "h-2", card_id: "tarcza" }),
+      aHolding({ id: "h-3", card_id: "zbroja" }),
+    ]);
+    const { result } = await shieldSaves(
+      layered,
+      { seatId: "seat-a", kind: "ordinary" },
+      ports({ random: scriptedRandom([3]) }),
+    );
+    expect(result).toBe(true);
+  });
 });
 
 describe("Zaczarowane Wzgórza and the spoken word", () => {

@@ -1050,6 +1050,10 @@ export function spellWards(abilities: readonly Ability[]): {
   return { immune, deniedToOpponent };
 }
 
+// Nothing in `src` calls this any more — `shieldSaves` (fight.ts) reads
+// `shieldUpTo` over `standing` instead (`status.ts`'s `oslona` twin). Left
+// here, with its tests, until the `oslona` `Ability` kind retires with the
+// rest of them in step three of the fold (docs/WHERE.md, "A Status kind").
 export function bestShield(abilities: readonly Ability[]): number {
   let best = 0;
   for (const ability of abilities) {

@@ -3,7 +3,6 @@
 import { isFoeClass } from "@/data/types";
 import type { SpellId } from "@/data/ids";
 import {
-  bestShield,
   canEscapeAt,
   diesForYou,
   heldAbilities,
@@ -62,7 +61,13 @@ import { refuseAgainstStone } from "./stone";
 import { slotsFor } from "@/lib/engine/slots";
 import { floorOf } from "./spellFloor";
 import { addEffect, refuseAgainst13_2, refuseWhileUndrawn, storedStatuses } from "./turn";
-import { bonusFrom, cardStatuses, cardUntouchable, magiaDoubled } from "@/lib/engine/status";
+import {
+  bonusFrom,
+  cardStatuses,
+  cardUntouchable,
+  magiaDoubled,
+  shieldUpTo,
+} from "@/lib/engine/status";
 
 /**
  * The one Zaklęcie the rules name inside another rule.
@@ -756,8 +761,7 @@ export async function shieldSaves(
   if (command.kind === "magical") return { writes: {}, result: false };
 
   const seat = seatById(snapshot, command.seatId);
-  const abilities = seatView(snapshot, seat.id).abilities;
-  const upTo = bestShield(abilities);
+  const upTo = shieldUpTo(seatView(snapshot, seat.id).standing);
   if (upTo === 0) return { writes: {}, result: false };
 
   const die = await ports.random.rollD6("osłona: rzut");

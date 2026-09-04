@@ -230,6 +230,9 @@ const STACKING: Record<Modifier["kind"], Stacking> = {
   "bez-limitu-zaklec": "exclusive",
   // 1.2-1.5's arithmetic: two Eliksiry are two points, and `bonusFrom` sums.
   points: "sums",
+  // A Hełm and a Tarcza worn together are not two rolls: `shieldUpTo` takes
+  // the widest, and the reason it does is written there.
+  oslona: "exclusive",
   // `movementCap` takes the smaller of the caps, so a second one either tightens
   // it or does nothing. Never a further restriction than the tightest.
   "move-max": "exclusive",
@@ -327,6 +330,10 @@ export function markOf(status: Status): Mark {
       const up = (status.modifier.miecz ?? 0) + (status.modifier.magia ?? 0) >= 0;
       return { glyph: up ? "\u25B2" : "\u25BC", tone: up ? "dobry" : "zly", title };
     }
+    // A right held rather than something that has happened yet, same as
+    // `ocalenie`'s \u271A \u2014 nothing is worse about the character for wearing one.
+    case "oslona":
+      return { glyph: "\u26E8", tone: "dobry", title };
     case "frozen":
       return { glyph: "\u25A0", tone: "zly", title };
     // A Wr\u00F3g out of reach rather than a character stopped \u2014 neither good nor

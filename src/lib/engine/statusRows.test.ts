@@ -163,6 +163,11 @@ describe("stackingOf: the four columns answer for themselves", () => {
     expect(stackingOf(buff(1, { modifier: { kind: "znowu" }, source: "formula-czasu" }))).toBe(
       "refreshes",
     );
+    // A Hełm and a Tarcza together do not roll twice — `shieldUpTo` takes
+    // the widest, same as `move-max`'s tightest.
+    expect(stackingOf(buff(1, { modifier: { kind: "oslona", upTo: 1 }, source: "helm" }))).toBe(
+      "exclusive",
+    );
   });
 });
 

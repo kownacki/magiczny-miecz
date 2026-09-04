@@ -180,7 +180,10 @@ is a **Status** (CONTEXT.md). The other three decisions, and the order:
          `bonusFromHoldings` survives for `fight.ts`'s single-card
          correction, reading the same map), ~~spell limits~~ (done: `whyNoSpells`
          reads `standing`; `zaklecia-ponad-limit` stays in `spellAllowance`),
-         protection (`oslona`/`ocalenie`), crossings
+         ~~osłona~~ (done 2026-09-04: Hełm/Tarcza/Zbroja's `oslona` is a
+         `points`-shaped twin, `shieldUpTo` takes the widest; `shieldSaves`
+         reads `standing` and `bestShield` stays, unused, for its tests),
+         `ocalenie`, crossings
          (`przeprawa-kostki` → `przeprawa`), carrying (`udzwig`), the rest.
       3. `Ability` kinds whose reader has moved become `Modifier` kinds; what
          is left of `Ability` is the per-card data that has no standing-effect

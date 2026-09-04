@@ -14,6 +14,7 @@ import {
   frozen,
   heldStatuses,
   movementCap,
+  shieldUpTo,
   type HeldCard,
   type Status,
 } from "./status";
@@ -60,6 +61,18 @@ describe("what a character is under", () => {
     ];
     expect(movementCap(under)).toBe(1);
     expect(movementCap([])).toBeNull();
+  });
+
+  it("takes the widest osłona in force, not the sum", () => {
+    // A Hełm, a Tarcza and a Zbroja worn together are one roll against 3,
+    // not three rolls against 1, 2 and 3 in turn.
+    const under = [
+      status({ modifier: { kind: "oslona", upTo: 1 } }),
+      status({ id: "b", modifier: { kind: "oslona", upTo: 3 } }),
+      status({ id: "c", modifier: { kind: "oslona", upTo: 2 } }),
+    ];
+    expect(shieldUpTo(under)).toBe(3);
+    expect(shieldUpTo([])).toBe(0);
   });
 
   it("knows when the holder cannot act at all", () => {
@@ -262,9 +275,37 @@ describe("the held half: a card's own Abilities as Status rows", () => {
   });
 
   it("yields nothing for an Ability with no twin yet (the exhaustive mapping compiles)", () => {
-    // Hełm is `oslona`, read only when a fight is lost — not a standing fact,
-    // so `HELD_TWIN` maps it to null rather than guessing at a Modifier.
-    expect(heldStatuses([heldCard({ cardId: "helm" })], "classic", null)).toEqual([]);
+    // Rękawice are `bezpieczny`, read only when the named field is stepped on
+    // — not a standing fact, so `HELD_TWIN` maps it to null rather than
+    // guessing at a Modifier.
+    expect(heldStatuses([heldCard({ cardId: "rekawice" })], "classic", null)).toEqual([]);
+  });
+
+  /**
+   * 17.4's three shields, held rather than rolled: a Hełm, Tarcza or Zbroja
+   * stands for the right to roll the moment it is worn, the same way a Miecz
+   * stands for its point whether or not a fight ever happens. `shieldSaves`
+   * (fight.ts) is the reader that asks for the roll itself.
+   */
+  it("puts Hełm, Tarcza and Zbroja on the standing list as `oslona`", () => {
+    const [row] = heldStatuses([heldCard({ cardId: "helm" })], "classic", null);
+    expect(row.modifier).toEqual({ kind: "oslona", upTo: 1 });
+    expect(row.ends).toEqual({ kind: "held" });
+    expect(heldStatuses([heldCard({ cardId: "tarcza" })], "classic", null)[0].modifier).toEqual({
+      kind: "oslona",
+      upTo: 2,
+    });
+    expect(heldStatuses([heldCard({ cardId: "zbroja" })], "classic", null)[0].modifier).toEqual({
+      kind: "oslona",
+      upTo: 3,
+    });
+  });
+
+  it("in slotowy, a packed Hełm shields nothing and a worn one does", () => {
+    const packed = heldCard({ cardId: "helm", slot: null });
+    const worn = heldCard({ cardId: "helm", slot: "main-hand" });
+    expect(heldStatuses([packed], "slots", null)).toEqual([]);
+    expect(shieldUpTo(heldStatuses([worn], "slots", null))).toBe(1);
   });
 
   /**

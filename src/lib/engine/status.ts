@@ -135,6 +135,25 @@ export type Modifier =
    * still. See `Reckoning` in `holdings.ts`.
    */
   | { kind: "points"; miecz?: number; magia?: number; tylkoWalka?: true }
+  /**
+   * The right to roll against losing the point of Życie a lost fight costs.
+   *
+   * 17.4 says only that the loss „może temu zapobiec użycie Przedmiotu lub
+   * Zaklęcia"; which Przedmiot, and on what roll, is printed on the three
+   * cards themselves. „Posiadacz Hełmu, który utracił podczas walki 1 punkt
+   * Życia ma prawo wykonać rzut kostką: wynik równy 1 oznacza, że Hełm go
+   * ochronił." The Tarcza reads 1 lub 2 and the Zbroja 1, 2 lub 3, which is
+   * the whole of what `upTo` holds.
+   *
+   * Wearing more than one is one roll against the widest rather than a roll
+   * per card — see `shieldUpTo`, which is where that reading lives.
+   *
+   * 18.2b takes the roll away entirely in a magical fight — „żaden Przedmiot
+   * nie może zapobiec utracie punktu Życia" — which is why `shieldSaves` asks
+   * the fight's kind before reading this at all, rather than reading it and
+   * then discarding what it found.
+   */
+  | { kind: "oslona"; upTo: number }
   /** A hard cap on how far the holder may move, whatever the die says. Mgła. */
   | { kind: "move-max"; fields: number }
   /**
@@ -603,6 +622,26 @@ export function magiaCountsAsMiecz(statuses: readonly Status[]): boolean {
 }
 
 /**
+ * The widest osłona in force, or 0 for none.
+ *
+ * The widest and not the sum, and one roll rather than one per card: each of
+ * the three grants „prawo wykonać rzut kostką" — the right, singular — against
+ * the same point of Życie, and nothing printed says a second card buys a
+ * second attempt at a loss the first has already answered. The reading is this
+ * app's, not the book's; 17.4 leaves it at „może temu zapobiec użycie
+ * Przedmiotu lub Zaklęcia" and the cards say nothing about each other.
+ */
+export function shieldUpTo(statuses: readonly Status[]): number {
+  let widest = 0;
+  for (const status of statuses) {
+    if (status.modifier.kind === "oslona" && status.modifier.upTo > widest) {
+      widest = status.modifier.upTo;
+    }
+  }
+  return widest;
+}
+
+/**
  * The thing standing between this character and the next point they would lose.
  *
  * Read at the one door every loss comes through, so an Ocalony spoken in
@@ -867,7 +906,7 @@ export type HeldCard = Pick<Holding, "cardId" | "kind" | "slot"> & { id: string 
  * somebody says whether it is a standing fact too — `STACKING` in
  * `statusRows.ts` already uses the same discipline for the same reason.
  *
- * One kind has a twin so far — every other kind here is read at the moment it
+ * Two kinds have a twin so far — every other kind here is read at the moment it
  * applies (a fight, a toll, a roll) rather than *standing* the way `points` or
  * `frozen` do, or is already folded into some other reading (`carryLimit`,
  * `spellAllowance`, `forbiddenNatures`) and would be counted twice by also
@@ -893,7 +932,11 @@ const HELD_TWIN: Record<Ability["kind"], ((ability: Ability) => Modifier | null)
   "bez-zaklec": (ability) => (ability.kind === "bez-zaklec" ? { kind: "no-spells" } : null),
 
   "zabiera-zycie": null, // a one-off gain when a fight is won (Excalibur), not a standing fact
-  oslona: null, // read only when a fight is lost
+  // Hełm, Tarcza and Zbroja are the only cards that print this ability, and
+  // wearing one is a standing fact the way carrying a Miecz is — the roll it
+  // grants is read only when a fight is lost (`shieldSaves`), but whether the
+  // right to roll is held at all does not wait for that moment.
+  oslona: (ability) => (ability.kind === "oslona" ? { kind: "oslona", upTo: ability.upTo } : null),
   bezpieczny: null, // read only when the named field is stepped on
   ucieczka: null, // read only when a flight is attempted
   udzwig: null, // folded into `carryLimit` already
