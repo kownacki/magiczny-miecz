@@ -58,16 +58,18 @@ their scans are deliberately untouched.
 
       The five with nothing at all, and what each of them actually wants:
 
-      - **Sobowtór** — one line. His strength being his opponent's is already
-        carried in `cards.ts` and tested; what he lacks is a `SCRIPTS` entry, so
-        "Pozostanie tu, aż ktoś go pokona" is unencoded and `coverageOf` calls
-        him `brak` — "aplikacja jej nie prowadzi" — about a card the app fights
-        correctly. `sobowtor: STRAZUJE()` answers both.
-      - **Kometa** — buildable today, no new model. "Giną wszyscy Nieznajomi"
-        is a sweep of one class off the Kraina you are walking: the `stranger`
-        rows in that ring go to the used pile.
-      - **Turniej Rycerski** — assembly. A challenge, a teleport and an ordinary
-        duel, all three of which exist.
+      - ~~**Sobowtór**~~ — built 2026-09-04: `sobowtor: STRAZUJE()`.
+      - **Kometa** — one new op (`katastrofa`: a class swept off the Krąg,
+        Karty to the used pile, granted ones to none) and one new journal
+        kind: `clearField`'s line is the right sentence and the wrong kind —
+        `override` is the table correcting the game, and this is a printed
+        Karta doing what it says. `lost-card` reads „traci", which is a held
+        card. So: a kind for a Karta destroyed by a card, then the op.
+      - **Turniej Rycerski** — needs a decision the script vocabulary lacks:
+        „wyzwać każdą Postać" is a choice among however many Postacie are at
+        the table now, and `wybor` is a fixed list re-walked by index. `Target`
+        has `inna-postac`, but `seatsTargeted` answers null for it and every op
+        punts it to manual. A dynamic choice shape is a design, not a brief.
       - **Wampir** — blocked. His Życie grows as he wins, which is a number
         that has to live on the Karta lying on the Obszar. Same wall as the
         three partial Zaklęcia (LANDED.md).
