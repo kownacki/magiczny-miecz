@@ -1304,3 +1304,35 @@ Left open and worth naming: `inEffect` knows a Natura and not a Charakterystyka,
 so if a Pustelnik ever does hold one of the four, it would still count toward
 his points. Closing that means threading abilities through eleven call sites
 including `fight.ts`, which is its own job.
+
+## The Status fold is finished, and its last step is dropped
+
+2026-09-04. Every reader named in the plan has moved — points, spell limit,
+osłona, carrying, ocalenie — plus two that came off the list for reasons of
+their own: crossings, because `przeprawa-kostki` is printed on a Postać and has
+no second spelling, and `ocalenie`, which turned out to be a duplicated
+projection rather than a reader.
+
+**Step three is dropped rather than done.** "`Ability` kinds whose reader has
+moved become `Modifier` kinds" reads like the natural end of the fold and is
+the wrong shape, which only tracing the cost shows. `ABILITIES` is one table
+saying what every card and Charakterystyka prints; `describeAbility` renders it
+on the seat card; and `BONUS_BY_ID` — the lookup the plan cited as the pattern
+to copy — is *built from* `ABILITIES` rather than replacing it, so even
+`punkty`, the first reader to move, still needs its kind. Retiring the kinds
+would scatter card data into per-fact tables and lose a printed line, to remove
+a duplication that was never in the data.
+
+The duplication was in the **readers**. A held Miecz and an Eliksir were two
+sums; a Kryształ and a field were two lists for one question. Those are gone.
+What is left is two vocabularies that mean different things and should:
+an `Ability` is what a card *prints*, a `Status` is what is *true of a holder
+now*, and `HELD_TWIN` is an exhaustive bridge, so neither can drift and a new
+Ability kind cannot be added without somebody saying whether it stands.
+
+All step three really contained was three dead readers, and they are deleted:
+`bestShield`, `cannotUseSpells`, and `abilities.ts`'s own `carryLimit` — the
+last of which hid behind sharing a name with `derive.ts`'s live one.
+
+It also settles what crossings deferred: a Postać's printed abilities stay
+abilities. There was never a second spelling of them to retire either.

@@ -51,10 +51,16 @@ Obszar — as a Modifier, where it came from, and when it ends. Two sources,
 one shape: an applied one is stored (`seat_effects`) and ends by its `Ends`;
 a held card's is produced at read time and ends when the card is no longer
 in effect. Every rule that asks "what is this holder under" reads one list of
-them. Decided 2026-09-04; the held-card half is being folded in one reader
-at a time — see docs/TASKS.md.
-_Avoid_: ability (the held-card half's own vocabulary, being retired), buff,
-effect (an **Effect** is a happening, walked once; a Status stands)
+them. Decided 2026-09-04, and the fold is done: every reader asks the one
+list.
+
+An **Ability** is not a rival for this word and is not being retired. It is
+what a Karta or a Charakterystyka *prints*; a Status is what is *true of a
+holder now*. `HELD_TWIN` is the bridge, an exhaustive `Record` over every
+Ability kind, so the two cannot drift and a new kind cannot be added without
+somebody saying whether it stands.
+_Avoid_: buff, effect (an **Effect** is a happening, walked once; a Status
+stands). Say "ability" only of printed text, never of what a holder is under
 
 **Apply**:
 Folding a **Changeset** into a **Snapshot** in memory, so a later step sees an
@@ -143,8 +149,20 @@ moment, which is the whole reason they are ports.
   this holder under — differing only in where the fact came from (a card in
   hand, a status applied) and how long it lasts (while held, until an `Ends`).
   A held Miecz was `Ability { punkty }`, an Eliksir `Modifier { points }`, and
-  two readers summed them. Resolved: both are a **Status**; `Ability` kinds
-  fold into `Modifier` kinds and a held card produces its Status at read time.
+  two readers summed them. Resolved: both are read as a **Status**, produced
+  from the held card at read time.
+
+  What was *not* the ambiguity, established 2026-09-04 after tracing what
+  removing it would cost: the two **data** vocabularies. The plan had said
+  Ability kinds would become Modifier kinds and the union would shrink to
+  per-card data; that is the wrong shape. `ABILITIES` is one table saying what
+  every card prints, `describeAbility` renders it on the seat card, and even
+  `punkty` — the kind whose reader moved first — is still the source
+  `BONUS_BY_ID` is *built from*. Retiring the kinds would scatter card data
+  into ad-hoc lookups and buy nothing: the duplication was always in the
+  **readers**, and folding those fixed it. Keep both unions, keep the bridge
+  exhaustive.
+
   A Zaklęcie's script is its truth, with the prose rendered from it like every
   other card's; the regex reader of card prose (`cardEffects.ts`) goes.
 

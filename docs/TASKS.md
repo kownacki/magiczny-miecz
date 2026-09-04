@@ -205,9 +205,30 @@ is a **Status** (CONTEXT.md). The other three decisions, and the order:
          status has no row to delete — and the three friends who die in
          your place stay on `diesForYou`, being scoped to a defeat and
          costing a Karta rather than being any loss at all), the rest.
-      3. `Ability` kinds whose reader has moved become `Modifier` kinds; what
-         is left of `Ability` is the per-card data that has no standing-effect
-         reading (`skup`, `sprzedaj-w`, `wymagany`, `zakazane`).
+      3. ~~`Ability` kinds whose reader has moved become `Modifier` kinds.~~
+         **Dropped 2026-09-04, after tracing what it costs.** It was the
+         wrong shape and the plan was wrong to name it. `ABILITIES` is one
+         table saying what every card and Charakterystyka prints;
+         `describeAbility` renders it on the seat card; and `BONUS_BY_ID` —
+         the very lookup this step cited as the pattern to copy — is *built
+         from* `ABILITIES` rather than replacing it, so even `punkty`, whose
+         reader moved first, still needs its kind. Retiring the kinds would
+         scatter card data into ad-hoc per-fact tables and lose the printed
+         line the seat card shows, to remove a duplication that was never in
+         the data. The duplication was in the **readers**, and steps one and
+         two are what fixed it.
+
+         What stands instead, in CONTEXT.md: an `Ability` is what a card
+         *prints*, a `Status` is what is *true of a holder now*, and
+         `HELD_TWIN` is the exhaustive bridge, so a new Ability kind cannot
+         be added without somebody saying whether it stands. Three dead
+         readers were deleted on the way past (`bestShield`,
+         `cannotUseSpells`, `abilities.ts`'s own `carryLimit`), which is all
+         the cleanup this step really had in it.
+
+         This also answers the question crossings deferred: a Postać's
+         printed abilities stay abilities. There was never a second spelling
+         of them to retire.
 - [ ] **A Zaklęcie's script is its truth.** Every one of the 27 gets a
       `stosuje` — an Effect for a one-off, a Status with an `Ends` for a
       lasting one — and `describeEffect` renders the sentence, as for every
