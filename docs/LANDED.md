@@ -1121,3 +1121,23 @@ taken on 2026-09-04, and the second landed the same day.
   `holdOverflow` now. Seven tests pin it. The Envelope's surplus sentence,
   the console's and the browser's drop confirmation all say the Karta is
   destroyed.
+
+## The first two cards on the new holder
+
+Krąg Płomieni and Władca Gromu, 2026-09-04. A Wróg lying on an Obszar can
+now be `unieruchomiony` — 19.1's own word — a Modifier kept apart from
+`frozen` because that one is read by the turn engine for a *seat's* act and a
+Wróg has no act. `beginFight` and `sendRaider` refuse him naming the card,
+and the kolejka lets a turn walk past him rather than holding it open.
+
+The crux was the lift. `liftFieldCards` deleted every row on arrival and
+`leaveCardsBehind` wrote a fresh one back, and a Changeset cannot link a
+status to a row that does not exist yet. So a Wróg under a status is not
+lifted at all: his row stays, the frame's copy carries `fieldCardId` and
+`unattackable`, the write-back skips him, and the two browser places that
+merged rows with the frame assuming no overlap filter him. A Władca Gromu's
+paralysis ends on the round clock, swept in `passTurn`, the only clock a
+Karta has; a Krąg's `dispelled` is swept by nothing, on purpose. Left
+manual: nothing in the app lifts a card-held Krąg, and the Krąg cannot be
+aimed at the Wróg just drawn before the fight, since his row was lifted.
+Seventeen tests.

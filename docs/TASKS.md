@@ -25,9 +25,9 @@ their scans are deliberately untouched.
       card, `addCardEffect`); the migration is written in `db/migrations/`
       and applied to the shared database on 2026-09-04, read back from the
       catalog: `seat_id` nullable, `field_card_id` with its cascade, the
-      `seat_effects_one_holder` check. Wiring the five cards
-      to it is the next brief: Krąg Płomieni and Władca Gromu first, then
-      the Wampir, the Ocalony and the Układ Planet.
+      `seat_effects_one_holder` check. Krąg Płomieni and Władca Gromu are
+      wired (LANDED.md); the Wampir, the Ocalony and the Układ Planet are in
+      progress.
 
       **What is inside a container — decided 2026-09-04: no storage UI.**
       Losing the Magiczna Sakwa or the Tragarz opens the overflow frame with
