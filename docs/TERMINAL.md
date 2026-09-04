@@ -56,9 +56,10 @@ work does not turn into a rewrite of things that are already right.
   `src/lib/game/commands/` import nothing but JSON data, their own types, and
   each other. No React, no Supabase, no `node:fs`, no `Math.random`. A command is
   already `(Snapshot, Command, Ports) → Outcome<Changeset, T>`.
-- **The console grammar is pure.** `src/lib/engine/console.ts` parses a line into
-  a `Command` union with no I/O at all, and `confirmationFor` already guards the
-  destructive ones.
+- **The console grammar is pure.** `src/lib/engine/consoleSpec.ts` is one table
+  keyed on the `Command` kind — each verb's help, capability, parse and Tab
+  completion in one entry — and `parseCommand` and `complete` dispatch into it
+  with no I/O at all; `confirmationFor` already guards the destructive ones.
 - **The commit is already correct under concurrency.** `change.ts` does
   load → decide → write, with the write taking the games row on a
   compare-and-swap against `revision`. A loser writes nothing rather than half of

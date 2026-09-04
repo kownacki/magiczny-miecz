@@ -1068,8 +1068,20 @@ Three landed the same day, in order of leverage per unit of work:
   assumed was a string, and a `carried` Zaklęcie the label table had no word
   for.
 
-Four are still open, in the order they were ranked: a console verb declared
-once so parsing, completion and help derive from it; the console's own commands (`settle`,
+- **A console verb declared once.** One verb lived in five hand-written
+  tables — the `Command` union, `COMMANDS`, a `NEEDS` keyed on the kind,
+  sixty-five `word === "x"` branches in the parser and twenty-six in the
+  completer — and thirty-six verbs had no Tab completion because nobody had
+  added the branch. `consoleSpec.ts` is now `SPECS`, a `Record` over
+  `Command["kind"]` in which each entry carries its help, its capability, its
+  `parse` and its `complete`, the same shape `VERBS` has on the effectful side;
+  `parseCommand` and `complete` pick the entry by word and call it. The
+  catalogues and the helpers every grammar shares moved to
+  `consoleCatalogue.ts` so the table could import them. The 1,900-line console
+  test passed unchanged, which is the evidence the grammar moved rather than
+  changed; the verbs that had no completion got their obvious pools after.
+
+Three are still open, in the order they were ranked: the console's own commands (`settle`,
 `endgame`, the `answer` ladder, `me`/`look`) moving home to `commands/` and an
 Envelope; one Polish inflection vocabulary in `polish.ts`; and, last and
 largest, fewer vocabularies for what a card does.

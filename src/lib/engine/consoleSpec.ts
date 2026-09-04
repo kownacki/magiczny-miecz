@@ -3,6 +3,44 @@
 import { type FieldId } from "./board";
 import type { CardClass } from "@/data/types";
 import type { TurnPhase } from "./turn";
+import { findByName } from "./search";
+import { RANDOM_CHARACTER_ID, RANDOM_CHARACTER_NAME } from "./characters";
+import {
+  AS,
+  AT,
+  BY_TYPE,
+  CARDS,
+  CATEGORIES,
+  DEALABLE,
+  EFFECTS,
+  FIELD_KINDS,
+  FOES,
+  GOLD_OFFERED,
+  GOLD_WORDS,
+  NATURES,
+  OUTCOMES,
+  PEOPLE,
+  PLACEABLE,
+  PLACES,
+  READABLE,
+  READ_KINDS,
+  SLOT_WORDS,
+  STACKABLE,
+  STACK_KINDS,
+  TO,
+  ZAKLECIA,
+  afterComma,
+  fieldNamed,
+  finishedName,
+  goldAsked,
+  isCategory,
+  keywordAt,
+  missing,
+  named,
+  nothing,
+  shelved,
+  type Pool,
+} from "./consoleCatalogue";
 
 /**
  * A tester's console, and why the game has one.
@@ -450,8 +488,156 @@ export const STATS: Record<string, StatName> = {
   tury: "tury",
 };
 
-export const COMMANDS: CommandSpec[] = [
-  {
+/**
+ * What one verb's grammar is given: the word that was typed — which matters to
+ * the few whose meaning turns on it, `stone`/`unstone`, `gold`/`sword` — its
+ * own usage line for the refusals, and every word the console answers to, for
+ * `help` to check a name against.
+ */
+export interface ParseContext {
+  word: string;
+  usage: string;
+  words: ReadonlySet<string>;
+}
+
+/** What Tab is given: the parts typed so far, who is at the table, and what may be offered. */
+export interface CompleteContext {
+  players: readonly string[];
+  offering: { stage?: Stage; testmode?: boolean };
+  words: ReadonlySet<string>;
+}
+
+type Parsed<K extends Command["kind"]> = { ok: Extract<Command, { kind: K }> } | { error: string };
+
+/**
+ * One verb, whole: what `help` says of it, who may type it, how the line is
+ * read, and what Tab offers after it.
+ *
+ * These were five tables — the `Command` union, `COMMANDS`, a `NEEDS` keyed on
+ * the kind, sixty-five `word === "x"` branches in the parser and twenty-six
+ * `verb === "x"` branches in the completer — and adding a verb meant finding all
+ * five, which nobody did: thirty-six verbs had no completion because nobody
+ * added the branch. Keyed on the command's kind rather than on the word typed,
+ * so the same `Record` over `Command["kind"]` that `VERBS` uses on the
+ * effectful side checks this one too — a kind in the union with no entry here
+ * is a compile error, at this table.
+ */
+export interface Spec<K extends Command["kind"]> extends CommandSpec {
+  parse: (tail: string, ctx: ParseContext) => Parsed<K>;
+  /**
+   * What Tab offers after the verb, or nothing: a verb that takes no argument
+   * leaves it out, and one that takes a name it cannot know — a player's new
+   * name, a number — says so by offering an empty pool.
+   */
+  complete?: (parts: readonly string[], ctx: CompleteContext) => Pool;
+}
+
+const spec = <K extends Command["kind"]>(one: Spec<K>): Spec<K> => one;
+
+/** A whole number of coins, or the reason it is not one. */
+function coins(said: string, verb: string): { gold: number } | { error: string } {
+  const asked = Number(said);
+  if (!Number.isInteger(asked) || asked < 1) {
+    return { error: `\`${verb} gold\` wants a whole number of Sztuki Złota — \`${verb} gold 5\`.` };
+  }
+  return { gold: asked };
+}
+
+/** `force`, `hard`, `wand`, `pay`: a trailing bare word, taken off the end of the parts. */
+function trailing(parts: readonly string[], flag: string): { on: boolean; rest: readonly string[] } {
+  const on = parts.length > 0 && parts[parts.length - 1].toLowerCase() === flag;
+  return { on, rest: on ? parts.slice(0, -1) : parts };
+}
+
+/**
+ * A Postać out of the game, or back into it — the grammar `remove` and
+ * `revive` share.
+ *
+ * Named by seat or by its own name, and the two are not interchangeable: a
+ * seat is where a Postać is standing, so only a living one has one, while a
+ * name reaches the dead as well. Which is the line between what a host may do
+ * and what only this console may — the rulebook says nothing at all about
+ * withdrawing a living Postać, and says exactly what happens to a dead one
+ * (4.4), so putting that Karta back is the break.
+ *
+ * `hard` last, the way `force` is, and for the same reason: it is about the
+ * removal rather than about who it lands on, and the common line never has to
+ * step over it.
+ */
+function postac(
+  tail: string,
+  usage: string,
+): { seat: number | null; characterId: string | null; hard: boolean } | { error: string } {
+  const { on: hard, rest } = trailing(tail.split(/\s+/).filter(Boolean), "hard");
+  const said = rest.join(" ");
+  if (said === "") return missing(usage, "Which Postać?");
+  if (/^\d+$/.test(said)) return { seat: Number(said), characterId: null, hard };
+  const hit = findByName(PEOPLE, (person) => person.name, said);
+  if ("ambiguous" in hit) return { error: `Which one — ${hit.ambiguous.join(", ")}?` };
+  if ("missing" in hit) return { error: `No Postać called \`${said}\`.` };
+  return { seat: null, characterId: hit.found.id, hard };
+}
+
+/** Who to offer: everybody at the table, for the verbs that take `[player]`. */
+const people = (parts: readonly string[], { players }: CompleteContext): Pool => ({
+  pool: [...players],
+  at: 1,
+});
+
+/** The board, wherever an Obszar is named on its own. */
+const board = (): Pool => shelved(FIELD_KINDS, 1);
+
+/**
+ * `place` names a Karta first and an Obszar only after `at`; `clear` is its
+ * inverse and reads the same way.
+ *
+ * `clear` offered Obszary in both places, which is the wrong half of the
+ * grammar: the common use is "take that Karta off the square I am standing
+ * on", and Tab answered with a wall of place names.
+ */
+function placeOrClear(verb: "place" | "clear", parts: readonly string[]): Pool {
+  const at = keywordAt(parts, "at");
+  if (at !== -1) return shelved(FIELD_KINDS, at + 1);
+  /**
+   * The money form, which both verbs have: `place gold N` puts coins down and
+   * `clear gold [N]` takes them off. Tab cannot finish a number, so the word is
+   * offered and then it gets out of the way — nothing where the amount goes,
+   * and `at` once something has been typed there.
+   *
+   * `clear` differs in one respect: the amount is optional, because bare
+   * `clear gold` means the lot. So `at` is offered as soon as the word is
+   * finished, and again after a number.
+   */
+  const money = (parts[1] ?? "").toLowerCase();
+  if (GOLD_WORDS.has(money)) {
+    const amountIn = parts.length >= 4 && parts[parts.length - 1] === "";
+    const bare = verb === "clear" && parts.length === 3 && parts[2] === "";
+    return amountIn || bare ? { pool: ["at"], at: parts.length - 1 } : nothing(parts);
+  }
+  /**
+   * `clear` takes whole kinds, comma-separated, so what is being typed is
+   * whatever follows the last comma — `deal`'s rule, for the same grammar.
+   * `place` has no list and keeps the plain first argument. Past a comma the
+   * Obszar drops out and everything else stays: a list may hold Karty as well
+   * as kinds — `clear MIECZ, strangers` — so both are offered. What cannot be
+   * there is a place name: `at` takes the one Obszar a sweep has.
+   */
+  if (verb === "clear") {
+    const comma = afterComma(parts);
+    if (comma > 1) return shelved([BY_TYPE, ...PLACEABLE], comma);
+  }
+  const names = PLACEABLE.flatMap((group) => group.cards.map((one) => one.name));
+  if (finishedName(parts, names)) return { pool: ["at"], at: parts.length - 1 };
+  // Money first, the way 12.1 lists it — "zabrać leżące złoto, Przedmioty lub
+  // Przyjaciół" — and because it is one word against a hundred and sixty-five,
+  // which is the one a list this long can afford to lead with. For `clear` it
+  // leads the kinds instead of standing alone, because there the two are one
+  // answer: everything you can name instead of a card.
+  return verb === "clear" ? shelved([BY_TYPE, ...PLACEABLE], 1) : shelved([GOLD_OFFERED, ...PLACEABLE], 1);
+}
+
+export const SPECS: { [K in Command["kind"]]: Spec<K> } = {
+  help: spec({
     name: "help",
     offTable: true,
     aliases: ["?"],
@@ -459,8 +645,23 @@ export const COMMANDS: CommandSpec[] = [
     summary: "list these commands, or explain one of them",
     needs: "play",
     group: "reading",
-  },
-  {
+    parse: (tail, { words }) => {
+      // Refused here rather than reported as an empty list, because `help go`
+      // typed at a console that has no `go` is a question, and "there is no
+      // such command" is the answer to it.
+      const asked = tail.toLowerCase().split(/\s+/)[0];
+      // `all` is not a command and is the one word this takes that is not one:
+      // it asks for the whole list rather than about anything.
+      if (tail !== "" && asked !== "all" && !words.has(asked)) {
+        return { error: `No command \`${tail}\`. Type \`help\` for the list.` };
+      }
+      return { ok: { kind: "help", about: asked || null } };
+    },
+    // `help` takes every command, locked or out of season: asking about one you
+    // cannot run is a fair question, and the answer says why.
+    complete: (_parts, { words }) => ({ pool: [...words], at: 1 }),
+  }),
+  rule: spec({
     name: "rule",
     offTable: true,
     aliases: [],
@@ -468,19 +669,59 @@ export const COMMANDS: CommandSpec[] = [
     summary: "read a rule out of the Instrukcji, or list a chapter",
     needs: "play",
     group: "reading",
-  },
-  {
+    parse: (tail) => ({ ok: { kind: "rule", about: tail.trim() || null } }),
+  }),
+  stat: spec({
     name: "gold",
     aliases: ["sword", "magic", "life", "tury"],
     usage: "gold +5|=12 [player] [force]",
     summary: "move a parameter, or `=` it to a number — `force` passes 1.3's floor; `tury` owes turns",
     needs: "testmode",
     group: "override",
-  },
+    parse: (tail, { word, usage }) => {
+      let [amount, ...rest] = tail.split(/\s+/).filter(Boolean);
+      if (!amount) return missing(usage, "How much?");
+      // `= 12` as readily as `=12`, since one is what a person types and the
+      // other is what they type when they are being careful.
+      if (amount === "=" && rest.length > 0) {
+        amount = `=${rest[0]}`;
+        rest = rest.slice(1);
+      }
+      /**
+       * `=12` puts the number where you want it; `+5` and `-1` move it.
+       *
+       * A bare number stays a gain — "gold 5" plainly means five more of it,
+       * and has meant that for as long as there has been a console. What it is
+       * not is a way to *set* one, which is what somebody wants about as often:
+       * reaching a Miecz of 8 from 3 should not be arithmetic done by the
+       * person typing.
+       */
+      const assigning = amount.startsWith("=");
+      const number = Number(assigning ? amount.slice(1) : amount.startsWith("+") ? amount.slice(1) : amount);
+      if (!Number.isInteger(number) || (!assigning && number === 0)) {
+        return { error: `\`${amount}\` is not a whole number of points.` };
+      }
+      if (assigning && number < 0) {
+        return { error: `\`${amount}\`: nothing goes below zero.` };
+      }
+      const delta = assigning ? 0 : number;
+      const set = assigning ? number : null;
+      /**
+       * `force` last, after the player, because it is about the change and not
+       * about who it lands on: `magic -1 Ola force`. A word rather than a flag,
+       * so it reads as the sentence it is and Tab finishes it like everything
+       * else — and last, so the common line never has to step over it.
+       */
+      const { on: force, rest: who } = trailing(rest, "force");
+      return { ok: { kind: "stat", stat: STATS[word], delta, set, who: who.join(" ") || null, force } };
+    },
+    // A stat takes its amount first and a player after it.
+    complete: (_parts, { players }) => ({ pool: [...players, "force"], at: 2 }),
+  }),
   /* --------------------------------------------------------------------------
    * Playing. The game as printed: roll, walk it out, meet what is there, pass.
    * ----------------------------------------------------------------------- */
-  {
+  ready: spec({
     name: "ready",
     when: ["lobby"],
     aliases: ["unready"],
@@ -488,8 +729,10 @@ export const COMMANDS: CommandSpec[] = [
     summary: "say you have chosen — `unready` takes it back",
     needs: "play",
     group: "table",
-  },
-  {
+    parse: (tail, { word }) => ({ ok: { kind: "ready", who: tail || null, ready: word === "ready" } }),
+    complete: people,
+  }),
+  start: spec({
     name: "start",
     when: ["lobby"],
     aliases: [],
@@ -497,8 +740,9 @@ export const COMMANDS: CommandSpec[] = [
     summary: "begin the game; everyone who has a Postać must be ready",
     needs: "play",
     group: "table",
-  },
-  {
+    parse: () => ({ ok: { kind: "start" } }),
+  }),
+  roll: spec({
     name: "roll",
     when: ["roll"],
     aliases: [],
@@ -506,8 +750,9 @@ export const COMMANDS: CommandSpec[] = [
     summary: "throw the die for your move (10.2)",
     needs: "play",
     group: "turn",
-  },
-  {
+    parse: () => ({ ok: { kind: "roll" } }),
+  }),
+  move: spec({
     name: "move",
     when: ["move"],
     aliases: ["walk"],
@@ -515,8 +760,11 @@ export const COMMANDS: CommandSpec[] = [
     summary: "walk the roll out and stand there (10.2) — `look` lists where it reaches",
     needs: "play",
     group: "turn",
-  },
-  {
+    parse: (tail, { usage }) =>
+      named(PLACES, (field) => field.name, tail, "Obszar", (field) => ({ kind: "move" as const, fieldId: field.id }), usage),
+    complete: board,
+  }),
+  draw: spec({
     name: "draw",
     when: ["field"],
     aliases: [],
@@ -524,8 +772,9 @@ export const COMMANDS: CommandSpec[] = [
     summary: "take what the Obszar you are standing on owes you (13.4)",
     needs: "play",
     group: "turn",
-  },
-  {
+    parse: () => ({ ok: { kind: "draw" } }),
+  }),
+  answer: spec({
     name: "answer",
     when: ["field"],
     // No `a`: the single-letter aliases are interactive fiction's own three —
@@ -536,8 +785,18 @@ export const COMMANDS: CommandSpec[] = [
     summary: "settle what a Karta or an Obszar asked — `look` shows the question",
     needs: "play",
     group: "turn",
-  },
-  {
+    parse: (tail) => {
+      const parts = tail.split(/\s+/).filter(Boolean);
+      const numbers = parts.filter((one) => /^\d+$/.test(one)).map(Number);
+      const named = parts.filter((one) => !/^\d+$/.test(one)).join(" ");
+      // No number is a real answer. A compulsory Obszar comes in two shapes —
+      // one that asks (`wybor`) and one that only rolls (`rzut`, the Karczma)
+      // — and the second has nothing to choose. `answer` alone means "get on
+      // with it"; `answer 2` means "and I pick the second".
+      return { ok: { kind: "answer", card: named || null, choices: numbers } };
+    },
+  }),
+  buy: spec({
     name: "buy",
     aliases: [],
     when: PLAYING,
@@ -545,8 +804,10 @@ export const COMMANDS: CommandSpec[] = [
     summary: "buy from the Obszar you are standing on, at its printed price",
     needs: "play",
     group: "trade",
-  },
-  {
+    parse: (tail, { usage }) => (tail ? { ok: { kind: "buy", name: tail } } : missing(usage, "Buy what?")),
+    complete: () => shelved(PLACEABLE, 1),
+  }),
+  sell: spec({
     name: "sell",
     aliases: [],
     when: PLAYING,
@@ -554,8 +815,10 @@ export const COMMANDS: CommandSpec[] = [
     summary: "sell one back to the Lichwiarz in the Gród",
     needs: "play",
     group: "trade",
-  },
-  {
+    parse: (tail, { usage }) => (tail ? { ok: { kind: "sell", name: tail } } : missing(usage, "Sell what?")),
+    complete: () => shelved(PLACEABLE, 1),
+  }),
+  heal: spec({
     name: "heal",
     aliases: [],
     when: PLAYING,
@@ -563,8 +826,13 @@ export const COMMANDS: CommandSpec[] = [
     summary: "take back a point of Życie, or buy several where they are sold (4.2)",
     needs: "play",
     group: "trade",
-  },
-  {
+    parse: (tail, { usage }) => {
+      if (!tail) return { ok: { kind: "heal", points: null } };
+      if (!/^\d+$/.test(tail)) return missing(usage, `How many — \`${tail}\`?`);
+      return { ok: { kind: "heal", points: Number(tail) } };
+    },
+  }),
+  cast: spec({
     name: "cast",
     aliases: [],
     when: PLAYING,
@@ -572,8 +840,25 @@ export const COMMANDS: CommandSpec[] = [
     summary: "cast a Zaklęcie you are holding (9.6)",
     needs: "play",
     group: "carrying",
-  },
-  {
+    parse: (tail, { usage }) => {
+      if (!tail) return missing(usage, "Cast what?");
+      // `at` joins the two names, the way `place MIECZ at Karczma` does, and
+      // `to` adds the third for the card that moves what it points at.
+      const [named, rest] = tail.split(AT);
+      if (!named?.trim()) return missing(usage, "Cast what?");
+      const [at, to] = (rest ?? "").split(TO);
+      return { ok: { kind: "cast", name: named.trim(), who: at?.trim() || null, to: to?.trim() || null } };
+    },
+    // The Zaklęcie first; past `at` a player, past `to` an Obszar.
+    complete: (parts, { players }) => {
+      const to = keywordAt(parts, "to");
+      if (to !== -1) return shelved(FIELD_KINDS, to + 1);
+      const at = keywordAt(parts, "at");
+      if (at !== -1) return { pool: [...players], at: at + 1 };
+      return shelved([ZAKLECIA], 1);
+    },
+  }),
+  trophies: spec({
     // A table setting, so it lives in the noun-space beside `table` and
     // `testmode` rather than in the game's verb-space. Bare `trophies` says
     // which way it is, as bare `testmode` does.
@@ -585,10 +870,17 @@ export const COMMANDS: CommandSpec[] = [
     summary: "how beaten Wrogowie are kept (1.4) — points, or the Karty as printed",
     needs: "play",
     group: "trade",
-  },
-  {
-    // Naming nothing hands in everything, which is what a player cashing out is
-    // usually after. Naming cards hands in those — 1.4 lets you pick, and a
+    parse: (tail, { usage }) => {
+      if (!tail) return { ok: { kind: "trophies", mode: null } };
+      const asked = tail.trim().toLowerCase();
+      if (asked === "points" || asked === "cards") return { ok: { kind: "trophies", mode: asked } };
+      return missing(usage, "`points` (score them) or `cards` (keep the Karty, as printed)?");
+    },
+    complete: () => ({ pool: ["points", "cards"], at: 1 }),
+  }),
+  trade: spec({
+    // Naming nothing hands in everything, which is what a player cashing out
+    // is usually after. Naming cards hands in those — 1.4 lets you pick, and a
     // Smok held back is six points not burnt.
     name: "trade",
     aliases: [],
@@ -597,8 +889,27 @@ export const COMMANDS: CommandSpec[] = [
     summary: "cash beaten Wrogowie in at 7 points a Miecz (1.4) — how many Miecze you want, the Karty you name, or all of them",
     needs: "play",
     group: "trade",
-  },
-  {
+    parse: (tail, { usage }) => {
+      /**
+       * A bare number is a count of Miecze, not a card.
+       *
+       * Unambiguous because no Karta is called "2", and it is the thing
+       * somebody actually wants: you know how much Miecz you are short, not
+       * which of your four Wrogowie add up to it. Working that out is
+       * `offerFor`'s.
+       */
+      if (tail && /^\d+$/.test(tail)) {
+        const swords = Number(tail);
+        if (swords < 1) return missing(usage, "How many Miecze — at least one?");
+        return { ok: { kind: "trade", cards: [], swords } };
+      }
+      // Commas or spaces: "trade CYKLOP, NOBBIN" and "trade CYKLOP NOBBIN" are
+      // the same list, because a player typing two card names will use either.
+      const cards = tail ? tail.split(",").flatMap((part) => part.trim()).filter((part) => part.length > 0) : [];
+      return { ok: { kind: "trade", cards, swords: null } };
+    },
+  }),
+  beast: spec({
     name: "beast",
     aliases: [],
     when: PLAYING,
@@ -606,8 +917,9 @@ export const COMMANDS: CommandSpec[] = [
     summary: "fight the Bestia at the Zamek — winning ends the game (14.7, 22)",
     needs: "play",
     group: "fight",
-  },
-  {
+    parse: () => ({ ok: { kind: "beast" } }),
+  }),
+  bridge: spec({
     name: "bridge",
     aliases: ["most"],
     when: ["move", "field"],
@@ -615,8 +927,9 @@ export const COMMANDS: CommandSpec[] = [
     summary: "try to step onto the Kamienny Most from an entrance (11.10)",
     needs: "play",
     group: "board",
-  },
-  {
+    parse: () => ({ ok: { kind: "bridge" } }),
+  }),
+  cross: spec({
     name: "cross",
     aliases: [],
     when: PLAYING,
@@ -624,8 +937,15 @@ export const COMMANDS: CommandSpec[] = [
     summary: "cross between the Kręgi — the Trzęsawiska or the Lodowy Las (11.1-11.8)",
     needs: "play",
     group: "board",
-  },
-  {
+    parse: (tail) => {
+      if (tail === "") return { ok: { kind: "cross", to: null } };
+      const where = fieldNamed(tail);
+      if ("error" in where) return where;
+      return { ok: { kind: "cross", to: where.fieldId } };
+    },
+    complete: board,
+  }),
+  guardian: spec({
     name: "guardian",
     aliases: [],
     when: PLAYING,
@@ -633,8 +953,9 @@ export const COMMANDS: CommandSpec[] = [
     summary: "square up to whatever is standing in the way (11.9-11.11)",
     needs: "play",
     group: "fight",
-  },
-  {
+    parse: () => ({ ok: { kind: "guardian" } }),
+  }),
+  ferry: spec({
     name: "ferry",
     aliases: [],
     when: PLAYING,
@@ -642,8 +963,11 @@ export const COMMANDS: CommandSpec[] = [
     summary: "the Przeprawa — `pay` a Sztuka Złota, or be sent back",
     needs: "play",
     group: "board",
-  },
-  {
+    // `pay` last and bare, the way `force` and `hard` are.
+    parse: (tail) => ({ ok: { kind: "ferry", pay: tail.toLowerCase() === "pay" } }),
+    complete: () => ({ pool: ["pay"], at: 1 }),
+  }),
+  take: spec({
     name: "take",
     aliases: ["get"],
     when: ["field", "fight"],
@@ -651,8 +975,41 @@ export const COMMANDS: CommandSpec[] = [
     summary: "pick up the Złoto lying on your Obszar — all of it unless a number says — or a Karta you drew or one lying there (12.1, 13.4)",
     needs: "play",
     group: "carrying",
-  },
-  {
+    parse: (tail, { usage }) => {
+      /**
+       * `take gold` scoops up the lot, which is what a hand does at a table and
+       * what the Obszar's own „weź wszystko" does on screen. A number takes
+       * that many — 12.1 puts the amount in the player's gift, and Talisman's
+       * 12:1, the sentence it is adapted from, says *any* Gold Counters may be
+       * taken.
+       */
+      const asked = goldAsked(tail);
+      if (asked !== null) {
+        if (asked === "" || asked.toLowerCase() === "all") return { ok: { kind: "take", name: null, gold: null } };
+        const amount = coins(asked, "take");
+        if ("error" in amount) return amount;
+        return { ok: { kind: "take", name: null, gold: amount.gold } };
+      }
+      return tail ? { ok: { kind: "take", name: tail } } : missing(usage, "Take what?");
+    },
+    /**
+     * `take` names something lying on the Obszar or dealt into the turn, which
+     * is the same pool `place` puts there — and the gold beside it, since 12.1
+     * gives both to whoever finished their move here. Tab cannot know what is
+     * actually on the square, so it offers what could be. That is what `drop`
+     * does with a hand it cannot see either.
+     */
+    complete: (parts) => {
+      const money = (parts[1] ?? "").toLowerCase();
+      // Bare `take gold` already means the lot; `all` is the word for saying so.
+      if (GOLD_WORDS.has(money)) return { pool: ["all"], at: 2 };
+      return shelved([GOLD_OFFERED, ...PLACEABLE], 1);
+    },
+  }),
+  putdown: spec({
+    // `drop` is the lawful one: `place` conjures a card onto a field and this
+    // puts down one you are holding. The kind is `putdown` because `place` had
+    // the obvious name first.
     name: "drop",
     when: PLAYING,
     aliases: [],
@@ -660,8 +1017,13 @@ export const COMMANDS: CommandSpec[] = [
     summary: "put one down on the Obszar you are standing on (12.1)",
     needs: "play",
     group: "carrying",
-  },
-  {
+    parse: (tail, { usage }) => (tail ? { ok: { kind: "putdown", name: tail } } : missing(usage, "Drop what?")),
+    // A Karta out of your own hand, and no Obszar — it is the square you are
+    // standing on (12.1). It sat in `place`'s branch from when the two shared a
+    // word, so Tab offered it an `at` the grammar rejects.
+    complete: () => ({ pool: CARDS.map((c) => c.name), at: 1 }),
+  }),
+  equip: spec({
     name: "equip",
     when: PLAYING,
     aliases: ["wear"],
@@ -669,8 +1031,20 @@ export const COMMANDS: CommandSpec[] = [
     summary: "put a Przedmiot on — the place is worked out unless it fits two",
     needs: "play",
     group: "carrying",
-  },
-  {
+    parse: (tail, { usage }) => {
+      if (!tail) return missing(usage, "Wear what?");
+      // The slot last, the way `force` and `hard` are: it is about where the
+      // card goes rather than which card it is, and most cards fit one place.
+      const parts = tail.split(/\s+/);
+      const last = parts[parts.length - 1].toLowerCase();
+      const slot = parts.length > 1 && SLOT_WORDS.has(last) ? last : null;
+      const name = (slot === null ? parts : parts.slice(0, -1)).join(" ");
+      if (!name) return missing(usage, "Wear what?");
+      return { ok: { kind: "equip", name, slot } };
+    },
+    complete: () => shelved(PLACEABLE, 1),
+  }),
+  use: spec({
     name: "use",
     when: PLAYING,
     aliases: [],
@@ -678,8 +1052,10 @@ export const COMMANDS: CommandSpec[] = [
     summary: "spend a Karta that is spent by using it",
     needs: "play",
     group: "carrying",
-  },
-  {
+    parse: (tail, { usage }) => (tail ? { ok: { kind: "use", name: tail } } : missing(usage, "Use what?")),
+    complete: () => shelved(PLACEABLE, 1),
+  }),
+  fight: spec({
     name: "fight",
     aliases: [],
     when: ["field", "fight"],
@@ -687,8 +1063,25 @@ export const COMMANDS: CommandSpec[] = [
     summary: "square up to a Wróg on your Obszar — named when more than one is there (16.2)",
     needs: "play",
     group: "fight",
-  },
-  {
+    parse: (tail, { usage }) => {
+      // Nothing named takes whatever is waiting, which is the usual case: a
+      // Wróg attacks the character who drew him (16.2), and there is only one
+      // of him.
+      if (!tail) return { ok: { kind: "fight", cardId: null } };
+      return named(FOES, (card) => card.name, tail, "Wróg", (card) => ({ kind: "fight" as const, cardId: card.id }), usage);
+    },
+    /**
+     * Every Wróg, in one list and not two.
+     *
+     * The box prints `Wróg II Bestia` and `Wróg III Demon`, and they are two
+     * classes everywhere a rule counts them (15.2, 17.5, 18.2) — but this is a
+     * list read by name, and the Księga shelves them together for the same
+     * reason. One heading over the whole pool is no heading at all, so `fight`
+     * keeps the plain alphabet.
+     */
+    complete: () => ({ pool: FOES.map((c) => c.name), at: 1 }),
+  }),
+  escape: spec({
     name: "escape",
     aliases: ["flee"],
     when: ["field", "fight"],
@@ -696,8 +1089,9 @@ export const COMMANDS: CommandSpec[] = [
     summary: "try to slip away instead of fighting (19.1)",
     needs: "play",
     group: "fight",
-  },
-  {
+    parse: () => ({ ok: { kind: "escape" } }),
+  }),
+  attack: spec({
     name: "attack",
     aliases: [],
     when: ["field"],
@@ -705,8 +1099,10 @@ export const COMMANDS: CommandSpec[] = [
     summary: "pick a fight with a Postać standing on your Obszar (13.3, 17.6)",
     needs: "play",
     group: "fight",
-  },
-  {
+    parse: (tail, { usage }) => (tail ? { ok: { kind: "attack", who: tail } } : missing(usage, "Attack whom?")),
+    complete: people,
+  }),
+  claim: spec({
     // The Władca's word is "wypełnić", but what the player does at the counter
     // is collect — the errand was finished somewhere else, often turns ago.
     name: "claim",
@@ -716,8 +1112,9 @@ export const COMMANDS: CommandSpec[] = [
     summary: "hand the Władca's misja in and take the Tarcza (Twierdza)",
     needs: "play",
     group: "board",
-  },
-  {
+    parse: () => ({ ok: { kind: "claim" } }),
+  }),
+  free: spec({
     // Named for what it is trying to do rather than for what is holding you:
     // the Świątynie call it being opętany, and a second Obszar that pinned a
     // character would reach for this verb rather than earn its own.
@@ -728,8 +1125,9 @@ export const COMMANDS: CommandSpec[] = [
     summary: "throw to shake off something holding you in place (Świątynie)",
     needs: "play",
     group: "board",
-  },
-  {
+    parse: () => ({ ok: { kind: "free" } }),
+  }),
+  ask: spec({
     // "gdy sobie tego zażyczysz" — the card's own word for it is asking, and a
     // player with a Krzyżowiec is asking a person rather than reading a scroll.
     name: "ask",
@@ -739,8 +1137,9 @@ export const COMMANDS: CommandSpec[] = [
     summary: "have a Przyjaciel speak the Zaklęcie he carries (Krzyżowiec, Gnom)",
     needs: "play",
     group: "friends",
-  },
-  {
+    parse: () => ({ ok: { kind: "ask" } }),
+  }),
+  pay: spec({
     // No argument: only one card in the box sells anything, and naming him
     // would be asking the player to tell the app what it already knows.
     name: "pay",
@@ -750,8 +1149,9 @@ export const COMMANDS: CommandSpec[] = [
     summary: "buy a turn of a Przyjaciel's help with a Sztuka Złota (Najemnik)",
     needs: "play",
     group: "friends",
-  },
-  {
+    parse: () => ({ ok: { kind: "pay" } }),
+  }),
+  raid: spec({
     // Named for what it is rather than for the card that does it: "wyprawa" is
     // the word the Poszukiwacz's own text reaches for, and a second card that
     // sends somebody out would use this verb rather than earn a new one.
@@ -762,8 +1162,11 @@ export const COMMANDS: CommandSpec[] = [
     summary: "send a Przyjaciel to attack up to 3 Obszary away (Poszukiwacz Przygód)",
     needs: "play",
     group: "friends",
-  },
-  {
+    parse: (tail, { usage }) =>
+      tail ? { ok: { kind: "raid", who: tail } } : missing(usage, "Send your Przyjaciel against whom?"),
+    complete: people,
+  }),
+  card: spec({
     // `card` is the alias `give` used to answer to. It is a better name for
     // reading one than for conjuring one, and reading is the commoner want.
     name: "card",
@@ -775,16 +1178,21 @@ export const COMMANDS: CommandSpec[] = [
     summary: "what a Karta says — Postać, Zdarzenie, Przedmiot or Zaklęcie",
     needs: "play",
     group: "reading",
-  },
-  {
+    parse: (tail, { usage }) => (tail ? { ok: { kind: "card", name: tail } } : missing(usage, "Which card?")),
+    // Everything readable, which is every Karta in the box and every Postać: a
+    // Wróg cannot be dealt into a hand and can certainly be looked at.
+    complete: () => shelved(READ_KINDS, 1),
+  }),
+  look: spec({
     name: "look",
     aliases: ["l"],
     usage: "look",
     summary: "the Obszar you are on, what is on it, and what the turn is waiting for",
     needs: "play",
     group: "reading",
-  },
-  {
+    parse: () => ({ ok: { kind: "look" } }),
+  }),
+  me: spec({
     name: "me",
     // `i` is `inventory`, the most-typed word in interactive fiction. What it
     // shows here is a Karta Postaci, which is that and the numbers beside it.
@@ -793,40 +1201,73 @@ export const COMMANDS: CommandSpec[] = [
     summary: "a Karta Postaci as it stands: points, Życie, Złoto, Natura and what is carried",
     needs: "play",
     group: "reading",
-  },
-  {
+    parse: (tail) => ({ ok: { kind: "me", who: tail || null } }),
+    complete: people,
+  }),
+  who: spec({
     name: "who",
     aliases: [],
     usage: "who",
     summary: "everyone at the table, and which seat they drive",
     needs: "play",
     group: "reading",
-  },
-  {
+    parse: () => ({ ok: { kind: "who" } }),
+  }),
+  seat: spec({
     name: "seat",
     aliases: [],
     usage: "seat <player> <seat>",
     summary: "put somebody in a seat; refuses one that is taken",
     needs: "play",
     group: "table",
-  },
-  {
+    /**
+     * `seat Ola 3` — the seat is the number on the end.
+     *
+     * No keyword between them, unlike `rename`, because the two arguments are
+     * not the same kind of thing: a seat is a bare number and no name here
+     * begins with a digit, so the line reads itself.
+     */
+    parse: (tail, { usage }) => {
+      const parts = tail.split(/\s+/).filter(Boolean);
+      const last = parts[parts.length - 1] ?? "";
+      if (!/^\d+$/.test(last)) return missing(usage, "Into which seat?");
+      const who = parts.slice(0, -1).join(" ");
+      if (!who) return missing(usage, "Seat whom?");
+      return { ok: { kind: "seat", who, seat: Number(last) } };
+    },
+    // `seat Ola 3` finishes the person; the seat is a digit and finishes itself.
+    complete: people,
+  }),
+  unseat: spec({
     name: "unseat",
     aliases: [],
     usage: "unseat [player]",
     summary: "out of the seat, still at the table — the Postać stays put",
     needs: "play",
     group: "table",
-  },
-  {
+    parse: (tail) => ({ ok: { kind: "unseat", who: tail || null } }),
+    complete: people,
+  }),
+  kick: spec({
     name: "kick",
     aliases: [],
     usage: "kick <player>",
     summary: "put somebody out of the table",
     needs: "play",
     group: "table",
-  },
-  {
+    /**
+     * The one command here that will not default to you.
+     *
+     * Everything else that takes `[player]` means yourself when it is left
+     * off, which is right when the worst case is a Życie you can put back.
+     * This takes the seat away from whoever it names and cannot be undone by
+     * typing it again, and a bare `kick` meaning "kick me" is a way to lose
+     * your own table to a fumbled line.
+     */
+    parse: (tail, { usage }) => (tail ? { ok: { kind: "kick", who: tail } } : missing(usage, "Kick whom?")),
+    complete: people,
+  }),
+  leave: spec({
     // No `exit` alias. `mm` claims that word for leaving the *program*, and its
     // local commands run first — so this advertised a word that did nothing
     // here and something else in the browser. Two meanings for one word, and
@@ -837,56 +1278,124 @@ export const COMMANDS: CommandSpec[] = [
     summary: "go, by your own choice",
     needs: "play",
     group: "table",
-  },
-  {
+    parse: () => ({ ok: { kind: "leave" } }),
+  }),
+  rename: spec({
     name: "rename",
     aliases: [],
     usage: "rename <player> as <name>",
     summary: "give somebody a name",
     needs: "play",
     group: "table",
-  },
-  {
+    /**
+     * `rename Ola as Basia` — two names in one line, split by the word that
+     * reads as English and appears in no Postać and no Obszar, exactly as
+     * `place` uses `at`. Without the split there is no telling where one name
+     * ends.
+     */
+    parse: (tail, { usage }) => {
+      const cut = tail.search(AS);
+      if (cut === -1) return missing(usage, "Rename them to what?");
+      const who = tail.slice(0, cut).trim();
+      const name = tail.slice(cut).replace(AS, "").trim();
+      if (!who) return missing(usage, "Rename whom?");
+      if (!name) return missing(usage, "Rename them to what?");
+      return { ok: { kind: "rename", who, name } };
+    },
+    // Only the person. What they are being renamed to is not a name anybody
+    // has yet, which is the point of typing it.
+    complete: (parts, ctx) => (keywordAt(parts, "as") === -1 ? people(parts, ctx) : nothing(parts)),
+  }),
+  host: spec({
     name: "host",
     aliases: [],
     usage: "host <player>",
     summary: "hand over the host role",
     needs: "play",
     group: "table",
-  },
-  {
+    parse: (tail, { usage }) => (tail ? { ok: { kind: "host", who: tail } } : missing(usage, "Hand it to whom?")),
+    complete: people,
+  }),
+  pick: spec({
     name: "pick",
     aliases: [],
     usage: "pick [character] [seat]",
     summary: "a Postać into a seat — LOSOWA or nothing takes the surprise, yours unless numbered (4.4)",
     needs: "play",
     group: "table",
-  },
-  {
+    /**
+     * A Postać into a seat: 4.4's "moze wybrac sobie nowa", and a latecomer's
+     * first one, which are the same act for different reasons.
+     *
+     * Both arguments optional and told apart by shape. A trailing bare number
+     * is the seat — yours when it is left off — and whatever is in front of it
+     * is the Postać, drawn when that is left off too, which is what 4.4
+     * describes.
+     */
+    parse: (tail) => {
+      const parts = tail.split(/\s+/).filter(Boolean);
+      const numbered = parts.length > 0 && /^\d+$/.test(parts[parts.length - 1]);
+      const seat = numbered ? Number(parts[parts.length - 1]) : null;
+      const said = (numbered ? parts.slice(0, -1) : parts).join(" ");
+      if (said === "") return { ok: { kind: "pick", characterId: null, seat } };
+      // The surprise, by the name on its own Karta. `null` already means it —
+      // a bare `pick` takes it — and this is the same answer said out loud, so
+      // typing what Tab offered does what Tab implied.
+      if (said.toUpperCase() === RANDOM_CHARACTER_NAME) {
+        return { ok: { kind: "pick", characterId: RANDOM_CHARACTER_ID, seat } };
+      }
+      const hit = findByName(PEOPLE, (person) => person.name, said);
+      if ("ambiguous" in hit) return { error: `Which one — ${hit.ambiguous.join(", ")}?` };
+      if ("missing" in hit) return { error: `No Postać called \`${said}\`.` };
+      return { ok: { kind: "pick", characterId: hit.found.id, seat } };
+    },
+    // The surprise first: it is the one entry that is not a Postać, and a
+    // player scanning for "any of them" should not have to know that the way
+    // to say it is to say nothing.
+    complete: () => ({ pool: [RANDOM_CHARACTER_NAME, ...PEOPLE.map((person) => person.name)], at: 1 }),
+  }),
+  remove: spec({
     name: "remove",
     aliases: ["erase"],
     usage: "remove <character> [hard]",
     summary: "a Postać out of the game, its Karty to the used piles — `hard` bars it for good",
     needs: "testmode",
     group: "override",
-  },
-  {
+    parse: (tail, { usage }) => {
+      const said = postac(tail, usage);
+      if ("error" in said) return said;
+      return { ok: { kind: "remove", ...said } };
+    },
+    // Postacie by name — a seat number would do just as well, but a number has
+    // nothing to finish.
+    complete: () => ({ pool: PEOPLE.map((person) => person.name), at: 1 }),
+  }),
+  revive: spec({
     name: "revive",
     aliases: [],
     usage: "revive <character>",
     summary: "back to life where it fell, with its own points and no Przedmioty",
     needs: "testmode",
     group: "override",
-  },
-  {
+    parse: (tail, { usage }) => {
+      const said = postac(tail, usage);
+      if ("error" in said) return said;
+      if (said.hard) return { error: "`hard` is a removal's word, not a revival's." };
+      return { ok: { kind: "revive", seat: said.seat, characterId: said.characterId } };
+    },
+    complete: () => ({ pool: PEOPLE.map((person) => person.name), at: 1 }),
+  }),
+  kill: spec({
     name: "kill",
     aliases: [],
     usage: "kill [player]",
     summary: "take a character to 0 Życia (4.4)",
     needs: "testmode",
     group: "override",
-  },
-  {
+    parse: (tail) => ({ ok: { kind: "kill", who: tail || null } }),
+    complete: people,
+  }),
+  nature: spec({
     name: "nature",
     when: PLAYING,
     aliases: [],
@@ -896,8 +1405,19 @@ export const COMMANDS: CommandSpec[] = [
     // no card, which is the definition this file gives for `testmode`.
     needs: "testmode",
     group: "override",
-  },
-  {
+    parse: (tail) => {
+      const [said, ...rest] = tail.split(/\s+/).filter(Boolean);
+      const nature = NATURES[(said ?? "").toLowerCase()];
+      if (!nature) return { error: `Which Natura — ${Object.keys(NATURES).join(", ")}?` };
+      // `force` last, after the player, the way `gold` takes it.
+      const { on: force, rest: who } = trailing(rest, "force");
+      return { ok: { kind: "nature", nature, who: who.join(" ") || null, force } };
+    },
+    // The Natura first, then who it belongs to.
+    complete: (parts, { players }) =>
+      parts.length === 2 ? { pool: Object.keys(NATURES), at: 1 } : { pool: [...players], at: 2 },
+  }),
+  turn: spec({
     /**
      * One noun, three things you do to it — see the `turn` Command for why the
      * three verbs became one.
@@ -915,8 +1435,52 @@ export const COMMANDS: CommandSpec[] = [
       "hand the turn on (10.1) — bare, or `end`. `reset` starts it over, a name hands play round to somebody; `force` overrules what refuses",
     needs: "play",
     group: "turn",
-  },
-  {
+    /**
+     * Bare is `end`, because handing the turn on is the line somebody types
+     * twenty times a session and it kept its own word for years — `pass` and
+     * `endturn` still say it, and now they say it as this. Anything else in the
+     * first position is a person: `turn reset` and `turn Ola` are told apart by
+     * the one word that is not a name.
+     *
+     * A player really called „reset" is out of luck and can use their seat
+     * number. That is the whole cost of the subword, and it is worth it: the
+     * alternative is a fourth verb nobody would find.
+     */
+    parse: (tail) => {
+      // `force` last and bare, the way `gold`'s and `nature`'s are.
+      const { on: forced, rest } = trailing(tail.split(/\s+/).filter(Boolean), "force");
+      const said = rest.join(" ");
+      const act = said.toLowerCase();
+      if (act === "reset") {
+        if (forced) return { error: "`turn reset` takes no `force` — it refuses nothing." };
+        return { ok: { kind: "turn", act: "reset" } };
+      }
+      if (act === "" || act === "end") return { ok: { kind: "turn", act: "end", force: forced } };
+      // A name, which is the one act that cannot default to you: a bare `turn`
+      // is handing yours on, and walking play round to yourself is a no-op
+      // nobody types.
+      if (forced) return { error: "`force` belongs to `turn end`, not to a name." };
+      return { ok: { kind: "turn", act: "reach", who: said } };
+    },
+    /**
+     * What there is to do to a turn, and who to do the third one to.
+     *
+     * Offered rather than left to be remembered: `force` is a word you type at
+     * a console that has just refused you, and a refusal that does not say
+     * what to type next is a refusal you argue with. The two acts that need
+     * test mode are not offered without it, the way `availableIn` hides a
+     * locked verb — Tab must not teach a line that will be refused.
+     */
+    complete: (parts, { players, offering }) => {
+      if (offering.testmode === false) return { pool: ["end"], at: 1 };
+      // `force` after `end`, and nowhere else — it is the only act that refuses
+      // anything.
+      const said = (parts[1] ?? "").toLowerCase();
+      if (parts.length > 2 && (said === "end" || said === "")) return { pool: ["force"], at: 2 };
+      return { pool: ["end", "reset", ...players], at: 1 };
+    },
+  }),
+  stone: spec({
     name: "stone",
     when: PLAYING,
     aliases: ["unstone"],
@@ -926,16 +1490,33 @@ export const COMMANDS: CommandSpec[] = [
     // player deciding to be.
     needs: "testmode",
     group: "override",
-  },
-  {
+    /**
+     * Two words, one act and its undo — the shape `ready`/`unready` already
+     * has. The lift is a word rather than a flag on the same one because that
+     * is what a person types when they mean it: `stone Ola off` reads as an
+     * argument to `stone` and `unstone Ola` reads as the opposite of `stone
+     * Ola`, which it is.
+     */
+    parse: (tail, { word }) => ({ ok: { kind: "stone", who: tail || null, stone: word === "stone" } }),
+    complete: people,
+  }),
+  effect: spec({
     name: "effect",
     aliases: [],
     usage: "effect fog|frozen|barred|nolimit [player]",
     summary: "a Mgła's cap, a stolen turn, 11.11's year off the Most — or 2.6 off",
     needs: "testmode",
     group: "override",
-  },
-  {
+    parse: (tail) => {
+      const [said, ...who] = tail.split(/\s+/).filter(Boolean);
+      const effect = EFFECTS[(said ?? "").toLowerCase()];
+      if (!effect) return { error: `Which effect — ${Object.keys(EFFECTS).join(", ")}?` };
+      return { ok: { kind: "effect", effect, who: who.join(" ") || null } };
+    },
+    complete: (parts, { players }) =>
+      parts.length === 2 ? { pool: Object.keys(EFFECTS), at: 1 } : { pool: [...players], at: 2 },
+  }),
+  deal: spec({
     /**
      * One verb for every Karta in the box, because `draw` is already one.
      *
@@ -960,8 +1541,49 @@ export const COMMANDS: CommandSpec[] = [
     summary: "any Karta happens to you, whatever kind it is — bare, it lists them",
     needs: "testmode",
     group: "override",
-  },
-  {
+    parse: (tail) => {
+      // Bare, it is a question rather than a mistake: "what can I ask for?" is
+      // the thing somebody dressing a test table wants, and Tab's grid cannot
+      // carry the headings that answer it.
+      if (tail === "") return { ok: { kind: "deal", cardIds: [] } };
+      /**
+       * Several Karty, separated by commas.
+       *
+       * A comma because no card in the box has one in its name and every card
+       * has spaces in it, so nothing else can tell TOPÓR ŚWIATŁA I CIEMNOŚCI
+       * from two cards. It is also what you would write on paper listing what
+       * came up.
+       *
+       * The list is the point rather than a convenience: 13.4 settles how many
+       * Karty an Obszar is worth at the moment you arrive and `drawAll` deals
+       * them in one act, so a verb that stands in for a draw and could only
+       * ever produce one card could not reproduce the thing the game actually
+       * does. The order typed is the order they arrive in, which is all 15.2
+       * needs — `resolutionOrder` does the rest.
+       *
+       * A trailing comma is not an error. `deal SMOK,` is a line halfway
+       * through being typed, and refusing it teaches nothing the next keystroke
+       * would not have fixed.
+       */
+      const said = tail.split(",").map((one) => one.trim()).filter(Boolean);
+      const cardIds: string[] = [];
+      for (const one of said) {
+        // Every Karta in the box, because every Karta can be drawn. The two
+        // verbs this replaced each matched a slice of the deck, which is why
+        // asking for the wrong slice answered "No card called `SMOK`" about a
+        // card that is printed twice.
+        const hit = findByName(READABLE, (card) => card.name, one);
+        if ("ambiguous" in hit) return { error: `Which one — ${hit.ambiguous.slice(0, 6).join(", ")}?` };
+        // Named rather than "one of them": with several on the line, "No card
+        // called ``" would leave you counting commas to find which.
+        if ("missing" in hit) return { error: `No card called \`${one}\`.` };
+        cardIds.push(hit.found.id);
+      }
+      return { ok: { kind: "deal", cardIds } };
+    },
+    complete: (parts) => shelved(DEALABLE, afterComma(parts)),
+  }),
+  stack: spec({
     // The one test shortcut that does not step round the game. `give`, `place`
     // and `summon` each put a card in play by fiat; this puts it back on the
     // deck so the ordinary `draw` finds it, which is the only way to watch a
@@ -973,8 +1595,32 @@ export const COMMANDS: CommandSpec[] = [
     summary: "put a Karta on top of its pile, so the next draw is that one",
     needs: "testmode",
     group: "override",
-  },
-  {
+    parse: (tail, { usage }) => {
+      /**
+       * A number is a position in the draw order, not a name.
+       *
+       * No card in the box is called a number, so the two forms cannot
+       * collide. A bare number means the Karty Zdarzeń: they are *the* deck,
+       * and the Zaklęcia are always called by their own name.
+       */
+      const spot = /^(?:(events|spells|zdarzenia|zaklecia|zaklęcia)\s+)?(\d+)$/i.exec(tail.trim());
+      if (spot) {
+        const said = (spot[1] ?? "events").toLowerCase();
+        const pile = said.startsWith("s") || said.startsWith("zak") ? "spells" : "events";
+        return { ok: { kind: "stack", cardId: null, pile, at: Number(spot[2]) } };
+      }
+      return named(
+        STACKABLE,
+        (card) => card.name,
+        tail,
+        "card",
+        (card) => ({ kind: "stack" as const, cardId: card.id, pile: null, at: null }),
+        usage,
+      );
+    },
+    complete: () => shelved(STACK_KINDS, 1),
+  }),
+  pile: spec({
     // The half `stack` needs to be usable by position: you cannot ask for the
     // tenth card without seeing the list. Also the only way to answer "is the
     // Smok still in there, or has somebody had him?" — which the used pile
@@ -985,8 +1631,16 @@ export const COMMANDS: CommandSpec[] = [
     summary: "look through a pile, top first — bare, both of them in brief",
     needs: "testmode",
     group: "override",
-  },
-  {
+    parse: (tail) => {
+      const said = tail.trim().toLowerCase();
+      if (said === "") return { ok: { kind: "pile", pile: null } };
+      if (said.startsWith("e") || said.startsWith("zd")) return { ok: { kind: "pile", pile: "events" } };
+      if (said.startsWith("s") || said.startsWith("zak")) return { ok: { kind: "pile", pile: "spells" } };
+      return { error: "Which pile — `events` or `spells`?" };
+    },
+    complete: () => ({ pool: ["events", "spells"], at: 1 }),
+  }),
+  clear: spec({
     // `place`'s inverse, and the reason it exists is that nothing else undoes
     // it: a Karta leaves an Obszar by being taken, beaten or walked onto, and
     // a test table that dressed a field had no way to undress it.
@@ -996,8 +1650,102 @@ export const COMMANDS: CommandSpec[] = [
     summary: "take Złoto, Karty or whole kinds off an Obszar — bare, the lot; `at` names another",
     needs: "testmode",
     group: "override",
-  },
-  {
+    parse: (tail) => {
+      if (tail === "") return { ok: { kind: "clear", fieldId: null, cardIds: [], gold: null, classes: [] } };
+      /**
+       * `place`'s grammar backwards, and the same `at` between the two names.
+       *
+       * `clear` takes the lot off the Obszar you stand on, `clear Karczma` the
+       * lot off a named one, `clear TARGOWISKO` one Karta off yours, and
+       * `clear TARGOWISKO at Karczma` one off a named one. A bare word is tried
+       * as an Obszar first and as a Karta second, which is unambiguous in
+       * practice and settled by `at` when it is not.
+       */
+      const cut = tail.search(AT);
+      const said = cut === -1 ? tail : tail.slice(0, cut);
+      const place = cut === -1 ? "" : tail.slice(cut).replace(AT, "");
+      let fieldId: FieldId | null = null;
+      if (place !== "") {
+        const where = fieldNamed(place);
+        if ("error" in where) return where;
+        fieldId = where.fieldId;
+      }
+      const words = said.split(",").map((one) => one.trim()).filter(Boolean);
+      /**
+       * A single bare word is still tried as an Obszar first.
+       *
+       * `clear Karczma` means the square, and has since before any of this.
+       * Only for one word: two Obszary cannot both be swept — `at` takes one —
+       * so in a list the same word can only be a Karta or a kind, and trying
+       * the board there would let a place name shadow one.
+       */
+      if (cut === -1 && words.length === 1 && !isCategory(words[0])) {
+        const where = findByName(PLACES, (field) => field.name, said);
+        if ("found" in where) {
+          return { ok: { kind: "clear", fieldId: where.found.id, cardIds: [], gold: null, classes: [] } };
+        }
+      }
+      /**
+       * One list, three kinds of thing in it: `clear MIECZ, strangers, gold`.
+       *
+       * `deal`'s grammar, and the same reason — one act at a table is one line
+       * here. What is new against `deal` is that the words are not all of one
+       * sort, and they do not have to be: a Karta by name, a whole kind, and
+       * the money are three ways of pointing at what is lying on a square, and
+       * „take the Miecz, the Nieznajomych and the money" is one wish. Each is
+       * tried as a kind first — the words are English and nothing in the box
+       * is called `places` — then as a Karta.
+       *
+       * A named Karta takes **one copy**, as it always has, and a kind takes
+       * every one of its class; `clear MIECZ, MIECZ` therefore takes two,
+       * which is the only way to say it.
+       *
+       * All or nothing. A list with one word the console does not know is a
+       * typo rather than a smaller sweep, and half-obeying it would take Karty
+       * off a square the typist meant to keep — so a miss is an error naming
+       * the word, the way `deal` names the card it could not find.
+       */
+      const classes: CardClass[] = [];
+      const cardIds: string[] = [];
+      let money: number | "all" | null = null;
+      for (const one of words) {
+        // The money, with or without an amount, and in the list like
+        // everything else: `clear gold`, `clear gold all`, `clear MIECZ, gold 3`.
+        const asked = goldAsked(one);
+        if (asked !== null) {
+          if (asked === "" || asked.toLowerCase() === "all") {
+            money = "all";
+            continue;
+          }
+          const amount = coins(asked, "clear");
+          if ("error" in amount) return amount;
+          money = amount.gold;
+          continue;
+        }
+        const kind = CATEGORIES.get(one.toLowerCase());
+        if (kind) {
+          for (const cardClass of kind) if (!classes.includes(cardClass)) classes.push(cardClass);
+          continue;
+        }
+        const hit = findByName(CARDS, (card) => card.name, one);
+        if ("ambiguous" in hit) return { error: `Which one — ${hit.ambiguous.slice(0, 6).join(", ")}?` };
+        if ("missing" in hit) {
+          return words.length === 1
+            ? { error: `No card called \`${one}\`.` }
+            : { error: `No card or kind called \`${one}\`.` };
+        }
+        cardIds.push(hit.found.id);
+      }
+      return {
+        ok:
+          money !== null
+            ? { kind: "clear", fieldId, cardIds, gold: money, classes }
+            : { kind: "clear", fieldId, cardIds, gold: null, classes },
+      };
+    },
+    complete: (parts) => placeOrClear("clear", parts),
+  }),
+  place: spec({
     name: "place",
     // `drop` was an alias here and is not any more: it is the lawful "put a
     // Przedmiot down", and a word cannot mean both that and a card conjured
@@ -1007,8 +1755,50 @@ export const COMMANDS: CommandSpec[] = [
     summary: "leave loose Złoto or a card on an Obszar, the one you stand on unless named — bare, the catalogue",
     needs: "testmode",
     group: "override",
-  },
-  {
+    /**
+     * A card left lying on a field, rather than put in a hand.
+     *
+     * Two names in one line, which nothing else here takes, so they are
+     * separated by the word that reads as English and appears in no card and
+     * no Obszar: `place MIECZ at Karczma`. Without it, the Obszar is the one
+     * you are standing on — which is what a tester wants most of the time, and
+     * the only reason the field is optional.
+     */
+    parse: (tail, { usage }) => {
+      const cut = tail.search(AT);
+      const cardPart = cut === -1 ? tail : tail.slice(0, cut);
+      const fieldPart = cut === -1 ? "" : tail.slice(cut).replace(AT, "");
+      let fieldId: FieldId | null = null;
+      if (fieldPart !== "") {
+        const where = fieldNamed(fieldPart);
+        if ("error" in where) return where;
+        fieldId = where.fieldId;
+      }
+      // Money before Karty, because there is no Karta it could be: nothing in
+      // the box is called „gold" or „złoto" on its own, and the two that come
+      // close — „1 SZTUKA ZŁOTA", „2 SZTUKI ZŁOTA" — start with a numeral.
+      const asked = goldAsked(cardPart);
+      if (asked !== null) {
+        if (asked === "") return missing(usage, "How much gold?");
+        const amount = coins(asked, "place");
+        if ("error" in amount) return amount;
+        return { ok: { kind: "place", cardId: null, gold: amount.gold, fieldId } };
+      }
+      // Bare, it is a question rather than a mistake — the same reading bare
+      // `deal` has, and the same catalogue behind it.
+      if (cardPart.trim() === "") return { ok: { kind: "place", cardId: null, gold: null, fieldId } };
+      return named(
+        CARDS,
+        (c) => c.name,
+        cardPart,
+        "card",
+        (c) => ({ kind: "place" as const, cardId: c.id, gold: null, fieldId }),
+        usage,
+      );
+    },
+    complete: (parts) => placeOrClear("place", parts),
+  }),
+  teleport: spec({
     // Was `go`, with `move` as an alias. Both words belong to the lawful walk
     // — you roll, then you move — and this is the one that puts a figure
     // anywhere at all, which is a different act and now says so.
@@ -1018,24 +1808,42 @@ export const COMMANDS: CommandSpec[] = [
     summary: "stand on any Obszar, without a roll and without walking there",
     needs: "testmode",
     group: "override",
-  },
-  {
+    parse: (tail, { usage }) =>
+      named(PLACES, (field) => field.name, tail, "Obszar", (field) => ({ kind: "teleport" as const, fieldId: field.id }), usage),
+    complete: board,
+  }),
+  settle: spec({
     name: "settle",
     aliases: [],
     usage: "settle won|lost|draw",
     summary: "settle the fight you are in — won, lost or drawn",
     needs: "testmode",
     group: "override",
-  },
-  {
+    // Spelled out, because `win` alone is two different things: the fight in
+    // front of you, and the game.
+    parse: (tail, { usage }) => {
+      const said = tail.toLowerCase();
+      const outcome = OUTCOMES[said];
+      if (!outcome) return missing(usage, `Won, lost or drawn — \`${said || "?"}\`?`);
+      return { ok: { kind: "settle", outcome } };
+    },
+    complete: () => ({ pool: Object.keys(OUTCOMES), at: 1 }),
+  }),
+  endgame: spec({
     name: "endgame",
     aliases: [],
     usage: "endgame won|lost",
     summary: "end the game on the Bestia — losing to it costs 2 Życia (14.7)",
     needs: "testmode",
     group: "override",
-  },
-  {
+    parse: (tail, { usage }) => {
+      const said = tail.toLowerCase();
+      if (said !== "won" && said !== "lost") return missing(usage, `Won or lost — \`${said || "?"}\`?`);
+      return { ok: { kind: "endgame", won: said === "won" } };
+    },
+    complete: () => ({ pool: ["won", "lost"], at: 1 }),
+  }),
+  spoils: spec({
     // Only a duel offers it, and only to the winner — there is nothing to take
     // off a Karta. Grouped with fighting because that is where it happens.
     name: "spoils",
@@ -1045,8 +1853,22 @@ export const COMMANDS: CommandSpec[] = [
     summary: "settle a won duel: the Życie, their Sztuka Złota, or a Przedmiot you name (17.9)",
     needs: "play",
     group: "fight",
-  },
-  {
+    parse: (tail) => {
+      const said = tail.trim();
+      if (said === "") return { ok: { kind: "spoils", take: "zycie", card: null } };
+      /**
+       * `gold`, because the vocabulary is the engine's and the engine is
+       * English. The two Polish spellings still answer — nobody's fingers
+       * should have to relearn a word — but the printed line says the one that
+       * belongs to the app rather than to the box.
+       */
+      if (GOLD_WORDS.has(said.toLowerCase())) return { ok: { kind: "spoils", take: "zloto", card: null } };
+      // Anything else is a Przedmiot by name, matched the way every card name is.
+      return { ok: { kind: "spoils", take: "zycie", card: said } };
+    },
+    complete: () => shelved([GOLD_OFFERED, ...PLACEABLE], 1),
+  }),
+  endcast: spec({
     // The other end of the pause a cast opens (9.6): a Zaklęcie waits while
     // anybody could answer it, and this is the table saying nobody will. It
     // also happens on its own when the window closes, so this is the shortcut
@@ -1058,16 +1880,18 @@ export const COMMANDS: CommandSpec[] = [
     summary: "let the Zaklęcie in the air take effect now (9.6)",
     needs: "play",
     group: "carrying",
-  },
-  {
+    parse: () => ({ ok: { kind: "endcast" } }),
+  }),
+  endfight: spec({
     name: "endfight",
     aliases: [],
     usage: "endfight",
     summary: "drop the fight without settling it",
     needs: "testmode",
     group: "override",
-  },
-  {
+    parse: () => ({ ok: { kind: "endfight" } }),
+  }),
+  spell: spec({
     name: "spell",
     when: PLAYING,
     aliases: [],
@@ -1075,91 +1899,37 @@ export const COMMANDS: CommandSpec[] = [
     summary: "draw a Zaklęcie (9.5) — `wand` is the Różdżka refilling a hand",
     needs: "play",
     group: "carrying",
-  },
-];
+    parse: (tail) => {
+      // `wand` last and bare, the way `force` and `hard` are.
+      const { on: wand, rest } = trailing(tail.split(/\s+/).filter(Boolean), "wand");
+      return { ok: { kind: "spell", who: rest.join(" ") || null, wand } };
+    },
+    complete: people,
+  }),
+};
 
 /**
- * Every word this console answers to, taken from the list `help` prints.
- *
- * The gate below is the reason it exists: a verb that is not on this list is
- * refused before anything looks at it, so the parser cannot quietly know a
- * command that `help` has never heard of and Tab cannot finish. What is left is
- * the opposite mistake — advertising something nothing carries out — and the
- * tests catch that by typing every line `help` prints.
+ * The list `help` prints, in the order the table is written — which is the
+ * order somebody meets the verbs, and the order the tests type them in.
  */
+export const COMMANDS: CommandSpec[] = Object.values(SPECS);
 
-const NEEDS: Record<Command["kind"], Capability> = {
-  help: "play",
-  rule: "play",
-  who: "play",
-  seat: "play",
-  unseat: "play",
-  kick: "play",
-  leave: "play",
-  rename: "play",
-  host: "play",
-  pick: "play",
+/**
+ * The entry for a word somebody typed: a verb's own name or any of its aliases.
+ *
+ * Built once. `VERBS` in the parser is the same map's keys, so a word that
+ * parses is a word this finds and the other way round.
+ */
+export const BY_WORD: ReadonlyMap<string, Spec<Command["kind"]>> = new Map(
+  (Object.values(SPECS) as Spec<Command["kind"]>[]).flatMap((one) =>
+    [one.name, ...one.aliases].map((word) => [word, one] as const),
+  ),
+);
 
-  roll: "play",
-  move: "play",
-  draw: "play",
-  look: "play",
-  answer: "play",
-  card: "play",
-  fight: "play",
-  escape: "play",
-  attack: "play",
-  raid: "play",
-  pay: "play",
-  ask: "play",
-  free: "play",
-  claim: "play",
-  take: "play",
-  putdown: "play",
-  equip: "play",
-  use: "play",
-  beast: "play",
-  bridge: "play",
-  cross: "play",
-  guardian: "play",
-  ferry: "play",
-  buy: "play",
-  sell: "play",
-  heal: "play",
-  cast: "play",
-  trade: "play",
-  trophies: "play",
-  ready: "play",
-  start: "play",
-  me: "play",
-  stat: "testmode",
-  remove: "testmode",
-  revive: "testmode",
-  kill: "testmode",
-  // Not "testmode": `changeNature` is the same function the browser's own
-  // control calls, and 7.2 is a rule of the game. What overrules anything is
-  // `force`, which is why this is decided in `needsOf` rather than here.
-  nature: "testmode",
-  // The bare word is 10.1; `needsOf` raises it for the acts that are not.
-  turn: "play",
-  // Both sides call `turnToStone`. There was never a second act here to
-  // separate — 20.1 is a rule, and this is how it is reached.
-  stone: "testmode",
-  effect: "testmode",
-  deal: "testmode",
-  place: "testmode",
-  teleport: "testmode",
-  settle: "testmode",
-  endgame: "testmode",
-  endfight: "testmode",
-  stack: "testmode",
-  pile: "testmode",
-  clear: "testmode",
-  endcast: "play",
-  spoils: "play",
-  // Both sides call `drawSpell`. 9.5 deals them; this is that.
-  spell: "play",
-};
+/** The entry for a kind, which is where a capability is looked up once a line has parsed. */
+export function specOf<K extends Command["kind"]>(kind: K): Spec<K> {
+  return SPECS[kind];
+}
 
 export function needsOf(command: Command): Capability {
   /**
@@ -1173,7 +1943,7 @@ export function needsOf(command: Command): Capability {
   if (command.kind === "turn") {
     return command.act === "end" && !command.force ? "play" : "testmode";
   }
-  return NEEDS[command.kind];
+  return SPECS[command.kind].needs;
 }
 
 /**
