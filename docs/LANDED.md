@@ -1157,3 +1157,14 @@ widened: a row carrying any card-held status stays unlifted, with the one
 honest consequence that a Wampir drawn and lost to in the same turn has no
 row yet and does not grow from that first fight. The five cards the missing
 column blocked this morning are all wired by evening.
+
+## The Kometa, and a word for a Karta destroyed by a Karta
+
+2026-09-04. One new Effect op, `katastrofa`, a class swept off the acting
+seat's Krąg: every row of that class on the ring, and every one this turn
+had already lifted into its kolejka and not met, go to the used pile in one
+Changeset. The journal needed a kind it did not have — `override` is the
+table correcting the game, `lost-card` reads „traci" — so `card-destroyed`
+cites nothing and reads „KOMETA: giną — X, Y". Its `moves_kind_check`
+migration was applied the same day and read back from the catalog; the
+drift check reports the schema file and the database in step.
