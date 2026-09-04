@@ -337,6 +337,21 @@ export function sztuki(n: number): string {
 }
 
 /**
+ * A number of tury, in the accusative — „tracisz 1 turę", „traci 5 tur" — the
+ * case a card taking turns away wants.
+ *
+ * Written out by hand in four places before this: `journalText.ts` had its
+ * own copy calling `plural` correctly, `effectText.ts` had two more, and
+ * `status.ts` and `statusRows.ts` skipped `plural` altogether for a
+ * hand-rolled `n <= 4` cutoff that agrees with the real rule everywhere
+ * except the twenties — it calls 22 tur, which is wrong; 22 is exactly the
+ * "few" case again, „22 tury".
+ */
+export function tury(n: number): string {
+  return `${n} ${plural(n, "turę", "tury", "tur")}`;
+}
+
+/**
  * A line that stands on its own, starting the way a line does.
  *
  * The formalised lines beside a Karta are *composed*, not written: `abilityText`

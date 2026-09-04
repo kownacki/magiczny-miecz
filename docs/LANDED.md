@@ -1081,7 +1081,20 @@ Three landed the same day, in order of leverage per unit of work:
   test passed unchanged, which is the evidence the grammar moved rather than
   changed; the verbs that had no completion got their obvious pools after.
 
-Three are still open, in the order they were ranked: the console's own commands (`settle`,
+- **Console `settle` and `endgame` are Commands.** `commands/settling.ts`,
+  with eight tests; `endgame`'s loss is one Commit rather than two.
+- **One Polish inflection vocabulary.** `tury()` joins `sztuki()` in
+  `polish.ts`; the four hand-written copies went, including two that skipped
+  `plural()` for an `n <= 4` rule that called 22 „tur". `describeEnd` and
+  `markOf` moved out of `status.ts` into `statusRows.ts`, so the status model
+  carries no prose. `trophy-section.tsx` no longer shadows `plural`.
+  `CONTEXT.md` names `announcements.ts` for the notice register, which is where
+  it lives. The two `ops.ts` sites stay: one is the word without its number,
+  the other the nominative.
+
+Two are still open, in the order they were ranked: the console's `me`/`look`
+rendering an Envelope and its `answer` ladder becoming one function both
+surfaces call; the console's own commands (`settle`,
 `endgame`, the `answer` ladder, `me`/`look`) moving home to `commands/` and an
 Envelope; one Polish inflection vocabulary in `polish.ts`; and, last and
 largest, fewer vocabularies for what a card does.

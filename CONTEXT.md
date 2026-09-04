@@ -143,7 +143,7 @@ moment, which is the whole reason they are ports.
 - "notice" and "journal line" render the same events and are NOT the same thing
   — resolved: the journal is third-person past and gender-neutral because a
   typed name cannot be declined (`journalText.ts`); the notice is second-person
-  and immediate, which is why it can quote the dice (`noticeText.ts`). Two
+  and immediate, which is why it can quote the dice (`announcements.ts`). Two
   registers, deliberately.
 - **"tura"** meant two different things and the word was doing both jobs. The
   box is consistent: 10.1 divides play into **tury**, which the Postacie take

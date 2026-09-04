@@ -3,18 +3,17 @@ import {
   allStatuses,
   fromColumns,
   stillStone,
-  markOf,
   afterEvent,
   afterFight,
   afterTurn,
   bonusFrom,
-  describeEnd,
   dispel,
   forcedNature,
   frozen,
   movementCap,
   type Status,
 } from "./status";
+import { describeEnd, markOf } from "./statusRows";
 
 function status(over: Partial<Status> = {}): Status {
   return {

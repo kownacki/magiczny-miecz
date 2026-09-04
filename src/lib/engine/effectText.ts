@@ -11,9 +11,11 @@ import {
   plural,
   sentence,
   STAT_LABEL,
+  sztuki,
   TARGET_FULL,
   TARGET_SHORT,
   TARGET_SINGULAR,
+  tury,
 } from "./polish";
 
 /** Anyone but you is worth naming; "ty" is the default and saying it is noise. */
@@ -381,7 +383,7 @@ export function describeEffect(effect: Effect): string {
       return `sprzedajesz Przedmiot za ${effect.cena} Sz. Z.`;
 
     case "tura-stracona": {
-      const turns = `${effect.turns} ${plural(effect.turns, "turę", "tury", "tur")}`;
+      const turns = tury(effect.turns);
       const spared = effect.oprocz?.length
         ? ` (oprócz: ${effect.oprocz.map(characterName).join(", ")})`
         : "";
@@ -436,7 +438,7 @@ export function describeEffect(effect: Effect): string {
       // The Sztukmistrz sells; everybody else gives. A price left unsaid is the
       // one thing a player would want to have known first.
       if (effect.cena) {
-        return `kupujesz ${many} za ${plural(effect.cena * effect.count, "Sztukę Złota", "Sztuki Złota", "Sztuk Złota")}`;
+        return `kupujesz ${many} za ${sztuki(effect.cena * effect.count)}`;
       }
       // „Możesz je wybrać ze stosu" — the Półbóg's, and the reason to meet him.
       // „dowolne", because the point is that no face of the pile is off limits.
@@ -579,7 +581,7 @@ export function summariseEffect(effect: Effect): string {
       return `${effect.delta > 0 ? "+" : "−"}${Math.abs(effect.delta)} ${STAT_LABEL[effect.stat]}`;
 
     case "tura-stracona":
-      return `tracisz ${effect.turns} ${plural(effect.turns, "turę", "tury", "tur")}`;
+      return `tracisz ${tury(effect.turns)}`;
 
     case "walka":
       return `walka: ${effect.nazwa} (${

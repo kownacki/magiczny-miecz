@@ -6,7 +6,7 @@ import { useState } from "react";
 
 import { trophyPointsOf as trophyValue } from "@/lib/engine/trophies";
 import { TROPHY_RATE, offersFor, type Offer } from "@/lib/engine/trophies";
-import { plural as polishPlural } from "@/lib/engine/polish";
+import { plural } from "@/lib/engine/polish";
 import { Fold } from "./fold";
 import { TileRow } from "./tile-row";
 import { Rules } from "./rule-ref";
@@ -213,7 +213,7 @@ export function TrophySection({
       title="Trofea"
       tally={
         <span className={most ? "text-ochre" : undefined}>
-          {counting} pkt{most ? ` · ${most.swords} ${plural(most.swords)}` : ""}
+          {counting} pkt{most ? ` · ${most.swords} ${swordPoints(most.swords)}` : ""}
         </span>
       }
       open={showing}
@@ -329,7 +329,7 @@ export function TrophySection({
                           : "border-edge text-muted hover:border-ochre/60"
                       }`}
                     >
-                      {one.swords} {plural(one.swords)}
+                      {one.swords} {swordPoints(one.swords)}
                     </button>
                   ))}
                 </div>
@@ -359,7 +359,7 @@ export function TrophySection({
                 >
                   {swords < 1
                     ? `Wybierz co najmniej ${TROPHY_RATE} pkt`
-                    : `Wymień ${points} pkt na ${swords} ${plural(swords)}`}
+                    : `Wymień ${points} pkt na ${swords} ${swordPoints(swords)}`}
                   {swords >= 1 && wasted > 0 ? ` (${wasted} przepadnie)` : ""}
                 </button>
               )}
@@ -376,9 +376,13 @@ export function TrophySection({
  * So a button never reads „1 punkty Miecza" — nor „5 punkty", which the
  * two-case version got wrong and a hand of trofea can reach: 75 points of
  * Wrogowie are hoardable and seven buy a Miecz.
+ *
+ * Named for what it says rather than for `plural` — the engine's own, and the
+ * one this calls — because a component that shadowed that name by accident
+ * had two functions answering to it.
  */
-function plural(swords: number): string {
-  return `${polishPlural(swords, "punkt", "punkty", "punktów")} Miecza`;
+function swordPoints(swords: number): string {
+  return `${plural(swords, "punkt", "punkty", "punktów")} Miecza`;
 }
 
 /**

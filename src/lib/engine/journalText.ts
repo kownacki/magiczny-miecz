@@ -8,9 +8,10 @@ import characters from "@/data/characters.json";
 import type { Character, EventCard, Item, Spell } from "@/data/types";
 import { asFieldId } from "./board";
 import { asCharacterId } from "./characters";
-import { NATURE_LABEL, fieldName as nameOfField, plural, roundShown, sztuki } from "./polish";
+import { NATURE_LABEL, fieldName as nameOfField, plural, roundShown, sztuki, tury } from "./polish";
 import { USE_VERB_PAST } from "./uses";
-import { describeEnd, type Ends } from "./status";
+import type { Ends } from "./status";
+import { describeEnd } from "./statusRows";
 import type { JournalKind } from "./journal";
 
 /** One row of `magiczny_miecz.moves`, as the route hands it over. */
@@ -257,7 +258,6 @@ function natura(value: unknown): string | null {
 }
 
 const life = (n: number) => `${n} ${plural(n, "Życie", "Życia", "Żyć")}`;
-const tury = (n: number) => `${n} ${plural(n, "turę", "tury", "tur")}`;
 
 /**
  * Renders one entry, or null when the table should not see it.

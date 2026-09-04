@@ -21,6 +21,8 @@ import {
   cardName,
   fieldName,
   plural,
+  sztuki,
+  tury,
 } from "./polish";
 import { slotsFor, SLOT_LABEL, isWearable, type EqMode, type Slot } from "./slots";
 
@@ -165,7 +167,8 @@ export function staysAs(cardId: string): string | null {
     case "zostaje-z-pula":
       return "zostaje na Obszarze, dopóki się nie wyczerpie";
     case "po-turach":
-      return `działa przez ${disposition.turns} ${disposition.turns === 1 ? "turę" : "tury"}`;
+      // `tury` and not a two-way choice: five turns are „5 tur", not „5 tury".
+      return `działa przez ${tury(disposition.turns)}`;
     case "wraca-do-stosu":
       return "wraca do stosu";
     case "bierzesz":
@@ -810,7 +813,7 @@ export function describeAbility(ability: Ability): string {
       const price =
         ability.cena === undefined || ability.cena === 0
           ? "wypowie je, gdy zechcesz"
-          : `wypowie je za ${plural(ability.cena, "Sztukę Złota", "Sztuki Złota", "Sztuk Złota")}`;
+          : `wypowie je za ${sztuki(ability.cena)}`;
       const after = ability.znika ? ", po czym odchodzi z zapłatą" : "";
       const look = ability.mozeszObejrzec ? " (wolno ci je obejrzeć)" : "";
       return `nosi przy sobie 1 Zaklęcie${look} — ${price}${after}`;
@@ -823,7 +826,7 @@ export function describeAbility(ability: Ability): string {
         .filter(Boolean)
         .join(" i ");
       const often = ability.razNaTure ? ", raz na turę" : "";
-      return `za ${plural(ability.cena, "Sztukę Złota", "Sztuki Złota", "Sztuk Złota")}: ${gives} na jedną turę${often}`;
+      return `za ${sztuki(ability.cena)}: ${gives} na jedną turę${often}`;
     }
     case "przeciw": {
       const gives = [

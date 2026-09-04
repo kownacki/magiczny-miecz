@@ -10,17 +10,49 @@
  * turn order. `status.ts` knows nothing about who plays next and should not
  * start: it is imported by `cardScript.ts`, which `turn.ts` imports, and asking
  * it to import the queue projector back would close that circle.
+ *
+ * `describeEnd` lives here for a related reason and not that one: it is the
+ * sentence a player is told, and a sentence is presentation even when nothing
+ * in it needs the turn order. `status.ts`'s own `markOf` still wants it for a
+ * mark's hover title, and imports it back — a two-file cycle, but not the
+ * one the paragraph above is guarding against, because `describeEnd` itself
+ * reaches for nothing about who plays next.
  */
 
-import {
-  DEBT,
-  describeEnd,
-  markOf,
-  type Mark,
-  type Modifier,
-  type Status,
-} from "./status";
+import { DEBT, type Ends, type Modifier, type Status } from "./status";
+import { tury } from "./polish";
 import type { QueueEntry } from "./turnQueue";
+
+/** What a player is told about how long this lasts. */
+export function describeEnd(ends: Ends): string {
+  switch (ends.kind) {
+    case "turns":
+      return ends.turns === 1 ? "do końca tej tury" : `jeszcze ${tury(ends.turns)}`;
+    // Named outright, because a round deadline is the one duration in this
+    // union that is already a date. Everything else is a condition, and the
+    // countdown is a date only after somebody walks the order forward.
+    case "round":
+      return `mija na początku rundy ${ends.round}`;
+    // "Bieżącej" rather than "tej", because the two are different sentences
+    // and only one of them is about somebody else's turn. `turns: 1` on the
+    // active seat also reads "do końca tej tury" and means the holder's own;
+    // this one means whichever turn is happening.
+    case "this-turn":
+      return "do końca bieżącej tury";
+    case "fight":
+      return "do końca walki";
+    case "event":
+      return ends.what === "crossing"
+        ? "do przeprawy przez Trzęsawiska lub Lodowy Las"
+        : ends.what === "bridge-entry"
+          ? "do wejścia na Kamienny Most"
+          : "do śmierci Postaci";
+    case "dispelled":
+      return "dopóki ktoś tego nie zdejmie";
+    case "roll":
+      return `dopóki nie wyrzucisz ${ends.upTo} lub mniej`;
+  }
+}
 
 /* --------------------------------------------------------------------------
  * When it lapses.
@@ -142,8 +174,11 @@ export function whenSaid(status: Status, lapse: Lapse | null, mine: boolean): st
   if (status.source === DEBT && status.ends.kind === "turns") {
     const owed = status.ends.turns;
     // Said the way the label is not, because the two are printed side by side:
-    // "Traci turę — traci 2 tury" is the same sentence twice.
-    const many = `jeszcze ${owed} ${owed === 1 ? "tura" : owed <= 4 ? "tury" : "tur"}`;
+    // "Traci turę — traci 2 tury" is the same sentence twice. Owed is a debt
+    // counted down to zero rather than lost to a verb, so 1 is nominative
+    // ("1 tura") where `tury` — built for "tracisz turę" — would say "turę";
+    // from 2 up the words agree either way, so `tury` settles which of them.
+    const many = owed === 1 ? "jeszcze 1 tura" : `jeszcze ${tury(owed)}`;
     return lapse ? `${many} — wraca w rundzie ${lapse.round}` : many;
   }
 
@@ -245,6 +280,117 @@ const STACKING_BY_SOURCE: Record<string, Stacking> = {
 export function stackingOf(status: Status): Stacking {
   return STACKING_BY_SOURCE[status.source] ?? STACKING[status.modifier.kind];
 }
+
+/* --------------------------------------------------------------------------
+ * How an effect is drawn.
+ *
+ * `markOf` used to sit in `status.ts`, next to `describeEnd` — it is here for
+ * the same reason: a glyph and a hover title are what a player is shown, not
+ * what is true of a character, and `status.ts` importing this file back for
+ * either one would close the cycle the module doc above already turns away.
+ * ----------------------------------------------------------------------- */
+
+/** Whether the effect is doing the holder a favour. */
+export type Tone = "dobry" | "zly" | "obojetny";
+
+export interface Mark {
+  /** A single character, drawn small beside the holder's name. */
+  glyph: string;
+  tone: Tone;
+  /** The whole of it in words, for the hover. */
+  title: string;
+}
+
+/**
+ * One effect, as the mark a player sees.
+ *
+ * A glyph and not an icon file: there are six shapes here and each is doing the
+ * work of a bullet, not of a picture. The hover carries the meaning, which is
+ * where a player will look for it — a mark on a name is a reminder that
+ * something is true, not an explanation of what.
+ */
+export function markOf(status: Status): Mark {
+  const when = describeEnd(status.ends);
+  const title = `${status.label} — ${when}`;
+  switch (status.modifier.kind) {
+    case "points": {
+      const up = (status.modifier.miecz ?? 0) + (status.modifier.magia ?? 0) >= 0;
+      return { glyph: up ? "\u25B2" : "\u25BC", tone: up ? "dobry" : "zly", title };
+    }
+    case "frozen":
+      return { glyph: "\u25A0", tone: "zly", title };
+    // A door closed on one kind of card, like `barred` on one place: nothing is
+    // worse about the character, there is simply something they may not speak.
+    case "no-spells":
+      return { glyph: "⊘", tone: "zly", title };
+    // The console's switch, and the only mark here that is not something the
+    // game did to anybody. Neutral rather than „dobry": having no cap is not a
+    // blessing a Postać earned, it is a rule that has been turned off, and a
+    // green triangle beside a name would read as the former.
+    case "bez-limitu-zaklec":
+      return { glyph: "∞", tone: "obojetny", title };
+    // A way opened rather than a weight carried: the one mark here that is
+    // something a character *may* do.
+    case "przeprawa":
+      return { glyph: "⇥", tone: "dobry", title };
+    // Turns coming back rather than being taken away, which is the other thing
+    // this app's marks have never had to say.
+    case "znowu":
+      return { glyph: "↻", tone: "dobry", title };
+    // Nothing has happened yet — that is the whole of what this one says.
+    // A point of Życie held back rather than a weight carried.
+    case "ocalenie":
+      return { glyph: "✚", tone: "dobry", title };
+    case "spoken":
+      return { glyph: "…", tone: "obojetny", title };
+    case "move-max":
+      return { glyph: "\u25B8", tone: "zly", title };
+    case "nature":
+      return { glyph: "\u25D1", tone: "obojetny", title };
+    case "barred":
+      return { glyph: "\u2298", tone: "zly", title };
+    // An errand rather than an affliction, so it is neither good nor bad to be
+    // carrying one — and a filled star once it is done and only the collecting
+    // is left.
+    case "mission":
+      return {
+        glyph: status.modifier.done ? "\u2605" : "\u2606",
+        tone: "obojetny",
+        title,
+      };
+    // A door closed rather than a weight carried — nothing is worse about the
+    // character, there is simply something they may no longer do.
+    case "no-friends":
+      return { glyph: "\u2298", tone: "zly", title };
+    // Both make the character worth more for a moment, so they read as the same
+    // upward mark a `points` buff does.
+    case "magia-as-miecz":
+    case "move-x2":
+      return { glyph: "\u25B2", tone: "dobry", title };
+    // A record rather than an effect: nothing about the character has changed,
+    // and one Nieznajomy will want to know.
+    case "attacker":
+      return { glyph: "\u2694", tone: "obojetny", title };
+    case "note":
+      return { glyph: NOTE_GLYPH[status.source] ?? "\u25CB", tone: "obojetny", title };
+  }
+}
+
+/**
+ * The symbol a note carries, where what it is a note about has one.
+ *
+ * `note` is the bucket for effects with nothing mechanical to apply, and every
+ * one of them drew the same hollow circle \u2014 which beside a player's name says
+ * that something is true and not one word about what. It looked less like a
+ * mark than like a picture that had failed to load.
+ *
+ * A Natura has a symbol of its own, so the bucket does not have to stay a
+ * bucket. Anything else added here should be the same kind of thing: a shape
+ * that names the subject, not one that grades it.
+ */
+const NOTE_GLYPH: Record<string, string> = {
+  natura: "\u262F",
+};
 
 /* --------------------------------------------------------------------------
  * The rows.
