@@ -32,42 +32,6 @@ export function spellCapacity(totalMagia: number): number {
   return SPELL_CAPACITY[Math.min(totalMagia, SPELL_CAPACITY.length - 1)];
 }
 
-export interface Bonuses {
-  miecz: number;
-  magia: number;
-}
-
-/**
- * What a seat's held cards add on top of its own points.
- *
- * Rules 1.5 and 2.5 make the total the sum of own points plus contributions
- * from Items, Magic Items and Friends. Two things this deliberately does not
- * do: it never writes back to the seat (the total is recomputed on every read,
- * so it cannot drift from the cards actually held), and it never lets a bonus
- * make a *trophy* count — defeated-enemy cards are held to be traded for Miecz
- * later (1.4), not to be worn.
- */
-export function bonusesFrom(
-  holdings: readonly Holding[],
-  items: ReadonlyMap<string, Item>,
-  { suppressMagicalItems = false }: { suppressMagicalItems?: boolean } = {},
-): Bonuses {
-  let miecz = 0;
-  let magia = 0;
-  for (const holding of holdings) {
-    if (holding.kind === "trophy") continue;
-    const item = items.get(holding.cardId);
-    if (!item) continue;
-    // Zaczarowane Wzgórza suspends points gained from Magic Items while a
-    // character stands there (the worked example under 2.6). Ordinary items
-    // keep working.
-    if (suppressMagicalItems && item.magical) continue;
-    miecz += item.miecz ?? 0;
-    magia += item.magia ?? 0;
-  }
-  return { miecz, magia };
-}
-
 /**
  * The whole of 2.6 for one character: the table, and what a card raises it to.
  *
@@ -95,39 +59,6 @@ export function spellAllowance(
   const raised = spellsOverLimit(abilities);
   const table = spellCapacity(totalMagia);
   return raised > 0 ? Math.max(table, startingSpells + raised) : table;
-}
-
-export interface Totals {
-  miecz: number;
-  magia: number;
-  spellCapacity: number;
-}
-
-export function totalsFor(
-  seat: Seat,
-  items: ReadonlyMap<string, Item>,
-  options?: {
-    suppressMagicalItems?: boolean;
-    /**
-     * The hand this character was dealt at setup (9.5), which is what the
-     * Różdżka Zaklęć measures itself against. Zero is the common case — twenty
-     * of the twenty-seven start with none — and is the safe default: without
-     * the Różdżka it changes nothing at all.
-     */
-    startingSpells?: number;
-  },
-): Totals {
-  const bonus = bonusesFrom(seat.holdings, items, options);
-  const magia = seat.magicOwn + bonus.magia;
-  return {
-    miecz: seat.swordOwn + bonus.miecz,
-    magia,
-    spellCapacity: spellAllowance(
-      magia,
-      options?.startingSpells ?? 0,
-      heldAbilities(seat.holdings.filter((h) => h.kind !== "trophy").map((h) => h.cardId)),
-    ),
-  };
 }
 
 /**
@@ -308,12 +239,3 @@ export function mayHold(item: Pick<Item, "forbiddenTo">, nature: Nature | null):
   return !item.forbiddenTo.includes(nature);
 }
 
-/**
- * Rule 9.4 in the direction that bites: a character holding more spells than
- * its Magia allows must discard the excess immediately. Returns how many must
- * go, so the caller can ask which.
- */
-export function excessSpells(seat: Seat, totals: Totals): number {
-  const held = seat.holdings.filter((h) => h.kind === "spell").length;
-  return Math.max(0, held - totals.spellCapacity);
-}

@@ -122,22 +122,6 @@ import { TEST_SOURCE } from "@/lib/engine/status";
 import { fitsIn, slotsFor, SLOTS, type Slot } from "@/lib/engine/slots";
 
 /**
- * The third edge, beside `turnStore.ts` and `lobbyStore.ts`.
- *
- * The grammar this carries out is `engine/console.ts`'s and is pure; this is
- * the half with the database in it, and it does almost nothing of its own —
- * every branch calls the function the game itself calls, so a tested Życie is
- * lost the way a real one is and a staged fight rolls the dice real combat
- * rolls. Nothing here can quietly disagree with the rules by keeping its own
- * copy of them.
- *
- * It lived in `turnStore.ts`, which made that file the largest in the repo and
- * made two unrelated things one: the turn, and the shortcut for testing the
- * turn. They are not read together and they are not changed together, and only
- * one of them ships to a table that is actually playing.
- */
-
-/**
  * Who is typing, which is now two facts rather than one.
  *
  * A person and the Postać they drive are different rows with different
@@ -150,30 +134,6 @@ export interface Actor {
   userId: string;
   seatId: string | null;
 }
-
-/**
- * Carries out one line from the test console.
- *
- * The grammar is in `console.ts` and is pure; this is the half with the
- * database in it, and it does almost nothing of its own — every command calls
- * the function the game itself calls, so a tested Życie is lost the way a real
- * one is, a staged fight rolls the dice the real combat rolls, and nothing here
- * can quietly disagree with the rules by having its own copy of them.
- *
- * Returns the line to print back. Refusals come up as thrown errors, which the
- * route turns into the same message any other refusal gets.
- *
- * # Which language a reply is in
- *
- * English, all of it — this is a terminal and the engine's own surface. What
- * stays Polish is what the *box* says: the journal, which is the record a
- * player reads back, and the name of anything printed on a component. So a
- * sentence is English and the things it names are not, which is the rule
- * `console.ts` already draws for what you type: `gold +5` and `pick MAGOG`.
- *
- * That is why `Postać`, `Zaklęcie`, `Obszar` and `Miecz` are in English
- * sentences here and are not translated. They are what the thing is called.
- */
 
 /**
  * Everything a verb is given: the table it acts on, who typed the line, and

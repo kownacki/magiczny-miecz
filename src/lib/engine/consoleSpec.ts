@@ -1245,6 +1245,16 @@ export function permits(
   };
 }
 
+/**
+ * The list `help` prints, one command to a line.
+ *
+ * Every word that can be typed starts its own line, `place|put|drop`, rather
+ * than trailing the summary as "(also put, drop)". Somebody reading this is
+ * looking for the word to type, and the alternatives were both the furthest
+ * thing from where the eye goes and the reason the lines were long enough to
+ * wrap — which on a narrow window is what made a list of twelve look like a
+ * list of seven.
+ */
 export function helpLines(
   about: string | null = null,
   at: { testmode?: boolean; stage?: Stage; all?: boolean } = { testmode: true },

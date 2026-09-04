@@ -3,13 +3,11 @@ import {
   BASE_CARRY_LIMIT,
   adjustOwn,
   carryLimit,
-  excessSpells,
   heal,
   gainLife,
   mayHold,
   spellAllowance,
   spellCapacity,
-  totalsFor,
 } from "./derive";
 import { abilitiesOf } from "./abilities";
 import {
@@ -83,39 +81,6 @@ describe("spell capacity (2.6)", () => {
   });
 });
 
-describe("totals (1.5, 2.5)", () => {
-  const items = new Map([
-    ["srebrna-strzala", item("srebrna-strzala", { miecz: 1, magia: 1, magical: true })],
-    ["miecz", item("miecz", { miecz: 1 })],
-  ]);
-
-  it("adds item bonuses to own points without storing them", () => {
-    const s = seat({ holdings: [held("srebrna-strzala"), held("miecz")] });
-    const totals = totalsFor(s, items);
-    expect(totals.miecz).toBe(5); // 3 own + 1 + 1
-    expect(totals.magia).toBe(3); // 2 own + 1
-    expect(s.swordOwn).toBe(3); // untouched
-  });
-
-  it("ignores trophies, which are kept to trade for Miecz later (1.4)", () => {
-    const s = seat({ holdings: [held("miecz", "trophy")] });
-    expect(totalsFor(s, items).miecz).toBe(3);
-  });
-
-  it("suspends magical items on Zaczarowane Wzgórza but keeps ordinary ones", () => {
-    const s = seat({ holdings: [held("srebrna-strzala"), held("miecz")] });
-    const totals = totalsFor(s, items, { suppressMagicalItems: true });
-    expect(totals.miecz).toBe(4); // the magical Srebrna Strzała stops counting
-    expect(totals.magia).toBe(2);
-  });
-
-  it("recomputes spell capacity from the total, not from own Magia", () => {
-    const ring = new Map([["pierscien-mocy", item("pierscien-mocy", { magia: 3 })]]);
-    const s = seat({ magicOwn: 2, holdings: [held("pierscien-mocy")] });
-    expect(totalsFor(s, ring).spellCapacity).toBe(spellCapacity(5));
-  });
-});
-
 describe("the Różdżka Zaklęć (2.6)", () => {
   const none = [] as const;
   const wand = abilitiesOf("rozdzka-zaklec");
@@ -148,11 +113,6 @@ describe("the Różdżka Zaklęć (2.6)", () => {
     expect(spellAllowance(1, 0, wand)).toBe(1);
   });
 
-  it("reaches the same answer through a seat's holdings", () => {
-    const s = seat({ magicOwn: 4, holdings: [held("rozdzka-zaklec")] });
-    expect(totalsFor(s, new Map()).spellCapacity).toBe(2); // no setup hand given
-    expect(totalsFor(s, new Map(), { startingSpells: 2 }).spellCapacity).toBe(3);
-  });
 });
 
 describe("own points floor (1.3, 2.3)", () => {
@@ -225,22 +185,6 @@ describe("nature gating (5.3)", () => {
 
   it("allows anything unrestricted", () => {
     expect(mayHold(item("miecz"), "evil")).toBe(true);
-  });
-});
-
-describe("excess spells (9.4)", () => {
-  it("reports how many must be discarded", () => {
-    const s = seat({
-      magicOwn: 2,
-      holdings: [held("a", "spell"), held("b", "spell"), held("c", "spell")],
-    });
-    // Magia 2 allows one spell; three are held.
-    expect(excessSpells(s, totalsFor(s, new Map()))).toBe(2);
-  });
-
-  it("is zero when within the limit", () => {
-    const s = seat({ magicOwn: 5, holdings: [held("a", "spell")] });
-    expect(excessSpells(s, totalsFor(s, new Map()))).toBe(0);
   });
 });
 

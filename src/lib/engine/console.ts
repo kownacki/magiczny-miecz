@@ -334,25 +334,5 @@ export function complete(
   };
 }
 
-/**
- * The list `help` prints, one command to a line.
- *
- * Every word that can be typed starts its own line, `place|put|drop`, rather
- * than trailing the summary as "(also put, drop)". Somebody reading this is
- * looking for the word to type, and the alternatives were both the furthest
- * thing from where the eye goes and the reason the lines were long enough to
- * wrap — which on a narrow window is what made a list of twelve look like a
- * list of seven.
- */
-/**
- * What each kind of command needs before it may run.
- *
- * A second list beside `COMMANDS`, and deliberately: the spec table is keyed on
- * the word you type and this is keyed on what the word parsed *to*, and the two
- * are not one-to-one — `gold`, `sword`, `magic` and `life` are four words and
- * one `stat`. A test types every usage line `help` prints and checks the answer
- * here matches the spec it came from, which is what keeps them from drifting.
- */
-
 export * from "./consoleSpec";
 export * from "./consoleParse";

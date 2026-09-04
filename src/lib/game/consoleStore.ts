@@ -14,7 +14,9 @@ import {
 import { seatsFor, usersFor, type SeatRow, type UserRow } from "./store";
 import { activeStore } from "./gameStore";
 import { seatView, turnQueueOf } from "./commands/seat";
-import { VERBS, type ConsoleContext } from "./consoleVerbs";
+import { VERBS, type Actor, type ConsoleContext } from "./consoleVerbs";
+
+export type { Actor } from "./consoleVerbs";
 
 /**
  * The third edge, beside `turnStore.ts` and `lobbyStore.ts`.
@@ -31,20 +33,6 @@ import { VERBS, type ConsoleContext } from "./consoleVerbs";
  * turn. They are not read together and they are not changed together, and only
  * one of them ships to a table that is actually playing.
  */
-
-/**
- * Who is typing, which is now two facts rather than one.
- *
- * A person and the Postać they drive are different rows with different
- * lifetimes, and the console needs both: `kill` and `go` are about a figure on
- * the board, `kick` and `leave` are about somebody in the room. `seatId` is
- * null for a spectator, and the commands that need one say so themselves.
- */
-
-export interface Actor {
-  userId: string;
-  seatId: string | null;
-}
 
 /**
  * Carries out one line from the test console.
