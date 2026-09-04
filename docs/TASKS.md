@@ -197,7 +197,14 @@ is a **Status** (CONTEXT.md). The other three decisions, and the order:
          written beside it, and what did move is `grantedCrossing`, from the
          stored half to the whole `standing` list. Folding a Postać's own
          printed text onto the list is a separate question, and the one to
-         answer for all of them at once in step 3), `ocalenie`, the rest.
+         answer for all of them at once in step 3), ~~`ocalenie`~~ (done
+         2026-09-04, and it was a duplicated projection rather than a
+         reader: `spendLife` mapped `snapshot.effects` by hand into what
+         `storedStatuses` already returns. It stays on the **stored** half
+         on purpose — an Ocalony is spent by deleting its row, and a held
+         status has no row to delete — and the three friends who die in
+         your place stay on `diesForYou`, being scoped to a defeat and
+         costing a Karta rather than being any loss at all), the rest.
       3. `Ability` kinds whose reader has moved become `Modifier` kinds; what
          is left of `Ability` is the per-card data that has no standing-effect
          reading (`skup`, `sprzedaj-w`, `wymagany`, `zakazane`).
