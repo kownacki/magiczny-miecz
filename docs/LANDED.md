@@ -1370,3 +1370,33 @@ Twelve tests are skipped, never deleted, each naming `PVP_PARKED`; one new test
 pins the refusal. COVERAGE.md gains ⏸, *built and unreachable*, kept apart from
 ◐ so "missing" and "switched off" are not one number. Two open tasks closed with
 it: the Turniej's dynamic choice, and 17.9's browser spoils picker.
+
+## A Postać's own powers are parked, and the Czarodziej stops borrowing a Nieznajomy's
+
+2026-09-05. Every printed clause on a Karta Postaci except the starting kit is
+dimmed and struck. `CHARACTER_POWERS_PARKED` is the boolean and
+`abilitiesOfCharacter` is the single door, so all sixteen encoded abilities stop
+firing without a guard in any of the seven readers that ask; nothing is deleted.
+
+The count is what decided the scope. 89 clauses across 27 Kartas Postaci, of
+which the app ran 34 — 18 starting kits and 16 encoded abilities across only 10
+characters. A Karta keeping sixteen promises and breaking fifty-five is worse
+than one keeping none and saying so, because a player cannot tell which sixteen.
+What is left still distinguishes a Postać: printed Miecz and Magia, starting
+gear, where it begins, its Natura.
+
+**The registry inverted with it.** `LIVE_ABILITIES` names what the app carries
+and `parkedAbility` returns the complement, so an unlisted clause is dimmed by
+default and one the app learns to run must be added to appear. The failure mode
+becomes a card that under-promises — checkable against the paper — rather than
+one that over-promises. It also subsumes the duel list from the day before:
+those eight clauses were never carried either.
+
+**And a bug the parking work surfaced.** Opening the CZARODZIEJ's Karta Postaci
+showed „Tylko Postać: dobra" and a class numeral „IV". Both are the *Nieznajomy*
+Czarodziej's: `czarodziej` names a Postać and a Nieznajomy, `demon` a Postać and
+a Wróg, and `ids.test.ts` has pinned that pair all along — so every card-scoped
+question asked with a bare id answers about the wrong object on exactly those
+two panels. `requirementOf` and `numeralOf` are both right; the panels now carry
+a `character` flag and do not ask, the same shape `CardDetail` already used for
+`coverageOf`.
