@@ -1432,3 +1432,36 @@ said 128 Karty were `pelne` and 6 `brak` when the answers were 131 and 3. Both
 were written by being broken on purpose, and both carry the false greens they
 went through first, because a check that cannot fail is worse than none.
 
+
+## An id is never a string, in the engine too
+
+2026-09-06. The rule at the top of CLAUDE.md was enforced at the store door and
+on the wire and never inside the engine: forty-nine exported functions took
+`cardId: string`. Typed now, along with the shapes that feed them so the
+narrowing happens once — the row types, `Holding`, `TurnCard`, `Seat`, the
+trophy and loss shapes, and `TileCard`, which became a discriminated union of
+Karta, Postać, Obszar and name-with-no-Karta, because those four had been one
+`string` and the confusion had nowhere else to live.
+
+**Branding turned out to be unnecessary**, which was the design question. Two
+ids name both a Postać and a Karta — `czarodziej` and `demon` — and the
+assumption going in was that a plain union could not tell them apart.
+TypeScript checks assignability on the *declared* type: a `CharacterId` is a
+union of twenty-seven literals, most of which are not `CardId`s, so the whole
+union is rejected at a `CardId` parameter. Only a bare literal slips through,
+and `ids.test.ts` pins the colliding pair. So this cost forty-nine signatures
+rather than a nominal-type change touching every card literal in the data.
+
+Four live bugs fell out of the compiler, which is the argument for the whole
+exercise. `raid` asked `cardName(seat.character_id)`, a Postać through the card
+registry — `raid BARBARZYŃCA` matched nothing and `raid CZARODZIEJ` matched the
+Nieznajomy's name by luck. `sameName` was handed printed names three times and
+worked only because `cardName` echoes what it cannot find. `trophy-section.tsx`
+carried a cast with a comment calling itself the boundary, while the boundary
+was `seatsFor` all along. And `characterProfile` handed a character id to
+`whenApplies`, harmless only because the mode was always `classic`. Several
+fixtures named cards the box does not contain, and one assertion passed because
+of it.
+
+`requireCardId` joins `requireFieldId`, added to the generator since `ids.ts`
+is generated. 3205 tests and 31 skips, unchanged.
