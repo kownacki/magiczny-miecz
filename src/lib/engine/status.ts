@@ -262,6 +262,26 @@ export type Modifier =
    */
   | { kind: "przeprawa"; przez: "trzesawiska" | "lodowy-las" }
   /**
+   * How many dice this holder throws at a named crossing, instead of the two
+   * the board asks for.
+   *
+   * Rusałka's, and only hers: „Przyjaźń Rusałki pozwoli ci na wykonanie rzutu
+   * jedną kostką, gdy będziesz przechodzić z Uroczyska do Lasu Błędnych Ogni."
+   * One die against your Magia rather than two is the difference between a
+   * hard crossing and a likely one, so it is asked rather than assumed.
+   *
+   * Not `przeprawa` above, which is a crossing *granted* — taken from anywhere,
+   * simply walked, and 11.3's dice belong to the Uroczysko's own card. This is
+   * the dice themselves, at a crossing you were already entitled to make. Two
+   * facts, two kinds, which is why folding this reader retires no second
+   * spelling and is worth doing only because it puts one more question on the
+   * one list.
+   *
+   * `obstacle` is carried because the card names one: a Rusałka does nothing
+   * for you at the Lodowy Las.
+   */
+  | { kind: "przeprawa-kostki"; obstacle: "trzesawiska"; dice: number }
+  /**
    * The turn comes back to this character instead of moving on.
    *
    * Formuła Czasu: „Pozwala postaci na wykorzystanie 3 kolejnych tur zamiast
@@ -690,6 +710,32 @@ export function carryBonus(statuses: readonly Status[]): number {
 }
 
 /**
+ * How many dice to throw at this crossing, given what the holder is under.
+ *
+ * The fewest on offer, the way `movementCap` takes the tightest: every card
+ * that speaks here speaks to make a crossing likelier, so two of them are not
+ * two rolls but the better of the two. Nothing in the base game grants a
+ * second, and the reading is stated rather than left to whichever row came
+ * first out of the list.
+ *
+ * `fallback` is the board's own number for this crossing — 11.3's two at the
+ * Trzęsawiska — because a character with nothing simply throws what the
+ * Obszar asks.
+ */
+export function crossingDiceFrom(
+  statuses: readonly Status[],
+  obstacle: string,
+  fallback: number,
+): number {
+  const offered = statuses
+    .filter(
+      (status) => status.modifier.kind === "przeprawa-kostki" && status.modifier.obstacle === obstacle,
+    )
+    .map((status) => (status.modifier as Extract<Modifier, { kind: "przeprawa-kostki" }>).dice);
+  return offered.length > 0 ? Math.min(...offered) : fallback;
+}
+
+/**
  * The thing standing between this character and the next point they would lose.
  *
  * Read at the one door every loss comes through, so an Ocalony spoken in
@@ -1004,17 +1050,11 @@ const HELD_TWIN: Record<Ability["kind"], ((ability: Ability) => Modifier | null)
   "podglad-zaklec": null, // read only when a Zaklęcie is drawn
   "odporny-na-zaklecie": null, // read only when a named Zaklęcie lands on the holder
   "punkty-na-polach": null, // read only on the named Obszar
-  // Rusałka is the only thing in the box that prints it, and she is a
-  // Przyjaciel — a `friend` card in `events.json`, which `heldStatuses` does
-  // walk. So a twin here *would* fire, and this could be folded the way the
-  // points and osłona readers were. It is not, yet, and that is the honest
-  // state rather than a reason: the fold's own commit (9a63637) argued she was
-  // a Postać and that nothing held could produce it, which was simply wrong
-  // about the data. What remains true is the narrower half — `przeprawa` is a
-  // *granted* crossing and `przeprawa-kostki` is how many dice one takes, so
-  // there is no second spelling to retire and no bug here to fix, only a
-  // reader that could move. See `crossingDice`.
-  "przeprawa-kostki": null,
+  // Rusałka is a Przyjaciel, so a held one produces this like any other card.
+  "przeprawa-kostki": (ability) =>
+    ability.kind === "przeprawa-kostki"
+      ? { kind: "przeprawa-kostki", obstacle: ability.obstacle, dice: ability.dice }
+      : null,
   skup: null, // a desk's price, not a fact about the holder
   "sprzedaj-w": null, // a card's own buyer, not a fact about the holder
   "placi-za-przegrana": null, // read only when a duel is lost

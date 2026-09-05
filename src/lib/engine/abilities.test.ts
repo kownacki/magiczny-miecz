@@ -9,7 +9,6 @@ import {
   ABILITIES,
   abilitiesOf,
   canEscapeAt,
-  crossingDice,
   tollIsWaived,
   heldAbilities,
   isSpared,
@@ -124,16 +123,6 @@ describe("walking past what a field does to you", () => {
 });
 
 describe("crossings and tolls", () => {
-  it("halves the Trzęsawiska for Rusałka", () => {
-    expect(crossingDice(abilitiesOf("rusalka"), "trzesawiska", 2)).toBe(1);
-  });
-
-  it("leaves everyone else on two dice", () => {
-    expect(crossingDice(heldAbilities(["miecz"]), "trzesawiska", 2)).toBe(2);
-    // Her help is specific to the Trzęsawiska; the Lodowy Las is a fight.
-    expect(crossingDice(abilitiesOf("rusalka"), "lodowy-las", 2)).toBe(2);
-  });
-
   it("waives the ferryman's Sztuka Złota for the Przewoźnik, at both Przeprawy", () => {
     const p = abilitiesOf("przewoznika");
     expect(tollIsWaived(p, "przeprawa-1")).toBe(true);

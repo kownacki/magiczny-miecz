@@ -206,9 +206,15 @@ is a **Status** (CONTEXT.md). The other three decisions, and the order:
          others. What survives of the original reasoning is the narrower
          half: `przeprawa` is a *granted* crossing and `przeprawa-kostki` is
          how many dice, so there is no second spelling to retire and no bug —
-         only a reader that has not moved. What did move is `grantedCrossing`,
-         from the stored half to the whole `standing` list. **Open again**, as
-         a small fold nobody has done), ~~`ocalenie`~~ (done
+         only a reader that has not moved. What did move first was
+         `grantedCrossing`, from the stored half to the whole `standing` list.
+         **The reader moved too, 2026-09-05**: `przeprawa-kostki` is a Modifier,
+         a held Rusałka produces it through `HELD_TWIN`, and
+         `crossingDiceFrom` takes the fewest dice on offer the way
+         `movementCap` takes the tightest cap. `crossingDice` is deleted with
+         its two tests, and `bridge.test.ts`'s end-to-end Rusałka crossing
+         passed unchanged through the move, which is the evidence that
+         mattered), ~~`ocalenie`~~ (done
          2026-09-04, and it was a duplicated projection rather than a
          reader: `spendLife` mapped `snapshot.effects` by hand into what
          `storedStatuses` already returns. It stays on the **stored** half

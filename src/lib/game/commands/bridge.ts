@@ -20,7 +20,7 @@ import {
   rollDice,
   trapOutcome,
 } from "@/lib/engine/bridge";
-import { crossingDice, pointsAt, tollIsWaived } from "@/lib/engine/abilities";
+import { pointsAt, tollIsWaived } from "@/lib/engine/abilities";
 import type { CombatResult } from "@/lib/engine/combat";
 import {
   afterMove,
@@ -44,7 +44,7 @@ import {
 
 import { asReturnable, putOnPile } from "./piles";
 import { keepOnly, storedStatuses } from "./turn";
-import { afterEvent, grantedCrossing } from "@/lib/engine/status";
+import { afterEvent, crossingDiceFrom, grantedCrossing } from "@/lib/engine/status";
 import { facing } from "@/lib/engine/across";
 import { spendLife } from "./life";
 import { activeSeat, pointsOf, seatView } from "./seat";
@@ -566,13 +566,11 @@ export async function crossRing(
     //
     // Rusałka's friendship is exactly this: one die at the Trzęsawiska instead
     // of two, which is the difference between a hard crossing and a likely one.
-    // Still the abilities and not `standing`, and only because nobody has
-    // moved this reader yet. Rusałka is a Przyjaciel — a `friend` card, which
-    // `heldStatuses` walks — so the twin could be built and this could read
-    // the one list like every other reader. 9a63637 claimed she was a Postać
-    // and that nothing held could produce it; that was wrong about the data,
-    // and the note beside the `HELD_TWIN` entry now says so.
-    const count = crossingDice(view.abilities, crossing.obstacle, crossing.test.dice);
+    // Read off `standing`, like every other question about what this seat is
+    // under. Rusałka is a Przyjaciel, so `heldStatuses` produces her die from
+    // the holding — and a Zaklęcie or an Obszar that ever wants to speak here
+    // has somewhere to say it without this line changing again.
+    const count = crossingDiceFrom(view.standing, crossing.obstacle, crossing.test.dice);
     dice = await rollDice(ports.random, count, "trzęsawiska");
     // `parametr`, not `walka`: the Trzęsawiska are a threshold and not a fight,
     // so a Krzyżowiec's fight-only points have no business in the number.

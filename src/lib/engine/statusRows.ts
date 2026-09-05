@@ -247,6 +247,9 @@ const STACKING: Record<Modifier["kind"], Stacking> = {
   unieruchomiony: "exclusive",
   "no-spells": "exclusive",
   przeprawa: "exclusive",
+  // `crossingDiceFrom` takes the fewest dice on offer, so a second one either
+  // improves the crossing or does nothing — never two rolls.
+  "przeprawa-kostki": "exclusive",
   // Two Formuły Czasu do not make six turns: `playsAgain` is a question with a
   // yes-or-no answer, and the countdowns run side by side, so what stands is
   // the longer of them.
@@ -360,6 +363,10 @@ export function markOf(status: Status): Mark {
       return { glyph: "∞", tone: "obojetny", title };
     // A way opened rather than a weight carried: the one mark here that is
     // something a character *may* do.
+    // A crossing made likelier, which is nothing having happened *to* the
+    // holder — the same reading as `oslona`'s: a right held, not a weight.
+    case "przeprawa-kostki":
+      return { glyph: "\u2684", tone: "dobry", title };
     case "przeprawa":
       return { glyph: "⇥", tone: "dobry", title };
     // Turns coming back rather than being taken away, which is the other thing

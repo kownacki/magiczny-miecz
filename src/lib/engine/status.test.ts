@@ -15,6 +15,7 @@ import {
   carryBonus,
   heldStatuses,
   movementCap,
+  crossingDiceFrom,
   shieldUpTo,
   type HeldCard,
   type Status,
@@ -306,6 +307,16 @@ describe("the held half: a card's own Abilities as Status rows", () => {
    * stands for its point whether or not a fight ever happens. `shieldSaves`
    * (fight.ts) is the reader that asks for the roll itself.
    */
+  it("puts a held Rusałka's die on the standing list", () => {
+    // She is a Przyjaciel, so `heldStatuses` walks her like any other friend —
+    // which is the whole reason this reader could be folded at all.
+    const rows = heldStatuses([heldCard({ cardId: "rusalka", kind: "friend" })], "classic", null);
+    const die = rows.find((row) => row.modifier.kind === "przeprawa-kostki");
+    expect(die?.modifier).toEqual({ kind: "przeprawa-kostki", obstacle: "trzesawiska", dice: 1 });
+    expect(die?.ends).toEqual({ kind: "held" });
+    expect(crossingDiceFrom(rows, "trzesawiska", 2)).toBe(1);
+  });
+
   it("puts Hełm, Tarcza and Zbroja on the standing list as `oslona`", () => {
     const [row] = heldStatuses([heldCard({ cardId: "helm" })], "classic", null);
     expect(row.modifier).toEqual({ kind: "oslona", upTo: 1 });
@@ -443,3 +454,29 @@ describe("what a player sees on a name", () => {
     }
   });
 });
+
+describe("how many dice a crossing takes (11.3)", () => {
+  it("throws what the Obszar asks when nothing speaks", () => {
+    expect(crossingDiceFrom([], "trzesawiska", 2)).toBe(2);
+  });
+
+  it("takes the fewest on offer, not the first found", () => {
+    // Everything that speaks here speaks to make a crossing likelier, so two
+    // of them are the better of the two rather than two rolls.
+    const under = [
+      status({ modifier: { kind: "przeprawa-kostki", obstacle: "trzesawiska", dice: 1 } }),
+      status({ id: "b", modifier: { kind: "przeprawa-kostki", obstacle: "trzesawiska", dice: 2 } }),
+    ];
+    expect(crossingDiceFrom(under, "trzesawiska", 2)).toBe(1);
+  });
+
+  it("answers for the obstacle the card names and no other", () => {
+    // „gdy będziesz przechodzić z Uroczyska do Lasu Błędnych Ogni" — a Rusałka
+    // is no help at all at the Lodowy Las.
+    const under = [
+      status({ modifier: { kind: "przeprawa-kostki", obstacle: "trzesawiska", dice: 1 } }),
+    ];
+    expect(crossingDiceFrom(under, "lodowy-las", 2)).toBe(2);
+  });
+});
+

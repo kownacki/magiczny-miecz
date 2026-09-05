@@ -998,24 +998,6 @@ export function isForbidden(abilities: readonly Ability[], cardId: string): bool
 }
 
 /**
- * How many dice this character throws at a crossing.
- *
- * Rusałka's whole point is that she halves the odds — one die against your
- * Magia instead of two — so this is asked rather than assumed wherever the
- * Trzęsawiska are rolled for.
- */
-export function crossingDice(
-  abilities: readonly Ability[],
-  obstacle: string,
-  fallback: number,
-): number {
-  const aid = abilities.find(
-    (ability) => ability.kind === "przeprawa-kostki" && ability.obstacle === obstacle,
-  );
-  return aid && aid.kind === "przeprawa-kostki" ? aid.dice : fallback;
-}
-
-/**
  * How many Przedmioty may be carried, over rule 5.4's four.
  *
  * The bonuses add up: nothing in any of these texts says a character may not
