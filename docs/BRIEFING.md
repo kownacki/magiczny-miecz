@@ -58,6 +58,14 @@ it**, then spend the brief's words on the part that is actually specific.
 - **Do not widen the task.** If the change starts to sprawl into a refactor
   nobody asked for, stop and report where the edge was.
 
+## This briefing is new — tell me how it read
+
+**Temporary, 2026-09-06.** This file, `WHERE.md`, `npm run ask` and the
+instruction to verify by playing were all written in one session and none has
+been used by a fresh one. In your report, say which you used, which you forgot
+existed, and anything you went looking for and could not find. A tool nobody
+reaches for is worse than no tool, because it looks like coverage.
+
 ## Where to look before asking
 
 - **[WHERE.md](WHERE.md)** — to add an action, a Command, a console verb, a

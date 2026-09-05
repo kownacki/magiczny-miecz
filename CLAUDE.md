@@ -13,6 +13,33 @@ columns it needed dropped from the database. If you find prose describing it,
 that prose is stale; if you find yourself reaching for "what happens in
 companion mode", the answer is that there is no such thing.
 
+## The tooling below is new and unproven — say how it went
+
+**Temporary, added 2026-09-06.** Most of what this file points at for *working*
+rather than for *rules* was built in a single session, on one session's
+friction, and no fresh session has used any of it yet: `docs/WHERE.md`,
+`docs/BRIEFING.md`, `npm run ask` (including `ask where`), the `mm` transcripts,
+and the instruction to check mechanics by playing rather than in a browser.
+
+Some of it will be exactly right and some will be noise nobody reads. There is
+a cautionary example in the repo already: `mm` was built months ago, documented,
+genuinely the fastest way to check anything — and ignored, including by the
+session that then wrote this paragraph, because it was not in the path anybody
+walked.
+
+**So report back, in your closing summary, without being asked:**
+
+- which of these you actually reached for, and which you forgot existed;
+- anything you looked for and could not find, or found by grepping instead;
+- anywhere a doc told you something that was not true.
+
+That last one matters most: this repo now has tests that check its own numbers
+(`docCounts.test.ts`) and its own reachability (`reachable.test.ts`) because
+prose here has gone stale twice in a week.
+
+**Delete this section** once a few sessions have reported and the tooling has
+settled — it is scaffolding, and it costs tokens on every load.
+
 ## Read these first
 
 - **[docs/WHERE.md](docs/WHERE.md)** — to add an action, a Command, a console verb,
