@@ -113,25 +113,29 @@ their scans are deliberately untouched.
       variant — none has one yet. See **Wariant: ekwipunek slotowy** in
       [COVERAGE.md](COVERAGE.md).
 
-### Class II and class III as two separate battles (17.5, 18.2)
+### ~~Class II and class III as two separate battles (17.5, 18.2)~~ — checked 2026-09-05, already carried
 
-The Demon getting its own class (`CARD_CLASS.demon`) made explicit something
-the engine has never been asked about. 17.5:
+This section said the whole of the task was "whether `fight.ts` sums a pack at
+all, and whether it would now split one correctly along the class line", and
+that nobody had read it against 17.5 since the classes became two. Read now,
+and both halves were already there:
 
-> Więcej niż jeden przeciwnik. Jeżeli Postać jest atakowana przez więcej niż
-> jedną istotę, **Miecze tych istot są sumowane**, a do uzyskanego rezultatu
-> dodawany jest wynik rzutu kostką.
+- **It sums.** `beginFight` builds `foes` from every named card and
+  `attackAsOne` returns one opponent with the totals combined — „Miecze tych
+  istot są sumowane" — with one roll against the sum. `foeBonusAt` is added
+  once per creature rather than once to the sum, because the Kamienny Las says
+  „każdy Wróg".
+- **It splits.** `attackAsOne` returns null the moment two `CombatKind`s are in
+  the pack, and `beginFight` refuses with „Zwykli i magiczni Wrogowie nie
+  atakują razem — rozpatrzcie osobno (18.1)". So a mixed Obszar is two fights,
+  by refusal rather than by silently flattening or auto-splitting.
+- **In the right order.** `resolutionOrder` sorts the drawn stack by
+  `CARD_CLASS`, and `afterDraw` re-runs it every time a card joins, so class II
+  is resolved before class III without anyone having to remember 15.2.
 
-and 18.2 resolves magical combat "w identyczny sposób". So a Wilk and a
-Wilkołak on one Obszar are **one** fight at Miecz 12, not two fights in some
-order — and because Miecz and Magia cannot be added, an Obszar holding both
-kinds gives exactly **two** fights: the summed II first, then the summed III.
-
-What was NOT checked, and is the whole of the task: whether `fight.ts` sums a
-pack at all, and whether it would now split one correctly along the class line.
-`fought` already lists a pack's members and `trophiesFrom` walks them, so
-something knows about packs; nobody has read it against 17.5 since the classes
-were two.
+Pinned already, in three places: `fight.test.ts` for the refusal,
+`combat.test.ts` for `attackAsOne`, and `resolutionOrder` in six test files.
+Nothing to build; the section was open only because nobody had gone and looked.
 
 ### One house rule journals itself, the other does not
 
@@ -229,11 +233,13 @@ is a **Status** (CONTEXT.md). The other three decisions, and the order:
          This also answers the question crossings deferred: a Postać's
          printed abilities stay abilities. There was never a second spelling
          of them to retire.
-- [ ] **A Zaklęcie's script is its truth.** Every one of the 27 gets a
-      `stosuje` — an Effect for a one-off, a Status with an `Ends` for a
-      lasting one — and `describeEffect` renders the sentence, as for every
-      other card. `timing` and `target` stay. What cannot be expressed stays
-      in MANUAL. In batches of about nine; the four partial ones last.
+- [x] **A Zaklęcie's script is its truth.** Done — verified 2026-09-05 by
+      counting rather than by memory: all 27 entries in `SPELLS` carry a
+      `stosuje`, `applies` or `reactive`, and the regex reader of card prose
+      (`cardEffects.ts`) is deleted. Two are partial and say which half in
+      `MANUAL` — KRĄG PŁOMIENI's dispel and OCALONY's two thirds. This box
+      stayed unticked after the work landed, which is its own small lesson:
+      a checklist item is only as good as somebody closing it.
 
 ### Music
 
