@@ -1,6 +1,7 @@
 /** What a character is carrying: picking it up (12.1, 16.6, 21.1), putting it down (5.5, 6.4, 9.4), and the two test shortcuts that conjure a card. Where it is worn is ./wearing. */
 
 import items from "@/data/items.json";
+import { refuseIfParked } from "@/lib/engine/disabled";
 import { CARD_CLASS_LABEL } from "@/data/types";
 import type { CardClass, EventCard, Item, Nature } from "@/data/types";
 import { forbiddenNatures } from "@/lib/engine/abilityText";
@@ -1401,6 +1402,9 @@ export function placeCard(
   snapshot: Snapshot,
   command: { seatId: string; cardId: string; target: FieldId | null },
 ): Outcome<FieldId> {
+  // Out of the game entirely — not in a pile, and not conjurable either.
+  refuseIfParked(command.cardId);
+
   const seat = snapshot.seats.find((s) => s.id === command.seatId);
   if (!seat) throw new Error("Nieznane miejsce.");
 
@@ -1505,6 +1509,10 @@ export function grantCard(
   snapshot: Snapshot,
   command: { seatId: string; cardId: string },
 ): Outcome<void> {
+  // The one thing this shortcut does not step round. Everything else it
+  // skips is a rule; a parked Karta is not in the box at all.
+  refuseIfParked(command.cardId);
+
   const { seatId, cardId } = command;
 
   /**

@@ -48,12 +48,17 @@ describe("meeting or exploring, not both (13.2)", () => {
     expect(hasExplored(onField({ resolved: ["karczma"] }))).toBe(true);
   });
 
-  it("refuses an attack on an Obszar already explored", () => {
+  /**
+   * `attackSeat` refuses outright while Postać przeciw Postaci is parked
+   * (`PVP_PARKED`, `src/lib/engine/disabled.ts`), so there is no attack left
+   * for 13.2 to allow or refuse. Runs again once that flips back to `false`.
+   */
+  it.skip("refuses an attack on an Obszar already explored", () => {
     const explored = onField({ drawn: [{ cardId: "mgla", cardClass: "encounter" }] as never });
     expect(() => attackSeat(explored, { targetSeatId: "seat-b" })).toThrow(/13\.2/);
   });
 
-  it("allows the attack when nothing has been explored", () => {
+  it.skip("allows the attack when nothing has been explored", () => {
     expect(() => attackSeat(onField(), { targetSeatId: "seat-b" })).not.toThrow();
   });
 

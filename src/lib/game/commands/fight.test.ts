@@ -1473,7 +1473,13 @@ describe("poprawianie sumy Postaci", () => {
  * Two characters.
  * ----------------------------------------------------------------------- */
 
-describe("pojedynek (13.1, 13.3, 17.7)", () => {
+/**
+ * Postać przeciw Postaci is parked (`PVP_PARKED`, `src/lib/engine/disabled.ts`)
+ * — `attackSeat` refuses outright, first thing, before any of these scenarios
+ * get to run. Nothing here is wrong; there is simply no duel to open. Flip
+ * the boolean back to `false` and this block runs again with no other change.
+ */
+describe.skip("pojedynek (13.1, 13.3, 17.7)", () => {
   const table = (over: { field?: string; state?: TurnPhase } = {}) =>
     aTable({
       game: { active_seat: 0, turn_state: over.state ?? pole({ drawn: [] }) },
@@ -1591,6 +1597,22 @@ describe("pojedynek (13.1, 13.3, 17.7)", () => {
       attackSeat(table({ field: "wejscie-na-most-a" }), { targetSeatId: "seat-b" }),
     ).not.toThrow();
   });
+});
+
+/**
+ * The parking above is real behaviour and needs its own coverage, not just an
+ * absence of the tests it silenced — otherwise a slip that quietly deleted
+ * `refuseIfPvpParked()`'s call site would leave the suite green.
+ */
+it("refuses every duel while Postać przeciw Postaci is parked (PVP_PARKED)", () => {
+  const table = aTable({
+    game: { active_seat: 0, turn_state: pole({ drawn: [] }) },
+    seats: [
+      aSeat({ id: "seat-a", seat_index: 0, sword_own: 3 }),
+      aSeat({ id: "seat-b", seat_index: 1, sword_own: 2 }),
+    ],
+  });
+  expect(() => attackSeat(table, { targetSeatId: "seat-b" })).toThrow(/niedostępne/);
 });
 
 /* --------------------------------------------------------------------------

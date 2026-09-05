@@ -69,11 +69,14 @@ their scans are deliberately untouched.
         `card-destroyed`, cited to nothing: it is the Karta's own text, the
         way `lost-card` already is, and reads „giną" rather than „traci"
         because nothing here was ever held.
-      - **Turniej Rycerski** — needs a decision the script vocabulary lacks:
-        „wyzwać każdą Postać" is a choice among however many Postacie are at
-        the table now, and `wybor` is a fixed list re-walked by index. `Target`
-        has `inna-postac`, but `seatsTargeted` answers null for it and every op
-        punts it to manual. A dynamic choice shape is a design, not a brief.
+      - ~~**Turniej Rycerski**~~ — **parked 2026-09-05 with the rest of Postać
+        przeciw Postaci**, so the dynamic-choice design it was waiting on is
+        not needed yet. It is out of the deck entirely; see "Postać przeciw
+        Postaci" below. When duels come back, the design problem comes back
+        with them: „wyzwać każdą Postać" is a choice among however many
+        Postacie are at the table now, and `wybor` is a fixed list re-walked
+        by index — `Target` has `inna-postac`, but `seatsTargeted` answers
+        null for it and every op punts it to manual.
       - ~~**Wampir**~~ — built 2026-09-04 on the card holder: his growth is a
         `points` status on his own row, read before the dice.
       - **Tajemna Sakwa** — blocked. "W Sakwie możesz umieścić 1 Przedmiot" is
@@ -101,12 +104,13 @@ their scans are deliberately untouched.
       fruits — is built. It went where the note predicted, into one piece of
       vocabulary rather than five special cases: a `Modifier` with an `Ends`,
       kept in `seat_effects`. `{ kind: "turns", turns: 1 }` is exactly it.
-- [ ] **17.9's spoils, in the browser.** The engine and the console take them
-      — see LANDED.md. A won duel is the one fight that does not settle itself:
-      `fight` says who won and `spoils` takes it. The console asks; the browser
-      does not yet, and that is all that is left — the press exists
-      (`fight-done`) and the route reads `spoils` / `spoilsHoldingId`, so it is
-      a picker on a button that is already there.
+- [ ] ~~**17.9's spoils, in the browser.**~~ **Parked 2026-09-05 with duels**
+      (`PVP_PARKED`), because a won *duel* is the only fight that does not
+      settle itself — beating a Wróg settles on its own and always did. The
+      engine and the console still take them; when duels come back this is
+      what is left, and it is small: the press exists (`fight-done`) and the
+      route reads `spoils` / `spoilsHoldingId`, so it is a picker on a button
+      that is already there.
 - [ ] **Nature-dependent cards** — the seat's Nature is known, so these are
       resolvable once Kat's setup choice is handled.
 - [ ] **Two weapons at once**, for a character with the ability in the slotowy
@@ -270,6 +274,58 @@ LANDED.md for what is built (`src/lib/music/`, `/music`).
       the routes, and that is the part worth keeping.
 
 ## Parked
+
+### Postać przeciw Postaci — parked 2026-09-05 (`PVP_PARKED`)
+
+**The feature is coming; it is not built.** `PVP_PARKED` in
+`src/lib/engine/disabled.ts` is a `const true` in the same shape as
+`COMPANION_PARKED`: nothing is deleted, and flipping it to false brings duels
+back with no other change.
+
+**What is off.** 17.6-10 (resolving a fight between Postacie, the escape into
+it, the spoils, the draw), 18.1b (a Charakterystyka's magical attack on
+another Postać), and 19.1-2's escape *from* a Postać. `attackSeat` is the one
+door and it refuses first, before any more specific refusal can fire.
+
+**What is untouched**, because 13.3 has two branches and only the first is a
+fight. Meeting a Postać to use an ability on her is unaffected — the Wiedźma's
+urok, the Spryciarz's shilling, the Awanturnik's and Quark's „zamiast
+atakować", the Błędny Rycerz taking a Krzyżowiec — though "unaffected" is a
+low bar here, since none of those five is wired as a command yet either; they
+are the table's before and after this. So does every Zaklęcie
+spoken at another player, hostile ones included: the Krąg Płomieni, Szaleństwo,
+Władca Czarów, Siedem Wichrów, Powiew Śmierci — which says outright „nie
+trzeba toczyć walki".
+
+**What went with it.**
+
+- One Karta, out of the deck entirely: **TURNIEJ RYCERSKI**, whose whole text
+  is „możesz wyzwać na pojedynek każdą Postać".
+- Nine printed clauses on seven Kartas Postaci, dimmed rather than hidden —
+  Barbarzyńca, Demon, Kat (two), Łotr (two), Olbrzym, Rycerz Ciemności,
+  Zdobywca. All 27 Postacie stay pickable; the Kat and the Łotr lose two of
+  their four and nobody loses everything. The Rycerz Ciemności keeps
+  „atakując możesz wybrać formę walki", which is 18.1b's own permission and is
+  how he attacks a *Wróg* with Magia.
+- The **DOBRE BÓSTWO** stays in the deck but stops being able to convict, and
+  now says so in `MANUAL`. Its trigger has two halves and the app can reach
+  neither: `attackSeat` wrote `how: "atak"` and is parked, and while
+  `how: "zdolnosc"` is modelled and rendered, **no command sets it** — none of
+  the five Charakterystyki that meet a Postać without fighting her is wired as
+  a command yet. Left alone it would have acquitted everybody silently, which
+  is the app deciding a judgement rather than handing it back. Worth knowing
+  before flipping `PVP_PARKED`: that note comes off the moment either half
+  becomes reachable.
+
+**The convention this established**, and the reason it is written down here
+rather than only in the card's own note: a card that the app cannot run is
+*parked*, not half-carried. It is absent from every pile, refused at every
+console door that could conjure it, and shown in the Księga Tolimana dimmed
+and struck through with one red word — „Niedostępne" — and no explanation. The
+reason lives in the code and in this file, never on screen. That is a
+different thing from `coverage.ts`'s `MANUAL`, which is for a card that **is**
+in the deck and will be drawn, with one clause the table applies itself. Two
+lists, two meanings, and neither should grow into the other.
 
 **Companion mode** (`COMPANION_PARKED`) is the only thing left, and this work
 went through it. `no_device` is gone: a chair the host filled in by hand is now

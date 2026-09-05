@@ -82,6 +82,25 @@ const MANUAL: Readonly<Partial<Record<CardId, string>>> = {
   wierzchowiec:
     "Twoi Przyjaciele poruszają się bez tego dodatku — jeśli zostawiłeś ich w tyle, w następnej turze możesz po nich wrócić zamiast zwykłego ruchu. Aplikacja nie trzyma dla Przyjaciela osobnej pozycji na planszy, więc zróbcie to sami.",
 
+  /**
+   * The DOBRE BÓSTWO, from 2026-09-05, and only while duels are parked.
+   *
+   * „Jeśli podczas tej rozgrywki zaatakowałeś inną Postać lub użyłeś swoich
+   * zdolności na jej niekorzyść" has two triggers and the app can now reach
+   * neither. `attackSeat` wrote `how: "atak"` and is parked (`PVP_PARKED`);
+   * `how: "zdolnosc"` is modelled and read by `abilityText`, but no command
+   * sets it, because none of the five Charakterystyki that meet a Postać
+   * without fighting her (AWANTURNIK, QUARK, WIEDŹMA, SPRYCIARZ, BŁĘDNY
+   * RYCERZ) is wired as a command yet.
+   *
+   * So the Karta stays in the deck and works — it just acquits everybody,
+   * which is the app quietly deciding a judgement rather than passing it back.
+   * This note is what stops that being silent. It goes when either trigger
+   * becomes reachable, and the first one to do so is `PVP_PARKED` flipping.
+   */
+  "dobre-bostwo":
+    "Bóstwo osądza sprawiedliwie tylko wtedy, gdy pamiętacie sami: aplikacja nie wie, czy ktoś zaatakował inną Postać albo użył przeciw niej swoich zdolności — rozstrzygnijcie to przy stole.",
+
   // --- friends --------------------------------------------------------------
   // The ALCHEMIK was here for "zamiana jest nieodwracalna", which is not
   // something the table has to do — `sellHolding` deletes the holding and

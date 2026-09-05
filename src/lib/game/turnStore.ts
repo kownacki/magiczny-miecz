@@ -8,6 +8,7 @@ import {
   type FieldId,
 } from "@/lib/engine/board";
 import { dealtInto } from "@/lib/engine/turn";
+import { refuseIfParked } from "@/lib/engine/disabled";
 import { resolutionOrder } from "@/lib/engine/state";
 import type { CardClass, EventCard } from "@/data/types";
 import { combatValueOf } from "@/lib/engine/cards";
@@ -402,6 +403,8 @@ export async function stageCards(
   const cards = cardIds.map((cardId) => {
     const card = EVENTS.find((one) => one.id === cardId);
     if (!card) throw new Error(`Nieznana karta: ${cardId}`);
+    // Named by hand, so it never went past a pile that could have excluded it.
+    refuseIfParked(cardId);
     return card;
   });
   if (cards.length === 0) throw new Error("Nie podano żadnej karty.");

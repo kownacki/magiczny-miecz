@@ -19,6 +19,13 @@ A card-by-card equivalent of this table is enforced in code rather than written
 down: see `src/lib/engine/coverage.ts`, which puts the same three states on
 screen next to every drawn card.
 
+**A fourth state, ⏸.** A rule marked so is *built and unreachable*, because
+the feature it belongs to is parked — today that is Postać przeciw Postaci
+(`PVP_PARKED`, see TASKS.md). It is not a gap and not a half: the code is
+there and one boolean turns it back on. Distinguished from ◐ on purpose, so
+that "what is missing" and "what is switched off" cannot be read as the same
+number.
+
 **Where it stands.** 127 rules ✅, 9 ◐, none ❌. Of the 138 Karty Zdarzeń, 128
 are `pelne`, 4 `czesciowe` and 6 `brak` — all 17 Nieznajomi are done; all 27
 Zaklęcia are carried out, 24 of them fully; and all 57 Obszary do what is
@@ -277,11 +284,11 @@ loss on death are the same either way, so nothing above this line changes.
 | 17.4 | "na tym walka się kończy" — one roll per enemy per turn | ✅ | `endFight` records `fought`; `beginFight` refuses a rematch |
 | 17.5 | several enemies at once add their Miecze together | ✅ | `beginFight` takes a list; `combinedEnemyTotal` |
 | 17.4/17.5 | one creature that is several fights — the Trójgłowy Smok's three heads, regrown on a loss | ✅ | the `loop` frame (docs/STACK.md law 3): `roundsOf` says how many, `beginFight` opens the count under the first head, `resolveFight` puts the next head up or closes the attempt. A head pays out nothing — no trophy, no errand, no Excalibur — and the pack is refused, because 17.5 offers one comparison and the card asks for three |
-| 17.6 | the attacked character may try to slip away | ✅ | `escape` resolves the fleeing seat as the duel's `opponentSeat`, and refuses the attacker |
-| 17.7 | **both** characters may cast before the roll | ✅ | `claimFloor` gives any seat holding a castable spell an exclusive claim, and `fightRoll` refuses the dice while it stands — duels included |
-| 17.8 | attacker's Miecz worked out first | ✅ | |
-| 17.9 | the winner takes a Życie, an item, or a Sztuka Złota | ◐ | **all three happen, and the console asks.** `resolveFight` takes a `Spoils`; the Przedmiot changes hands rather than being destroyed (so 21.2's stock holds) and arrives through `slotOnArrival`; taking it or the Złoto skips the blow entirely — no osłona, no Giermek dying in anybody's place, no Excalibur. A won duel is the one fight that does not settle itself: `fight` says who won and `spoils` takes it, bare for the Życie, `zloto`, or a Przedmiot by name. ◐ only because **the browser does not ask yet** — the press exists (`fight-done`) and the route reads `spoils` / `spoilsHoldingId`, so it is a picker on a button that is already there |
-| 17.10 | a draw costs nobody anything | ✅ | |
+| 17.6 | the attacked character may try to slip away | ⏸ | **parked** (`PVP_PARKED`) — built and unreachable: `escape` resolves the fleeing seat as the duel's `opponentSeat` and refuses the attacker, but no duel can start |
+| 17.7 | **both** characters may cast before the roll | ⏸ | **parked** for duels; the same machinery still governs a fight against a Wróg — `claimFloor` gives any seat holding a castable spell an exclusive claim, and `fightRoll` refuses the dice while it stands — duels included |
+| 17.8 | attacker's Miecz worked out first | ⏸ | **parked** (`PVP_PARKED`) |
+| 17.9 | the winner takes a Życie, an item, or a Sztuka Złota | ⏸ | **parked** (`PVP_PARKED`). Beating a Wróg settles itself and is unaffected; it is the *duel's* spoils that had to be asked for, and there is no duel. Built and unreachable: `resolveFight` takes a `Spoils`, the Przedmiot changes hands rather than being destroyed (so 21.2's stock holds) and arrives through `slotOnArrival`, and the console asks. The browser picker this row used to call for is parked with it |
+| 17.10 | a draw costs nobody anything | ⏸ | **parked** for duels; a remis against a Wróg is unaffected |
 
 ## 18. Walka magiczna
 

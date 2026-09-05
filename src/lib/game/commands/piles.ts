@@ -1,6 +1,7 @@
 /** Putting cards back where they came from — "stos zużytych Kart Zdarzeń", and the spells' own (9.5, 9.6, 4.4, 1.4, 6.4, 16.6, 20.2). */
 
 import { discardTo, returningRef, stackOnTop } from "@/lib/engine/deck";
+import { refuseIfParked } from "@/lib/engine/disabled";
 import { fromTheShop } from "@/lib/engine/stock";
 import { BY_REF, EVENT_COPIES, SPELL_BY_REF, SPELL_COPIES, decksOf } from "../decks";
 import type { Changeset, Outcome, Snapshot } from "../change";
@@ -155,6 +156,9 @@ export function stackForDraw(
   snapshot: Snapshot,
   command: { seatId: string; cardId: string },
 ): Outcome<"events" | "spells"> {
+  // Nothing may be stacked for a draw that no pile contains.
+  refuseIfParked(command.cardId);
+
   const { seatId, cardId } = command;
   const pile = EVENT_COPIES.has(cardId) ? "events" : SPELL_COPIES.has(cardId) ? "spells" : null;
   if (!pile) throw new Error("Ta Karta nie jest w żadnej talii.");

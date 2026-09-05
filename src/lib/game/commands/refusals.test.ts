@@ -164,11 +164,16 @@ describe("a Postać Zamieniona w Kamień", () => {
     expect(apply(at, writes).seats.find((one) => one.id === "seat-b")?.eliminated).toBe(false);
   });
 
-  it("cannot be attacked (17.6, 20.5)", () => {
+  /**
+   * `attackSeat` refuses outright while Postać przeciw Postaci is parked
+   * (`PVP_PARKED`, `src/lib/engine/disabled.ts`) — the 20.5 refusal these two
+   * are about never gets a chance to run. Back once that flips to `false`.
+   */
+  it.skip("cannot be attacked (17.6, 20.5)", () => {
     expect(() => attackSeat(table(), { targetSeatId: "seat-b" })).toThrow(/20\.5/);
   });
 
-  it("can be attacked again once it is flesh", () => {
+  it.skip("can be attacked again once it is flesh", () => {
     expect(() => attackSeat(table({ round: 4 }), { targetSeatId: "seat-b" })).not.toThrow();
   });
 
@@ -276,7 +281,12 @@ describe("a Postać in the Krąg Płomieni", () => {
       ],
     });
 
-  it("cannot be attacked", () => {
+  /**
+   * `attackSeat` refuses outright while Postać przeciw Postaci is parked
+   * (`PVP_PARKED`, `src/lib/engine/disabled.ts`), before it ever reaches the
+   * Krąg Płomieni's own refusal. Back once that flips to `false`.
+   */
+  it.skip("cannot be attacked", () => {
     expect(() => attackSeat(inFlames(), { targetSeatId: "seat-b" })).toThrow(
       /nie można zaatakować/,
     );

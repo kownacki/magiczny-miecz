@@ -5,6 +5,7 @@ import spellsData from "@/data/spells.json";
 import type { EventCard, Spell } from "@/data/types";
 import { buildDeck, cardRef, shuffleWith, type DeckState, type Shuffle } from "@/lib/engine/deck";
 import { streamFor } from "@/lib/engine/prng";
+import { parkedCard } from "@/lib/engine/disabled";
 
 export const EVENTS = events as EventCard[];
 export const SPELLS = spellsData as Spell[];
@@ -84,8 +85,19 @@ export interface Decks {
  */
 export function freshDecks(order: Shuffle = shuffle): Decks {
   return {
-    events: buildDeck(EVENTS.map((card) => cardRef(card.source)), order),
-    spells: buildDeck(SPELLS.map((card) => cardRef(card.source)), order),
+    // A parked Karta is not shuffled in, which is the whole of what „out of
+    // the game" means for a card: it cannot be drawn because it is not there.
+    // Done here rather than at the draw, because a pile that contains a card
+    // nothing may deal is a pile whose count lies — and 21.1's „potasuj
+    // wszystkie Karty Zdarzeń" is what this function is.
+    events: buildDeck(
+      EVENTS.filter((card) => !parkedCard(card.id)).map((card) => cardRef(card.source)),
+      order,
+    ),
+    spells: buildDeck(
+      SPELLS.filter((card) => !parkedCard(card.id)).map((card) => cardRef(card.source)),
+      order,
+    ),
   };
 }
 

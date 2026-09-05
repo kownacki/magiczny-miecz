@@ -1,4 +1,4 @@
-import { only, top } from "@/lib/engine/stack";
+import { top } from "@/lib/engine/stack";
 import { describe, expect, it } from "vitest";
 import { apply } from "../change";
 import { aSeat, aTable, ports } from "../fixture";
@@ -6,8 +6,7 @@ import { scriptedRandom } from "@/lib/engine/ports";
 import { buildDeck } from "@/lib/engine/deck";
 import { resolveDrawnCard } from "./resolving";
 import { resume } from "./frames";
-import { attackSeat } from "./fight";
-import { storedStatuses } from "./turn";
+import { addEffect, storedStatuses } from "./turn";
 import { hasAttacked, movementCap, stillStone } from "@/lib/engine/status";
 import { asSeatCharacter } from "@/lib/engine/characters";
 import { SPELLS as SPELL_CARDS } from "../decks";
@@ -123,22 +122,36 @@ describe("the Dobre Bóstwo, which judges what you did", () => {
     expect(said).toMatch(/nic się nie dzieje/);
   });
 
+  /**
+   * The mark `attackSeat` writes is one half of what this card asks about;
+   * "lub użyłeś swoich zdolności na jej niekorzyść" is the other, and that
+   * half is not parked — 13.3's other form of meeting (AWANTURNIK, QUARK,
+   * WIEDŹMA, SPRYCIARZ, BŁĘDNY RYCERZ all use an ability *instead of*
+   * attacking) has nothing to do with a duel. But none of the five is wired
+   * up as a runnable command yet (see the `attacker` Condition's note in
+   * `cardScript.ts`), so there is no ability to call here either. This writes
+   * the mark the way the first one that is built will: through `addEffect`,
+   * the generic door `attackSeat` itself calls rather than anything specific
+   * to a fight, with `how: "zdolnosc"` in place of "atak" — so the Bóstwo is
+   * exercised on its own, unparked branch rather than by borrowing the duel.
+   */
   const guilty = () => {
     const table = meeting("dobre-bostwo", 3);
-    const duelling = apply(table, {
-      game: {
-        turn_state: only({
-          phase: "field", fieldId: "wrzosowiska", from: null, draw: 0, drawn: [], resolved: [],
-        } as TurnPhase),
-      },
-    });
-    // Only the mark, not the fight the attack also opens.
-    return apply(table, {
-      effects: attackSeat(duelling, { targetSeatId: "seat-b" }).writes.effects,
-    });
+    return apply(
+      table,
+      addEffect(table, {
+        seatId: "seat-a",
+        effect: {
+          source: "13.3",
+          label: "Użył zdolności na niekorzyść innej Postaci",
+          modifier: { kind: "attacker", how: "zdolnosc", round: table.game.round },
+          ends: { kind: "dispelled" },
+        },
+      }),
+    );
   };
 
-  it("marks whoever raised a hand, at the moment of attacking", () => {
+  it("marks whoever used a zdolność against another Postać (13.3)", () => {
     expect(hasAttacked(storedStatuses(guilty(), "seat-a"))).toBe(true);
   });
 

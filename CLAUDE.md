@@ -221,6 +221,28 @@ anything.
 
 ## Settled — don't reopen
 
+- **Content the app cannot run yet is *parked*, never half-built.** The list is
+  `src/lib/engine/disabled.ts`: `PARKED_CARDS` for a whole Karta,
+  `PARKED_ABILITIES` for a printed clause on a Karta Postaci, and a feature
+  boolean beside them in the shape of `COMPANION_PARKED` — today `PVP_PARKED`,
+  for Postać przeciw Postaci. A parked card is **gone**: `freshDecks` never
+  shuffles it in, and every console door that could conjure one
+  (`placeCard`, `grantCard`, `stackForDraw`, `stageCards`) refuses through
+  `refuseIfParked`. It keeps its entry in the Księga Tolimana, dimmed and
+  struck through, and its popup says one red word — „Niedostępne" — and
+  nothing else. **No commentary, ever**: the reason lives in that file and in
+  docs/TASKS.md, where somebody choosing what to build next reads it, not in
+  front of a player mid-game.
+
+  This is **not** `coverage.ts`'s `MANUAL`, and the two must not grow into each
+  other. `MANUAL` means the Karta is in the deck, will be drawn, and has one
+  clause the table applies itself. Parked means the Karta is not in the box
+  this game. A card is in one list or the other, never both.
+
+  Nothing is deleted, and one boolean brings it back — the same promise
+  companion mode is parked under, for the same reason: a feature that comes
+  back is not a feature you rewrite.
+
 - **Base game only.** The five expansions are out of scope; their scans are
   deliberately untouched. Surveyed once, in docs/EXPANSIONS.md, so that a
   decision taken now is taken knowing what is coming — four of them add a board

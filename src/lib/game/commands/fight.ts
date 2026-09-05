@@ -1,6 +1,7 @@
 /** A fight from the moment it opens to the moment somebody walks away from it (17.3-17.7, 19). The Zaklęcia spoken into one are ./spells. */
 
 import { isFoeClass } from "@/data/types";
+import { refuseIfPvpParked } from "@/lib/engine/disabled";
 import type { SpellId } from "@/data/ids";
 import {
   canEscapeAt,
@@ -992,6 +993,10 @@ export function attackSeat(
   snapshot: Snapshot,
   command: { targetSeatId: string },
 ): Outcome<void> {
+  // Parked whole — see `PVP_PARKED`. First, so that nothing below it can
+  // report a more specific refusal about a fight that cannot happen at all.
+  refuseIfPvpParked();
+
   const attacker = activeSeat(snapshot);
   const target = snapshot.seats.find((s) => s.id === command.targetSeatId);
   if (!target) throw new Error("Nieznane miejsce.");
