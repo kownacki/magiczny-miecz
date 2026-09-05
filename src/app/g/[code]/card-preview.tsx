@@ -26,9 +26,10 @@ import { characterProfile, itemProfile } from "@/lib/engine/abilityText";
 import { CardFacts, hasFacts } from "./card-facts";
 import { numeralMeaning, numeralOf } from "@/lib/engine/cards";
 import type { Nature } from "@/data/types";
-import { CardMark, Corner, MARK_SIZE } from "./card-mark";
+import { CardMark, Corner, MARK_SIZE, ParkedWord } from "./card-mark";
 import { LAYER } from "./layers";
 import type { EqMode } from "@/lib/engine/slots";
+import { parkedCard } from "@/lib/engine/disabled";
 import { CardBack, CardTile, type TileCard } from "./card-tile";
 import { asCharacterId, startingKit } from "@/lib/engine/characters";
 import charactersData from "@/data/characters.json";
@@ -464,8 +465,10 @@ export function CardPreview({
   // be spoken, and what it is aimed at. Asked of the card id, which answers
   // for nothing else in the box.
   const spell = imageless ? null : spellFacts(card.cardId);
+  // Never true for a field or a Postać — see `CardDetail`'s own note.
+  const parked = imageless || card.character ? null : parkedCard(card.cardId);
   const anythingToSay =
-    !src || card.text || card.kindLabel || profile?.slotLabel || spell || hasFacts(profile);
+    !src || card.text || card.kindLabel || profile?.slotLabel || spell || hasFacts(profile) || parked;
 
   return createPortal(
     <div
@@ -659,11 +662,20 @@ export function CardPreview({
             </div>
           )}
 
+          {/* The one word, said instead of the printed text — a hover is a
+              preview of the Karta and the popup already carries the whole of
+              this; repeating it here in place of the prose is what keeps the
+              two from disagreeing about what a parked card says. */}
+          {parked && (
+            <p className="border-t border-edge/60 pt-2 text-[11px]">
+              <ParkedWord />
+            </p>
+          )}
           {/* The prose only when there is no picture of it.
               Beside the card, repeating its text is repeating what the reader is
               already looking at — and it pushed the formalised lines, which are
               what the app will actually DO, off the bottom of the panel. */}
-          {card.text && !src && (
+          {card.text && !src && !parked && (
             <p className="whitespace-pre-line border-t border-edge/60 pt-2 text-[11px] leading-relaxed text-muted">
               {card.text}
             </p>

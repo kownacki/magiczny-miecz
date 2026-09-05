@@ -13,6 +13,7 @@ import type { Nature, Region } from "@/data/types";
 import type { Character, EventCard, Item, Spell } from "@/data/types";
 import { CARD_CLASS_LABEL, isFoeClass, type CardClass } from "@/data/types";
 import { CardTile, cardKey, type TileCard } from "./card-tile";
+import { parkedCard } from "@/lib/engine/disabled";
 import { TileRow } from "./tile-row";
 import { Fold } from "./fold";
 import {
@@ -143,6 +144,7 @@ function shelfCards(shelf: Shelf): TileCard[] {
         cardId: character.id,
         name: character.name,
         text: character.abilities.join("\n\n"),
+        abilities: character.abilities,
         kindLabel: `Postać · Miecz ${character.miecz} · Magia ${character.magia}`,
         character: true,
       });
@@ -581,15 +583,25 @@ export function CardLibrary({
                   tiles keep their own 92 and sit centred in whatever they are
                   given. */}
               <TileRow columns={5} frame={false}>
-                {section.cards.map((card) => (
+                {section.cards.map((card) => {
+                  // Not hidden — a parked Karta keeps its entry on the shelf,
+                  // dimmed and crossed out where it lies, the same as any
+                  // other card that is done with (`StruckOut`'s own note).
+                  const parked = parkedCard(card.cardId) !== null;
+                  return (
                   <CardTile
                     key={card.cardId}
                     card={card}
                     eqMode={eqMode}
                     nature={nature}
+                    dimmed={parked}
+                    struck={parked}
                     onClick={() => onInspect(card)}
                   >
-                    {onGrant && card.holdable && (
+                    {/* Not for a parked Karta — the console door behind this
+                        button refuses one, and a button that always fails is
+                        worse than no button. */}
+                    {onGrant && card.holdable && !parked && (
                       <button
                         onClick={() => onGrant(card.cardId)}
                         className="text-[9px] text-ochre/80 underline transition hover:text-ochre"
@@ -598,7 +610,8 @@ export function CardLibrary({
                       </button>
                     )}
                   </CardTile>
-                ))}
+                  );
+                })}
               </TileRow>
             </Fold>
           ))}

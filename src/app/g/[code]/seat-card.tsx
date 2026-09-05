@@ -31,6 +31,8 @@ import { TrophySection } from "./trophy-section";
 import { PLACES_ON_THE_BODY, SlotPanel } from "./slot-panel";
 import { CHARACTERS, asNature, type Seat, wornBySlot } from "./table";
 import { characterForbiddenIn, forbiddenIn } from "@/lib/engine/holdings";
+import { parkedAbility } from "@/lib/engine/disabled";
+import { ParkedWord } from "./card-mark";
 import Image from "next/image";
 import { characterKind } from "@/lib/engine/polish";
 import { seatColour } from "@/lib/view/boardMap";
@@ -507,6 +509,7 @@ export function SeatCard({
                         cardId: character.id,
                         name: character.name,
                         text: character.abilities.join("\n\n"),
+                        abilities: character.abilities,
                         kindLabel: characterKind(character),
                         character: true,
                       })
@@ -732,9 +735,23 @@ export function SeatCard({
                 </ul>
               )}
               <ol className="mt-1 flex list-decimal flex-col gap-1 pl-4 text-[11px] leading-relaxed text-muted">
-                {character.abilities.map((ability, index) => (
-                  <li key={index}>{ability}</li>
-                ))}
+                {character.abilities.map((ability, index) => {
+                  // Parked, not deleted: the clause is still the Charakterystyka
+                  // printed on the Karta, and 8.2 is above the general rules
+                  // whether or not this build can run it (see `disabled.ts`).
+                  const off = parkedAbility(character.id, index);
+                  return (
+                    <li key={index} className={off ? "opacity-45" : undefined}>
+                      <span className={off ? "line-through" : undefined}>{ability}</span>
+                      {off && (
+                        <>
+                          {" "}
+                          <ParkedWord />
+                        </>
+                      )}
+                    </li>
+                  );
+                })}
               </ol>
             </Fold>
           )}

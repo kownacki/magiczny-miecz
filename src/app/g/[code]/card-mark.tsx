@@ -19,6 +19,7 @@
  */
 import { SLOT_LABEL, type Slot } from "@/lib/engine/slots";
 import { SLOT_ICON } from "@/lib/view/slotIcons";
+import { PARKED_SAID } from "@/lib/engine/disabled";
 
 /* --------------------------------------------------------------------------
  * Where a mark goes, and how big it is.
@@ -266,4 +267,17 @@ export function StruckOut() {
       <span className="absolute left-1/2 top-1/2 h-0.5 w-[200%] -translate-x-1/2 -translate-y-1/2 -rotate-45 bg-vermilion/70" />
     </span>
   );
+}
+
+/**
+ * The one word a parked Karta or a parked clause is allowed to say.
+ *
+ * `PARKED_SAID` and nothing beside it, in the colour nothing recoverable uses —
+ * the same vermilion `StruckOut` and a rejected slot already speak in, so "not
+ * in the game" reads as one idea whether it is a whole card, a clause of one,
+ * or the picture it sits under. There is deliberately no title and no wider
+ * text here: `disabled.ts` is where the reason lives, not the screen.
+ */
+export function ParkedWord() {
+  return <span className="font-medium text-vermilion">{PARKED_SAID}</span>;
 }

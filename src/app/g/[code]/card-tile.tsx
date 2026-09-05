@@ -14,13 +14,14 @@ import {
   faceFor,
 } from "@/lib/view/cardImages";
 import { useCardPreview } from "./card-preview";
-import { CardMark, Corner, MARK_SIZE, markText, StruckOut, WornMark } from "./card-mark";
+import { CardMark, Corner, MARK_SIZE, ParkedWord, markText, StruckOut, WornMark } from "./card-mark";
 import { LAYER } from "./layers";
 import { Overlay } from "./overlay";
 import { CloseButton } from "./chrome";
 import type { EqMode, Slot } from "@/lib/engine/slots";
 import type { Nature } from "@/data/types";
 import { manualNote, coverageOf, NOT_HANDLED } from "@/lib/engine/coverage";
+import { parkedAbility, parkedCard } from "@/lib/engine/disabled";
 import { numeralOf } from "@/lib/engine/cards";
 import { TileCaption } from "./tile-caption";
 
@@ -52,6 +53,16 @@ export interface TileCard {
    * registry hands back the wrong picture rather than none.
    */
   character?: boolean;
+  /**
+   * A Postać's own clauses, unjoined.
+   *
+   * `text` is these same strings run together for anything that only ever
+   * shows prose; this is kept apart so a card that carries one lets each
+   * clause answer `parkedAbility` for itself — a parked clause is dimmed and
+   * struck where it stands, not lost inside a paragraph that cannot mark part
+   * of itself.
+   */
+  abilities?: readonly string[];
   /** Could a hand contain this? Only Przedmioty, Przyjaciele and Zaklęcia can. */
   holdable?: boolean;
   /**
@@ -525,6 +536,9 @@ export function CardDetail({ card, onClose }: { card: TileCard; onClose: () => v
   // jej nie prowadzi" printed under it, which is not true of anything.
   const coverage = card.character ? "pelne" : coverageOf(card.cardId);
   const note = card.character ? null : manualNote(card.cardId);
+  // Never true for a Postać — `PARKED_CARDS` names cards off the decks, never
+  // a character, because losing one ability is not losing the Postać (8.2).
+  const parked = card.character ? null : parkedCard(card.cardId);
 
   return (
     <Overlay label={card.name} onDismiss={onClose} layer={LAYER.card}>
@@ -569,10 +583,37 @@ export function CardDetail({ card, onClose }: { card: TileCard; onClose: () => v
           {/* Printed text, and printed text cites nothing: no card in the box
               carries a rule number. The note below is the app's own writing and
               is the one thing here that could. */}
-          {card.text && (
-            <p className="whitespace-pre-line text-xs leading-relaxed text-muted">{card.text}</p>
+          {parked ? (
+            // The whole of it. `disabled.ts` says why; this says only that.
+            <p className="text-xs">
+              <ParkedWord />
+            </p>
+          ) : card.abilities ? (
+            // A Postać's clauses, one `<li>` each, so a parked one can be
+            // dimmed and struck without touching its neighbours — the same
+            // list the seat card folds under „Zdolności".
+            <ol className="flex list-decimal flex-col gap-1 pl-4 text-xs leading-relaxed text-muted">
+              {card.abilities.map((ability, index) => {
+                const off = parkedAbility(card.cardId, index);
+                return (
+                  <li key={index} className={off ? "opacity-45" : undefined}>
+                    <span className={off ? "line-through" : undefined}>{ability}</span>
+                    {off && (
+                      <>
+                        {" "}
+                        <ParkedWord />
+                      </>
+                    )}
+                  </li>
+                );
+              })}
+            </ol>
+          ) : (
+            card.text && (
+              <p className="whitespace-pre-line text-xs leading-relaxed text-muted">{card.text}</p>
+            )
           )}
-          {coverage !== "pelne" && (
+          {!parked && coverage !== "pelne" && (
             <p
               className={`mt-3 rounded border-l-2 px-2 py-1 text-[11px] leading-snug ${
                 coverage === "brak"
