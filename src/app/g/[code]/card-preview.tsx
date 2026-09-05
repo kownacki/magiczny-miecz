@@ -29,7 +29,7 @@ import type { Nature } from "@/data/types";
 import { CardMark, Corner, MARK_SIZE, ParkedWord } from "./card-mark";
 import { LAYER } from "./layers";
 import type { EqMode } from "@/lib/engine/slots";
-import { parkedCard } from "@/lib/engine/disabled";
+import { parkedAbility, parkedCard } from "@/lib/engine/disabled";
 import { CardBack, CardTile, type TileCard } from "./card-tile";
 import { asCharacterId, startingKit } from "@/lib/engine/characters";
 import charactersData from "@/data/characters.json";
@@ -463,6 +463,18 @@ export function CardPreview({
   // The Karta's own printed figures. Absent for the "Losowa" card, which is
   // nobody yet and has nothing to print.
   const starting = card.character ? (CHARACTERS.find((one) => one.id === card.cardId) ?? null) : null;
+  /**
+   * How many of this Postać's printed clauses the app is not carrying.
+   *
+   * The Karta itself is right there and says them all, so without this the
+   * panel is silent about the difference — and on a Postać with no starting
+   * kit, like the TROLL, silent about the Charakterystyka altogether. Counted
+   * off the printed array rather than off `LIVE_ABILITIES` directly, so it
+   * answers for a Postać nobody has listed at all.
+   */
+  const dimmed = starting
+    ? starting.abilities.filter((_, index) => parkedAbility(starting.id, index)).length
+    : 0;
   // What a Zaklęcie says about itself that is not printed on it: when it may
   // be spoken, and what it is aimed at. Asked of the card id, which answers
   // for nothing else in the box.
@@ -669,6 +681,21 @@ export function CardPreview({
 
               </p>
             </div>
+          )}
+
+          {/* What the app is not carrying, beside what it is.
+              Under the figures and the kit because that is the order the
+              question arrives in — what do I get, then what do I have to do
+              myself. One line for the whole Charakterystyka rather than a
+              marker per clause: the Karta beside it already strikes each one
+              through, and saying „niedostępne" four times says it less. */}
+          {dimmed > 0 && (
+            <p className="flex items-baseline gap-2 border-t border-edge/60 pt-2 text-[11px]">
+              <span className="text-muted">
+                {dimmed === 1 ? "Zdolność" : "Zdolności"} z Karty:
+              </span>
+              <ParkedWord />
+            </p>
           )}
 
           {/* The one word, said instead of the printed text — a hover is a
