@@ -390,6 +390,40 @@ Both are now built, and both are still worth reading before touching either.
   (I Spotkanie, II Wróg, V Przedmiot), used for resolution ordering in 15.2 —
   it is *not* a unique card id. Cards cannot be identified by number.
 
+### `turnStore.ts`'s wrappers stay — measured 2026-09-05
+
+A handoff proposed folding "the 43 thin `turnStore` wrappers" into the action
+tables' `run`, with the console calling the same table, so that adding an
+action would be one entry. Counted rather than eyeballed, the file is:
+
+| | |
+| --- | --- |
+| exported functions | 76 |
+| pure `change(gameId, cmdOn, …)` pass-throughs | **27**, not 43 |
+| — of those, shared by both surfaces | 13 |
+| — single-surface (5 route-only, 9 console-only) | 14 |
+| doing real work: shuffles, reads, orchestration | 49 |
+
+The 49 cannot be folded. The 13 could be, and that is the part that should not
+be: the console calls them with arguments of its own after resolving a name —
+`moveTo(gameId, offered.fieldId, true)` once it has worked out the bridge offer
+— so folding them makes the console adopt `from`'s body-shaped arguments and
+import the HTTP action table. Two front-ends converging on one function is what
+a seam looks like, not duplication. CLAUDE.md already gives this layer the job:
+`turnStore.ts` is one of "the thin edges that mint the tokens, hand in the
+shuffles and run the commands".
+
+And the premise was wrong anyway. Adding an action touches four files because
+there are four concerns — the body's shape, the command call, the table entry,
+the client's call — and no arrangement makes that one. What a reader needs is
+to know *which* four and in what order, which is [WHERE.md](WHERE.md)'s recipe
+1. That is the answer to this complaint, and it cost an hour rather than a
+refactor.
+
+Inlining just the 14 single-surface pass-throughs was considered and declined:
+it saves one file for five actions and cuts against CLAUDE.md's line about
+where commands are run.
+
 ### Findings worth keeping
 
 - **Ring-to-ring adjacency is not geometry, and `boardMap.ts` cannot answer it.**
