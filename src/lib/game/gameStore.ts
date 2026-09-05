@@ -26,9 +26,8 @@ import { setHandle } from "./handle";
  *
  * **Every implementation keeps the compare-and-swap.** An in-memory game has no
  * concurrent writers and does not need one — but the moment "offline" gets its
- * own cheaper rules there are two games to keep honest, and that is exactly why
- * companion mode is parked (`COMPANION_PARKED`, and the note in docs/TASKS.md).
- * One contract, proved once, in `gameStore.test.ts`.
+ * own cheaper rules there are two games to keep honest. One contract, proved
+ * once, in `gameStore.test.ts`.
  */
 export interface GameStore {
   /**

@@ -21,7 +21,7 @@ afterEach(() => resetStore());
 /** A table opened, a Postać chosen, the game started. Everything shuffled. */
 async function dealt(seed: string) {
   const tables = emptyTables();
-  const { game } = await createGame("Michał", "simulation", "slots", null, memoryHandle(tables));
+  const { game } = await createGame("Michał", "slots", null, memoryHandle(tables));
   (tables.games[0] as Record<string, unknown>).seed = seed;
 
   const store = memoryStore(tables);

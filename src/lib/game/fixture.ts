@@ -108,14 +108,12 @@ export function aTable(over: TableOver = {}): Snapshot {
   const game: GameRow & { turn_state: TurnState } = {
     id: "game-1",
     join_code: "ABCD",
-    mode: "simulation",
     eq_mode: "classic",
     // The printed rule, not the database's default. A fixture that quietly
     // moved every trophy test onto the variant would be testing the variant
     // and saying it tested 1.4. Tests for `punkty` pass it explicitly.
     trophy_mode: "cards",
     endless_stock: false,
-    die_source: "app",
     status: "playing",
     active_seat: 0,
     round: 3,

@@ -89,9 +89,8 @@ export function seatState(seat: LobbySeat): SeatState {
 /**
  * How a seat is named where a sentence starts, or on its own card.
  *
- * A seat can be nameless: the host seats somebody by hand in companion mode
- * without typing one, and a table where that shows as an empty slot is a table
- * nobody can be asked about.
+ * A seat can be nameless — a chair whose player has not typed one — and a
+ * table where that shows as an empty slot is a table nobody can be asked about.
  */
 export function seatName(seat: LobbySeat): string {
   return seat.playerName ?? `Miejsce ${seat.seatIndex + 1}`;
@@ -141,28 +140,18 @@ export interface Aiming {
   mySeatIndex: number | null;
   /** `mayAdminister`. */
   canAdminister: boolean;
-  mode: string;
 }
 
 /**
  * Whose character you may choose.
  *
- * Your own, always. The one exception is companion mode, where the host seats
- * people who have no device of their own and so has to choose for them.
- *
- * Nobody else's. An earlier version let any visitor aim at any slot, which
- * meant a stranger could hand you a Kat — and the character route still allows
- * exactly that, since it takes whatever `seatId` the body names from any seated
- * player. This is the only place that refusal is made.
+ * Your own, and nobody else's. An earlier version let any visitor aim at any
+ * slot, which meant a stranger could hand you a Kat — and the character route
+ * still allows exactly that, since it takes whatever `seatId` the body names
+ * from any seated player. This is the only place that refusal is made.
  */
 export function mayChooseFor(seat: LobbySeat, aiming: Aiming): boolean {
-  return (
-    seat.seatIndex === aiming.mySeatIndex ||
-    // A chair nobody is driving, which is what `noDevice` used to say and what
-    // the server now decides the same way — see `mayChooseFor` in
-    // `commands/character.ts`.
-    (aiming.canAdminister && aiming.mode === "companion" && !seat.driven)
-  );
+  return seat.seatIndex === aiming.mySeatIndex;
 }
 
 /** The seat this device is sitting in, or null for somebody merely watching. */
@@ -174,8 +163,8 @@ export function mySeat(seats: readonly LobbySeat[], mySeatIndex: number | null):
  * The seat the character strip is pointed at.
  *
  * Your own unless you have deliberately aimed somewhere you are allowed to aim.
- * A stale pick — a seat that left, or one the mode no longer lets you choose
- * for — falls back to your own rather than staying aimed at nobody.
+ * A stale pick — a seat that left — falls back to your own rather than staying
+ * aimed at nobody.
  */
 export function aimedAt(
   seats: readonly LobbySeat[],

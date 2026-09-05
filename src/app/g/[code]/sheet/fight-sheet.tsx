@@ -10,7 +10,7 @@ import { DrawSheet, type SheetChrome } from "./draw-sheet";
 import { FightControls } from "./fight-controls";
 import { SpellHand, type HeldSpell } from "../spell-hand";
 import type { TileCard } from "../card-tile";
-import type { OnAction, Simulated } from "../turn-controls";
+import type { OnAction } from "../turn-controls";
 import { cardImageUrl } from "@/lib/view/cardImages";
 import { castableNow, spellScript, type SpellTiming } from "@/lib/engine/spells";
 import type { Fight } from "@/lib/engine/turn";
@@ -33,7 +33,6 @@ export function FightSheet({
   who,
   chrome,
   fight,
-  simulated,
   busy,
   myEscape,
   onAction,
@@ -54,7 +53,6 @@ export function FightSheet({
   chrome: SheetChrome;
   /** The fight in progress, which is fought here rather than behind the sheet. */
   fight: Fight;
-  simulated: Simulated;
   busy: boolean;
   /**
    * Whether this device is the character being attacked in a duel (17.6).
@@ -147,7 +145,6 @@ export function FightSheet({
           {chrome.canAct ? (
             <FightControls
               fight={fight}
-              simulated={simulated}
               busy={busy}
               floorHeld={held !== null}
               // A duel's escape is the other player's (17.6) — except on the
@@ -166,32 +163,13 @@ export function FightSheet({
                     Zaklęciu Krąg Płomieni (19.1).
                   </p>
                   <div className="mt-2 flex flex-wrap gap-2">
-                    {simulated ? (
-                      <button
-                        disabled={busy}
-                        onClick={() => onAction({ action: "escape" })}
-                        className="rounded border border-edge px-3 py-1 text-xs text-ink transition hover:border-ochre disabled:opacity-50"
-                      >
-                        Spróbuj się wymknąć (19.1)
-                      </button>
-                    ) : (
-                      <>
-                        <button
-                          disabled={busy}
-                          onClick={() => onAction({ action: "escape", succeeded: true })}
-                          className="rounded border border-edge px-3 py-1 text-xs text-ink transition hover:border-ochre disabled:opacity-50"
-                        >
-                          Wymknąłem się (19.1)
-                        </button>
-                        <button
-                          disabled={busy}
-                          onClick={() => onAction({ action: "escape", succeeded: false })}
-                          className="rounded border border-edge px-3 py-1 text-xs text-muted transition hover:border-vermilion disabled:opacity-50"
-                        >
-                          Próba nieudana
-                        </button>
-                      </>
-                    )}
+                    <button
+                      disabled={busy}
+                      onClick={() => onAction({ action: "escape" })}
+                      className="rounded border border-edge px-3 py-1 text-xs text-ink transition hover:border-ochre disabled:opacity-50"
+                    >
+                      Spróbuj się wymknąć (19.1)
+                    </button>
                   </div>
                 </div>
               )}

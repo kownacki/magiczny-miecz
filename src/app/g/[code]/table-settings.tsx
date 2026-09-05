@@ -19,11 +19,6 @@ import type { EqMode } from "@/lib/engine/slots";
  * protecting are protected by the commands rather than by hiding the control —
  * the variant is refused once the game starts, and the finite pile is refused
  * once cards are on the board.
- *
- * The mode — whether there is a real board in the room — is deliberately not
- * here. It is the one answer that has to precede the table rather than the
- * game: it decides what the app *is* for this group, it is asked once at the
- * door, and while companion play is parked it is not a question at all.
  */
 export function TableSettings({
   eqMode,

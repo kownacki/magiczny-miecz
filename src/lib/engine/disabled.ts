@@ -41,8 +41,8 @@ export const PARKED_CARDS: Readonly<Partial<Record<CardId, Parked>>> = {
 /**
  * A Postać's own powers, parked whole — everything but the starting kit.
  *
- * Same shape and same promise as `PVP_PARKED` and `COMPANION_PARKED`: no code
- * is deleted and one flip brings them back. `abilitiesOfCharacter` is the only
+ * Same shape and same promise as `PVP_PARKED` below: no code is deleted and
+ * one flip brings them back. `abilitiesOfCharacter` is the only
  * door a character's typed abilities come through, so returning nothing from
  * it while this stands switches off all sixteen of them — the six field
  * safeties, the three escapes, the three roll modifiers, `bez-oplaty`,
@@ -141,9 +141,9 @@ export function refuseIfParked(cardId: string): void {
 /**
  * Postać przeciw Postaci, parked whole.
  *
- * The same shape `COMPANION_PARKED` uses in `game/modes.ts`, for the same
- * reason and with the same promise: nothing is deleted, and flipping this to
- * false brings the feature back. What it switches off is 17.6-10, 18.1b and
+ * The same shape `CHARACTER_POWERS_PARKED` uses above, for the same reason and
+ * with the same promise: nothing is deleted, and flipping this to false brings
+ * the feature back. What it switches off is 17.6-10, 18.1b and
  * 19.1-2's escape from a Postać — one attack door, so one refusal covers all
  * of them. 13.3's *other* branch is untouched: meeting a Postać to use an
  * ability on her (the Wiedźma's urok, the Spryciarz's shilling, the Błędny

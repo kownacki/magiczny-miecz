@@ -6,7 +6,6 @@ import {
   driverOf,
   otherSeats,
   pickingFor,
-  tableScreenHolder,
 } from "./table-view";
 import type { Seat } from "./table";
 import type { FieldCard, Person } from "./use-table";
@@ -54,11 +53,6 @@ describe("who is driving a chair", () => {
     expect(driverOf([person()], null)).toBeNull();
     expect(driverOf([person()], undefined)).toBeNull();
   });
-
-  it("names the host as holding the shared screen", () => {
-    expect(tableScreenHolder([person({ isHost: false }), person({ id: "u-b", name: "B", isHost: true })])).toBe("B");
-    expect(tableScreenHolder([person({ isHost: false })])).toBeNull();
-  });
 });
 
 describe("the other seats", () => {
@@ -76,33 +70,26 @@ describe("whose Postać is being chosen", () => {
   const empty = seat({ id: "seat-a", character_id: null });
 
   it("is your own seat while it is still empty", () => {
-    expect(pickingFor("auto", [empty], empty, false)?.id).toBe("seat-a");
-  });
-
-  it("is nobody once your own seat is filled and you are not hosting a companion table", () => {
-    const mine = seat({ id: "seat-a" });
-    expect(pickingFor("auto", [mine], mine, false)).toBeNull();
+    expect(pickingFor("auto", [empty], empty)?.id).toBe("seat-a");
   });
 
   /**
    * The bug this function was extracted with: it used to fall through to *any*
    * characterless seat, so opening a table could leave you aiming at somebody
-   * else's slot. A chair only counts when nobody is driving it either.
+   * else's slot.
    */
-  it("only offers a chair nobody is driving, and only to a companion host", () => {
+  it("is nobody once your own seat is filled", () => {
     const mine = seat({ id: "seat-a" });
-    const theirs = seat({ id: "seat-b", seat_index: 1, character_id: null, driver_id: "u-b" });
     const nobodys = seat({ id: "seat-c", seat_index: 2, character_id: null, driver_id: null });
-
-    expect(pickingFor("auto", [mine, theirs], mine, true)).toBeNull();
-    expect(pickingFor("auto", [mine, theirs, nobodys], mine, true)?.id).toBe("seat-c");
+    expect(pickingFor("auto", [mine], mine)).toBeNull();
+    expect(pickingFor("auto", [mine, nobodys], mine)).toBeNull();
   });
 
   it("takes a named seat as asked, whatever else is true", () => {
     const mine = seat({ id: "seat-a", character_id: null });
     const named = seat({ id: "seat-b", seat_index: 1 });
-    expect(pickingFor("seat-b", [mine, named], mine, false)?.id).toBe("seat-b");
-    expect(pickingFor("seat-z", [mine, named], mine, false)).toBeNull();
+    expect(pickingFor("seat-b", [mine, named], mine)?.id).toBe("seat-b");
+    expect(pickingFor("seat-z", [mine, named], mine)).toBeNull();
   });
 });
 

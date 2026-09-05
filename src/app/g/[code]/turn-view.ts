@@ -35,11 +35,7 @@ import { genderOf } from "@/lib/engine/characters";
 import type { EqMode, Slot } from "@/lib/engine/slots";
 import type { OwnPoints, Reader } from "@/lib/engine/abilityText";
 import { asNature, type Seat } from "./table";
-import {
-  boardCards as allBoardCards,
-  otherSeats,
-  tableScreenHolder as holderOfTableScreen,
-} from "./table-view";
+import { boardCards as allBoardCards, otherSeats } from "./table-view";
 import type { FieldCard, Game, Person } from "./use-table";
 
 /** The table as the server said it, and what this device holds over it. */
@@ -47,7 +43,6 @@ export interface TurnViewInput {
   game: Game;
   seats: Seat[];
   fieldCards: FieldCard[];
-  users: Person[];
   me: Person | null;
   mySeatIndex: number | null;
   /** Slot moves this device has made and the server has not confirmed yet. */
@@ -66,7 +61,6 @@ export function turnViewOf({
   game,
   seats,
   fieldCards,
-  users,
   me,
   mySeatIndex,
   moved,
@@ -76,12 +70,6 @@ export function turnViewOf({
 }: TurnViewInput) {
   const mySeat = seats.find((seat) => seat.seat_index === mySeatIndex);
   const amHost = me?.isHost === true;
-
-  // The shared screen in the middle of the table. Whoever's turn it is reaches
-  // over and taps it, so it drives the active player rather than sitting idle
-  // saying "waiting".
-  const isTableScreen = amHost && game.mode === "companion";
-  const tableScreenHolder = holderOfTableScreen(users);
 
   // Cards in play this turn. A fight keeps the stack it interrupted, so the
   // panel does not empty out mid-combat.
@@ -395,8 +383,6 @@ export function turnViewOf({
   return {
     mySeat,
     amHost,
-    isTableScreen,
-    tableScreenHolder,
     active,
     playing,
     now,

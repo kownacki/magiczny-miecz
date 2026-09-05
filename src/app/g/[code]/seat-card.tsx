@@ -56,10 +56,8 @@ export function SeatCard({
   seat,
   active,
   canAdjust,
-  canCorrect,
   isMine,
   slotted,
-  onAdjust,
   onDrop,
   asked = [],
   onTrade,
@@ -74,21 +72,9 @@ export function SeatCard({
   seat: Seat;
   active: boolean;
   canAdjust: boolean;
-  /**
-   * Whether the tracked values may be corrected by hand.
-   *
-   * Separate from `canAdjust`, which is really "this is your card and you may
-   * act on it" — dropping a Przedmiot and equipping one are moves, not
-   * corrections. Nudging Miecz with a ± is a correction, and a simulation has
-   * nothing to correct: the app moved the figure, threw the die and applied the
-   * result, so a player editing the outcome is not playing the game, they are
-   * editing its record of itself.
-   */
-  canCorrect: boolean;
   isMine: boolean;
   /** The table plays the slotted variant. */
   slotted: boolean;
-  onAdjust: (stat: string, delta: number) => void;
   onDrop: (holdingId: string) => void;
   /** Cards whose drop the server has not answered yet — see `asked` in the table. */
   asked?: readonly string[];
@@ -463,8 +449,8 @@ export function SeatCard({
                   it is about.
 
                   `1fr` and not a fixed width: a pile is at most three columns
-                  but a rail also carries its numeral and, in companion mode,
-                  its ± — and a track sized for the pile alone would clip them.
+                  but a rail also carries its numeral — and a track sized for
+                  the pile alone would clip it.
                   Under intrinsic sizing both fr tracks resolve to the wider of
                   the two, which is the same answer without the guess.
 
@@ -481,8 +467,6 @@ export function SeatCard({
                     total={seat.sword_total}
                     inFight={seat.sword_in_fight}
                     stat="sword"
-                    canAdjust={canCorrect}
-                    onAdjust={onAdjust}
                   />
                   <RailStat
                     label="Magia"
@@ -490,8 +474,6 @@ export function SeatCard({
                     total={seat.magic_total}
                     inFight={seat.magic_in_fight}
                     stat="magic"
-                    canAdjust={canCorrect}
-                    onAdjust={onAdjust}
                   />
                 </div>
 
@@ -540,15 +522,11 @@ export function SeatCard({
                     label="Złoto"
                     value={seat.gold}
                     stat="gold"
-                    canAdjust={canCorrect}
-                    onAdjust={onAdjust}
                   />
                   <RailStat
                     label="Życie"
                     value={seat.life}
                     stat="life"
-                    canAdjust={canCorrect}
-                    onAdjust={onAdjust}
                   />
                 </div>
               </div>

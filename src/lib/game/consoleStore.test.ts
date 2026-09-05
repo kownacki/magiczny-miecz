@@ -21,7 +21,7 @@ afterEach(() => resetStore());
 
 async function playing(eqMode: "slots" | "classic" = "slots", who = "goblin") {
   const tables = emptyTables();
-  const { game } = await createGame("Kowi", "simulation", eqMode, null, memoryHandle(tables));
+  const { game } = await createGame("Kowi", eqMode, null, memoryHandle(tables));
   setStore(memoryStore(tables));
   const seat = tables.seats[0].id as string;
   const user = (tables.users[0] as { id: string }).id;
@@ -483,7 +483,7 @@ describe("teleporting into a turn that goes on", () => {
   /** Past the roll, because a figure that has not moved yet is not restaged. */
   const midTurn = async () => {
     const table = await playing();
-    await rollForMove(table.gameId, null);
+    await rollForMove(table.gameId);
     return table;
   };
 
@@ -525,7 +525,7 @@ describe("teleporting into a turn that goes on", () => {
 describe("starting a turn over from the console", () => {
   it("puts the frame back to the rzut without moving play on", async () => {
     const { gameId, actor } = await playing();
-    await rollForMove(gameId, null);
+    await rollForMove(gameId);
     await runCommand(gameId, actor, { kind: "teleport", fieldId: "bezdroza" });
     expect(top((await activeStore().load(gameId)).game.turn_state)).toMatchObject({
       phase: "field",

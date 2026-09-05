@@ -91,16 +91,9 @@ describe("otwarcie stołu (3.2, 9.5)", () => {
     expect((writes.game as Record<string, unknown>).started_at).toBe(new Date(NOW).toISOString());
   });
 
-  it("hands the shuffled piles to a simulation and none to a companion table", () => {
+  it("hands the shuffled piles to the game it opens", () => {
     const decks = noDeck();
-    const simulated = startGame(lobby([aSeat()]), { decks }, ports());
-    expect(simulated.writes.game?.deck).toBe(decks);
-
-    const physical = aTable({
-      game: { mode: "companion", status: "lobby", round: 0, active_seat: null, deck: null },
-      seats: [aSeat()],
-    });
-    expect(startGame(physical, { decks }, ports()).writes.game?.deck).toBeNull();
+    expect(startGame(lobby([aSeat()]), { decks }, ports()).writes.game?.deck).toBe(decks);
   });
 
   /**
@@ -204,7 +197,7 @@ describe("starting the game", () => {
 
 describe("rzut na ruch (10.2)", () => {
   it("throws one die and offers both ways round the ring", async () => {
-    const { writes, result } = await rollForMove(rolling(), {}, die(2));
+    const { writes, result } = await rollForMove(rolling(), undefined, die(2));
     expect(result).toBe(2);
     expect(top(writes.game!.turn_state!)).toMatchObject({ phase: "move", roll: 2 });
     const options = (top(writes.game!.turn_state!) as { options: { fieldId: string }[] }).options;
@@ -234,19 +227,19 @@ describe("rzut na ruch (10.2)", () => {
         },
       ],
     });
-    await expect(rollForMove(held, {}, die(2))).rejects.toThrow(/WŁADCA ZAKLĘĆ/);
+    await expect(rollForMove(held, undefined, die(2))).rejects.toThrow(/WŁADCA ZAKLĘĆ/);
   });
 
   it("asks for exactly one die", async () => {
     const random = scriptedRandom([2]);
-    await rollForMove(rolling(), {}, ports({ random }));
+    await rollForMove(rolling(), undefined, ports({ random }));
     await expect(random.rollD6("a second")).rejects.toThrow(/exhausted/);
   });
 
-  it("records the roll, and that the app threw it", async () => {
-    const { writes } = await rollForMove(rolling(), {}, die(5));
+  it("records the roll", async () => {
+    const { writes } = await rollForMove(rolling(), undefined, die(5));
     expect(writes.journal).toEqual([
-      { seatId: "seat-a", round: 3, kind: "roll", payload: { roll: 5, manual: false }, manual: false },
+      { seatId: "seat-a", round: 3, kind: "roll", payload: { roll: 5 } },
     ]);
   });
 
@@ -272,7 +265,7 @@ describe("rzut na ruch (10.2)", () => {
         ends: { kind: "turns", turns: 1 },
       },
     ];
-    const { writes, result } = await rollForMove(fogged, {}, die(5));
+    const { writes, result } = await rollForMove(fogged, undefined, die(5));
     expect(result).toBe(5);
     // The throw is untouched, on the record and on the screen.
     expect(top(writes.game!.turn_state!)).toMatchObject({ roll: 5 });
@@ -285,12 +278,6 @@ describe("rzut na ruch (10.2)", () => {
     expect(writes.journal?.[0]).toMatchObject({ payload: { roll: 5, cap: 1 } });
   });
 
-  /** At a physical table a human reads the die aloud, and the journal says so. */
-  it("marks a number a human typed in", async () => {
-    const { writes } = await rollForMove(rolling(), { manual: true }, die(5));
-    expect(writes.journal?.[0]).toMatchObject({ payload: { roll: 5, manual: true }, manual: true });
-  });
-
   /**
    * The Wierzchowiec: „pozwala ci dodać od 1 do 3 punktów do wyniku rzutu
    * kostką w trakcie wykonywania ruchu" — wired here for the first time.
@@ -299,7 +286,7 @@ describe("rzut na ruch (10.2)", () => {
    */
   it("widens the destination list by the Wierzchowiec's range, roll still on the record untouched", async () => {
     const mounted = rolling({}, [aHolding({ card_id: "wierzchowiec" })]);
-    const { writes, result } = await rollForMove(mounted, {}, die(1));
+    const { writes, result } = await rollForMove(mounted, undefined, die(1));
     expect(result).toBe(1);
     expect(top(writes.game!.turn_state!)).toMatchObject({ roll: 1 });
     const options = (top(writes.game!.turn_state!) as { options: { fieldId: string }[] }).options;
@@ -334,7 +321,7 @@ describe("rzut na ruch (10.2)", () => {
       [aHolding({ seat_id: "seat-a", card_id: "wierzchowiec", slot: null })],
     );
     packed.game.eq_mode = "slots";
-    const { writes: packedWrites } = await rollForMove(packed, {}, die(1));
+    const { writes: packedWrites } = await rollForMove(packed, undefined, die(1));
     const bareOptions = (top(packedWrites.game!.turn_state!) as { options: unknown[] }).options;
     expect(bareOptions).toHaveLength(2);
     expect(packedWrites.journal?.[0]).not.toMatchObject({ payload: { bonus: expect.anything() } });
@@ -344,7 +331,7 @@ describe("rzut na ruch (10.2)", () => {
       [aHolding({ seat_id: "seat-a", card_id: "wierzchowiec", slot: "mount" })],
     );
     worn.game.eq_mode = "slots";
-    const { writes: wornWrites } = await rollForMove(worn, {}, die(1));
+    const { writes: wornWrites } = await rollForMove(worn, undefined, die(1));
     const mountedOptions = (top(wornWrites.game!.turn_state!) as { options: unknown[] }).options;
     expect(mountedOptions).toHaveLength(8);
   });
@@ -354,7 +341,7 @@ describe("rzut na ruch (10.2)", () => {
       game: { active_seat: 0, turn_state: { phase: "move", roll: 2, options: [] } },
       seats: [aSeat({ seat_index: 0 })],
     });
-    await expect(rollForMove(table, {}, die(2))).rejects.toThrow("Nie czas na rzut.");
+    await expect(rollForMove(table, undefined, die(2))).rejects.toThrow("Nie czas na rzut.");
   });
 
   /**
@@ -362,7 +349,7 @@ describe("rzut na ruch (10.2)", () => {
    * a table that types a 7 hears about the 7 rather than about the figure.
    */
   it("refuses when the figure is not on the board", async () => {
-    await expect(rollForMove(rolling({ field_id: null }), {}, die(2))).rejects.toThrow(
+    await expect(rollForMove(rolling({ field_id: null }), undefined, die(2))).rejects.toThrow(
       "Postać nie stoi na żadnym polu.",
     );
   });
@@ -379,13 +366,13 @@ describe("rzut na ruch (10.2)", () => {
       );
 
     it("is not offered without a Magiczny Miecz", async () => {
-      const { writes } = await rollForMove(atUrwisko(), {}, die(2));
+      const { writes } = await rollForMove(atUrwisko(), undefined, die(2));
       expect(bridges(writes)).toEqual([]);
     });
 
     it("is offered to a character carrying one", async () => {
       const armed = atUrwisko({}, [aHolding({ card_id: "magiczny-miecz" })]);
-      const { writes } = await rollForMove(armed, {}, die(2));
+      const { writes } = await rollForMove(armed, undefined, die(2));
       expect(bridges(writes).map((option) => option.bridge?.from)).toEqual(["ruiny-twierdzy"]);
     });
 
@@ -394,7 +381,7 @@ describe("rzut na ruch (10.2)", () => {
       const barred = atUrwisko({ bridge_blocked_until_round: 4 }, [
         aHolding({ card_id: "magiczny-miecz" }),
       ]);
-      const { writes } = await rollForMove(barred, {}, die(2));
+      const { writes } = await rollForMove(barred, undefined, die(2));
       expect(bridges(writes)).toEqual([]);
     });
   });

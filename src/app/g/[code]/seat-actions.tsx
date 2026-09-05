@@ -1,6 +1,6 @@
 "use client";
 
-/** The things a character can do outside the move-draw-fight loop, most of them companion mode's. */
+/** The things a character can do outside the move-draw-fight loop: the Bestia, and Magog's Natura. */
 
 import { Rules } from "./rule-ref";
 
@@ -10,54 +10,40 @@ import { NATURE_LABEL } from "@/lib/engine/polish";
 /**
  * The things a character can do that are not part of the move-draw-fight loop.
  *
- * Most of these are companion mode's. They exist because at a physical table
- * the app is a referee being told what happened: a Nature changed on some
- * card's say-so (7.2), something granted a spell (9.5), a Medyk healed
- * somebody. Rather than scatter a button into every card that might trigger
- * one, they live in one place the player can reach.
+ * Only what a player genuinely decides. Everything else this box used to hold —
+ * drawing a Zaklęcie, healing, turning to Kamień, choosing a Natura — was the
+ * app being *told* what a physical table had done, and a button for it is not a
+ * rule the player is exercising but a way to edit the game's record of itself.
+ * 9.5 grants spells through encounters and areas, 7.2 describes what happens
+ * *when* a Natura changes rather than a choice anyone gets to make, and 20.1's
+ * Kamień is something a card does to you.
  *
- * In simulation none of that is true. 9.5 grants spells through encounters and
- * areas, 7.2 describes what happens *when* a Nature changes rather than a
- * choice anyone gets to make, and 20.1's Kamień is something a card does to
- * you. A button for each is not a rule the player is exercising, it is a way to
- * edit the game's record of itself — so in simulation they are not offered.
- *
- * What survives is what a player genuinely decides. The Bestia is a real choice
- * made on a real square, and Magog really may change Natura at will, which is
- * why that is a typed ability now instead of a note: it is what tells the one
- * character who may reach for it apart from the twenty-six who may not.
+ * The Bestia is a real choice made on a real square, and Magog really may
+ * change Natura at will — which is why that is a typed ability now instead of a
+ * note: it is what tells the one character who may reach for it apart from the
+ * twenty-six who may not.
  */
 export function SeatActions({
   busy,
   nature,
   canFightBeast,
-  byHand,
   mayChooseNature,
-  onSpell,
   onNature,
-  onStone,
-  onHeal,
   onBeast,
 }: {
   busy: boolean;
   nature: string | null;
   /** Only offered on the Zamek, where 10.5 says the fight is compulsory. */
   canFightBeast: boolean;
-  /** Companion mode: the app is being told what the table did, so it must ask. */
-  byHand: boolean;
   /** This character may change Natura whenever they like — Magog, and only Magog. */
   mayChooseNature: boolean;
-  onSpell: () => void;
   onNature: (nature: string) => void;
-  onStone: () => void;
-  onHeal: () => void;
   onBeast: () => void;
 }) {
   const [open, setOpen] = useState(false);
-  const showNature = byHand || mayChooseNature;
   // Nothing left to offer: no header either, rather than a heading that opens
   // onto an empty box.
-  if (!byHand && !showNature && !canFightBeast) return null;
+  if (!mayChooseNature && !canFightBeast) return null;
 
   return (
     <div className="mt-4 border-t border-edge pt-3">
@@ -74,16 +60,7 @@ export function SeatActions({
         // sit beside other markup.
         <Rules>
           <div className="mt-3 flex flex-col gap-3 text-xs">
-            {byHand && (
-              <Row label="Zaklęcie (9.5)">
-                <Action busy={busy} onClick={onSpell}>
-                  Wyciągnij Zaklęcie
-                </Action>
-                <Note>Limit zależy od Magii (2.6).</Note>
-              </Row>
-            )}
-
-            {showNature && (
+            {mayChooseNature && (
               <Row label="Natura (7.2)">
                 {/* Good, chaotic, evil — in that order, because 7.1 describes them
                 as two departures from a middle rather than as a list, and the
@@ -104,24 +81,6 @@ export function SeatActions({
                   </Action>
                 ))}
                 <Note>Najwyżej raz na turę (7.3).</Note>
-              </Row>
-            )}
-
-            {byHand && (
-              <Row label="Życie (4.7)">
-                <Action busy={busy} onClick={onHeal}>
-                  Uzdrowienie
-                </Action>
-                <Note>Tylko do 4 punktów z początku gry.</Note>
-              </Row>
-            )}
-
-            {byHand && (
-              <Row label="Zamiana w Kamień (20.1)">
-                <Action busy={busy} onClick={onStone}>
-                  Zamień w Kamień
-                </Action>
-                <Note>Trzy tury bez ruchu.</Note>
               </Row>
             )}
 

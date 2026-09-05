@@ -1013,7 +1013,7 @@ describe("opening a table", () => {
     const { writes } = openTable(table, { hostName: "Michał", hostSeatId: "seat-0" });
 
     expect(writes.journal).toEqual([
-      { seatId: null, round: 3, kind: "table-opened", payload: { mode: "simulation" } },
+      { seatId: null, round: 3, kind: "table-opened", payload: {} },
       { seatId: "seat-0", round: 3, kind: "joined-table", payload: { name: "Michał" } },
     ]);
   });

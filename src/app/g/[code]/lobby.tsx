@@ -50,7 +50,6 @@ import {
  */
 export function Lobby({
   code,
-  mode,
   seats: seatsFromServer,
   users,
   mySeatIndex,
@@ -60,7 +59,6 @@ export function Lobby({
   pickingFor,
   pendingCharacterId,
   busy,
-  onAddLocal,
   onPickFor,
   onChooseCharacter,
   onRemove,
@@ -76,7 +74,6 @@ export function Lobby({
   library,
 }: {
   code: string;
-  mode: string;
   seats: LobbySeat[];
   /** Everybody here, seated or not — see `watching` below. */
   users: { id: string; name: string; seatIndex: number | null; away: boolean }[];
@@ -100,7 +97,6 @@ export function Lobby({
   /** Asked for, not yet granted. Everything else in the strip waits with it. */
   pendingCharacterId: string | null;
   busy: boolean;
-  onAddLocal: (name: string) => void;
   onPickFor: (seat: LobbySeat | null) => void;
   onChooseCharacter: (seat: LobbySeat, characterId: string) => void;
   onRemove: (seat: LobbySeat) => void;
@@ -133,7 +129,7 @@ export function Lobby({
   /** Everybody at the table who is driving no chair. */
   const watching = users.filter((one) => one.seatIndex === null);
 
-  const aiming: Aiming = { mySeatIndex, canAdminister: mayAdminister(isHost, hostAway), mode };
+  const aiming: Aiming = { mySeatIndex, canAdminister: mayAdminister(isHost, hostAway) };
   const me = mySeat(seats, mySeatIndex);
   const target = aimedAt(seats, pickingFor, aiming);
   const chosen = chosenSeats(seats);
@@ -159,12 +155,7 @@ export function Lobby({
             open on both screens. `items-center` and not `items-baseline` — a
             glyph has no baseline of its own, so the browser sits it on the
             bottom of its box and it rides high of the title beside it. The
-            table's bar learned this already.
-
-            The mode used to be written here, beside the title. It said "Pełna
-            symulacja" on every table anybody can open, because companion play
-            is parked — a label that never varies is not telling anybody
-            anything, and it was taking the space this door now uses. */}
+            table's bar learned this already. */}
         <div className="flex items-center gap-3">
           <h1 className="font-[family-name:var(--font-display)] text-lg text-ochre">
             Magiczny Miecz
@@ -276,12 +267,7 @@ export function Lobby({
                */
               if (!seat || seatState(seat) === "free") {
                 return (
-                  <EmptySlot
-                    key={seat ? seat.id : `empty-${index}`}
-                    canAdd={aiming.canAdminister && mode === "companion"}
-                    busy={busy}
-                    onAdd={onAddLocal}
-                  />
+                  <EmptySlot key={seat ? seat.id : `empty-${index}`} />
                 );
               }
               return (

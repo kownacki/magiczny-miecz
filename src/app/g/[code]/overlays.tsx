@@ -60,7 +60,6 @@ export function Overlays() {
     openField,
     dealt,
     mySeatIndex,
-    isTableScreen,
     intent,
     folded,
     beneath,
@@ -276,7 +275,7 @@ export function Overlays() {
             // one person's browser while the rest read about it afterwards in
             // the journal. Only the player whose turn it is can press anything.
             who={active.player_name ?? `Miejsce ${active.seat_index + 1}`}
-            canAct={mySeatIndex === active.seat_index || isTableScreen}
+            canAct={mySeatIndex === active.seat_index}
             // The three seconds between somebody deciding and it landing —
             // only ever drawn on the devices that cannot press anything. Sent
             // by the acting seat and by nobody else, which the route is what
@@ -317,7 +316,6 @@ export function Overlays() {
                   ) ?? compulsoryOffer(active.field_id, turnState.resolved ?? []))
                 : null
             }
-            simulated={game.mode === "simulation"}
             /**
              * Your own hand, beside whatever is happening — which in a fight is
              * somebody else's turn as often as your own.
@@ -388,13 +386,11 @@ export function Overlays() {
             }
             onInspect={setInspectingCard}
             /* 17.6: in a duel the escape is the attacked character's, so the
-               button goes to their device rather than the attacker's. The
-               shared screen keeps it too, since in companion mode it is the
-               device the whole table is pressing. */
+               button goes to their device rather than the attacker's. */
             myEscape={
               turnState.phase === "fight" &&
               turnState.fight.opponentSeat !== undefined &&
-              (isTableScreen || turnState.fight.opponentSeat === mySeatIndex)
+              turnState.fight.opponentSeat === mySeatIndex
             }
             ring={ringFields(active.field_id)}
             /* „nie zajętym przez inną Postać" — the Lewiatan may not be put
@@ -502,7 +498,7 @@ export function Overlays() {
             seats.find((seat) => seat.id === turnState.seatId)?.player_name ??
             "gracz"
           }
-          canAct={mine?.id === turnState.seatId || isTableScreen}
+          canAct={mine?.id === turnState.seatId}
           ring={ringFields(active.field_id).map((fieldId) => ({
             fieldId,
             name: fieldName(fieldId),
@@ -521,7 +517,7 @@ export function Overlays() {
           who={
             seats.find((seat) => seat.id === turnState.seatId)?.player_name ?? "gracz"
           }
-          canAct={mine?.id === turnState.seatId || isTableScreen}
+          canAct={mine?.id === turnState.seatId}
           busy={busy}
           onAnswer={(choice) => post("turn", { action: "answer", choice })}
         />

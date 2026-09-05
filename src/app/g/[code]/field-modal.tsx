@@ -196,10 +196,7 @@ export function FieldModal({
   asked = [],
   onClose,
   phase,
-  simulated = true,
-  typedRolls = false,
   onAction,
-  onSuggestion,
   onService,
   purse,
   stock,
@@ -250,10 +247,7 @@ export function FieldModal({
    * of what it is for, and none of these belong there.
    */
   phase?: string;
-  simulated?: boolean;
-  typedRolls?: boolean;
   onAction?: OnAction;
-  onSuggestion?: (stat: string, delta: number, reason: string) => void;
   onService?: OnService;
   purse?: { gold: number; life: number };
   stock?: Record<string, number>;
@@ -450,7 +444,6 @@ export function FieldModal({
   /** Everything the controls under an open offer need, gathered once. */
   const offerCtx: OfferContext = {
     busy,
-    typedRolls,
     onRollOffer: () =>
       open && onAction?.({ action: "pole-tabela", offer: open.key }),
     gold: purse?.gold ?? 0,
@@ -462,7 +455,6 @@ export function FieldModal({
     eqMode,
     nature,
     onAsk: onAsk ?? (() => {}),
-    onSuggestion: onSuggestion ?? (() => {}),
     onService,
   };
 
@@ -1043,7 +1035,6 @@ export function FieldModal({
               {crossingFrom(fieldId) && (
                 <Crossing
                   crossing={crossingFrom(fieldId)!}
-                  simulated={simulated}
                   busy={busy}
                   onAction={onAction}
                 />

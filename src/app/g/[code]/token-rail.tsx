@@ -268,8 +268,6 @@ export function RailStat({
   total,
   inFight,
   stat,
-  canAdjust,
-  onAdjust,
 }: {
   label: string;
   value: number;
@@ -285,8 +283,6 @@ export function RailStat({
    */
   inFight?: number;
   stat: string;
-  canAdjust: boolean;
-  onAdjust: (stat: string, delta: number) => void;
 }) {
   // Życie and Złoto have no derived half at all — 3.1 and 4.1 make the żetony
   // the whole value — so those rails have no `total` and the number under them
@@ -364,27 +360,6 @@ export function RailStat({
             box is both wearable and always on, so all three differ rarely. */}
         {saysItself ? "" : <StatFigure value={value} total={total} inFight={inFight} />}
       </span>
-      {canAdjust && (
-        // Always visible rather than revealed on hover. Phones are the primary
-        // device at a table and have no hover, so a hover-gated override is an
-        // override that does not exist for most of the people using it.
-        <div className="flex gap-0.5">
-          <button
-            onClick={() => onAdjust(stat, -1)}
-            title={`${label} −1`}
-            className="h-4 w-4 rounded border border-edge text-[10px] leading-none text-muted hover:border-vermilion hover:text-ink"
-          >
-            −
-          </button>
-          <button
-            onClick={() => onAdjust(stat, 1)}
-            title={`${label} +1`}
-            className="h-4 w-4 rounded border border-edge text-[10px] leading-none text-muted hover:border-verdigris hover:text-ink"
-          >
-            +
-          </button>
-        </div>
-      )}
     </div>
   );
 }

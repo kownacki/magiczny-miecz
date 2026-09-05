@@ -435,9 +435,7 @@ export function openTable(
           seatId: null,
           round: snapshot.game.round,
           kind: "table-opened",
-          // The mode, because it is the one setting that cannot be changed
-          // afterwards.
-          payload: { mode: snapshot.game.mode },
+          payload: {},
         },
         {
           seatId: command.hostSeatId,

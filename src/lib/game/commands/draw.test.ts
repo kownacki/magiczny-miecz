@@ -78,10 +78,7 @@ describe("ciągnięcie Karty Zdarzeń", () => {
 
   it("refuses before the move has finished on an Obszar", () => {
     expect(() =>
-      drawCard(table({ game: { turn_state: { phase: "roll" } } }), {
-        named: null,
-        shuffle: never,
-      }),
+      drawCard(table({ game: { turn_state: { phase: "roll" } } }), { shuffle: never }),
     ).toThrow("Nie czas na ciągnięcie Kart — najpierw skończ ruch na Obszarze.");
   });
 
@@ -111,7 +108,7 @@ describe("ciągnięcie Karty Zdarzeń", () => {
       // HERE is Step I, which prints „wyciągnij 1 kartę" — and the refusal says
       // so, because `draw` is 0 whether the square asks for nothing or has been
       // filled, and only the board knows which.
-      expect(() => drawCard(owed(0, lying), { named: null, shuffle: never })).toThrow(
+      expect(() => drawCard(owed(0, lying), { shuffle: never })).toThrow(
         "Ten Obszar daje 1 — tyle już tu leży albo wyciągnięto (13.4).",
       );
     });
@@ -121,13 +118,13 @@ describe("ciągnięcie Karty Zdarzeń", () => {
         game: { turn_state: onField({ fieldId: asFieldId("karczma")!, draw: 0, drawn: [] }) },
         seats: [aSeat({ id: "seat-a", field_id: asFieldId("karczma")! })],
       });
-      expect(() => drawCard(bare, { named: null, shuffle: never })).toThrow(
+      expect(() => drawCard(bare, { shuffle: never })).toThrow(
         "Na tym Obszarze nie ciągnie się Kart (13.4).",
       );
     });
 
     it("still draws what is left over", () => {
-      const done = drawCard(owed(1, lying), { named: null, shuffle: never });
+      const done = drawCard(owed(1, lying), { shuffle: never });
       expect(done.result.card?.id).toBe("cyklop");
     });
 
@@ -139,7 +136,7 @@ describe("ciągnięcie Karty Zdarzeń", () => {
      * „wyciągnij 1 kartę" square with a Miecz on it paid out twice.
      */
     it("counts the draw off the Obszar's tally", () => {
-      const after = drawCard(owed(1, lying), { named: null, shuffle: never });
+      const after = drawCard(owed(1, lying), { shuffle: never });
       expect(top(after.writes.game!.turn_state!)).toMatchObject({ draw: 0 });
     });
 
@@ -151,14 +148,14 @@ describe("ciągnięcie Karty Zdarzeń", () => {
      * is being resolved. It neither needs the tally nor spends it.
      */
     it("lets a Karta draw past it without spending it", () => {
-      const done = drawCard(owed(0, lying), { named: null, shuffle: never, byCard: true });
+      const done = drawCard(owed(0, lying), { shuffle: never, byCard: true });
       expect(done.result.card?.id).toBe("cyklop");
       expect(top(done.writes.game!.turn_state!)).toMatchObject({ draw: 0 });
     });
   });
 
   it("takes the top card and puts the pile back one shorter", () => {
-    const { writes, result } = drawCard(table(), { named: null, shuffle: never });
+    const { writes, result } = drawCard(table(), { shuffle: never });
 
     expect(result.card?.id).toBe("cyklop");
     expect(result.recycled).toBe(false);
@@ -166,7 +163,7 @@ describe("ciągnięcie Karty Zdarzeń", () => {
   });
 
   it("puts the card into the turn with the slice it came off", () => {
-    const { writes } = drawCard(table(), { named: null, shuffle: never });
+    const { writes } = drawCard(table(), { shuffle: never });
     expect(top(writes.game!.turn_state!)).toMatchObject({
       phase: "field",
       drawn: [{ cardId: "cyklop", cardClass: "foe", ref: eventRef("cyklop") }],
@@ -174,7 +171,7 @@ describe("ciągnięcie Karty Zdarzeń", () => {
   });
 
   it("journals the draw against the seat whose turn it is", () => {
-    const { writes } = drawCard(table(), { named: null, shuffle: never });
+    const { writes } = drawCard(table(), { shuffle: never });
     expect(writes.journal).toEqual([
       {
         seatId: "seat-a",
@@ -207,7 +204,7 @@ describe("ciągnięcie Karty Zdarzeń", () => {
         deck: piles({ events: pile([eventRef("cyklop")]) }),
       },
     });
-    const { writes } = drawCard(holding, { named: null, shuffle: never });
+    const { writes } = drawCard(holding, { shuffle: never });
     expect(
       (top(writes.game!.turn_state!) as Extract<TurnPhase, { phase: "field" }>).drawn.map(
         (card) => card.cardId,
@@ -224,7 +221,7 @@ describe("ciągnięcie Karty Zdarzeń", () => {
         }),
       },
     });
-    const { writes, result } = drawCard(dry, { named: null, shuffle: reversed });
+    const { writes, result } = drawCard(dry, { shuffle: reversed });
 
     // Reversed, so the Cyklop is on top of the recycled pile.
     expect(result.card?.id).toBe("cyklop");
@@ -242,53 +239,18 @@ describe("ciągnięcie Karty Zdarzeń", () => {
 
   it("refuses when there is nothing left in either pile", () => {
     const empty = table({ game: { deck: piles() } });
-    expect(() => drawCard(empty, { named: null, shuffle: never })).toThrow(
+    expect(() => drawCard(empty, { shuffle: never })).toThrow(
       "Talia Kart Zdarzeń jest pusta.",
     );
   });
 
   it("refuses a slice the card index has never heard of", () => {
     const nonsense = table({ game: { deck: piles({ events: pile(["zdarzenia-9#99"]) }) } });
-    expect(() => drawCard(nonsense, { named: null, shuffle: never })).toThrow(
+    expect(() => drawCard(nonsense, { shuffle: never })).toThrow(
       "Nieznana karta w talii: zdarzenia-9#99",
     );
   });
 
-  describe("przy planszy", () => {
-    const physical = (over: Parameters<typeof aTable>[0] = {}) =>
-      table({ ...over, game: { mode: "companion", deck: null, ...(over.game ?? {}) } });
-
-    it("has to be told which card came up", () => {
-      expect(() => drawCard(physical(), { named: null, shuffle: never })).toThrow(
-        "Podaj nazwę wyciągniętej karty.",
-      );
-    });
-
-    it("takes the named card and never touches a pile", () => {
-      const { writes, result } = drawCard(physical(), {
-        named: { cardId: "cyklop", cardClass: "foe" },
-        shuffle: never,
-      });
-
-      expect(result).toEqual({ card: expect.objectContaining({ id: "cyklop" }), recycled: false });
-      expect(writes.game?.deck).toBeUndefined();
-      expect(writes.journal?.[0]).toEqual({
-        seatId: "seat-a",
-        round: 3,
-        kind: "card",
-        payload: { cardId: "cyklop", cardClass: "foe", source: "fizyczna" },
-      });
-    });
-
-    /** The referee is usable before the deck is transcribed: an unknown id is not an error. */
-    it("still records a card nobody has transcribed", () => {
-      const { result } = drawCard(physical(), {
-        named: { cardId: "smok-z-tarnowa", cardClass: "foe" },
-        shuffle: never,
-      });
-      expect(result.card).toBeNull();
-    });
-  });
 });
 
 /* ==========================================================================
@@ -304,13 +266,11 @@ describe("wyciągnięcie wszystkich Kart naraz", () => {
       draw?: number;
       drawn?: { cardId: string; cardClass: CardClass }[];
       events?: DeckState;
-      mode?: "simulation" | "companion";
     } = {},
   ) =>
     aTable({
       seats: [aSeat({ id: "seat-a", field_id: MGLY })],
       game: {
-        ...(over.mode ? { mode: over.mode } : {}),
         turn_state: {
           phase: "field",
           fieldId: MGLY,
@@ -421,11 +381,6 @@ describe("wyciągnięcie wszystkich Kart naraz", () => {
     expect(() => drawAll(atMgly({ draw: 0 }), { shuffle: never })).toThrow(/daje 3/);
   });
 
-  it("refuses at a physical table, where the cardboard is dealt by hand", () => {
-    expect(() => drawAll(atMgly({ mode: "companion", draw: 2 }), { shuffle: never })).toThrow(
-      /nazwij każdą Kartę osobno/,
-    );
-  });
 });
 
 /* ==========================================================================
@@ -521,13 +476,6 @@ describe("rozdanie Zaklęcia", () => {
     const empty = table({ seats: [magical()], game: { deck: piles() } });
     expect(() => drawSpell(empty, { seatId: "seat-a", shuffle: never })).toThrow(
       "Stos Kart Zaklęć jest pusty.",
-    );
-  });
-
-  it("sends a physical table to its own stack", () => {
-    const physical = table({ seats: [magical()], game: { mode: "companion", deck: null } });
-    expect(() => drawSpell(physical, { seatId: "seat-a", shuffle: never })).toThrow(
-      "Przy planszy Zaklęcia ciągnie się z fizycznego stosu.",
     );
   });
 

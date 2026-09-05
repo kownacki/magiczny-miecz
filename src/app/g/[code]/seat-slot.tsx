@@ -10,7 +10,6 @@
  */
 
 import Image from "next/image";
-import { useState } from "react";
 import type { Character } from "@/data/types";
 import { useCharacterPreview } from "./character-picker";
 import {
@@ -255,60 +254,11 @@ export function SeatSlot({
   );
 }
 
-/**
- * A place nobody is in.
- *
- * Only companion mode fills one from here. There, one screen sits in the middle
- * of a real table and nobody else has a device; in simulation everybody has
- * their own and joins with the code, so a slot the host filled in would be a
- * way of taking somebody's seat before they arrived.
- */
-export function EmptySlot({
-  canAdd,
-  busy,
-  onAdd,
-}: {
-  canAdd: boolean;
-  busy: boolean;
-  onAdd: (name: string) => void;
-}) {
-  const [name, setName] = useState("");
-
-  if (!canAdd) {
-    return (
-      <div className={`flex ${SLOT} items-center justify-center rounded-lg border border-dashed border-edge/60 p-2 text-center text-[12px] leading-snug text-muted/60`}>
-        wolne miejsce — dołączcie kodem
-      </div>
-    );
-  }
-
+/** A place nobody is in. */
+export function EmptySlot() {
   return (
-    <form
-      onSubmit={(event) => {
-        event.preventDefault();
-        if (!name.trim()) return;
-        onAdd(name);
-        setName("");
-      }}
-      className={`flex ${SLOT} flex-col justify-center gap-2 rounded-lg border border-dashed border-edge p-2`}
-    >
-      <span className="text-center text-[12px] uppercase tracking-widest text-muted">
-        Dodaj gracza
-      </span>
-      <input
-        value={name}
-        onChange={(event) => setName(event.target.value)}
-        placeholder="imię"
-        maxLength={24}
-        className="rounded border border-edge bg-night px-2 py-1 text-center text-sm text-ink outline-none focus:border-ochre"
-      />
-      <button
-        type="submit"
-        disabled={busy || !name.trim()}
-        className="rounded border border-edge px-2 py-1 text-sm text-ink transition hover:border-ochre disabled:opacity-40"
-      >
-        + Dodaj
-      </button>
-    </form>
+    <div className={`flex ${SLOT} items-center justify-center rounded-lg border border-dashed border-edge/60 p-2 text-center text-[12px] leading-snug text-muted/60`}>
+      wolne miejsce — dołączcie kodem
+    </div>
   );
 }

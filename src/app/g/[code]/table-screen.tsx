@@ -80,16 +80,6 @@ const BY_REF = new Map<string, TileCard>(
 const cardOfRef = (ref: string) => BY_REF.get(ref) ?? null;
 const PRINTED_SPELLS = (spells as Spell[]).length;
 
-/**
- * Whether companion's own status line is drawn at all.
- *
- * `false` while COMPANION_PARKED keeps every new table in simulation, where
- * `game.mode` can never be "companion" — so the line was unreachable anyway and
- * only cost a reader the time to work that out. Kept rather than deleted, like
- * the rest of that mode: one boolean brings it back.
- */
-const COMPANION_LINE = false;
-
 export function TableScreen({ library }: { library: React.ReactNode }) {
   const {
     code,
@@ -128,12 +118,10 @@ export function TableScreen({ library }: { library: React.ReactNode }) {
     spoken,
     mine,
     showSeat,
-    isTableScreen,
     turnWindows,
     surplus,
     notices,
     dismissNotice,
-    tableScreenHolder,
     askToDrop,
     asked,
     equip,
@@ -533,9 +521,7 @@ export function TableScreen({ library }: { library: React.ReactNode }) {
                   characterName={
                     CHARACTERS.find((one) => one.id === active.character_id)?.name ?? null
                   }
-                  isMine={
-                    (mySeatIndex !== null && active.seat_index === mySeatIndex) || isTableScreen
-                  }
+                  isMine={mySeatIndex !== null && active.seat_index === mySeatIndex}
                   fieldName={
                     active.field_id ? fieldName(active.field_id) : "—"
                   }
@@ -704,24 +690,6 @@ export function TableScreen({ library }: { library: React.ReactNode }) {
                 place to give that back is the window the button was in — not a
                 line of text behind everything. */}
 
-            {/* Companion's own line — who is driving the table, and the offer
-                to take it over — which cannot appear while COMPANION_PARKED
-                keeps every new table in simulation. Kept rather than deleted,
-                like the rest of that mode: one boolean brings it back. */}
-            {COMPANION_LINE && game.mode === "companion" && mySeatIndex !== null && (
-              <p className="rounded border border-edge/60 bg-panel/50 px-2 py-1 text-[11px] text-muted">
-                {isTableScreen ? (
-                  <span className="text-ochre">To urządzenie prowadzi wszystkich graczy.</span>
-                ) : (
-                  <>
-                    Prowadzi: <span className="text-ink">{tableScreenHolder ?? "—"}</span>.{" "}
-                    <button onClick={() => post("host", {})} className="underline hover:text-ink">
-                      graj tu za wszystkich
-                    </button>
-                  </>
-                )}
-              </p>
-            )}
             {/* The turn panel is gone. Everything it drew has a home: the roll
                 and the draw are buttons in the box, the direction and the Most
                 are decisions and open the action window, the Obszar's own
@@ -730,25 +698,17 @@ export function TableScreen({ library }: { library: React.ReactNode }) {
                 it. */}
 
 
-            {active && (mySeatIndex === active.seat_index || isTableScreen) && (
+            {active && mySeatIndex === active.seat_index && (
               <SeatActions
                 busy={busy}
                 nature={active.nature}
                 canFightBeast={active.field_id === "zamek-bestii"}
-                // Companion mode is the app being told what a physical table
-                // did, so it has to ask. Simulation rolls and applies these
-                // itself, and a button for them would be editing the record
-                // rather than playing (see CLAUDE.md).
-                byHand={game.mode === "companion"}
                 mayChooseNature={abilitiesOfCharacter(
                   asCharacterId(active.character_id),
                 ).some((ability) => ability.kind === "natura-dowolna")}
-                onSpell={() => post("holdings", { action: "spell", seatId: active.id })}
                 onNature={(nature) =>
                   post("holdings", { action: "nature", seatId: active.id, nature })
                 }
-                onStone={() => post("holdings", { action: "stone", seatId: active.id })}
-                onHeal={() => post("holdings", { action: "heal", seatId: active.id })}
                 onBeast={() => post("turn", { action: "beast" })}
               />
             )}
@@ -760,15 +720,8 @@ export function TableScreen({ library }: { library: React.ReactNode }) {
                 seat={mine}
                 active={mine.seat_index === game.active_seat}
                 canAdjust
-                // Companion play is corrected by hand because the board is the
-                // source of truth there and the app will desync. Simulation is
-                // settled the other way — nothing is entered by hand — and a
-                // tester who needs a number moved says `gold +5` rather than
-                // finding a ± under every parameter for the rest of time.
-                canCorrect={game.mode !== "simulation"}
                 isMine
                 slotted={game.eq_mode === "slots"}
-                onAdjust={(stat, delta) => post("adjust", { seatId: mine.id, stat, delta })}
                 onDrop={askToDrop}
                 asked={asked}
                 onEquip={equip}

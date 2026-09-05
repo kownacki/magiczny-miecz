@@ -49,12 +49,10 @@ export type Tables = Record<TableName, Row[]>;
  */
 export const DEFAULTS: Record<keyof Tables, Record<string, unknown>> = {
   games: {
-    mode: "simulation",
     eq_mode: "classic",
     trophy_mode: "points",
     // 21.2 as this table plays it. Found missing by fakeDb.test.ts, not by a bug.
     endless_stock: true,
-    die_source: "app",
     status: "lobby",
     round: 0,
     turn_state: { phase: "roll" },

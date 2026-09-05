@@ -4,18 +4,17 @@ import { NextResponse } from "next/server";
 import { handle } from "@/app/api/handle";
 import type { Route } from "@/lib/game/requests";
 import type { Action } from "@/lib/game/actions/shape";
-import type { Permission } from "@/lib/game/permission";
 import type { GameRow, UserRow } from "@/lib/game/store";
 
 /**
- * The Permission a route asks before any of its actions, named where the
- * route is declared so a reader sees it beside the table it guards.
+ * The gate a route asks before any of its actions, named where the route is
+ * declared so a reader sees it beside the table it guards.
  */
 export type Gate<Name extends string> = (
   game: GameRow,
   who: UserRow,
   action: Name,
-) => Permission;
+) => boolean;
 
 /**
  * What every action route did by hand, once.
@@ -50,11 +49,11 @@ export function actions<
       // The gate first, and the unknown-action 400 behind it: a seat that may
       // not act must not learn which actions exist. `mayAct` copes with a name
       // off the wire it has never heard of — that is what the wire is.
-      const { allowed, tableScreen } = gate(game, actor.user, name as keyof T & string);
+      const allowed = gate(game, actor.user, name as keyof T & string);
       if (!allowed) return NextResponse.json({ error: "To nie twoja tura." }, { status: 409 });
       const one = typeof name === "string" ? table[name as keyof T & string] : undefined;
       if (!one) return NextResponse.json({ error: "Nieznana akcja." }, { status: 400 });
-      return one.run(game.id, one.from(body, { game, user: actor.user, seat, tableScreen }));
+      return one.run(game.id, one.from(body, { game, user: actor.user, seat }));
     });
   };
 }

@@ -11,7 +11,7 @@ import { hasAttacked, lastAggression } from "@/lib/engine/status";
 import { nameOfSeat } from "./lobby";
 import { storedStatuses } from "./turn";
 import { apply } from "../change";
-import { attackSeat, beginFight, closeFightFrame, escape, fightRoll, setFightPlayerTotal, shieldSaves } from "./fight";
+import { attackSeat, beginFight, closeFightFrame, escape, fightRoll, shieldSaves } from "./fight";
 import { resolveFight } from "./spoils";
 import { castSpell, settleSpell } from "./spells";
 
@@ -1169,7 +1169,6 @@ describe("kostki w walce (17.3, 17.4)", () => {
     expect(writes.journal?.[0]).toMatchObject({
       kind: "fight-roll",
       payload: { side: "player", roll: 4 },
-      manual: false,
     });
   });
 
@@ -1433,15 +1432,6 @@ describe("kostki w walce (17.3, 17.4)", () => {
     expect(fightIn(writes).playerRoll).toBe(4);
   });
 
-  it("marks a die the table threw itself", async () => {
-    const { writes } = await fightRoll(
-      table(),
-      { side: "player", manual: true },
-      ports({ random: scriptedRandom([4]) }),
-    );
-    expect(writes.journal?.[0].manual).toBe(true);
-  });
-
   it("asks for exactly one die", async () => {
     const random = scriptedRandom([4]);
     await fightRoll(table(), { side: "player" }, ports({ random }));
@@ -1453,19 +1443,6 @@ describe("kostki w walce (17.3, 17.4)", () => {
     await expect(
       fightRoll(idle, { side: "player" }, ports({ random: scriptedRandom([4]) })),
     ).rejects.toThrow(/Nie ma walki/);
-  });
-});
-
-describe("poprawianie sumy Postaci", () => {
-  const table = aTable({ game: { active_seat: 0, turn_state: walka() } });
-
-  it("takes the corrected total", async () => {
-    const { writes } = setFightPlayerTotal(table, { total: 9 });
-    expect(fightIn(writes).playerTotal).toBe(9);
-  });
-
-  it("never goes below zero", async () => {
-    expect(fightIn(setFightPlayerTotal(table, { total: -3 }).writes).playerTotal).toBe(0);
   });
 });
 
@@ -1682,8 +1659,8 @@ describe("ucieczka (17.6, 19)", () => {
     ]);
   });
 
-  /** A companion table answers for itself, and "no" is an answer. */
-  it("takes the table's own answer over the abilities", async () => {
+  /** The console answers for itself, and "no" is an answer. */
+  it("takes a reported answer over the abilities", async () => {
     const table = aTable({
       game: {
         active_seat: 0,

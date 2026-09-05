@@ -42,7 +42,7 @@ describe("a game kept in a file", () => {
     await takeNewCharacter(gameId, seat, "goblin", seat);
     await setReady(gameId, (tables.users[0] as { id: string }).id, true);
     await startGame(gameId);
-    await rollForMove(gameId, 4);
+    await rollForMove(gameId);
 
     // Reopened from disk, by somebody who was not holding the objects.
     const again = await openSave(code);

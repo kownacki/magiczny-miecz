@@ -31,7 +31,7 @@ import { apply, change, effectRowsFor, merge, type EffectRow, type Handler } fro
 import { holdOverflow, refuseWhileOverflow, releaseOverflow } from "./commands/overflow";
 import { closeFight, resume } from "./commands/frames";
 import { finishTurn as finishTurnOn, resetTurn as resetTurnOn } from "./commands/turn";
-import { appRandom, supplied } from "./random";
+import { appRandom } from "./random";
 import {
   addEffect as addEffectTo,
   keepOnly as keepOnlyIn,
@@ -57,17 +57,15 @@ import {
   type Cast,
   type CastSpell,
 } from "./commands/spells";
-import { attackSeat as attackSeatOn, sendRaider as sendRaiderOn, beginFight as beginFightOn, escape as escapeOn, fightRoll as fightRollOn, setFightPlayerTotal as setFightPlayerTotalOn } from "./commands/fight";
+import { attackSeat as attackSeatOn, sendRaider as sendRaiderOn, beginFight as beginFightOn, escape as escapeOn, fightRoll as fightRollOn } from "./commands/fight";
 import { resolveFight as resolveFightOn, type Spoils } from "./commands/spoils";
 import {
   crossRing as crossRingOn,
-  enterBridge as enterBridgeOn,
   fightGuardian as fightGuardianOn,
   payFerry as payFerryOn,
   resolveBridgeOrdeal as resolveBridgeOrdealOn,
   rollGuardianStrength as rollGuardianStrengthOn,
   type BridgeOrdealResult,
-  type BridgeOutcome,
   type CrossOutcome,
 } from "./commands/bridge";
 import { claimFloor, releaseFloor } from "./commands/spellFloor";
@@ -92,7 +90,6 @@ import {
 } from "./commands/wearing";
 import {
   drawAll as drawAllOn,
-  drawCard as drawCardOn,
   drawSpell as drawSpellOn,
   drawSpellWithWand as drawSpellWithWandOn,
   shopStock as countStock,
@@ -133,7 +130,7 @@ import {
 export { freshDecks };
 export type { Adjustable, Adjusted };
 export { STONE_TURNS, TROPHY_RATE };
-export type { BridgeOrdealResult, BridgeOutcome, CrossOutcome };
+export type { BridgeOrdealResult, CrossOutcome };
 export type { Decisions, Resolution, UseResult };
 export type { Decks };
 
@@ -165,17 +162,9 @@ export async function startGame(gameId: string): Promise<void> {
   }
 }
 
-/**
- * Records the movement roll.
- *
- * `value` is supplied when the table is rolling physical dice — the RandomPort
- * bound to a human. The server still validates the range, because a mistyped 8
- * would otherwise walk a character off the ring.
- */
-export async function rollForMove(gameId: string, value: number | null): Promise<void> {
-  await change(gameId, rollForMoveOn, { manual: value !== null }, {
-    random: supplied([value], appRandom()),
-  });
+/** Records the movement roll (10.2). */
+export async function rollForMove(gameId: string): Promise<void> {
+  await change(gameId, rollForMoveOn, undefined, { random: appRandom() });
 }
 
 export async function moveTo(
@@ -187,28 +176,13 @@ export async function moveTo(
 }
 
 /**
- * Records a drawn card.
- *
- * Companion mode is told which card came up, because the physical deck decided.
- * Simulation mode draws one itself. Both end in the same place — a card added
- * to the turn's stack in rule 15.2 order — which is the whole of the distinction
- * made concrete.
- */
-export async function drawCard(
-  gameId: string,
-  named: { cardId: string; cardClass: CardClass } | null,
-): Promise<{ card: EventCard | null; recycled: boolean }> {
-  return change(gameId, drawCardOn, (of) => ({ named, shuffle: shuffleFor(of.game) }));
-}
-
-/**
  * Badanie Obszaru, as the one act it is at a table (13.4).
  *
  * The Karty an Obszar owes are dealt together — you stop, you count what is
- * already lying there, and you turn over the difference. `drawCard` above is
- * what remains for the two cases that really are singular: a companion table
- * naming the cardboard it just turned over, and a Karta that draws *past* the
- * Obszar's tally (`byCard` — the Skalne Wrota, Odmiana Losu).
+ * already lying there, and you turn over the difference. `drawCard` in
+ * `commands/draw.ts` is what remains for the one case that really is singular:
+ * a Karta that draws *past* the Obszar's tally (`byCard` — the Skalne Wrota,
+ * Odmiana Losu).
  */
 export async function drawAll(
   gameId: string,
@@ -639,18 +613,8 @@ export async function settleSpell(gameId: string, force = false): Promise<Cast |
   return change(gameId, settleSpellOn, { force });
 }
 
-export async function setFightPlayerTotal(gameId: string, total: number): Promise<void> {
-  await change(gameId, setFightPlayerTotalOn, { total });
-}
-
-export async function fightRoll(
-  gameId: string,
-  side: "player" | "enemy",
-  value: number | null,
-): Promise<void> {
-  await change(gameId, fightRollOn, { side, manual: value !== null }, {
-    random: supplied([value], appRandom()),
-  });
+export async function fightRoll(gameId: string, side: "player" | "enemy"): Promise<void> {
+  await change(gameId, fightRollOn, { side }, { random: appRandom() });
 }
 
 /**
@@ -936,12 +900,10 @@ export async function changeNature(
   gameId: string,
   seatId: string,
   nature: "good" | "evil" | "chaotic",
-  /** Ignores a 7.3 mark the game itself wrote. `byHand` is the other half. */
+  /** Ignores a 7.3 mark the game itself wrote. */
   force = false,
-  /** Somebody typed it, so 7.3 gets no mark out of it — see the command. */
-  byHand = false,
 ): Promise<{ nowForbidden: string[] }> {
-  return change(gameId, changeNatureOn, { seatId, nature, force, byHand });
+  return change(gameId, changeNatureOn, { seatId, nature, force });
 }
 
 /**
@@ -1060,13 +1022,8 @@ export async function fightGuardian(gameId: string): Promise<void> {
 }
 
 /** Throws the die that gives a bridge guardian its Miecz or Magia (5 to 10). */
-export async function rollGuardianStrength(
-  gameId: string,
-  value: number | null,
-): Promise<{ strength: number }> {
-  return change(gameId, rollGuardianStrengthOn, { manual: value !== null }, {
-    random: supplied([value], appRandom()),
-  });
+export async function rollGuardianStrength(gameId: string): Promise<{ strength: number }> {
+  return change(gameId, rollGuardianStrengthOn, undefined, { random: appRandom() });
 }
 
 /**
@@ -1094,17 +1051,6 @@ export async function payFerry(gameId: string, pay: boolean): Promise<{ at: stri
 export type FightOutcome = "wygrana" | "remis" | "przegrana";
 
 /**
- * The table reporting how a bridge guardian went, where it is not being fought
- * through the app — companion mode with the creature resolved on the table.
- */
-export async function enterBridge(
-  gameId: string,
-  outcome: BridgeOutcome,
-): Promise<{ at: string | null }> {
-  return change(gameId, enterBridgeOn, { outcome });
-}
-
-/**
  * Crosses between rings (11.1-11.8).
  *
  * Only two places on the whole board allow it, only one direction of each is
@@ -1116,10 +1062,10 @@ export async function enterBridge(
  */
 export async function crossRing(
   gameId: string,
-  input: { outcome?: CrossOutcome; dice?: number[] | null; to?: FieldId } = {},
+  input: { outcome?: CrossOutcome; to?: FieldId } = {},
 ): Promise<{ to: string | null; outcome: CrossOutcome; dice?: number[]; magia?: number }> {
   return change(gameId, crossRingOn, { outcome: input.outcome, to: input.to }, {
-    random: supplied(input.dice ?? [], appRandom()),
+    random: appRandom(),
   });
 }
 
@@ -1129,8 +1075,7 @@ export async function crossRing(
  * Rule 17.2 makes fleeing a decision taken BEFORE any dice, and 19.1 says
  * whether it works depends on the character's own special abilities or the
  * Krąg Płomieni spell — never on a die. So the answer is read off what the
- * seat is holding rather than rolled for, and a companion table can still say
- * yes or no itself.
+ * seat is holding rather than rolled for.
  *
  * Three things the rules keep apart and this has to as well:
  *
@@ -1166,19 +1111,8 @@ export async function escape(
  * not one, and forces a retreat off the bridge; the character may come back and
  * try again.
  */
-export async function fightBeast(
-  gameId: string,
-  kindRoll: number | null,
-  strengthRoll: number | null,
-  playerRoll: number | null,
-  beastRoll: number | null,
-): Promise<void> {
-  // The four dice in the order the command asks for them. This is the whole of
-  // what `die_source` decides, and it is decided here rather than fifteen times
-  // inside the rules.
-  await change(gameId, fightBeastCommand, undefined, {
-    random: supplied([kindRoll, strengthRoll, playerRoll, beastRoll], appRandom()),
-  });
+export async function fightBeast(gameId: string): Promise<void> {
+  await change(gameId, fightBeastCommand, undefined, { random: appRandom() });
 }
 
 /**
@@ -1262,16 +1196,9 @@ export async function equipCard(
  * at the end of the rulebook) and this is all six of them — the Zamek itself
  * already had its own fight.
  *
- * Dice may be supplied, as everywhere else, because a table with real dice on
- * it beats a table being told what it rolled.
  */
-export async function resolveBridgeOrdeal(
-  gameId: string,
-  input: { dice?: number[]; itemRolls?: number[] } = {},
-): Promise<BridgeOrdealResult> {
-  return change(gameId, resolveBridgeOrdealOn, undefined, {
-    random: supplied([...(input.dice ?? []), ...(input.itemRolls ?? [])], appRandom()),
-  });
+export async function resolveBridgeOrdeal(gameId: string): Promise<BridgeOrdealResult> {
+  return change(gameId, resolveBridgeOrdealOn, undefined, { random: appRandom() });
 }
 
 /**
@@ -1540,15 +1467,13 @@ export async function applyEffect(
 export async function resolveFieldOffer(
   gameId: string,
   offerName: string,
-  value: number | null,
   decided: Decisions = {},
 ): Promise<{ offer: string; face?: number; did: string[]; pending: Effect | null }> {
   return change(gameId, resolveFieldOfferOn, (of) => ({
     offerName,
     decided,
-    manual: value !== null,
     shuffle: shuffleFor(of.game),
-  }), { random: supplied([value], appRandom()) });
+  }), { random: appRandom() });
 }
 
 /**
@@ -1566,15 +1491,13 @@ export async function resolveFieldOffer(
 export async function resolveDrawnCard(
   gameId: string,
   cardId: string,
-  value: number | null,
   decided: Decisions = {},
 ): Promise<{ card: string; face?: number; did: string[]; pending: Effect | null }> {
   return change(gameId, resolveDrawnCardOn, (of) => ({
     cardId,
     decided,
-    manual: value !== null,
     shuffle: shuffleFor(of.game),
-  }), { random: supplied([value], appRandom()) });
+  }), { random: appRandom() });
 }
 
 /**

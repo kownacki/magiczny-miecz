@@ -62,11 +62,7 @@ export interface Holding {
 export interface TurnCard {
   cardId: string;
   cardClass: CardClass;
-  /**
-   * Which physical slice this is, when the app owns the deck. Absent in
-   * companion mode, where the player is holding the card and the app only
-   * knows which one they named.
-   */
+  /** Which physical slice this is. */
   ref?: string;
   /**
    * Staged by the test shortcut rather than drawn.

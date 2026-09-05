@@ -174,19 +174,13 @@ describe("concealment (9.3, 5.2, 6.2)", () => {
   const hand = [held("excalibur", "item"), held("zaklecie", "spell", "hidden")];
 
   it("hides another player's spells but counts them", () => {
-    const seen = visibleTo(hand, { own: false, mode: "simulation" });
+    const seen = visibleTo(hand, { own: false });
     expect(seen.cards.map((c) => c.cardId)).toEqual(["excalibur"]);
     expect(seen.hiddenCount).toBe(1);
   });
 
   it("shows a seat its own hand in full", () => {
-    expect(visibleTo(hand, { own: true, mode: "simulation" }).cards).toHaveLength(2);
-  });
-
-  it("hides nothing in companion mode, where the cards are in real hands", () => {
-    const seen = visibleTo(hand, { own: false, mode: "companion" });
-    expect(seen.cards).toHaveLength(2);
-    expect(seen.hiddenCount).toBe(0);
+    expect(visibleTo(hand, { own: true }).cards).toHaveLength(2);
   });
 });
 

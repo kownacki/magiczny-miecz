@@ -7,13 +7,11 @@ import { readSeatToken, takeRemovedNotice, writeSeatToken } from "@/lib/game/sea
 import characters from "@/data/characters.json";
 import type { Character } from "@/data/types";
 import { isCharacterId } from "@/data/ids";
-import { COMPANION_PARKED } from "@/lib/game/modes";
 import { deviceId } from "@/lib/game/deviceId";
 
 interface GameSummary {
   joinCode: string;
   status: string;
-  mode: string;
   round: number;
   lastPlayedAt: string;
   players: { name: string | null; characterId: string | null; abandoned: boolean }[];
@@ -59,10 +57,9 @@ type Intent = { kind: "create" } | { kind: "join"; code: string } | null;
  * list of existing ones is what you scroll to when you cannot remember which
  * table last night's game was on.
  *
- * Both routes go through a dialog rather than fields on this page. The name is
- * required, and the mode has to be settled before a table exists; asking for
- * both inline meant a page of fields most of which were irrelevant to whichever
- * of the two things you had come to do.
+ * Both routes go through a dialog rather than fields on this page: asking for
+ * a name inline meant a page of fields most of which were irrelevant to
+ * whichever of the two things you had come to do.
  */
 export default function Home() {
   const router = useRouter();
@@ -103,7 +100,6 @@ export default function Home() {
 
   async function createTable(
     name: string,
-    mode: "simulation" | "companion",
     eqMode: "classic" | "slots",
     endlessStock: boolean,
   ) {
@@ -113,7 +109,7 @@ export default function Home() {
       const response = await fetch("/api/games", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ name, mode, eqMode, endlessStock, deviceId: deviceId() }),
+        body: JSON.stringify({ name, eqMode, endlessStock, deviceId: deviceId() }),
       });
       if (!response.ok) throw new Error("Nie udało się otworzyć stołu.");
       const { joinCode, token } = await response.json();
@@ -193,13 +189,9 @@ export default function Home() {
         <h1 className="font-[family-name:var(--font-display)] text-4xl font-bold tracking-wide text-ochre">
           Magiczny Miecz
         </h1>
-        {/* Says what the app does today. While companion mode is parked there
-            is one way to play, and promising two would be promising one that
-            cannot be chosen. */}
         <p className="mt-3 text-sm text-muted">
-          {COMPANION_PARKED
-            ? "Zagraj całą partię tutaj — plansza, karty, kostka i kolejność po stronie aplikacji."
-            : "Zagraj całą partię tutaj albo przy planszy — liczenie, rzuty i kolejność kart aplikacja bierze na siebie w obu trybach."}
+          Zagraj całą partię tutaj — plansza, karty, kostka i kolejność po
+          stronie aplikacji.
         </p>
       </header>
 
@@ -263,9 +255,6 @@ export default function Home() {
                     {game.joinCode}
                   </span>
                   <span className="text-[11px] text-muted">
-                    {/* The mode is fixed at creation, so it is a property of the
-                        table worth seeing before you open it. */}
-                    {game.mode === "companion" ? "przy planszy" : "symulacja"} ·{" "}
                     {STATUS_LABEL[game.status] ?? game.status}
                     {game.status === "playing" ? ` · tura ${game.round}` : ""} ·{" "}
                     {whenPlayed(game.lastPlayedAt)}
@@ -462,15 +451,9 @@ function CreateDialog({
 }: {
   busy: boolean;
   onCancel: () => void;
-  onCreate: (
-    name: string,
-    mode: "simulation" | "companion",
-    eqMode: "classic" | "slots",
-    endlessStock: boolean,
-  ) => void;
+  onCreate: (name: string, eqMode: "classic" | "slots", endlessStock: boolean) => void;
 }) {
   const [name, setName] = useState("");
-  const [mode, setMode] = useState<"simulation" | "companion">("simulation");
   /**
    * What a table opens with, before its players have talked about it.
    *
@@ -489,41 +472,11 @@ function CreateDialog({
       <form
         onSubmit={(event) => {
           event.preventDefault();
-          if (name.trim()) onCreate(name.trim(), mode, eqMode, endlessStock);
+          if (name.trim()) onCreate(name.trim(), eqMode, endlessStock);
         }}
         className="flex flex-col gap-2"
       >
         <NameField value={name} onChange={setName} />
-
-        {/* The mode belongs to the table, so it is settled before the table
-            exists rather than toggled in the lobby afterwards. It decides
-            whether there is a board in the room, which is not a preference
-            anybody changes their mind about between clicking twice. */}
-        <fieldset className="mt-3 flex flex-col gap-2">
-          <legend className="mb-2 text-xs uppercase tracking-widest text-muted">
-            Jak gracie
-          </legend>
-          <ModeChoice
-            active={mode === "simulation"}
-            onPick={() => setMode("simulation")}
-            label="Pełna symulacja"
-            hint="Wszystko dzieje się tutaj — plansza i karty nie są potrzebne."
-          />
-          {/* Parked, not removed — see COMPANION_PARKED. Left on screen so
-              that it reads as "later" rather than as a mode this app never
-              had. */}
-          <ModeChoice
-            active={mode === "companion"}
-            onPick={() => setMode("companion")}
-            parked={COMPANION_PARKED}
-            label="Sędzia przy planszy"
-            hint={
-              COMPANION_PARKED
-                ? "Chwilowo wyłączone — wróci, gdy symulacja będzie gotowa."
-                : "Gracie prawdziwą planszą; aplikacja liczy i pilnuje kolejności."
-            }
-          />
-        </fieldset>
 
         {/* The variant and the pile are not asked here any more.
 
@@ -532,10 +485,7 @@ function CreateDialog({
             people, who found out later by discovering they had a Plecak.
             Neither has to be decided at the door, because nothing is dealt
             until the game starts — so both are in the poczekalnia now, where
-            the table is all present and has nothing to do but talk about them.
-
-            The mode stays. It is the one answer that really does precede the
-            table: it decides whether there is a board in the room at all. */}
+            the table is all present and has nothing to do but talk about them. */}
 
         <Actions
           busy={busy}
@@ -548,46 +498,3 @@ function CreateDialog({
   );
 }
 
-function ModeChoice({
-  active,
-  onPick,
-  label,
-  hint,
-  parked,
-}: {
-  active: boolean;
-  onPick: () => void;
-  label: string;
-  hint: string;
-  /** Shown, struck through and unselectable: not gone, just not now. */
-  parked?: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onPick}
-      disabled={parked}
-      aria-pressed={active}
-      className={`rounded-lg border px-3 py-2 text-left transition ${
-        parked
-          ? "cursor-not-allowed border-edge/50 bg-panel/20"
-          : active
-            ? "border-ochre bg-ochre/10"
-            : "border-edge bg-panel/40 hover:border-ochre/60"
-      }`}
-    >
-      <span
-        className={`block font-[family-name:var(--font-display)] text-sm ${
-          parked ? "text-muted/60 line-through" : active ? "text-ochre" : "text-ink"
-        }`}
-      >
-        {label}
-      </span>
-      <span
-        className={`block text-[11px] leading-snug ${parked ? "text-muted/50" : "text-muted"}`}
-      >
-        {hint}
-      </span>
-    </button>
-  );
-}

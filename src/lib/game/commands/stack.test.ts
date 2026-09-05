@@ -127,10 +127,10 @@ const theTable = (): Snapshot =>
 /** Moment 1 and 2: on the Płaskowyż with its three Karty turned over. */
 async function throughTheDraw(): Promise<Snapshot> {
   const play = driving(theTable());
-  await play.run(rollForMove, {}, rolling(4));
+  await play.run(rollForMove, undefined, rolling(4));
   await play.run(moveTo, { destination: "plaskowyz-mgiel" });
   for (let n = 0; n < 3; n++) {
-    await play.run(drawCard, { named: null, shuffle: asIs });
+    await play.run(drawCard, { shuffle: asIs });
   }
   return play.snapshot;
 }
@@ -141,7 +141,7 @@ describe("the resolution stack (docs/STACK.md)", () => {
 
   it("1. rolls 4 and moves to Płaskowyż Mgieł → [field(plaskowyz, draw 3)]", async () => {
     let at = theTable();
-    at = apply(at, (await rollForMove(at, {}, ports({ random: scriptedRandom([4]) }))).writes);
+    at = apply(at, (await rollForMove(at, undefined, ports({ random: scriptedRandom([4]) }))).writes);
     const rolled = top(at.game.turn_state);
     expect(rolled.phase === "move" && rolled.roll).toBe(4);
 
@@ -325,7 +325,7 @@ describe("the resolution stack (docs/STACK.md)", () => {
     // Płaskowyż the three Karty are lying on.
     await play.run(finishTurn);
     await play.run(finishTurn);
-    await play.run(rollForMove, {}, rolling(3));
+    await play.run(rollForMove, undefined, rolling(3));
     await play.run(moveTo, { destination: "plaskowyz-mgiel" });
     return play;
   }

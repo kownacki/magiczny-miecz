@@ -1,6 +1,6 @@
 "use client";
 
-/** A card's or a field's script drawn as controls: what the app can apply for you becomes a button, and what it cannot is stated. */
+/** A card's or a field's script, read out: what each face of it does, in plain words. */
 
 import { Rules } from "./rule-ref";
 
@@ -8,39 +8,24 @@ import { type Effect } from "@/lib/engine/cardScript";
 import { FIELDS } from "@/lib/engine/board";
 import { andWhom, describeCondition, describeLoss } from "@/lib/engine/effectText";
 import { characterName, STAT_LABEL } from "@/lib/engine/polish";
-import type { OnSuggestion } from "./turn-controls";
-import { ActionButton } from "./action-button";
 
 /**
- * The buttons for one effect.
+ * What one effect says, drawn.
  *
  * Recursive, because the effects are: a die table's face can be a fight, a
- * wish's option can be a teleport. Anything the app cannot apply on its own —
- * a move, a fight, a Nature change — is stated rather than offered, since those
- * already have their own controls elsewhere in the turn.
+ * wish's option can be a teleport.
+ *
+ * Nothing here is a button. The app applies every script itself — the server
+ * throws the die, takes the row and writes the result — so this is the reading
+ * of what a face does, before and after it happens. A control that applied
+ * "−1 Złota" a second time would not be an affordance but a trap.
  */
 export function EffectControls({
   effect,
-  cardName,
-  busy,
-  onSuggestion,
   prefix = "",
-  applied = false,
 }: {
   effect: Effect;
-  cardName: string;
-  busy: boolean;
-  onSuggestion: OnSuggestion;
   prefix?: string;
-  /**
-   * Whether the app has already carried this out.
-   *
-   * When it has, the outcomes are read, not pressed: a button that applies
-   * "−1 Złota" a second time is not an affordance, it is a trap. Set for every
-   * die table a simulation rolls, where the server applied the row before the
-   * page ever saw it.
-   */
-  applied?: boolean;
 }) {
   const stated = (text: string) => (
     <p className="text-[11px] text-muted">
@@ -59,15 +44,7 @@ export function EffectControls({
       return (
         <div className="flex flex-col gap-1">
           {effect.steps.map((step, i) => (
-            <EffectControls
-              key={i}
-              effect={step}
-              cardName={cardName}
-              busy={busy}
-              onSuggestion={onSuggestion}
-              prefix={prefix}
-              applied={applied}
-            />
+            <EffectControls key={i} effect={step} prefix={prefix} />
           ))}
         </div>
       );
@@ -77,13 +54,7 @@ export function EffectControls({
           <p className="mb-1 text-[11px] text-muted">{prefix}Wybierz jedno:</p>
           <div className="flex flex-wrap gap-1">
             {effect.options.map((option) => (
-              <EffectControls
-                key={option.label}
-                effect={option.effect}
-                cardName={cardName}
-                busy={busy}
-                onSuggestion={onSuggestion}
-              />
+              <EffectControls key={option.label} effect={option.effect} />
             ))}
           </div>
         </div>
@@ -96,13 +67,7 @@ export function EffectControls({
             {[1, 2, 3, 4, 5, 6].map((face) => (
               <li key={face} className="flex items-baseline gap-2">
                 <span className="tnum w-3 text-[11px] text-ochre">{face}</span>
-                <EffectControls
-                  effect={effect.faces[face]}
-                  cardName={cardName}
-                  busy={busy}
-                  onSuggestion={onSuggestion}
-                  applied={applied}
-                />
+                <EffectControls effect={effect.faces[face]} />
               </li>
             ))}
           </ol>
@@ -113,38 +78,18 @@ export function EffectControls({
       if (effect.target && effect.target !== "ty") {
         return stated(`${label}${andWhom(effect.target)}`);
       }
-      if (applied) return stated(label);
-      return (
-        <ActionButton
-          role="gain"
-          size="xs"
-          disabled={busy}
-          onClick={() => onSuggestion(effect.stat, effect.delta, cardName)}
-        >
-          {label}
-        </ActionButton>
-      );
+      return stated(label);
     }
     case "uzdrow":
       return stated(`uzdrowienie do ${effect.upTo} punktów Życia (nie ponad start, 4.7)`);
     case "tura-stracona":
-      if (applied) return stated(`−${effect.turns} tura`);
-      return effect.target && effect.target !== "ty" ? (
-        stated(
-          `−${effect.turns} tura${andWhom(effect.target)}` +
-            (effect.oprocz?.length
-              ? `, oprócz: ${effect.oprocz.map(characterName).join(", ")}`
-              : ""),
-        )
-      ) : (
-        <ActionButton
-          role="harm"
-          size="xs"
-          disabled={busy}
-          onClick={() => onSuggestion("tury", effect.turns, cardName)}
-        >
-          −{effect.turns} tura
-        </ActionButton>
+      return stated(
+        effect.target && effect.target !== "ty"
+          ? `−${effect.turns} tura${andWhom(effect.target)}` +
+              (effect.oprocz?.length
+                ? `, oprócz: ${effect.oprocz.map(characterName).join(", ")}`
+                : "")
+          : `−${effect.turns} tura`,
       );
     case "ruch-dodatkowy":
       return stated("dodatkowy ruch");
@@ -197,12 +142,7 @@ export function EffectControls({
             {prefix}Powiedz na głos cyfrę od 1 do 6, potem rzuć. Trafienie:
           </p>
           <div className="mt-0.5">
-            <EffectControls
-              effect={effect.nagroda}
-              cardName={cardName}
-              busy={busy}
-              onSuggestion={onSuggestion}
-            />
+            <EffectControls effect={effect.nagroda} />
           </div>
         </div>
       );
@@ -248,19 +188,10 @@ export function EffectControls({
         <div className="flex flex-col gap-1">
           <EffectControls
             effect={effect.to}
-            cardName={cardName}
-            busy={busy}
-            onSuggestion={onSuggestion}
             prefix={`${describeCondition(effect.warunek)}: `}
           />
           {effect.inaczej && (
-            <EffectControls
-              effect={effect.inaczej}
-              cardName={cardName}
-              busy={busy}
-              onSuggestion={onSuggestion}
-              prefix="w przeciwnym razie: "
-            />
+            <EffectControls effect={effect.inaczej} prefix="w przeciwnym razie: " />
           )}
         </div>
       );

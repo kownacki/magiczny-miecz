@@ -1,6 +1,6 @@
 /** Taking a card off a pile: the Obszar's Karty Zdarzeń (15.1, 15.2), the Zaklęcia of 9.2 and 9.5, the Różdżka's refill, and what the Wyposażenie has left (21.2). */
 
-import type { CardClass, EventCard } from "@/data/types";
+import type { EventCard } from "@/data/types";
 import type { EventId } from "@/data/ids";
 import { spellsAtSetup } from "@/lib/engine/characters";
 import { spellsPeeked } from "@/lib/engine/abilities";
@@ -12,7 +12,7 @@ import { PRINTED_STOCK, stockLeft } from "@/lib/engine/stock";
 import { FIELDS } from "@/lib/engine/board";
 import { afterDraw, type TurnPhase } from "@/lib/engine/turn";
 import { replaceTop, requireTop, whatIsOpen, type TurnState } from "@/lib/engine/stack";
-import { BY_REF, EVENTS, SPELL_BY_REF, decksOf } from "../decks";
+import { BY_REF, SPELL_BY_REF, decksOf } from "../decks";
 import type { Changeset, Outcome, Snapshot } from "../change";
 import { activeSeat, cardLending, holdingsOf, seatById, seatView } from "./seat";
 import { refuseAgainst13_2 } from "./turn";
@@ -50,11 +50,10 @@ import { refuseAgainst13_2 } from "./turn";
  *
  * One thread of the old binding is still attached and cannot be cut from here:
  * `decksOf` builds a pile with `decks.ts`'s module-level `shuffle` when the
- * stored row has none — a game opened before the spell pile existed, or a
- * simulation whose `deck` is somehow null. Neither branch is reachable through
- * a companion table, which refuses before the piles are read, so in practice
- * only a legacy row can find it. Closing it means `decksOf` taking a `Shuffle`
- * too, which is `decks.ts`'s change and not this file's.
+ * stored row has none — a game opened before the spell pile existed, or a game
+ * whose `deck` is somehow null. Only a legacy row can find it. Closing it means
+ * `decksOf` taking a `Shuffle` too, which is `decks.ts`'s change and not this
+ * file's.
  */
 export interface FromThePile {
   shuffle: Shuffle;
@@ -65,15 +64,6 @@ export interface FromThePile {
  * ----------------------------------------------------------------------- */
 
 export interface DrawCard extends FromThePile {
-  /**
-   * The card a player at a physical table named, because the physical deck
-   * decided. Null in simulation, where the app owns the pile and draws itself.
-   *
-   * This is the whole of the distinction between the two modes, and the only thing
-   * either branch differs by: both end with a card added to the turn's stack in
-   * 15.2 order.
-   */
-  named: { cardId: string; cardClass: CardClass } | null;
   /**
    * This draw is a Karta's instruction rather than the Obszar's count.
    *
@@ -87,8 +77,8 @@ export interface DrawCard extends FromThePile {
 }
 
 export interface Drawn {
-  /** Null when the table named a card the app has never been told about. */
-  card: EventCard | null;
+  /** The Karta that came off the pile. */
+  card: EventCard;
   /** True when 15.5 had to turn the used pile over to answer the draw. */
   recycled: boolean;
 }
@@ -178,27 +168,6 @@ export function drawCard(snapshot: Snapshot, command: DrawCard): Outcome<Drawn> 
         ? "Na tym Obszarze nie ciągnie się Kart (13.4)."
         : `Ten Obszar daje ${prints} — tyle już tu leży albo wyciągnięto (13.4).`,
     );
-  }
-
-  if (snapshot.game.mode === "companion") {
-    const named = command.named;
-    if (!named) throw new Error("Podaj nazwę wyciągniętej karty.");
-    return {
-      writes: {
-        game: { turn_state: replaceTop(snapshot.game.turn_state, afterDraw(state, named)) },
-        journal: [
-          {
-            seatId: seat.id,
-            round: snapshot.game.round,
-            kind: "card",
-            payload: { ...named, source: "fizyczna" },
-          },
-        ],
-      },
-      // A companion table may name a card nobody has transcribed yet; that is
-      // the referee being usable before the deck is finished, not an error.
-      result: { card: EVENTS.find((c) => c.id === named.cardId) ?? null, recycled: false },
-    };
   }
 
   const decks = decksOf(snapshot.game);
@@ -317,19 +286,6 @@ export function drawAll(snapshot: Snapshot, command: DrawAll): Outcome<DrewAll> 
         ? "Na tym Obszarze nie ciągnie się Kart (13.4)."
         : `Ten Obszar daje ${prints} — tyle już tu leży albo wyciągnięto (13.4).`,
     );
-  }
-
-  /**
-   * Companion deals with real cardboard, so there is nothing here to deal.
-   *
-   * A physical table turns the Karty over itself and then tells the app their
-   * names, which is `drawCard`'s `named` and cannot be done for several at once
-   * without asking for several names. Refused rather than half-supported —
-   * companion is parked (`COMPANION_PARKED`) and a silently different meaning
-   * for one verb is exactly what the second pass over every change is for.
-   */
-  if (snapshot.game.mode === "companion") {
-    throw new Error("Przy fizycznym stole nazwij każdą Kartę osobno (13.4).");
   }
 
   const decks = decksOf(snapshot.game);
@@ -509,10 +465,6 @@ export function drawSpell(snapshot: Snapshot, command: DrawSpell): Outcome<strin
         ? "Magia tej Postaci nie pozwala na żadne Zaklęcia (2.6)."
         : `Ta Postać może mieć najwyżej ${capacity} ${noun} (2.6).`,
     );
-  }
-
-  if (snapshot.game.mode === "companion") {
-    throw new Error("Przy planszy Zaklęcia ciągnie się z fizycznego stosu.");
   }
 
   const decks = decksOf(snapshot.game);

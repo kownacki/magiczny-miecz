@@ -1049,10 +1049,9 @@ suite("playing the game, and overruling it", () => {
    * Two that read as the game and are not.
    *
    * `nature` was `play` unless you added `force`, and `stone` was `play`
-   * outright — a reading that works for companion mode, where typing one is
-   * recording what a Karta just did at a physical table. In simulation the
-   * Karta does it, and typing it is a Natura changed with no card and a Postać
-   * turned to stone by nobody. 7.2 and 20.1 both say what causes them.
+   * outright. The Karta does both, and typing one is a Natura changed with no
+   * card and a Postać turned to stone by nobody. 7.2 and 20.1 both say what
+   * causes them.
    */
   it("locks the two that look like the game and are not", () => {
     for (const line of ["stone", "nature evil", "nature evil force"]) {

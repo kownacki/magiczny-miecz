@@ -27,7 +27,7 @@
  * At a physical table a human rolls and types the number in; in simulation the
  * app rolls. The rules must not be able to tell the difference — that is the
  * whole reason this is a port rather than a branch inside the rules. `reason`
- * is passed so a companion-mode implementation can prompt for the right thing
+ * is passed so a human-driven implementation can prompt for the right thing
  * ("roll for Kurhan") instead of an anonymous number box.
  */
 export interface RandomPort {

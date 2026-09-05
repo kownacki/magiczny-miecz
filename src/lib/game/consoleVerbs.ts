@@ -501,7 +501,7 @@ export const VERBS: { [K in Command["kind"]]: VerbRun<K> } = {
     // By hand always, forced only when asked: a Natura somebody typed does
     // not use up the character's one change of the turn, but a change the
     // *game* made this turn still refuses until `force` says otherwise.
-    await changeNature(gameId, seat.id, command.nature, command.force, true);
+    await changeNature(gameId, seat.id, command.nature, command.force);
     // 7.4 by way of 5.5 used to be spelled out here, card by card — the
     // command hands back which holdings the new Natura may not keep. The
     // slots say it themselves now, going red where the cards lie, so the line
@@ -869,7 +869,7 @@ export const VERBS: { [K in Command["kind"]]: VerbRun<K> } = {
   beast: async (ctx) => {
     const { gameId, seatOf, named } = ctx;
     const seat = seatOf(null);
-    await fightBeast(gameId, null, null, null, null);
+    await fightBeast(gameId);
     const after = (await activeStore().load(gameId)).game;
     if (after.status === "finished") return `${named(seat)} beats the Bestia. That is the game.`;
     const now = (await seatsFor(gameId)).find((one) => one.id === seat.id);
@@ -887,8 +887,6 @@ export const VERBS: { [K in Command["kind"]]: VerbRun<K> } = {
    * `moveTo` has a `viaBridge` at all, and why this verb is really "take the
    * one option that is the bridge".
    *
-   * `enterBridge` is the other door and is companion mode's: it takes an
-   * outcome a table already fought for.
    */
   bridge: async (ctx) => {
     const { gameId, seatOf, named } = ctx;
@@ -1085,11 +1083,11 @@ export const VERBS: { [K in Command["kind"]]: VerbRun<K> } = {
      * fight comes through this line, and only some of them owe it.
      */
     const owed = topIf((await activeStore().load(gameId)).game.turn_state, "fight");
-    if (owed?.fight.strengthRoll === null) await rollGuardianStrength(gameId, null);
+    if (owed?.fight.strengthRoll === null) await rollGuardianStrength(gameId);
 
     // Null on both, because the app throws its own dice in simulation.
-    await fightRoll(gameId, "player", null);
-    await fightRoll(gameId, "enemy", null);
+    await fightRoll(gameId, "player");
+    await fightRoll(gameId, "enemy");
 
     const after = topIf((await activeStore().load(gameId)).game.turn_state, "fight");
     const fight = after?.fight;
@@ -1127,7 +1125,7 @@ export const VERBS: { [K in Command["kind"]]: VerbRun<K> } = {
   escape: async (ctx) => {
     const { gameId, seatOf, named } = ctx;
     const seat = seatOf(null);
-    // Null: the app rolls. A reported number is companion mode's.
+    // Null: the app decides, from the abilities in play (19.1).
     const fled = await escape(gameId, null);
     return fled.succeeded
       ? `${named(seat)} slips away.${fled.onBridge ? " Back off the Most." : ""}`
@@ -1339,9 +1337,8 @@ export const VERBS: { [K in Command["kind"]]: VerbRun<K> } = {
 
   roll: async (ctx) => {
     const { gameId } = ctx;
-    // Null, not a number: the app throws it. A typed die is companion mode's,
-    // and "in simulation, nothing is entered by hand".
-    await rollForMove(gameId, null);
+    // The app throws it: "in simulation, nothing is entered by hand".
+    await rollForMove(gameId);
     const state = top((await activeStore().load(gameId)).game.turn_state) as {
       roll?: number;
       options?: { fieldId: string; fieldName: string }[];
@@ -1412,7 +1409,7 @@ export const VERBS: { [K in Command["kind"]]: VerbRun<K> } = {
     // the turn is actually stuck on.
     const offer = compulsoryOffer(state.fieldId ?? null, state.resolved ?? []);
     if (offer && !command.card) {
-      const done = await resolveFieldOffer(gameId, offer.name, null, decided);
+      const done = await resolveFieldOffer(gameId, offer.name, decided);
       return said(done.did, done.pending !== null);
     }
 
@@ -1433,7 +1430,7 @@ export const VERBS: { [K in Command["kind"]]: VerbRun<K> } = {
         `Which one — ${waiting.map((one) => cardName(one.cardId)).join(", ")}?`,
       );
     }
-    const done = await resolveDrawnCard(gameId, card.cardId, null, decided);
+    const done = await resolveDrawnCard(gameId, card.cardId, decided);
     return said(done.did, done.pending !== null);
   },
 

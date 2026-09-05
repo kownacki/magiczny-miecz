@@ -2,7 +2,6 @@
 
 /** One offer, opened: the Płatnerz's shelf, the Medyk's wounds, the Lichwiarz's desk — each with the thing it does attached to a button. */
 
-import { useState } from "react";
 import type { Effect } from "@/lib/engine/cardScript";
 import { HEAL_CEILING } from "@/lib/engine/derive";
 import { cardName } from "@/lib/engine/polish";
@@ -14,7 +13,7 @@ import { DieMark } from "./die-mark";
 import { Shop } from "./shop";
 import type { Confirmation } from "./confirm";
 import type { Offer } from "./field-offers";
-import type { OnService, OnSuggestion } from "./turn-controls";
+import type { OnService } from "./turn-controls";
 
 /**
  * Everything the controls under an offer need, gathered into one.
@@ -28,8 +27,6 @@ import type { OnService, OnSuggestion } from "./turn-controls";
  */
 export interface OfferContext {
   busy: boolean;
-  /** The other face of `Simulated`: true at a physical table, where a die may be typed in rather than thrown. */
-  typedRolls: boolean;
   /** Asks the server to throw this offer's die and apply the row. */
   onRollOffer: () => void;
   gold: number;
@@ -51,7 +48,6 @@ export interface OfferContext {
   nature?: Nature | null;
   /** Raises the app's one "are you sure?" — spending is irreversible. */
   onAsk: (ask: Confirmation) => void;
-  onSuggestion: OnSuggestion;
   onService?: OnService;
 }
 
@@ -216,27 +212,17 @@ function ServiceEffect({
   }
 
   return (
-    <EffectControls
-      effect={effect}
-      cardName={name}
-      busy={ctx.busy}
-      onSuggestion={ctx.onSuggestion}
-      applied={!ctx.typedRolls}
-    />
+    <EffectControls effect={effect} />
   );
 }
 
 /**
  * A field's die table.
  *
- * In a simulation this is one button: the server throws the die, applies the
- * row and says what it did — pressing "−1 Złota" afterwards would be the player
- * doing the app's job. The six faces stay on screen because they are the board,
- * and knowing what the Karczma can do to you before you walk in is the game.
- *
- * At a physical table it is the older thing: pick the face your own die showed
- * and apply the row yourself, because there the app is keeping the record and
- * not making it.
+ * One button: the server throws the die, applies the row and says what it did
+ * — pressing "−1 Złota" afterwards would be the player doing the app's job. The
+ * six faces stay on screen because they are the board, and knowing what the
+ * Karczma can do to you before you walk in is the game.
  */
 function ScriptedRoll({
   effect,
@@ -247,11 +233,7 @@ function ScriptedRoll({
   name: string;
   ctx: OfferContext;
 }) {
-  const [rolled, setRolled] = useState<number | null>(null);
-  // Nothing is picked out for the player in a simulation: the app rolled and
-  // acted, and the notice above says what came of it. Showing one face as
-  // "yours" here would invite a second, contradictory click.
-  const faces = rolled === null || !ctx.typedRolls ? [1, 2, 3, 4, 5, 6] : [rolled];
+  const faces = [1, 2, 3, 4, 5, 6];
 
   return (
     <div>
@@ -259,9 +241,7 @@ function ScriptedRoll({
         <span className="mr-1 text-[11px] text-muted">Rzuć kostką:</span>
         <button
           disabled={ctx.busy || ctx.blocked !== null}
-          onClick={() =>
-            ctx.typedRolls ? setRolled(1 + Math.floor(Math.random() * 6)) : ctx.onRollOffer()
-          }
+          onClick={() => ctx.onRollOffer()}
           className="rounded border border-edge px-2 py-0.5 text-[11px] text-ink transition hover:border-ochre disabled:opacity-50"
         >
           <span className="flex items-center gap-1.5">
@@ -269,28 +249,6 @@ function ScriptedRoll({
             <DieMark />
           </span>
         </button>
-        {ctx.typedRolls &&
-          [1, 2, 3, 4, 5, 6].map((face) => (
-            <button
-              key={face}
-              onClick={() => setRolled(face)}
-              className={`tnum h-5 w-5 rounded border text-[11px] transition ${
-                rolled === face
-                  ? "border-ochre text-ochre"
-                  : "border-edge text-muted hover:border-ochre"
-              }`}
-            >
-              {face}
-            </button>
-          ))}
-        {rolled !== null && (
-          <button
-            onClick={() => setRolled(null)}
-            className="ml-auto text-[11px] text-muted underline hover:text-ink"
-          >
-            wyczyść
-          </button>
-        )}
       </div>
       <ol className="flex flex-col gap-0.5">
         {faces.map((face) => (

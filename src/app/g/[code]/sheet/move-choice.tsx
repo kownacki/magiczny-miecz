@@ -7,7 +7,7 @@
 
 import { DrawSheet, type SheetChrome } from "./draw-sheet";
 import { BridgeControls } from "../crossing-controls";
-import type { OnAction, Simulated } from "../turn-controls";
+import type { OnAction } from "../turn-controls";
 import { DIRECTION_LABEL, type TurnMoveOption } from "@/lib/engine/turn";
 
 /**
@@ -91,14 +91,12 @@ export function BridgeChoice({
   who,
   chrome,
   bridge,
-  simulated,
   busy,
   onAction,
 }: {
   who: string;
   chrome: SheetChrome;
   bridge: React.ComponentProps<typeof BridgeControls>["bridge"];
-  simulated: Simulated;
   busy: boolean;
   onAction: OnAction;
 }) {
@@ -109,12 +107,7 @@ export function BridgeChoice({
       art={null}
       watching={`${who} wchodzi na Most`}
     >
-      <BridgeControls
-        bridge={bridge}
-        simulated={simulated}
-        busy={busy}
-        onAction={onAction}
-      />
+      <BridgeControls bridge={bridge} busy={busy} onAction={onAction} />
     </DrawSheet>
   );
 }

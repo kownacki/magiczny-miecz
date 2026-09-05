@@ -58,7 +58,6 @@ export async function replay(file: SaveFile, options: ReplayOptions = {}): Promi
   const handle = memoryHandle(tables);
   const { game } = await createGame(
     players[0] ?? null,
-    "simulation",
     original.eq_mode === "classic" ? "classic" : "slots",
     null,
     handle,

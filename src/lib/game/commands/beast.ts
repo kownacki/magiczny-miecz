@@ -10,7 +10,7 @@ import { only } from "@/lib/engine/stack";
 /**
  * Fights the Bestia.
  *
- * Four dice, in this order — the order a companion-mode table types them in:
+ * Four dice, in this order — the order the port is asked for them in:
  * one for the kind of fight, one for its strength, then one each for the two
  * combatants. Nothing here reaches for a die itself; where the numbers come
  * from is the port's business and neither binding is visible from in here.

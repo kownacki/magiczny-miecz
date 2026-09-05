@@ -139,7 +139,7 @@ export interface EnvelopeUser {
  */
 export interface EnvelopeGame extends Omit<GameRow, "deck" | "seed" | "turn_state"> {
   turn_state: TurnState;
-  /** Absent in companion mode, where both piles are physical. */
+  /** Null before `startGame` has shuffled. */
   deckCounts: {
     events: { draw: number; discard: number };
     spells: { draw: number; discard: number };

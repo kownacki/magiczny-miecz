@@ -50,7 +50,6 @@ export const TURN_ACTIONS = [
   "move",
   "draw",
   "fight",
-  "fight-total",
   "fight-roll",
   "attack",
   "claim",
@@ -61,7 +60,6 @@ export const TURN_ACTIONS = [
   "friend-part",
   "raid",
   "cross",
-  "bridge",
   "guardian",
   "guardian-strength",
   "ferry",
@@ -104,7 +102,6 @@ export type HoldingsAction = (typeof HOLDINGS_ACTIONS)[number];
 
 /** The token is added by `post` and read by every route, so it is not written per route. */
 export interface Requests {
-  adjust: { seatId: string; stat: string; delta: number; fieldId: string; reason: string };
   bye: Record<never, never>;
   character: { seatId: string; characterId: string; again: boolean; deal: boolean };
   debug: { action: string; seatId: string; cardId: string; fieldId: string; line: string };
@@ -221,8 +218,6 @@ export interface Requests {
      */
     spoils: string;
     spoilsHoldingId: string;
-    beastRoll: number;
-    cardClass: string;
     cardId: string;
     cardIds: string[];
     choices: unknown;
@@ -235,16 +230,11 @@ export interface Requests {
      */
     choice: number;
     destination: string;
-    dice: number[];
     fieldId: string;
-    itemRolls: unknown;
-    kindRoll: number;
     offer: unknown;
     outcome: string;
     pay: boolean;
-    playerRoll: number;
     side: string;
-    strengthRoll: number;
     succeeded: boolean;
     targetSeatId: string;
     /** A Wróg left lying on an Obszar, when a raid goes at one of those instead. */
@@ -253,9 +243,6 @@ export interface Requests {
     points: number;
     /** The friend's Karta being given up where she belongs, for gold. */
     holdingId: string;
-    total: number;
-    /** A die the table reports, or null where the app is to throw it. */
-    value: number | null;
     viaBridge: boolean;
   };
   /** `hard` bars the Karta for good; without it, it goes back in the pool. */

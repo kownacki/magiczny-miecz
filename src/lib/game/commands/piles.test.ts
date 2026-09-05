@@ -63,14 +63,6 @@ describe("putting a card back (9.5, 21.2)", () => {
     const writes = putOnPile(table(), "events", [{ cardId: "helm" }]);
     expect(writes).toEqual({});
   });
-
-  /** At a physical table the pile is a pile, and the app is not holding it. */
-  it("writes nothing in companion mode", () => {
-    const writes = putOnPile(table({ game: { mode: "companion" } }), "events", [
-      { cardId: "cyklop" },
-    ]);
-    expect(writes).toEqual({});
-  });
 });
 
 describe("trofea going back (1.4, 4.4)", () => {

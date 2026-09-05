@@ -14,7 +14,7 @@ afterEach(() => resetStore());
 async function table() {
   const tables = emptyTables();
   const handle = memoryHandle(tables);
-  const { game } = await createGame("Ola", "simulation", "classic", null, handle);
+  const { game } = await createGame("Ola", "classic", null, handle);
   setStore(memoryStore(tables));
 
   const first = tables.seats[0].id as string;

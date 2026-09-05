@@ -51,7 +51,7 @@ describe("what a replay would need", () => {
    */
   it("catches a die a rule actually threw", async () => {
     const tables = emptyTables();
-    const { game } = await createGame("Michał", "simulation", "slots", null, memoryHandle(tables));
+    const { game } = await createGame("Michał", "slots", null, memoryHandle(tables));
     setStore(memoryStore(tables));
     const seat = tables.seats[0].id as string;
     await takeNewCharacter(game.id, seat, "goblin", seat);
@@ -59,7 +59,7 @@ describe("what a replay would need", () => {
     await startGame(game.id);
 
     startRecording();
-    await rollForMove(game.id, null);
+    await rollForMove(game.id);
     const rolls = stopRecording();
 
     expect(rolls).toHaveLength(1);

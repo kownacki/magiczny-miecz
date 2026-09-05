@@ -31,7 +31,6 @@ import { bonusFromHoldings, inEffect } from "@/lib/engine/holdings";
 import {
   endFight,
   recordFightRoll,
-  setFightTotal,
   startFight,
   type TurnPhase,
 } from "@/lib/engine/turn";
@@ -631,52 +630,16 @@ export function summonFighter(
  * The numbers and the dice.
  * ----------------------------------------------------------------------- */
 
-/**
- * Corrects the character's side of the sum.
- *
- * Companion mode's, and gated on it by the caller: 1.5 counts Przedmioty and
- * Przyjaciele towards the total and at a physical table those are cards lying
- * on the wood that the referee does not track. In simulation the app owns every
- * one of them and there is nothing here to correct.
- *
- * No dice, and no journal line — the store wrote none, and the fight's own
- * numbers are on every screen already.
- */
-export function setFightPlayerTotal(
-  snapshot: Snapshot,
-  command: { total: number },
-): Outcome<void> {
-  return {
-    writes: {
-      game: {
-        turn_state: replaceTop(
-          snapshot.game.turn_state,
-          setFightTotal(top(snapshot.game.turn_state), command.total),
-        ),
-      },
-    },
-    result: undefined,
-  };
-}
 
 export interface FightRoll {
   side: "player" | "enemy";
-  /**
-   * True when a human read the number off a real die and typed it in.
-   *
-   * Provenance, not a value: the die itself comes from the port, and which
-   * binding is behind it is not something a rule may ask. Same shape as
-   * `RollForMove.manual`.
-   */
-  manual?: boolean;
 }
 
 /**
  * Throws one side's die (17.4, 17.8).
  *
- * One die, for the side the command names — and nothing validates the number,
- * because `supplied` refuses anything outside 1-6 as it takes it, which is the
- * one place that can tell a typed number from a thrown one.
+ * One die, for the side the command names. Nothing validates the number: it
+ * comes off `RandomPort` and a d6 is what a d6 gives.
  */
 export async function fightRoll(
   snapshot: Snapshot,
@@ -698,7 +661,6 @@ export async function fightRoll(
   const thrown = await ports.random.rollD6(
     command.side === "player" ? "walka: rzut Postaci" : "walka: rzut Wroga",
   );
-  const manual = command.manual ?? false;
 
   /**
    * The two Talizmany, which shift the die rather than the total.
@@ -728,7 +690,6 @@ export async function fightRoll(
           round: snapshot.game.round,
           kind: "fight-roll",
           payload: { side: command.side, roll, ...(shift !== 0 ? { thrown, shift } : {}) },
-          manual,
         },
       ],
     },
@@ -745,8 +706,7 @@ export async function fightRoll(
  * asked for.
  *
  * One die, and only when there is something to roll for: a magical fight and a
- * character with nothing on it both answer no without touching the port, so a
- * companion table is never asked to type a number nothing reads.
+ * character with nothing on it both answer no without touching the port.
  *
  * Rolled automatically because there is nothing to decide — the card grants
  * "the right to roll" and no reason has ever existed to decline. Journalled
@@ -1115,16 +1075,15 @@ export interface Escape {
   /**
    * Whether the attempt worked, or null to let the app decide.
    *
-   * Null is what a simulation sends. 19.1 does not roll for this — an escape
+   * Null is what every device sends. 19.1 does not roll for this — an escape
    * works because a character's ability or the Krąg Płomieni says it does — so
    * "decide" means reading the abilities rather than throwing a die, and the
-   * answer is the same one `canEscapeAt` gives the interface. A companion table
-   * still says yes or no itself, because there the abilities in play include
-   * whatever the players have agreed about a card nobody has transcribed.
+   * answer is the same one `canEscapeAt` gives the interface. The other half is
+   * the test console, which says yes or no outright.
    */
   reported: boolean | null;
   /**
-   * The seat that pressed it, or null for the shared screen in companion mode.
+   * The seat that pressed it, or null for the test console.
    *
    * Checked rather than trusted, because 17.6 hands the escape to the other
    * player: this is the one action in a fight that the seat whose turn it is
@@ -1139,8 +1098,7 @@ export interface Escape {
  * Rule 17.2 makes fleeing a decision taken BEFORE any dice, and 19.1 says
  * whether it works depends on the character's own special abilities or the
  * Krąg Płomieni spell — never on a die. So the answer is read off what the
- * seat is holding rather than rolled for, and a companion table can still say
- * yes or no itself.
+ * seat is holding rather than rolled for.
  *
  * Three things the rules keep apart and this has to as well:
  *

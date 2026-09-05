@@ -11,7 +11,7 @@ import type { DrawnActionsProps } from "./drawn-actions";
 import { BridgeControls } from "../crossing-controls";
 import { SpellHand, type HeldSpell } from "../spell-hand";
 import type { TileCard } from "../card-tile";
-import type { OnAction, Simulated } from "../turn-controls";
+import type { OnAction } from "../turn-controls";
 import type { Effect } from "@/lib/engine/cardScript";
 import { nextFrame } from "@/lib/engine/kolejka";
 import type { CardClass, EventCard } from "@/data/types";
@@ -63,7 +63,6 @@ export function DrawModal({
   move,
   bridge,
   fieldOffer,
-  simulated,
   myEscape,
   ring,
   occupied,
@@ -153,7 +152,6 @@ export function DrawModal({
     bridge: React.ComponentProps<typeof BridgeControls>["bridge"] | null;
     /** A field's compulsory table (16.5), when the character is standing on one. */
     fieldOffer: { name: string; effect: Effect } | null;
-    simulated: Simulated;
     /** Whether this device is the character being attacked in a duel (17.6). */
     myEscape: boolean;
     onAction: OnAction;
@@ -249,7 +247,6 @@ export function DrawModal({
         who={who}
         chrome={chrome}
         bridge={bridge}
-        simulated={simulated}
         busy={busy}
         onAction={onAction}
       />
@@ -262,7 +259,6 @@ export function DrawModal({
         who={who}
         chrome={chrome}
         fight={fight}
-        simulated={simulated}
         busy={busy}
         myEscape={myEscape}
         onAction={onAction}

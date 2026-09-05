@@ -28,9 +28,7 @@ function seed(): Tables {
       {
         id: "g1",
         join_code: "ABCD",
-        mode: "simulation",
         eq_mode: "classic",
-        die_source: "app",
         status: "playing",
         active_seat: 0,
         round: 3,
@@ -77,14 +75,15 @@ describe("a game kept somewhere that is not Postgres", () => {
 
     // Not a fixture and not a hand-written changeset: the same function the
     // HTTP route calls, through the same `change()`, against the same rules.
-    await rollForMove("g1", 4);
+    await rollForMove("g1");
 
     const game = tables.games[0] as Record<string, unknown>;
     expect(game.revision).toBe(8);
     expect(top(asTurnState(game.turn_state)).phase).toBe("move");
     // The roll was recorded, numbered from where the snapshot found the mark.
     expect(tables.moves.map((row) => row.seq)).toEqual([12, 13]);
-    expect(tables.moves[1]).toMatchObject({ kind: "roll", payload: { roll: 4, manual: true } });
+    expect(tables.moves[1]).toMatchObject({ kind: "roll" });
+    expect((tables.moves[1] as unknown as { payload: { roll: number } }).payload.roll).toBeGreaterThanOrEqual(1);
   });
 
   it("hands back everything a change may read", async () => {
@@ -105,7 +104,7 @@ describe("a game kept somewhere that is not Postgres", () => {
    *
    * One terminal has no second writer, so this looks like ceremony — it is not.
    * The moment an in-memory game is allowed a cheaper commit there are two sets
-   * of rules to keep honest, which is the argument that parked companion mode.
+   * of rules to keep honest.
    */
   it("refuses a stale write, and writes none of it", async () => {
     const tables = seed();

@@ -56,9 +56,7 @@ export interface StartGame {
    * inventing a second port for one call, the caller shuffles — `freshDecks()`
    * — and hands the result in, which is the same bargain the dice make: the
    * rule decides *whether* there is a deck, the edge decides what order it is
-   * in. A companion table's piles are thrown away here, which costs one shuffle
-   * nobody sees and keeps "only a simulation owns a deck" a rule rather than a
-   * caller's habit.
+   * in.
    */
   decks: Decks;
 }
@@ -125,9 +123,7 @@ export function startGame(
       round: 1,
       active_seat: chosen[0].seat_index,
       turn_state: only(startTurn()),
-      // Only a simulation needs a deck. In companion mode the deck is the
-      // physical one on the table and the app must not pretend to own it.
-      deck: snapshot.game.mode === "simulation" ? command.decks : null,
+      deck: command.decks,
       ...startedAt(ports.now()),
     },
   };
@@ -318,33 +314,18 @@ function onTheShelf(snapshot: Snapshot, cardId: string, taken: Record<string, nu
  * The movement roll.
  * ----------------------------------------------------------------------- */
 
-export interface RollForMove {
-  /**
-   * True when a human read the number off a real die and typed it in.
-   *
-   * Provenance, not a value: the die itself comes from the port, and which
-   * binding is behind it is not something a rule may ask. But the journal has
-   * always recorded whether the app or the table produced the number — that is
-   * what its `manual` column is for — and only the edge that chose the binding
-   * knows. Same shape as `Adjustment.record`.
-   */
-  manual?: boolean;
-}
-
 /**
  * Rolls for the move (10.2).
  *
  * One die, and it is the only one: "ruch: rzut kostką".
  *
  * The die is thrown after the phase check and before the "is the figure
- * anywhere" check, which is where the store threw it, so a table that types a 7
- * still hears about the 7 first. Nothing here validates the number — `supplied`
- * refuses anything outside 1-6 as it takes it, which is the same refusal in the
- * one place that can tell a typed number from a thrown one.
+ * anywhere" check, which is where the store threw it. Nothing here validates
+ * the number: it comes off `RandomPort` and a d6 is what a d6 gives.
  */
 export async function rollForMove(
   snapshot: Snapshot,
-  command: RollForMove,
+  command: undefined,
   ports: CommandPorts,
 ): Promise<Outcome<number>> {
   const seat = activeSeat(snapshot);
@@ -422,7 +403,6 @@ export async function rollForMove(
    */
   const bonus = moveBonusRange(seatView(snapshot, seat.id).abilities);
 
-  const manual = command.manual ?? false;
   return {
     writes: {
       game: {
@@ -465,11 +445,9 @@ export async function rollForMove(
           // over" needs the range that was on offer, not just the destination.
           payload: {
             roll,
-            manual,
             ...(cap === null ? {} : { cap }),
             ...(bonus === null ? {} : { bonus }),
           },
-          manual,
         },
       ],
     },

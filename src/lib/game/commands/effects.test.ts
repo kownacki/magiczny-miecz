@@ -1112,22 +1112,6 @@ describe("an Obszar's own table (15.1)", () => {
     expect(state.resolved).toContain("pole:Karczma");
   });
 
-  /** A table the app rolled itself is not a human overruling the referee. */
-  it("marks a typed-in face as manual and an app roll as not", async () => {
-    const app = await resolveFieldOffer(
-      standing("karczma"),
-      { offerName: "Karczma", shuffle: asIs },
-      ports({ random: scriptedRandom([2]) }),
-    );
-    expect(app.writes.journal?.[0]).toMatchObject({ manual: false });
-
-    const typed = await resolveFieldOffer(
-      standing("karczma"),
-      { offerName: "Karczma", manual: true, shuffle: asIs },
-      ports({ random: scriptedRandom([2]) }),
-    );
-    expect(typed.writes.journal?.[0]).toMatchObject({ manual: true });
-  });
 });
 
 /**

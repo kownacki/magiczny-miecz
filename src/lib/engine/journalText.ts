@@ -981,17 +981,11 @@ export function describe(
      * The first line in every journal, and the only one nobody chose.
      *
      * A table with nothing in its Dziennik reads as a table where nothing
-     * works. Something did happen — somebody opened this — and the mode is
-     * worth saying once, because it is the one setting that cannot be changed
-     * afterwards and decides whether the app deals the cards or is told what
-     * the table dealt.
+     * works. Something did happen — somebody opened this — and the line says
+     * so.
      */
     case "table-opened":
-      return line(
-        data.mode === "companion"
-          ? "Stół otwarty — sędzia przy planszy."
-          : "Stół otwarty — pełna symulacja.",
-      );
+      return line("Stół otwarty.");
     case "joined-table": {
       const who = typeof data.name === "string" && data.name ? data.name : "Ktoś";
       return line(

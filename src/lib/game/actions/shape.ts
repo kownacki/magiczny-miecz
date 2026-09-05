@@ -29,8 +29,6 @@ export interface ActionContext {
   game: GameRow;
   user: UserRow;
   seat: SeatRow;
-  /** The shared screen of a companion table, acting for whoever is playing — see `Permission`. */
-  tableScreen: boolean;
 }
 
 export interface Action<R extends Route, Args, Reply> {

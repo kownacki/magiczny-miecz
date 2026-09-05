@@ -25,9 +25,7 @@ export interface MapSeat {
  * This exists because the app kept the position of every figure in a database
  * and showed it as a word. Four players and a word each is not a board — you
  * cannot see that two of you are about to collide, or that the Karczma is three
- * fields the other way. It serves both modes: in simulation it *is* the board,
- * and in companion mode it is the check that the app and the table still agree
- * about where everybody is standing.
+ * fields the other way. It *is* the board.
  */
 export function BoardMap({
   seats,

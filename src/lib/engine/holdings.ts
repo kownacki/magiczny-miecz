@@ -512,15 +512,13 @@ export function bonusFromHoldings(
  * are held concealed (9.3), so another player learns only how many there are —
  * which is itself public, since the cards are visibly in someone's hand.
  *
- * A seat always sees its own hand in full. In companion mode nothing is hidden
- * at all: the cards are physically in people's hands and the app is not the one
- * keeping the secret.
+ * A seat always sees its own hand in full.
  */
 export function visibleTo<T extends Holding>(
   holdings: readonly T[],
-  options: { own: boolean; mode: string },
+  options: { own: boolean },
 ): { cards: T[]; hiddenCount: number } {
-  if (options.own || options.mode === "companion") {
+  if (options.own) {
     return { cards: [...holdings], hiddenCount: 0 };
   }
   const cards = holdings.filter((holding) => holding.face !== "hidden");

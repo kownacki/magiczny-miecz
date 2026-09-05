@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import { createGame, seatsFor } from "@/lib/game/store";
 import { listGames, openTable } from "@/lib/game/lobbyStore";
-import { COMPANION_PARKED, type GameMode } from "@/lib/game/modes";
 import type { EqMode } from "@/lib/engine/slots";
 
 /** The tables that exist, so a game can be found again without its code. */
@@ -16,18 +15,6 @@ export async function GET() {
 export async function POST(request: Request) {
   const body = await request.json().catch(() => ({}));
   const name = typeof body.name === "string" && body.name.trim() ? body.name.trim() : null;
-  // Anything but the one other legal value means simulation, which is the mode
-  // that needs nothing on the table — and while companion mode is parked, so
-  // does that. Refused here as well as hidden in the interface: the picker is
-  // disabled, but a disabled control is a suggestion.
-  const asked: GameMode = body.mode === "companion" ? "companion" : "simulation";
-  if (asked === "companion" && COMPANION_PARKED) {
-    return NextResponse.json(
-      { error: "Tryb „Sędzia przy planszy” jest chwilowo wyłączony." },
-      { status: 400 },
-    );
-  }
-  const mode = asked;
   // Klasyczny unless the table asked otherwise: the variant is a house rule and
   // the default has to be the game as printed.
   // Slotowy unless the caller asks for the printed rules.
@@ -41,7 +28,6 @@ export async function POST(request: Request) {
   const deviceId = typeof body.deviceId === "string" ? body.deviceId : null;
   const { game, hostToken } = await createGame(
     name,
-    mode,
     eqMode,
     deviceId,
     undefined,

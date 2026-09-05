@@ -27,9 +27,7 @@ function seed(): Tables {
       {
         id: "g1",
         join_code: "ABCD",
-        mode: "simulation",
         eq_mode: "classic",
-        die_source: "app",
         status: "playing",
         active_seat: 0,
         round: 3,

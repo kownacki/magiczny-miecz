@@ -1173,7 +1173,6 @@ const OPS: { [K in LeafOp]: OpRun<K> } = {
       { cardId: facing.cardId, granted: facing.granted },
     ]);
     const drew = drawCard(apply(snapshot, mergeAll(taken, back)), {
-      named: null,
       shuffle,
       byCard: true,
     });
@@ -1287,7 +1286,7 @@ const OPS: { [K in LeafOp]: OpRun<K> } = {
     const { snapshot, shuffle } = ctx;
     let writes: Changeset = {};
     for (let i = 0; i < effect.count; i++) {
-      const done = drawCard(apply(snapshot, writes), { named: null, shuffle, byCard: true });
+      const done = drawCard(apply(snapshot, writes), { shuffle, byCard: true });
       writes = merge(writes, done.writes);
     }
     return { writes, result: { did: [`wyciągnięto ${effect.count} Kart`], pending: null } };

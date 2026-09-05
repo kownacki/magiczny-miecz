@@ -68,7 +68,6 @@ function aCard(id: string, name: string): Character {
 const aiming = (over: Partial<Aiming> = {}): Aiming => ({
   mySeatIndex: 0,
   canAdminister: false,
-  mode: "simulation",
   ...over,
 });
 
@@ -78,9 +77,8 @@ describe("what a seat is called", () => {
   });
 
   it("counts from one, because nobody sits at seat zero", () => {
-    // The host seats somebody by hand in companion mode without typing a name,
-    // and a table where that shows as an empty slot is a table nobody can be
-    // asked about.
+    // A chair whose player never typed one, and a table where that shows as
+    // an empty slot is a table nobody can be asked about.
     expect(seatName(aSeat({ playerName: null, seatIndex: 2 }))).toBe("Miejsce 3");
   });
 
@@ -125,24 +123,9 @@ describe("whose character you may choose", () => {
     expect(mayChooseFor(aSeat({ seatIndex: 1 }), aiming({ mySeatIndex: 0 }))).toBe(false);
   });
 
-  it("is a chair nobody is driving, when you are running a companion table", () => {
+  it("is nobody else's, however much of a host you are", () => {
     const seat = aSeat({ seatIndex: 1, driven: false });
-    expect(mayChooseFor(seat, aiming({ canAdminister: true, mode: "companion" }))).toBe(true);
-  });
-
-  it("is not that chair when you are not running the table", () => {
-    const seat = aSeat({ seatIndex: 1, driven: false });
-    expect(mayChooseFor(seat, aiming({ canAdminister: false, mode: "companion" }))).toBe(false);
-  });
-
-  it("is nobody else's in a simulation, where everybody has their own device", () => {
-    const seat = aSeat({ seatIndex: 1, driven: false });
-    expect(mayChooseFor(seat, aiming({ canAdminister: true, mode: "simulation" }))).toBe(false);
-  });
-
-  it("is not the seat of somebody who is driving it themselves", () => {
-    const seat = aSeat({ seatIndex: 1, driven: true });
-    expect(mayChooseFor(seat, aiming({ canAdminister: true, mode: "companion" }))).toBe(false);
+    expect(mayChooseFor(seat, aiming({ canAdminister: true }))).toBe(false);
   });
 });
 
@@ -200,14 +183,13 @@ describe("where the character strip is aimed", () => {
   });
 
   it("is the seat you deliberately picked, when you are allowed to pick it", () => {
-    const seat = aSeat({ id: "theirs", seatIndex: 1, driven: false });
-    const at = aimedAt([mine, seat], seat, aiming({ canAdminister: true, mode: "companion" }));
-    expect(at?.id).toBe("theirs");
+    const at = aimedAt([mine, theirs], mine, aiming());
+    expect(at?.id).toBe("mine");
   });
 
   it("falls back to your own seat rather than staying aimed at one you may not choose for", () => {
-    // A stale pick: the mode changed under it, or the seat stopped being one
-    // the host drives. Aiming at nobody would leave the whole strip inert.
+    // A stale pick: the seat left, or was never yours. Aiming at nobody would
+    // leave the whole strip inert.
     expect(aimedAt([mine, theirs], theirs, aiming())?.id).toBe("mine");
   });
 });

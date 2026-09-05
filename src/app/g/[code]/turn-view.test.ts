@@ -35,13 +35,11 @@ const game = (top: TurnPhase, ...beneath: TurnPhase[]): Game =>
     eq_mode: "classic",
     endless_stock: false,
     join_code: "ABCD",
-    mode: "simulation",
     status: "playing",
     active_seat: 0,
     characters_out: [],
     round: 1,
     revision: 1,
-    die_source: "app",
     turn_state: { stack: [...beneath, top] },
   }) as unknown as Game;
 
@@ -60,7 +58,6 @@ const input = (over: Partial<TurnViewInput> = {}): TurnViewInput => ({
   game: game(field()),
   seats: [seat()],
   fieldCards: [],
-  users: [],
   me: null,
   mySeatIndex: 0,
   moved: {},

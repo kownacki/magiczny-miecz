@@ -1,7 +1,6 @@
 /** Every action on the turn route, declared once: what it reads off the body and what it runs. */
 
 import type { Spoils } from "../commands/spoils";
-import type { CardClass } from "@/data/types";
 import type { Decisions } from "../turnStore";
 import { asFieldId } from "@/lib/engine/board";
 import type { Body, Requests, TurnAction } from "../requests";
@@ -21,8 +20,6 @@ import {
   payFerry,
   rollGuardianStrength,
   drawAll,
-  drawCard,
-  enterBridge,
   escape,
   fightBeast,
   fightRoll,
@@ -30,7 +27,6 @@ import {
   moveTo,
   resolveFight,
   rollForMove,
-  setFightPlayerTotal,
   resolveBridgeOrdeal,
   resolveDrawnCard,
   resolveFieldOffer,
@@ -74,14 +70,8 @@ function spoilsIn(body: Partial<Requests["turn"]>): Spoils | undefined {
   return undefined;
 }
 
-/** A die the table reports, or nothing — a simulation never types one. */
-const rolled = (value: unknown) => (typeof value === "number" ? value : null);
-
 export const TURN = {
-  roll: turn({
-    from: (body) => rolled(body.value),
-    run: (gameId, value) => rollForMove(gameId, value),
-  }),
+  roll: turn({ from: () => undefined, run: (gameId) => rollForMove(gameId) }),
   move: turn({
     // `viaBridge` picks the turn-onto-the-Most option apart from the plain
     // walk, which lands on the same field id (11.10).
@@ -91,31 +81,18 @@ export const TURN = {
   /**
    * Badanie Obszaru is one act (13.4), so one press deals the lot.
    *
-   * A named card still means the physical deck decided and only that one came
-   * up — companion's door, and the reason `drawCard` is still here. Nothing
-   * named is simulation, where the app deals everything the Obszar still owes
-   * at once rather than making the player press the same button three times
-   * for one motion at the table.
+   * The app deals everything the Obszar still owes at once rather than making
+   * the player press the same button three times for one motion at the table.
    */
-  draw: turn({
-    from: (body) =>
-      body.cardId
-        ? { cardId: String(body.cardId), cardClass: body.cardClass as CardClass }
-        : null,
-    run: async (gameId, named) => (named ? await drawCard(gameId, named) : await drawAll(gameId)),
-  }),
+  draw: turn({ from: () => undefined, run: (gameId) => drawAll(gameId) }),
   fight: turn({
     // One Wróg, or several at once (17.5) whose Miecze add together.
     from: (body) => (Array.isArray(body.cardIds) ? body.cardIds.map(String) : [String(body.cardId)]),
     run: (gameId, cardIds) => beginFight(gameId, cardIds),
   }),
-  "fight-total": turn({
-    from: (body) => Number(body.total),
-    run: (gameId, total) => setFightPlayerTotal(gameId, total),
-  }),
   "fight-roll": turn({
-    from: (body) => ({ side: body.side === "enemy" ? ("enemy" as const) : ("player" as const), value: rolled(body.value) }),
-    run: (gameId, { side, value }) => fightRoll(gameId, side, value),
+    from: (body) => (body.side === "enemy" ? ("enemy" as const) : ("player" as const)),
+    run: (gameId, side) => fightRoll(gameId, side),
   }),
   attack: turn({
     from: (body) => String(body.targetSeatId),
@@ -158,27 +135,20 @@ export const TURN = {
     run: (gameId, target) => sendRaider(gameId, target),
   }),
   cross: turn({
-    // The Trzęsawiska are settled by the app from the dice; the Lodowy Las is
-    // a fight, so the table reports how it went — and 11.8 lets it draw.
+    // The Trzęsawiska are settled by the app from its own dice; the undefended
+    // direction is a walk, and says so with an outcome (11.3, 11.7).
     from: (body): Parameters<typeof crossRing>[1] => {
       const outcome =
         body.outcome === "remis" || body.outcome === "nieudana" ? body.outcome : "udana";
-      return { outcome, dice: Array.isArray(body.dice) ? body.dice.map(Number) : null };
+      return { outcome };
     },
     run: (gameId, crossing) => crossRing(gameId, crossing),
-  }),
-  bridge: turn({
-    // 11.11 has three outcomes, and the draw is not the same as a loss: it
-    // costs no point but still bars next turn's attempt.
-    from: (body): Parameters<typeof enterBridge>[1] =>
-      body.outcome === "remis" || body.outcome === "porazka" ? body.outcome : "wygrana",
-    run: (gameId, outcome) => enterBridge(gameId, outcome),
   }),
   // Fight whatever is blocking the way, rather than reporting an outcome.
   guardian: turn({ from: () => undefined, run: (gameId) => fightGuardian(gameId) }),
   "guardian-strength": turn({
-    from: (body) => rolled(body.value),
-    run: (gameId, value) => rollGuardianStrength(gameId, value),
+    from: () => undefined,
+    run: (gameId) => rollGuardianStrength(gameId),
   }),
   ferry: turn({
     from: (body) => body.pay === true,
@@ -186,38 +156,26 @@ export const TURN = {
   }),
   /**
    * Absent means "you decide" — a simulation never reports an outcome it could
-   * have worked out. A companion table sends a boolean.
+   * have worked out.
    *
    * The answer goes back, because "no" is a real answer here and used to look
-   * exactly like nothing having happened. The shared screen in companion mode
-   * acts for whoever is fleeing; a player's own device may only flee with its
-   * own character.
+   * exactly like nothing having happened. A device may only flee with its own
+   * character.
    */
   escape: turn({
-    from: (body, { seat, tableScreen }) => ({
+    from: (body, { seat }) => ({
       succeeded: typeof body.succeeded === "boolean" ? body.succeeded : null,
-      seatId: tableScreen ? null : seat.id,
+      seatId: seat.id,
     }),
     run: (gameId, { succeeded, seatId }) => escape(gameId, succeeded, seatId),
   }),
   // The Kamienny Most's own fields: the traps, the game with Death, the dog,
   // and the two creatures that stand in the way (14.5-14.6).
   "most-pole": turn({
-    from: (body) => ({
-      ...(Array.isArray(body.dice) ? { dice: body.dice.map(Number) } : {}),
-      ...(Array.isArray(body.itemRolls) ? { itemRolls: body.itemRolls.map(Number) } : {}),
-    }),
-    run: (gameId, dice) => resolveBridgeOrdeal(gameId, dice),
+    from: () => undefined,
+    run: (gameId) => resolveBridgeOrdeal(gameId),
   }),
-  beast: turn({
-    from: (body) => ({
-      kind: rolled(body.kindRoll),
-      strength: rolled(body.strengthRoll),
-      player: rolled(body.playerRoll),
-      beast: rolled(body.beastRoll),
-    }),
-    run: (gameId, { kind, strength, player, beast }) => fightBeast(gameId, kind, strength, player, beast),
-  }),
+  beast: turn({ from: () => undefined, run: (gameId) => fightBeast(gameId) }),
   // 17.3/17.7, and the thirteen cards that say "w dowolnej chwili": any seat
   // may ask for the moment before the dice, not only the one whose turn it is.
   "spell-claim": turn({
@@ -237,22 +195,14 @@ export const TURN = {
   // The app throws the die and applies the row. What comes back says which
   // face and what it did, because the player did not watch it.
   "pole-tabela": turn({
-    from: (body) => ({
-      offer: String(body.offer ?? ""),
-      value: rolled(body.value),
-      decided: decisionsFrom(body),
-    }),
-    run: (gameId, { offer, value, decided }) => resolveFieldOffer(gameId, offer, value, decided),
+    from: (body) => ({ offer: String(body.offer ?? ""), decided: decisionsFrom(body) }),
+    run: (gameId, { offer, decided }) => resolveFieldOffer(gameId, offer, decided),
   }),
   // The card's own script, applied by the app for the same reason the field's
   // table is.
   "karta-efekt": turn({
-    from: (body) => ({
-      cardId: String(body.cardId ?? ""),
-      value: rolled(body.value),
-      decided: decisionsFrom(body),
-    }),
-    run: (gameId, { cardId, value, decided }) => resolveDrawnCard(gameId, cardId, value, decided),
+    from: (body) => ({ cardId: String(body.cardId ?? ""), decided: decisionsFrom(body) }),
+    run: (gameId, { cardId, decided }) => resolveDrawnCard(gameId, cardId, decided),
   }),
   /**
    * Two frames can be waiting, and the body says which by what it names.

@@ -262,8 +262,6 @@ export function FieldDrawer() {
       {...(active && inspecting === active.field_id
         ? {
             phase: turnState.phase,
-            simulated: game.mode === "simulation",
-            typedRolls: game.mode !== "simulation",
             onAction: (body: Parameters<OnAction>[0]) => post("turn", body),
             // The wyprawa, built out here where the other seats and
             // everything lying on the board are. One of `targetSeatId` and
@@ -297,8 +295,6 @@ export function FieldDrawer() {
                 }
               />
             ),
-            onSuggestion: (stat: string, delta: number, reason: string) =>
-              post("adjust", { seatId: active.id, stat, delta, reason }),
             onService: (body: Parameters<OnService>[0]) =>
               post("holdings", { ...body, seatId: active.id }),
           }

@@ -43,10 +43,9 @@ for (const card of SPELLS) {
 /**
  * The shuffle bound to real randomness.
  *
- * This is the whole of what simulation mode adds over companion mode: the app
- * decides which card comes up instead of a human naming the one they drew. The
- * rules either side of it are identical, which is why the engine never learns
- * which mode it is running in.
+ * The app decides which card comes up, and the rules either side of it never
+ * ask where the answer came from — the same seam that lets a test hand in a
+ * scripted order.
  *
  * Still bound at module load, and now the fallback rather than the rule: a game
  * with a seed gets `shuffleFor` below instead. This is what a table opened

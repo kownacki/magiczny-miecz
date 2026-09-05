@@ -8,7 +8,7 @@ import { DieMark } from "./die-mark";
 import { crossingFrom } from "@/lib/engine/rings";
 import { FIELDS, asFieldId } from "@/lib/engine/board";
 import { fieldWithText } from "@/lib/view/fieldText";
-import type { OnAction, Simulated } from "./turn-controls";
+import type { OnAction } from "./turn-controls";
 
 /**
  * The Przewoźnik's toll (11.2), drawn in the Obszar window with the rest of
@@ -50,20 +50,16 @@ export function Ferry({
 /**
  * Facing the guardian at a bridge entrance (11.9-11.11).
  *
- * Three outcomes rather than two, because 11.11 gives a draw its own: it costs
- * no point but still bars next turn's attempt, exactly as a loss does. Offering
- * only "won" and "lost" quietly turned every draw into a loss and took a point
- * the rules leave alone.
+ * One button, because the app fights it: 11.11's three outcomes — and the draw
+ * is not the same as a loss, costing no point but still barring next turn's
+ * attempt — are the combat engine's to reach, not a thing anybody reports.
  */
 export function BridgeControls({
   bridge,
-  simulated,
   busy,
   onAction,
 }: {
   bridge: { from: string; guardian: string; entersAt: string; stat: "sword" | "magic" };
-  /** No manual outcomes when the app is the one fighting — see `Simulated`. */
-  simulated: Simulated;
   busy: boolean;
   onAction: OnAction;
 }) {
@@ -90,35 +86,6 @@ export function BridgeControls({
         >
           Stocz walkę
         </button>
-        {/* Reporting the outcome instead of fighting it is a companion-mode
-            affordance: there the fight may have been settled by a card the app
-            has never read. In a simulation the app is the one rolling, so being
-            told who won would be taking its word for its own work. */}
-        {!simulated && (
-          <>
-            <button
-              disabled={busy}
-              onClick={() => onAction({ action: "bridge", outcome: "wygrana" })}
-              className="rounded border border-verdigris/50 px-3 py-1 text-xs text-ink transition hover:bg-verdigris/20 disabled:opacity-50"
-            >
-              Pokonany — wchodzę na Most
-            </button>
-            <button
-              disabled={busy}
-              onClick={() => onAction({ action: "bridge", outcome: "remis" })}
-              className="rounded border border-edge px-3 py-1 text-xs text-ink transition hover:border-ochre disabled:opacity-50"
-            >
-              Remis
-            </button>
-            <button
-              disabled={busy}
-              onClick={() => onAction({ action: "bridge", outcome: "porazka" })}
-              className={`rounded border border-vermilion/50 px-3 py-1 text-xs text-ink transition hover:bg-vermilion/20 disabled:opacity-50`}
-            >
-              Przegrana (−1 {stat})
-            </button>
-          </>
-        )}
       </div>
     </div>
   );
@@ -198,14 +165,11 @@ export function BridgeOrdeal({
  */
 export function Crossing({
   crossing,
-  simulated,
   busy,
   onAction,
 }: {
   crossing: NonNullable<ReturnType<typeof crossingFrom>>;
   busy: boolean;
-  /** No manual outcomes when the app is the one fighting — see `Simulated`. */
-  simulated: Simulated;
   onAction: OnAction;
 }) {
   const to = FIELDS.get(crossing.to)?.name ?? crossing.to;
@@ -277,33 +241,6 @@ export function Crossing({
             >
               Stocz walkę
             </button>
-            {/* As at the bridge: reporting a result belongs to a table that
-                fought it themselves. */}
-            {!simulated && (
-              <>
-                <button
-                  disabled={busy}
-                  onClick={() => onAction({ action: "cross", outcome: "udana" })}
-                  className="rounded border border-verdigris/50 px-3 py-1 text-xs text-ink transition hover:bg-verdigris/20 disabled:opacity-50"
-                >
-                  Pokonany — przechodzę
-                </button>
-                <button
-                  disabled={busy}
-                  onClick={() => onAction({ action: "cross", outcome: "remis" })}
-                  className="rounded border border-edge px-3 py-1 text-xs text-ink transition hover:border-ochre disabled:opacity-50"
-                >
-                  Remis
-                </button>
-                <button
-                  disabled={busy}
-                  onClick={() => onAction({ action: "cross", outcome: "nieudana" })}
-                  className="rounded border border-vermilion/50 px-3 py-1 text-xs text-ink transition hover:bg-vermilion/20 disabled:opacity-50"
-                >
-                  Przegrana (−1 Życie)
-                </button>
-              </>
-            )}
           </div>
         </>
       )}

@@ -72,7 +72,6 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
     elsewhere,
     resumeHere,
     joinAsSomebodyElse,
-    addLocalPlayer,
     chooseCharacter,
   } = table;
   /**
@@ -530,7 +529,6 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
     game,
     seats,
     fieldCards,
-    users,
     me,
     mySeatIndex,
     moved,
@@ -561,7 +559,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
       driverOf(seat),
     );
 
-  const pickingFor = whoIsPicking(picking, seats, mySeat, amHost && game.mode === "companion");
+  const pickingFor = whoIsPicking(picking, seats, mySeat);
 
   /**
    * The screen, as one object — see `the-table.ts` for why it is a context and
@@ -668,7 +666,6 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
           <Toasts notices={notices} onDismiss={dismissNotice} />
           <Lobby
             code={game.join_code}
-            mode={game.mode}
             seats={seats.map((seat) => lobbySeat(seat))}
             users={users}
             mySeatIndex={mySeatIndex}
@@ -699,7 +696,6 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
             characters={CHARACTERS}
             pickingFor={pickingFor ? lobbySeat(pickingFor) : null}
             busy={busy}
-            onAddLocal={addLocalPlayer}
             onPickFor={(seat) => setPicking(seat ? seat.id : null)}
             pendingCharacterId={pendingCharacter}
             onChooseCharacter={async (seat, characterId) => {

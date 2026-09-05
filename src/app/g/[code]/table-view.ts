@@ -35,11 +35,6 @@ export function driverOf(
   return users.find((one) => one.id === seat?.driver_id) ?? null;
 }
 
-/** Whoever is holding the shared screen, for the line that says so. */
-export function tableScreenHolder(users: readonly Person[]): string | null {
-  return users.find((one) => one.isHost)?.name ?? null;
-}
-
 /** Everybody else with a Postać — the rows the page draws beside your own. */
 export function otherSeats(seats: readonly Seat[], mineId: string | undefined): Seat[] {
   return seats.filter((seat) => seat.id !== mineId && seat.character_id);
@@ -48,25 +43,18 @@ export function otherSeats(seats: readonly Seat[], mineId: string | undefined): 
 /**
  * Whose character is being chosen.
  *
- * Left to the app until somebody says otherwise: this device's own seat first,
- * then — only where the host is choosing on behalf of people with no device —
- * a companion seat still without one. It used to fall through to *any*
- * characterless seat, which is why opening a table could leave you aiming at a
- * stranger's slot.
+ * Left to the app until somebody says otherwise: this device's own seat, and
+ * nobody else's. It used to fall through to *any* characterless seat, which is
+ * why opening a table could leave you aiming at a stranger's slot.
  */
 export function pickingFor(
   picking: string | null,
   seats: readonly Seat[],
   mySeat: Seat | undefined,
-  hostOfCompanion: boolean,
 ): Seat | null {
   if (picking !== "auto") return seats.find((seat) => seat.id === picking) ?? null;
   if (mySeat && !mySeat.character_id) return mySeat;
-  if (!hostOfCompanion) return null;
-  // A chair with nobody driving it and nothing in it: somebody in the room the
-  // host is setting up, which is what `no_device` used to mark and is now
-  // simply the absence of a driver.
-  return seats.find((seat) => seat.driver_id === null && !seat.character_id) ?? null;
+  return null;
 }
 
 /** One Karta lying face up, with the Obszary it could be moved to. */

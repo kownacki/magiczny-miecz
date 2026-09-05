@@ -145,7 +145,7 @@ export async function spendHolding(
  */
 export async function resolveFieldOffer(
   snapshot: Snapshot,
-  command: { offerName: string; decided?: Decisions; manual?: boolean; shuffle: Shuffle },
+  command: { offerName: string; decided?: Decisions; shuffle: Shuffle },
   ports: CommandPorts,
 ): Promise<Outcome<{ offer: string; face?: number; did: string[]; pending: Effect | null }>> {
   const seat = activeSeat(snapshot);
@@ -236,7 +236,6 @@ export async function resolveFieldOffer(
               round: snapshot.game.round,
               kind: "field-table",
               payload: { offer: offer.name, face },
-              manual: command.manual ?? false,
             },
           ],
         }
@@ -337,7 +336,7 @@ function doubleDemons(
  */
 export async function resolveDrawnCard(
   snapshot: Snapshot,
-  command: { cardId: string; decided?: Decisions; manual?: boolean; shuffle: Shuffle },
+  command: { cardId: string; decided?: Decisions; shuffle: Shuffle },
   ports: CommandPorts,
 ): Promise<Outcome<{ card: string; face?: number; did: string[]; pending: Effect | null }>> {
   const seat = activeSeat(snapshot);
@@ -410,7 +409,6 @@ export async function resolveDrawnCard(
               round: snapshot.game.round,
               kind: "card-table",
               payload: { cardId: command.cardId, face },
-              manual: command.manual ?? false,
             },
           ],
         }

@@ -78,7 +78,7 @@ describe("zmiana Natury (7.2-7.4)", () => {
     const { writes } = changeNature(table(), {
       seatId: "seat-a",
       nature: "evil",
-      byHand: true,
+      force: true,
     });
     expect(writes.seats?.[0].patch).toEqual({ nature: "evil" });
     expect(writes.journal?.[0]).toMatchObject({ manual: true });
@@ -94,7 +94,6 @@ describe("zmiana Natury (7.2-7.4)", () => {
       changeNature(table({ nature_changed_round: 5 }), {
         seatId: "seat-a",
         nature: "evil",
-        byHand: true,
       }),
     ).toThrow(/force/);
   });

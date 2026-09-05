@@ -224,7 +224,7 @@ describe("taking the bag off, end to end", () => {
   async function playing() {
     const tables = emptyTables();
     const handle = memoryHandle(tables);
-    const { game } = await createGame("Ola", "simulation", "slots", null, handle);
+    const { game } = await createGame("Ola", "slots", null, handle);
     setStore(memoryStore(tables));
     const seat = tables.seats[0].id as string;
     const user = (tables.users[0] as { id: string }).id;

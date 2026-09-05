@@ -363,7 +363,7 @@ export function envelopeFor(
       // the browser: a player's spells (9.3) must never be sent to another
       // player's device at all. Totals are still reported in full, because a
       // character's strength is public even when the source of it is not.
-      const seen = visibleTo(own, { own: mine?.id === seat.id, mode: game.mode });
+      const seen = visibleTo(own, { own: mine?.id === seat.id });
       // Asked of the same reading the commands enforce against, rather than
       // worked out again here. In slotowy a card only counts where it is worn,
       // so the totals every device sees come from what is on the character and

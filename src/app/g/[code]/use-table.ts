@@ -153,7 +153,6 @@ export interface Table {
   elsewhere: boolean;
   resumeHere: () => Promise<void>;
   joinAsSomebodyElse: () => void;
-  addLocalPlayer: (name: string) => Promise<void>;
   chooseCharacter: (seatId: string, characterId: string) => Promise<void>;
   equip: (holdingId: string, slot: Slot | null) => Promise<void>;
 }
@@ -386,10 +385,9 @@ async function saidWrong(response: Response): Promise<string> {
    * the body — a minted token to write, a console line to print, whether the
    * table remembered this device — so each wrote out its own `fetch`, and with
    * it its own URL, method, headers and token read. That is where the checking
-   * `Requests` exists to do stopped happening: `addLocalPlayer` was sending
+   * `Requests` exists to do stopped happening: one of them was sending
    * `local: true`, a field `Requests["join"]` does not have and
-   * `join/route.ts` never read, which is exactly the bug that docblock
-   * recounts.
+   * `join/route.ts` never read.
    *
    * So the plumbing is shared and the response is not. Everything below still
    * decides for itself what a reply means; what it no longer decides is how to
@@ -981,16 +979,6 @@ async function saidWrong(response: Response): Promise<string> {
     }
   }
 
-  async function addLocalPlayer(name: string) {
-    // A seat the host is filling for somebody at the table with no device.
-    // It used to send `local: true` as well — a field `Requests["join"]` never
-    // had and `join/route.ts` never read, which only survived because this
-    // call went round the checked door.
-    const response = await send("join", { name: name.trim() || null });
-    if (!response.ok) return setError(await saidWrong(response));
-    refresh();
-  }
-
   return {
     // What the server said, with the host's own unconfirmed switch over the top
     // — see `houseRules`. Everything downstream reads `game.eq_mode`, so laying
@@ -1032,7 +1020,6 @@ async function saidWrong(response: Response): Promise<string> {
     elsewhere,
     resumeHere,
     joinAsSomebodyElse,
-    addLocalPlayer,
     chooseCharacter,
     equip,
   };

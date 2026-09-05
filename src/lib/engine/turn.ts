@@ -972,11 +972,6 @@ export function recordGuardianStrength(phase: TurnPhase, roll: number): TurnPhas
   };
 }
 
-export function setFightTotal(phase: TurnPhase, playerTotal: number): TurnPhase {
-  if (phase.phase !== "fight") return phase;
-  return { ...phase, fight: { ...phase.fight, playerTotal: Math.max(0, playerTotal) } };
-}
-
 /**
  * Records one side's die. Rule 17.8 fixes the order — the attacker's Miecz is
  * worked out first — so the player's roll is taken before the enemy's, and the

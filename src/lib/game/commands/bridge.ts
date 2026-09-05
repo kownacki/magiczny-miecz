@@ -324,17 +324,13 @@ export function fightGuardian(snapshot: Snapshot): Outcome<void> {
 /**
  * Throws the die that gives a bridge guardian its Miecz or Magia (5 to 10).
  *
- * One die, and it is the only one: "straznik: siła". The range check the store
- * did by hand belongs to the `supplied` binding now, which is the whole reason
- * a die is a port — a rule that validated its own dice was a rule that knew a
- * human had typed them.
- *
- * `manual` is the journal's flag and nothing else: whether the number came off
- * a real die on a real table. The command cannot tell, so it is told.
+ * One die, and it is the only one: "straznik: siła". Nothing here validates it
+ * — it comes off `RandomPort`, which is the whole reason a die is a port: a
+ * rule that validated its own dice was a rule that knew a human had typed them.
  */
 export async function rollGuardianStrength(
   snapshot: Snapshot,
-  command: { manual?: boolean },
+  command: undefined,
   ports: CommandPorts,
 ): Promise<Outcome<{ strength: number }>> {
   const seat = activeSeat(snapshot);
@@ -345,7 +341,6 @@ export async function rollGuardianStrength(
 
   const roll = await ports.random.rollD6("straznik: siła");
   const next = recordGuardianStrength(phase, roll);
-  const manual = command.manual ?? false;
 
   return {
     writes: {
@@ -356,31 +351,11 @@ export async function rollGuardianStrength(
           round: snapshot.game.round,
           kind: "guardian-strength",
           payload: { roll },
-          manual,
         },
       ],
     },
     result: { strength: next.phase === "fight" ? next.fight.enemyTotal : 0 },
   };
-}
-
-/**
- * The table reporting how a bridge guardian went, where it is not being fought
- * through the app — companion mode with the creature resolved on the table.
- */
-export type BridgeOutcome = "wygrana" | "remis" | "porazka";
-
-/** No dice: the table already threw them and is reporting the answer. */
-export function enterBridge(
-  snapshot: Snapshot,
-  command: { outcome: BridgeOutcome },
-): Outcome<{ at: string | null }> {
-  const state = requireTop(snapshot.game.turn_state, "bridge");
-  return settleBridge(
-    snapshot,
-    state.bridge,
-    command.outcome === "porazka" ? "przegrana" : command.outcome,
-  );
 }
 
 /* --------------------------------------------------------------------------
@@ -618,7 +593,7 @@ export interface BridgeOrdealResult {
 }
 
 /**
- * Rolls, in this order — which is the order a companion table types them in,
+ * Rolls, in this order — which is the order the port is asked for them in,
  * and depends on which of the six fields the character is standing on:
  *
  * - **Pułapka / Magiczna Pułapka**: three for the trap (14.5), then, only if it
@@ -629,7 +604,7 @@ export interface BridgeOrdealResult {
  * - **Demon Zagłady / Monstrum**: two for the creature's strength (14.6). Its
  *   fight is then thrown through the ordinary combat path.
  *
- * Death's own two used to be beyond a companion table's reach — the store rolled
+ * Death's own two used to be beyond a caller's reach — the store rolled
  * them with `Math.random` no matter what was supplied — and now they are simply
  * the third and fourth dice.
  */

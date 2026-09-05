@@ -6,7 +6,7 @@ import { handleNow } from "./handle";
 import * as tables from "./tables";
 import { tablesFor } from "./tables";
 import { makeClaimToken, makeJoinCode, makeSeed } from "./codes";
-import { MAX_SEATS, type GameMode } from "./modes";
+import { MAX_SEATS } from "./modes";
 import {
   isQuiet,
 } from "./commands/presence";
@@ -84,14 +84,12 @@ export interface UserRow {
 export interface GameRow {
   id: string;
   join_code: string;
-  mode: string;
   /** Which equipment variant this table plays: see `EqMode` in `slots.ts`. */
   eq_mode: string;
   /** Whether the Wyposażenie pile can run out (21.2). See `stockLeft`. */
   endless_stock: boolean;
   /** How a beaten Wróg is kept (1.4): `punkty` accrues, `karty` holds the Karty. */
   trophy_mode: string;
-  die_source: string;
   status: string;
   active_seat: number | null;
   /**
@@ -112,7 +110,7 @@ export interface GameRow {
    */
   journal_seq: number;
   turn_state: unknown;
-  /** Shuffled event deck; null in companion mode, where the table holds it. */
+  /** Shuffled event deck. */
   deck: unknown;
   /**
    * Where every shuffle in this game comes from — see `prng.ts`.
@@ -140,7 +138,7 @@ export interface GameRow {
  * exactly how turn_state was absent from every response the first time.
  */
 export const GAME_COLUMNS =
-  "id,join_code,mode,eq_mode,endless_stock,trophy_mode,die_source,status,active_seat,round,revision,journal_seq,turn_state,deck,characters_out,seed";
+  "id,join_code,eq_mode,endless_stock,trophy_mode,status,active_seat,round,revision,journal_seq,turn_state,deck,characters_out,seed";
 
 /** Columns safe to send to any device at the table. `claim_token` is never among them. */
 const SEAT_COLUMNS =
@@ -178,21 +176,9 @@ export const FIELD_GOLD_COLUMNS = "id,field_id,gold";
  * five characters from a 28-glyph alphabet, and a collision would otherwise
  * surface as a unique-constraint error in front of the players.
  */
-export type { GameMode } from "./modes";
-
-
-/**
- * Opens a table.
- *
- * The mode is decided here and not later. It is not a setting — it is what kind
- * of evening this is: whether the board is on the table in front of you or only
- * in the app. Everything downstream branches on it (whether the host seats
- * people by hand, whether a deck is shuffled, who is asked to roll), so a table
- * that does not know yet is a table nothing can be decided about.
- */
+/** Opens a table. */
 export async function createGame(
   hostName: string | null = null,
-  mode: GameMode = "simulation",
   eqMode: EqMode = "slots",
   /** Which browser this is, so the host can be recognised coming back. */
   deviceId: string | null = null,
@@ -222,7 +208,7 @@ export async function createGame(
       .from("games")
       // Seeded at birth, because a shuffle that happened before there was a
       // seed cannot be recovered afterwards.
-      .insert({ join_code: joinCode, mode, eq_mode: eqMode, endless_stock: endlessStock, seed: makeSeed() })
+      .insert({ join_code: joinCode, eq_mode: eqMode, endless_stock: endlessStock, seed: makeSeed() })
       .select(GAME_COLUMNS)
       .single();
 
@@ -280,7 +266,7 @@ export async function createGame(
 export async function recentGames(limit: number): Promise<Record<string, unknown>[]> {
   const { data, error } = await db
     .from("games")
-    .select("id,join_code,status,mode,round,last_played_at,created_at")
+    .select("id,join_code,status,round,last_played_at,created_at")
     .order("last_played_at", { ascending: false })
     .limit(limit);
   if (error) throw new Failure(`recentGames: ${error.message}`);

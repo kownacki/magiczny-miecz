@@ -11,7 +11,7 @@ import type { ActionContext } from "./shape";
  */
 
 const ctx = (over: Partial<ActionContext> = {}): ActionContext =>
-  ({ game: { id: "g1" }, user: { id: "u1" }, seat: { id: "s1" }, tableScreen: false, ...over }) as ActionContext;
+  ({ game: { id: "g1" }, user: { id: "u1" }, seat: { id: "s1" }, ...over }) as ActionContext;
 
 describe("the turn's vocabulary", () => {
   it("has an entry for every action the client may name, and no other", () => {
@@ -25,14 +25,9 @@ describe("what is read off the body", () => {
     expect(TURN.fight.from({ cardIds: ["wilk", "cyklop"] }, ctx())).toEqual(["wilk", "cyklop"]);
   });
 
-  it("draws one named Karta at a physical table, and the whole deal in simulation", () => {
-    expect(TURN.draw.from({}, ctx())).toBeNull();
-    expect(TURN.draw.from({ cardId: "wilk", cardClass: "foe" }, ctx())).toEqual({ cardId: "wilk", cardClass: "foe" });
-  });
-
-  it("lets the shared screen flee as whoever is fleeing, and a player only as themselves", () => {
+  it("lets a device flee only as its own character (17.6)", () => {
     expect(TURN.escape.from({ succeeded: true }, ctx())).toEqual({ succeeded: true, seatId: "s1" });
-    expect(TURN.escape.from({}, ctx({ tableScreen: true }))).toEqual({ succeeded: null, seatId: null });
+    expect(TURN.escape.from({}, ctx())).toEqual({ succeeded: null, seatId: "s1" });
   });
 
   it("tells an ask's answer from a suspended Karta's by what the body names", () => {
@@ -58,16 +53,12 @@ describe("what is read off the body", () => {
   });
 
   it("reads a crossing's outcome as one of the three, defaulting to success", () => {
-    expect(TURN.cross.from({ outcome: "nieudana", dice: [3, 4] }, ctx())).toEqual({ outcome: "nieudana", dice: [3, 4] });
-    expect(TURN.cross.from({ outcome: "hm" }, ctx())).toEqual({ outcome: "udana", dice: null });
-    expect(TURN.bridge.from({ outcome: "porazka" }, ctx())).toBe("porazka");
-    expect(TURN.bridge.from({}, ctx())).toBe("wygrana");
+    expect(TURN.cross.from({ outcome: "nieudana" }, ctx())).toEqual({ outcome: "nieudana" });
+    expect(TURN.cross.from({ outcome: "hm" }, ctx())).toEqual({ outcome: "udana" });
   });
 
-  it("takes a die the table reports, and null where the app is to throw it", () => {
-    expect(TURN.roll.from({ value: 4 }, ctx())).toBe(4);
-    expect(TURN.roll.from({}, ctx())).toBeNull();
-    expect(TURN["fight-roll"].from({ side: "enemy", value: null }, ctx())).toEqual({ side: "enemy", value: null });
-    expect(TURN["fight-roll"].from({ side: "x" as never }, ctx())).toEqual({ side: "player", value: null });
+  it("reads which side a fight die is for, defaulting to the player", () => {
+    expect(TURN["fight-roll"].from({ side: "enemy" }, ctx())).toBe("enemy");
+    expect(TURN["fight-roll"].from({ side: "x" as never }, ctx())).toBe("player");
   });
 });

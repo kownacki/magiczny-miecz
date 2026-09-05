@@ -77,18 +77,19 @@ export function changeNature(
    * 7.3 is a memory of which turn the Natura last changed on, and it is read
    * and written on two different questions.
    *
-   * `byHand` answers "did the character change it?". Somebody typing into the
-   * console is not the character doing anything, so nothing is written: a hack
-   * that left the mark behind would spend the character's one change of the
-   * turn on something that never happened in the game, and the next card to
-   * turn them Zły would be refused over it. It marks the journal row manual for
-   * the same reason — a Natura that moved because somebody typed must not read
-   * like one that moved because a card said so.
+   * `byHand` below answers "did the character change it?". Somebody typing
+   * into the console is not the character doing anything, so nothing is
+   * written: a hack that left the mark behind would spend the character's one
+   * change of the turn on something that never happened in the game, and the
+   * next card to turn them Zły would be refused over it. It marks the journal
+   * row manual for the same reason — a Natura that moved because somebody
+   * typed must not read like one that moved because a card said so.
    *
-   * `force` answers "may this ignore a mark that is already there?", and that
-   * mark can only have been the game's own. So it is the narrower thing, and
-   * the one worth a word on the line: without it a hack is refused by a rule
-   * about a change that really did happen, and being told is the point.
+   * `force` is what says so. It answers "may this ignore a mark that is
+   * already there?", and that mark can only have been the game's own, so only
+   * the console ever sets it. It is the narrower thing, and the one worth a
+   * word on the line: without it a hack is refused by a rule about a change
+   * that really did happen, and being told is the point.
    *
    * Lifting the rule by clearing the memory behind the command's back would be
    * the same act with the rule out of sight, which is why neither of these is
@@ -98,7 +99,6 @@ export function changeNature(
     seatId: string;
     nature: Nature;
     force?: boolean;
-    byHand?: boolean;
   },
 ): Outcome<{ nowForbidden: string[] }> {
   const seat = seatById(snapshot, command.seatId);
@@ -116,8 +116,8 @@ export function changeNature(
    * become forbidden by 7.4 when the Natura it would be forbidden by is the one
    * already in force.
    */
-  /** Somebody typed it, so 7.3 has nothing to remember. See `byHand` above. */
-  const byHand = command.byHand === true || command.force === true;
+  /** Somebody typed it, so 7.3 has nothing to remember. See the note above. */
+  const byHand = command.force === true;
 
   if (seat.nature === command.nature) {
     return {

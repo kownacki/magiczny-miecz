@@ -22,8 +22,8 @@ import type { EqMode } from "@/lib/engine/slots";
  * The one rule this must not break is in `gameStore.ts`: an offline game keeps
  * the compare-and-swap. A single terminal has no second writer and does not
  * need one — but the moment offline gets cheaper rules there are two games to
- * keep honest, which is the argument that parked companion mode. Nothing here
- * touches the commit; it only writes down what the commit produced.
+ * keep honest. Nothing here touches the commit; it only writes down what the
+ * commit produced.
  */
 
 /** Where saves live. Overridable so a test does not write into a real home. */
@@ -185,7 +185,7 @@ export async function newSave(
   const [host, ...others] = players;
   const tables = emptyTables();
   const handle = memoryHandle(tables);
-  const { game, hostToken } = await createGame(host ?? null, "simulation", eqMode, null, handle);
+  const { game, hostToken } = await createGame(host ?? null, eqMode, null, handle);
 
   // Through the same door a browser uses, so a local table is seated the way
   // any other is.

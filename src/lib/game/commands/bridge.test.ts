@@ -7,7 +7,6 @@ import { scriptedRandom } from "@/lib/engine/ports";
 import { aHolding, aSeat, aTable, ports } from "../fixture";
 import {
   crossRing,
-  enterBridge,
   fightGuardian,
   payFerry,
   resolveBridgeOrdeal,
@@ -325,31 +324,25 @@ describe("siła strażnika Wejścia na Most", () => {
 
   /** The board prints 1→5 through 6→10, which is the die plus four. */
   it("is the die plus four", async () => {
-    const { writes, result } = await rollGuardianStrength(fighting(), {}, dice(3));
+    const { writes, result } = await rollGuardianStrength(fighting(), undefined, dice(3));
     expect(result).toEqual({ strength: 7 });
     const phase = top(writes.game!.turn_state!) as Extract<TurnPhase, { phase: "fight" }>;
     expect(phase.fight.strengthRoll).toBe(3);
     expect(writes.journal?.[0]).toMatchObject({
       kind: "guardian-strength",
       payload: { roll: 3 },
-      manual: false,
     });
-  });
-
-  it("marks the line manual when a real die decided it", async () => {
-    const { writes } = await rollGuardianStrength(fighting(), { manual: true }, dice(6));
-    expect(writes.journal?.[0].manual).toBe(true);
   });
 
   it("asks for exactly one die", async () => {
     const random = scriptedRandom([2]);
-    await rollGuardianStrength(fighting(), {}, ports({ random }));
+    await rollGuardianStrength(fighting(), undefined, ports({ random }));
     await expect(random.rollD6("a second")).rejects.toThrow(/exhausted/);
   });
 
   it("refuses when there is no fight", async () => {
     const table = aTable({ game: { turn_state: { phase: "roll" } } });
-    await expect(rollGuardianStrength(table, {}, dice(3))).rejects.toThrow("Nie ma walki.");
+    await expect(rollGuardianStrength(table, undefined, dice(3))).rejects.toThrow("Nie ma walki.");
   });
 
   it("refuses to throw it twice", async () => {
@@ -362,33 +355,8 @@ describe("siła strażnika Wejścia na Most", () => {
         ),
       },
     });
-    await expect(rollGuardianStrength(already, {}, dice(3))).rejects.toThrow(
+    await expect(rollGuardianStrength(already, undefined, dice(3))).rejects.toThrow(
       "Siła przeciwnika jest już znana.",
-    );
-  });
-});
-
-describe("Most zgłoszony przez stół", () => {
-  const attempting = aTable({
-    game: { round: 3, turn_state: { phase: "bridge", bridge: MIASTO } },
-    seats: [aSeat({ field_id: "wymarle-miasto", magic_own: 4, magic_floor: 1 })],
-  });
-
-  it("reads a reported porażka as a loss", () => {
-    const { writes, result } = enterBridge(attempting, { outcome: "porazka" });
-    expect(result).toEqual({ at: null });
-    expect(writes.seats?.[0].patch).toMatchObject({ magic_own: 3 });
-  });
-
-  it("reads a reported win as the entrance being reached", () => {
-    expect(enterBridge(attempting, { outcome: "wygrana" }).result).toEqual({
-      at: "wejscie-na-most-b",
-    });
-  });
-
-  it("refuses when nobody is trying to get onto the Most", () => {
-    expect(() => enterBridge(aTable(), { outcome: "wygrana" })).toThrow(
-      "Nie ma teraz próby wejścia na Most.",
     );
   });
 });
@@ -516,8 +484,8 @@ describe("przechodzenie między Kręgami (11.1-11.8)", () => {
     expect(writes.journal?.[0]).toMatchObject({ kind: "crossing" });
   });
 
-  /** The Lodowy Las is a fight, so a companion table reports how it went. */
-  it("takes the table's word for the Lodowy Las, and throws nothing", async () => {
+  /** The Lodowy Las is a fight, so an outcome settles it without any dice. */
+  it("takes a reported outcome for the Lodowy Las, and throws nothing", async () => {
     const random = scriptedRandom([]);
     const { result } = await crossRing(
       at("przelecz-wichrow"),

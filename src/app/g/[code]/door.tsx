@@ -25,8 +25,7 @@ import { namedSeats, tableIsFull, type LobbySeat } from "./lobby-view";
  * later.
  *
  * So there is no seatless state to be in any more: you give a name and you are
- * at the table, with a character still to choose. (The host seating somebody
- * device-less in companion mode is the one way a seat appears without this.)
+ * at the table, with a character still to choose.
  */
 export function JoinGate({
   code,

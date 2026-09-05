@@ -974,9 +974,9 @@ async function attempt<C, T>(
   /**
    * A replay's dice come first, then whatever the caller asked for.
    *
-   * `supplied([value], appRandom())` is built at the call site before any
-   * snapshot exists, so a replay cannot hand its dice in that way — it puts
-   * them where the port will look instead. See `record.ts`.
+   * `options.random` is built at the call site before any snapshot exists, so
+   * a replay cannot hand its dice in that way — it puts them where the port
+   * will look instead. See `record.ts`.
    */
   const base = replayed(options.random ?? appRandom());
   // Outlives the attempts, so a retry throws the same dice: see `replayable`.

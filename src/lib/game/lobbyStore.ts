@@ -49,7 +49,6 @@ export type { LeaveResult };
 export interface GameSummary {
   joinCode: string;
   status: string;
-  mode: string;
   round: number;
   lastPlayedAt: string;
   createdAt: string;
@@ -129,7 +128,6 @@ export async function listGames(limit = 20): Promise<GameSummary[]> {
   return listed.map((game) => ({
     joinCode: game.join_code as string,
     status: game.status as string,
-    mode: game.mode as string,
     round: game.round as number,
     lastPlayedAt: game.last_played_at as string,
     createdAt: game.created_at as string,

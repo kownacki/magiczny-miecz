@@ -114,7 +114,6 @@ export function pushOntoPile(
   cardIds: readonly string[],
 ): Changeset {
   if (cardIds.length === 0) return {};
-  if (snapshot.game.mode !== "simulation") return {};
 
   const copies = pile === "events" ? EVENT_COPIES : SPELL_COPIES;
   const decks = decksOf(snapshot.game);
@@ -163,7 +162,7 @@ export function stackForDraw(
   const pile = EVENT_COPIES.has(cardId) ? "events" : SPELL_COPIES.has(cardId) ? "spells" : null;
   if (!pile) throw new Error("Ta Karta nie jest w żadnej talii.");
 
-  const decks = simulatedDecks(snapshot);
+  const decks = decksOf(snapshot.game);
   for (const ref of (pile === "events" ? EVENT_COPIES : SPELL_COPIES).get(cardId) ?? []) {
     const after = stackOnTop(decks[pile], ref);
     if (after) return wroteStack(snapshot, seatId, pile, decks, after, cardId);
@@ -188,7 +187,7 @@ export function stackAt(
   command: { seatId: string; pile: "events" | "spells"; at: number },
 ): Outcome<string> {
   const { seatId, pile, at } = command;
-  const decks = simulatedDecks(snapshot);
+  const decks = decksOf(snapshot.game);
   const draw = decks[pile].draw;
   if (!Number.isInteger(at) || at < 1 || at > draw.length) {
     throw new Error(
@@ -204,14 +203,6 @@ export function stackAt(
   const card = pile === "events" ? BY_REF.get(ref) : SPELL_BY_REF.get(ref);
   const cardId = card?.id ?? ref;
   return { ...wroteStack(snapshot, seatId, pile, decks, after, cardId), result: cardId };
-}
-
-/** The decks, or the reason there are none to arrange. */
-function simulatedDecks(snapshot: Snapshot) {
-  if (snapshot.game.mode !== "simulation") {
-    throw new Error("Talia jest na stole, nie w aplikacji.");
-  }
-  return decksOf(snapshot.game);
 }
 
 /** The one write both forms make, so the journal line cannot come out twice-shaped. */

@@ -1,26 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { scriptedRandom } from "@/lib/engine/ports";
-import { replayable, supplied } from "./random";
-
-describe("supplied", () => {
-  it("hands out what the table typed, in order", async () => {
-    const port = supplied([4, 2], scriptedRandom([]));
-    expect(await port.rollD6("first")).toBe(4);
-    expect(await port.rollD6("second")).toBe(2);
-  });
-
-  /** The `value ?? roll` the store used to write out at every die. */
-  it("falls through to the app for anything nobody typed", async () => {
-    const port = supplied([null, 5, undefined], scriptedRandom([1, 6]));
-    expect(await port.rollD6("app")).toBe(1);
-    expect(await port.rollD6("typed")).toBe(5);
-    expect(await port.rollD6("app again")).toBe(6);
-  });
-
-  it("refuses a number that is not a die", async () => {
-    await expect(supplied([9], scriptedRandom([])).rollD6("bad")).rejects.toThrow(/od 1 do 6/);
-  });
-});
+import { replayable } from "./random";
 
 describe("replayable", () => {
   /**

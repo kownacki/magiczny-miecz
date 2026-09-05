@@ -6,11 +6,11 @@ import type { TurnAction } from "./requests";
 /**
  * The gate on the turn route, written down.
  *
- * "It is not your turn" sounds like one rule and is five, four of which are
- * exceptions to it. They lived as five booleans and a five-term negation in the
- * middle of a route handler, where the only way to ask what they did was to
- * read them — and where a sixth exception, added in a hurry, would look exactly
- * like the five already there.
+ * "It is not your turn" sounds like one rule and is four, three of which are
+ * exceptions to it. They lived as booleans and a long negation in the middle of
+ * a route handler, where the only way to ask what they did was to read them —
+ * and where a fourth exception, added in a hurry, would look exactly like the
+ * three already there.
  *
  * Each carries a rule number because each is one. Getting `isFlight` wrong
  * refuses the only player entitled to press the button; getting `isSpellWindow`
@@ -18,32 +18,13 @@ import type { TurnAction } from "./requests";
  * getting `isStuck` wrong strands a table with nobody able to move it on. None
  * of the three fails loudly.
  */
-export interface Permission {
-  /** Whether the request goes through at all. A refusal is 409, not 403. */
-  allowed: boolean;
-  /**
-   * The shared screen in the middle of a companion table.
-   *
-   * Not a hole in the secrecy model: in companion mode every hidden thing is a
-   * physical card in somebody's hand, and the app holds nothing worth keeping
-   * from the people already sitting there. It is excluded in simulation, where
-   * the app *does* hold each player's concealed spells (9.3) and one device
-   * acting for everyone would expose them.
-   *
-   * Travels out because the caller needs it a second time: the table screen
-   * flees as whoever is fleeing, a player's own device only as itself.
-   */
-  tableScreen: boolean;
-}
-
 export function mayAct(
-  game: Pick<GameRow, "active_seat" | "mode">,
+  game: Pick<GameRow, "active_seat">,
   /** The person asking, and the seat they are driving — null while watching. */
   who: Pick<UserRow, "is_host"> & { seat_index: number | null },
   action: TurnAction | undefined,
-): Permission {
+): boolean {
   const isActiveSeat = who.seat_index !== null && who.seat_index === game.active_seat;
-  const tableScreen = game.mode === "companion" && who.is_host;
   // 17.7 is the one thing here a seat does on somebody else's turn: "przed
   // wykonaniem rzutu kostką obie Postacie mają możliwość użycia Zaklęć". A
   // window only the active player could close would not be a window.
@@ -65,10 +46,7 @@ export function mayAct(
    */
   const isStuck = game.active_seat === null && action === "end";
 
-  return {
-    allowed: isActiveSeat || tableScreen || isSpellWindow || isFlight || isStuck,
-    tableScreen,
-  };
+  return isActiveSeat || isSpellWindow || isFlight || isStuck;
 }
 
 /**
@@ -81,6 +59,6 @@ export function mayAct(
  * (`refuseUnlessSettledHere` and its neighbours), against the table as it
  * stands. Named so the route says which gate it stands behind.
  */
-export function seated(): Permission {
-  return { allowed: true, tableScreen: false };
+export function seated(): boolean {
+  return true;
 }

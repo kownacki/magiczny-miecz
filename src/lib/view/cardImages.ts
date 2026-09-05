@@ -198,10 +198,9 @@ const RANDOM_CARD = {
 /**
  * First slice for each card id.
  *
- * Companion mode identifies a card by name, so all four copies of "1 SZTUKA
- * ZŁOTA" arrive as the same id with no way to tell which was drawn — and it
- * does not matter, because the copies are identical. Simulation mode knows
- * exactly which slice came off the deck and says so.
+ * A card named by id alone — the four copies of "1 SZTUKA ZŁOTA" are one id —
+ * has no slice to draw, and it does not matter, because the copies are
+ * identical. A card off the deck knows exactly which slice it is and says so.
  */
 const FIRST_SLICE_BY_ID = new Map<string, string>();
 // Events, spells and equipment all live on different sheets and were being

@@ -5,7 +5,7 @@
 import { Rules } from "../rule-ref";
 
 import { type Fight } from "@/lib/engine/turn";
-import type { OnAction, Simulated } from "../turn-controls";
+import type { OnAction } from "../turn-controls";
 import { DieMark } from "../die-mark";
 
 /**
@@ -21,7 +21,6 @@ import { DieMark } from "../die-mark";
  */
 export function FightControls({
   fight,
-  simulated,
   busy,
   floorHeld = false,
   canFlee = true,
@@ -38,8 +37,6 @@ export function FightControls({
    * gets the button instead, in the sheet they are watching the fight through.
    */
   canFlee?: boolean;
-  /** No typed rolls and no edited totals — see `Simulated`. */
-  simulated: Simulated;
   busy: boolean;
   onAction: OnAction;
 }) {
@@ -83,21 +80,6 @@ export function FightControls({
               <DieMark />
             </span>
           </button>
-          {!simulated && (
-            <>
-              <span className="text-xs text-muted">albo wpisz wynik</span>
-              {[1, 2, 3, 4, 5, 6].map((value) => (
-                <button
-                  key={value}
-                  disabled={busy}
-                  onClick={() => onAction({ action: "guardian-strength", value })}
-                  className="tnum rounded border border-edge px-3 py-2 text-sm text-ink transition hover:border-ochre disabled:opacity-50"
-                >
-                  {value}
-                </button>
-              ))}
-            </>
-          )}
         </div>
       </div>
     );
@@ -122,38 +104,17 @@ export function FightControls({
 
       <div className="flex flex-wrap gap-2">
         {/* Declared before any dice (17.2). Whether it works is not a roll —
-            19.1 makes it an ability or the Krąg Płomieni — so a companion table
-            says which happened, and a simulation asks the app, which knows the
-            abilities in play and answers with `canEscapeAt`. */}
-        {canFlee &&
-          fight.playerRoll === null &&
-          fight.enemyRoll === null &&
-          (simulated ? (
-            <button
-              disabled={busy}
-              onClick={() => onAction({ action: "escape" })}
-              className="rounded border border-edge px-3 py-1 text-xs text-ink transition hover:border-ochre disabled:opacity-50"
-            >
-              Spróbuj się wymknąć (19.1)
-            </button>
-          ) : (
-            <>
-              <button
-                disabled={busy}
-                onClick={() => onAction({ action: "escape", succeeded: true })}
-                className="rounded border border-edge px-3 py-1 text-xs text-ink transition hover:border-ochre disabled:opacity-50"
-              >
-                Wymknąłem się (19.1)
-              </button>
-              <button
-                disabled={busy}
-                onClick={() => onAction({ action: "escape", succeeded: false })}
-                className="rounded border border-edge px-3 py-1 text-xs text-muted transition hover:border-vermilion disabled:opacity-50"
-              >
-                Próba nieudana
-              </button>
-            </>
-          ))}
+            19.1 makes it an ability or the Krąg Płomieni — so the app is asked,
+            and it answers from the abilities in play with `canEscapeAt`. */}
+        {canFlee && fight.playerRoll === null && fight.enemyRoll === null && (
+          <button
+            disabled={busy}
+            onClick={() => onAction({ action: "escape" })}
+            className="rounded border border-edge px-3 py-1 text-xs text-ink transition hover:border-ochre disabled:opacity-50"
+          >
+            Spróbuj się wymknąć (19.1)
+          </button>
+        )}
       </div>
 
       {/* The spell panel is beside the fight now, not inside it — see
@@ -166,25 +127,16 @@ export function FightControls({
           total={fight.playerTotal}
           roll={fight.playerRoll}
           label={label}
-          // 1.5 says the total is the character plus everything it carries, and
-          // in a simulation the app already knows all of it. Nudging the number
-          // by hand is for a table holding cards the app has never read.
-          editable={!simulated}
-          typedRolls={!simulated}
           busy={busy || waiting}
-          onTotal={(total) => onAction({ action: "fight-total", total })}
-          onRoll={(value) => onAction({ action: "fight-roll", side: "player", value })}
+          onRoll={() => onAction({ action: "fight-roll", side: "player" })}
         />
         <FightSide
           title={fight.cardName}
           total={fight.enemyTotal}
           roll={fight.enemyRoll}
           label={label}
-          editable={false}
-          typedRolls={!simulated}
           busy={busy || waiting}
-          onTotal={() => {}}
-          onRoll={(value) => onAction({ action: "fight-roll", side: "enemy", value })}
+          onRoll={() => onAction({ action: "fight-roll", side: "enemy" })}
         />
       </div>
 
@@ -305,21 +257,15 @@ function FightSide({
   total,
   roll,
   label,
-  editable,
-  typedRolls,
   busy,
-  onTotal,
   onRoll,
 }: {
   title: string;
   total: number;
   roll: number | null;
   label: string;
-  editable: boolean;
-  typedRolls: boolean;
   busy: boolean;
-  onTotal: (total: number) => void;
-  onRoll: (value: number | null) => void;
+  onRoll: () => void;
 }) {
   return (
     <div className="rounded border border-edge bg-night p-3">
@@ -327,37 +273,14 @@ function FightSide({
       <div className="flex items-baseline gap-2">
         <span className="tnum text-2xl text-ink">{total}</span>
         <span className="text-xs text-muted">{label}</span>
-        {editable && (
-          <span className="ml-auto flex gap-1">
-            <button
-              disabled={busy}
-              onClick={() => onTotal(total - 1)}
-              className="h-5 w-5 rounded border border-edge text-[11px] text-muted hover:border-vermilion"
-            >
-              −
-            </button>
-            <button
-              disabled={busy}
-              onClick={() => onTotal(total + 1)}
-              className="h-5 w-5 rounded border border-edge text-[11px] text-muted hover:border-verdigris"
-            >
-              +
-            </button>
-          </span>
-        )}
       </div>
-      {editable && (
-        <p className="mt-1 text-[10px] leading-tight text-muted/70">
-          + Przedmioty i Przyjaciele (1.5)
-        </p>
-      )}
 
       <div className="mt-3">
         {roll === null ? (
           <div className="flex flex-wrap gap-1">
             <button
               disabled={busy}
-              onClick={() => onRoll(null)}
+              onClick={onRoll}
               className="rounded border border-edge px-2 py-1 text-xs text-ink hover:border-ochre disabled:opacity-50"
             >
               <span className="flex items-center gap-1.5">
@@ -365,17 +288,6 @@ function FightSide({
                 <DieMark />
               </span>
             </button>
-            {typedRolls &&
-              [1, 2, 3, 4, 5, 6].map((value) => (
-                <button
-                  key={value}
-                  disabled={busy}
-                  onClick={() => onRoll(value)}
-                  className="tnum h-6 w-6 rounded border border-edge text-xs text-muted hover:border-ochre disabled:opacity-50"
-                >
-                  {value}
-                </button>
-              ))}
           </div>
         ) : (
           <p className="tnum text-sm text-muted">

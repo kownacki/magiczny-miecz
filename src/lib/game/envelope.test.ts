@@ -110,16 +110,6 @@ describe("a concealed hand (9.3)", () => {
     expect(stranger.mySeatIndex).toBeNull();
     expect(stranger.seats.map((seat) => seat.hidden_count)).toEqual([1, 1]);
   });
-
-  it("hides nothing at a physical table", () => {
-    // In companion mode the cards are in people's hands and the app is not the
-    // one keeping the secret — see `visibleTo`.
-    const table = twoHands();
-    table.game.mode = "companion";
-    const theirs = seatIn(envelopeFor(table, "usra", NOW), "seat-b");
-    expect(theirs.holdings.map((card) => card.cardId)).toEqual(["formula-czasu", "helm"]);
-    expect(theirs.hidden_count).toBe(0);
-  });
 });
 
 describe("what is public even when its source is not", () => {
@@ -291,7 +281,7 @@ describe("the deck, which never travels", () => {
     expect(game.used).toEqual({ events: "zd-8", spells: null });
   });
 
-  it("says nothing about piles a companion table is holding itself", () => {
+  it("says nothing about piles that have not been shuffled yet", () => {
     const { game } = envelopeFor(aTable({ game: { deck: null } }), null, NOW);
     expect(game.deckCounts).toBeNull();
     expect(game.used).toBeNull();
