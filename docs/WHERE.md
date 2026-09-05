@@ -211,7 +211,17 @@ An id is never a `string`. Where each one comes from:
   JSON. `ids.test.ts` fails the build when that file is stale.
 
 A string from outside becomes an id only through a guard: `asFieldId` /
-`requireFieldId`, `asCharacterId` / `asSeatCharacter`, `isCardId`. Narrow
+`requireFieldId`, `asCharacterId` / `asSeatCharacter`, `isCardId` /
+`requireCardId` — the `require` pair throw where carrying on is impossible, the
+others answer null where "not one" is an ordinary answer. `requireCardId` and
+the `isX` guards live in the **generated** `src/data/ids.ts`, so a change to
+them belongs in `scripts/generate-ids.mjs` or the next run overwrites it.
+
+**Since 2026-09-06 the engine's own signatures are typed**, so this is enforced
+rather than merely intended: about fifty functions take `CardId`,
+`CharacterId` or `FieldId` and will not accept a bare string. That also means
+you cannot hand a Postać to a card function, which is worth knowing because
+`czarodziej` and `demon` each name a Postać *and* a Karta. Narrow
 **once, at the boundary** — for anything read out of the database that boundary
 is `seatsFor` in `store.ts`, and everything downstream inherits the narrowing.
 Do not re-guard at each use, and do not add a second boundary beside it.
