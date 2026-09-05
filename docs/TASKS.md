@@ -63,6 +63,44 @@ their scans are deliberately untouched.
       [COVERAGE.md](COVERAGE.md).
 
 
+### Close every „rozpatrzcie sami" — a MANUAL note is a gap, not a getaway
+
+**Decided 2026-09-06.** `coverage.ts`'s `MANUAL` was built as an honest device:
+the app carries part of a card and names the rest, so a table is never left
+guessing whether the referee is watching. That stays true of the *mechanism* —
+saying nothing would be worse — but the **list is a backlog, not a design**.
+Every entry is a rule this app has not implemented yet, and the aim at this
+stage is to empty it.
+
+Six entries, and they are four problems:
+
+- **ŁÓDŹ, LATARNIA** — „na Obszarze graniczącym z tym, z którego wyruszyłeś".
+  Blocked on the same thing: cross-obstacle adjacency is not on the board,
+  because the rings are 14, 16 and 18 fields and do not line up. This is the
+  one real board gap left; see the note under "two decisions and three
+  blockers".
+- **WIERZCHOWIEC** — „twoi Przyjaciele muszą poruszać się w zwykły sposób".
+  Needs a Przyjaciel to have a position of its own, which nothing in the model
+  gives it: chapter 6 is custody only.
+- **DOBRE BÓSTWO** — cannot convict, because neither half of its trigger is
+  reachable: `attackSeat` is parked and nothing sets `how: "zdolnosc"` yet.
+  Closes when duels come back, or when 13.3's ability branch is built.
+- **KRĄG PŁOMIENI, OCALONY** — clauses that reach a Karta rather than a seat:
+  lifting a Krąg off a card, an Ocalony saving a Przyjaciel, and „rezultat
+  starcia pozostanie nierozstrzygnięty", which wants a card that can rewrite a
+  settled fight.
+
+**Also a gap, and not in the list**: 18.1's „rozpatrzcie osobno" — a mixed pack
+of ordinary and magical Wrogowie must be fought as two battles — is refused
+correctly by `beginFight`, but the console has no door to it, because `fight`
+takes exactly one Wróg and asks which when several wait. Found by trying to
+write a transcript for it. The rule is carried; the surface is not.
+
+**How to read the list from now on:** an entry is work waiting, and an empty
+`MANUAL` is the goal. Do not add one to make a card "honest" without also
+writing down what would close it — a note that explains a gap forever is how a
+gap stops looking like one.
+
 ### One house rule journals itself, the other does not
 
 `setEndlessStock` writes a line — "Zwykłego Wyposażenia nie będzie już

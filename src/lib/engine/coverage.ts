@@ -35,6 +35,14 @@ export type Coverage = "pelne" | "czesciowe" | "brak";
  * So a note that merely reassures ("the app already does this") does not belong
  * here: it would tell a table to watch something the referee is watching for
  * them, which is the same wasted vigilance as no referee at all.
+ *
+ * **This list is a backlog, not a design (decided 2026-09-06).** Saying nothing
+ * would be worse, so the mechanism stays — but every entry is a rule this app
+ * has not implemented, and the aim is to empty it. Read a „rozpatrzcie sami" as
+ * work waiting rather than as a legitimate way out, and do not add one to make
+ * a card look honest without also writing down, in docs/TASKS.md, what would
+ * close it. A note that explains a gap forever is how a gap stops looking like
+ * one.
  */
 const MANUAL: Readonly<Partial<Record<CardId, string>>> = {
   // --- equipment and magic items -------------------------------------------
