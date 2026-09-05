@@ -3,13 +3,15 @@
 A referee for the 1993 Polish board game *Magiczny Miecz* (Sfera, Adrian
 Markowski) — a Talisman derivative. **Private project, not published.**
 
-Two modes behind one engine. **Simulation** runs the whole game in the browser —
-board, deck, dice, arithmetic — and is the only one currently open.
-**Companion** — you play on the physical board with the physical cards and the
-app owns everything tedious — is **parked**: see `COMPANION_PARKED` in
-`src/lib/game/modes.ts`. No new table can be opened in it, nothing about it has
-been deleted, and one boolean brings it back. Assume simulation when working on
-anything.
+**One mode.** The app runs the whole game in the browser — board, deck, dice,
+arithmetic. There is nothing else to assume and no `mode` to branch on.
+
+There was a second, **companion**: you played on the physical board with the
+physical cards and the app owned everything tedious. It was parked behind a
+boolean for a while and **deleted on 2026-09-05** — 95 files, and the two
+columns it needed dropped from the database. If you find prose describing it,
+that prose is stale; if you find yourself reaching for "what happens in
+companion mode", the answer is that there is no such thing.
 
 ## Read these first
 
@@ -224,9 +226,8 @@ anything.
 - **Content the app cannot run yet is *parked*, never half-built.** The list is
   `src/lib/engine/disabled.ts`: `PARKED_CARDS` for a whole Karta,
   `LIVE_ABILITIES` for the printed clauses of a Karta Postaci that the app does
-  carry, and a feature boolean beside them in the shape of `COMPANION_PARKED` —
-  today `PVP_PARKED` for Postać przeciw Postaci and `CHARACTER_POWERS_PARKED`
-  for a Postać's own powers.
+  carry, and a feature boolean beside them: `PVP_PARKED` for Postać przeciw
+  Postaci and `CHARACTER_POWERS_PARKED` for a Postać's own powers.
 
   **Clauses are stated as what is live, and the inverse is parked.** A clause
   nobody has listed is dimmed by default, so one the app learns to run must be
@@ -252,27 +253,35 @@ anything.
   clause the table applies itself. Parked means the Karta is not in the box
   this game. A card is in one list or the other, never both.
 
-  Nothing is deleted, and one boolean brings it back — the same promise
-  companion mode is parked under, for the same reason: a feature that comes
-  back is not a feature you rewrite.
+  Nothing is deleted, and one boolean brings it back: a feature that comes back
+  is not a feature you rewrite.
+
+  **But parking is not a promise, and it expires.** Companion mode was parked
+  under exactly this convention and deleted the next day, because keeping the
+  option open was costing more than the option was worth. Park a thing to stop
+  it half-working, not to avoid deciding about it — and when a parked thing has
+  been parked long enough that nobody misses it, delete it and say so.
 
 - **Base game only.** The five expansions are out of scope; their scans are
   deliberately untouched. Surveyed once, in docs/EXPANSIONS.md, so that a
   decision taken now is taken knowing what is coming — four of them add a board
   that is not three rings, two of them are standalone games rather than modules,
   and one prints two different cards with the same name on one sheet.
-- ~~**Companion mode before simulation.**~~ Reversed. It was chosen because it
-  attacks the actual complaint about this game (downtime and bookkeeping) and
-  needs almost no card art. What settled it the other way is that keeping both
-  honest costs a second pass over every change, against a mode nobody is
-  playing yet. Simulation first; companion comes back when it is worth the
-  second pass. Nothing has been deleted — see `COMPANION_PARKED`.
-- **In simulation, nothing is entered by hand.** No typed die results, no
-  edited totals, no reported fight outcomes, no ± on a tracked value. The app
-  rolls, moves and computes; a player who could overwrite that is not playing
-  the game but editing its record of itself. Those controls exist and are
-  correct — they are companion mode's, and they are gated on the mode, not
-  deleted.
+- ~~**Companion mode.**~~ **Given up, 2026-09-05.** It was chosen first,
+  because it attacks the actual complaint about this game — downtime and
+  bookkeeping — and needs almost no card art. It lost to the cost of keeping
+  two modes honest: a second pass over every change, for a mode nobody was
+  playing. It was parked for a day and then deleted, which is the honest end of
+  a promise nobody intended to keep. Do not propose it again without saying
+  what has changed about that arithmetic.
+- **Nothing is entered by hand.** No typed die results, no edited totals, no
+  reported fight outcomes, no ± on a tracked value. The app rolls, moves and
+  computes; a player who could overwrite that is not playing the game but
+  editing its record of itself. Those controls existed for companion mode and
+  went with it, `supplied()` and the typed-value parameters included — so the
+  RandomPort now binds to an RNG or to a test's script and to nothing else.
+  The console is the one door that still conjures state, and it says so: every
+  row it writes is marked `manual`.
 - **Card data is a progressive enhancement, not a prerequisite.** The referee is
   useful with zero transcribed cards — you tell it what happened. Each card
   transcribed upgrades one interaction from "tell me" to "I'll handle it".

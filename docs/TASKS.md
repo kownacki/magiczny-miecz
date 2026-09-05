@@ -328,9 +328,8 @@ instead means adding its index to `LIVE_ABILITIES` and gating the rest.
 ### Postać przeciw Postaci — parked 2026-09-05 (`PVP_PARKED`)
 
 **The feature is coming; it is not built.** `PVP_PARKED` in
-`src/lib/engine/disabled.ts` is a `const true` in the same shape as
-`COMPANION_PARKED`: nothing is deleted, and flipping it to false brings duels
-back with no other change.
+`src/lib/engine/disabled.ts` is a `const true`: nothing is deleted, and
+flipping it to false brings duels back with no other change.
 
 **What is off.** 17.6-10 (resolving a fight between Postacie, the escape into
 it, the spoils, the draw), 18.1b (a Charakterystyka's magical attack on
@@ -383,22 +382,16 @@ different thing from `coverage.ts`'s `MANUAL`, which is for a card that **is**
 in the deck and will be drawn, with one clause the table applies itself. Two
 lists, two meanings, and neither should grow into the other.
 
-**Companion mode** (`COMPANION_PARKED`) is the only thing left, and this work
-went through it. `no_device` is gone: a chair the host filled in by hand is now
-simply one nobody is driving, which `mayChooseFor`, `dealCharacters` and the
-`away` reading in `envelope.ts` all agree about.
+~~**Companion mode.**~~ **Deleted 2026-09-05**, not parked. It was here as the
+last parked thing, and the open note under it — that the shared screen could
+not act, because the turn route refuses a seatless actor before `mayAct` is
+ever consulted — went with it: `tableScreen` no longer exists and `Permission`
+is a plain boolean.
 
-One thing does *not* agree, and it is written down rather than fixed, because
-building for a mode nobody runs is how you get two guesses instead of one:
-
-- **The shared screen cannot act.** `mayAct` still grants `tableScreen` to a
-  host in companion mode, and that is right — in companion every hidden thing
-  is a physical card and the app holds nothing worth keeping from the room. But
-  the host is a *user* now and may hold no seat at all, and the turn route
-  refuses a seatless actor ("Nie prowadzisz żadnej Postaci") **before** `mayAct`
-  is ever consulted. So a table screen that runs the game without playing —
-  which the split made possible and which is the whole point of a companion
-  table — is blocked one layer above the rule that allows it.
+What survives of that work is the part that was never companion's:
+`no_device` is gone, and a chair nobody is driving is simply undriven, which
+`mayChooseFor`, `dealCharacters` and the `away` reading in `envelope.ts` all
+agree about.
 
   When the boolean flips: the turn route's seatless guard has to ask `mayAct`
   first and let `tableScreen` through, and every command it then reaches needs a

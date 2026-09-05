@@ -103,7 +103,7 @@ seam properly rather than special-casing "offline".
 journal ranges in the same statement, still refuses a stale write. Not because
 one terminal has concurrent writers, but because the moment the offline store
 gets its own simpler rules there are two games to keep honest — which is the
-exact reason companion mode is parked (see `COMPANION_PARKED` and the note in
+exact reason companion mode was given up (deleted 2026-09-05; see the note in
 docs/TASKS.md). One conformance suite runs against every implementation.
 
 That rule has since been paid for once, and it is worth reading how. Making a

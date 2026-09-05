@@ -124,8 +124,9 @@ Pure TypeScript, no React and no Supabase, so it is unit-testable in isolation.
 
 ## Phase 4 — Companion app
 
-**Parked.** See `COMPANION_PARKED` in `src/lib/game/modes.ts`: no new table can
-be opened in this mode. It was the primary mode and everything below still
+**Deleted 2026-09-05** — see the entry at the end of this file. It was parked
+behind `COMPANION_PARKED` first, and everything below describes the mode as it
+stood while it existed; none of the code survives. It was the primary mode and everything below still
 works, but simulation is what is being built now, and keeping both honest cost
 a second pass over every change against a mode nobody was playing. Nothing here
 has been deleted; one boolean brings it back.
@@ -1341,7 +1342,8 @@ abilities. There was never a second spelling of them to retire either.
 
 2026-09-05. Duels are switched off whole rather than left half-working:
 `PVP_PARKED` in `src/lib/engine/disabled.ts`, a `const true` in the shape of
-`COMPANION_PARKED`, with `attackSeat` refusing first as the single door. Off
+`COMPANION_PARKED` (itself since deleted), with `attackSeat` refusing first as
+the single door. Off
 with it go 17.6-10, 18.1b and 19.1-2's escape from a Postać. Untouched: 13.3's
 other branch (meeting a Postać to use an ability on her) and every Zaklęcie
 spoken at another player, hostile ones included.
@@ -1400,3 +1402,33 @@ question asked with a bare id answers about the wrong object on exactly those
 two panels. `requirementOf` and `numeralOf` are both right; the panels now carry
 a `character` flag and do not ask, the same shape `CardDetail` already used for
 `coverageOf`.
+
+## Companion mode is deleted, and two checks are added so this kind of rot fails loudly
+
+2026-09-05. The app refereed two kinds of table; the second is given up. 95
+files and ~1,850 lines out, `games.mode` and `games.die_source` dropped from
+the database, and the promise that one boolean would bring it back is withdrawn
+rather than left standing. What went is everything reachable from `game.mode`:
+the mode picker, the table screen (which collapsed `Permission` to a plain
+boolean), host-seats-for-others, and every by-hand control — typed dice, typed
+totals, naming the card the physical deck dealt, the ± under each parameter.
+Then `supplied()` and the typed-value parameters on eight `turnStore`
+functions, which existed only to carry those numbers.
+
+What deliberately stayed is what looked like companion's and is the console's:
+the journal's `manual` flag and all fourteen writers, `adjustSeat`/`placeSeat`
+behind the `stat` and `place` verbs, `crossRing`'s `outcome`, `escape`'s
+`succeeded`. Two deletions went past the survey and were checked first — the
+`manual` option on five commands, provably always false; and the whole `bridge`
+action, since the Kamienny Most is entered by taking the bridge option out of a
+move (`moveTo`'s `viaBridge`), which is how simulation always entered it.
+
+**And two tests, because the day's real lesson was about invisible rot.**
+`reachable.test.ts` fails the build when an `Ability` kind has no code
+branching on it, or a reader in `abilities.ts` has no caller — the check that
+found three shipped-and-silent card clauses that morning. `docCounts.test.ts`
+derives every number in COVERAGE.md's summary from the code and compares: it
+said 128 Karty were `pelne` and 6 `brak` when the answers were 131 and 3. Both
+were written by being broken on purpose, and both carry the false greens they
+went through first, because a check that cannot fail is worse than none.
+

@@ -26,12 +26,19 @@ there and one boolean turns it back on. Distinguished from ◐ on purpose, so
 that "what is missing" and "what is switched off" cannot be read as the same
 number.
 
-**Where it stands.** 127 rules ✅, 9 ◐, none ❌. Of the 138 Karty Zdarzeń, 128
-are `pelne`, 4 `czesciowe` and 6 `brak` — all 17 Nieznajomi are done; all 27
-Zaklęcia are carried out, 24 of them fully; and all 57 Obszary do what is
-printed on them.
-The counts move, so trust the code over this paragraph — `coverage.ts` and
-`fieldScript.ts` are where the truth is, and both are checked by tests.
+**Where it stands.** Of the 138 Karty Zdarzeń, 131 are `pelne`, 4 `czesciowe`
+and 3 `brak` — all 17 Nieznajomi are done; all 27 Zaklęcia are carried out, 25
+of them fully; and all 57 Obszary do what is printed on them.
+
+Every number in that paragraph is checked against the code by
+`src/lib/engine/docCounts.test.ts`, which is why it no longer carries a tally
+of the ✅ and ◐ in the tables below: those live in four separate tables here,
+"how many rules" depends on which of them you count, and a number nobody can
+derive twice the same way is the kind that goes quietly wrong. It said 127 ✅
+and 9 ◐ until 2026-09-05, when the tables held neither.
+`coverage.ts` and `fieldScript.ts` are still where the truth is; the paragraph
+above is now made to agree with them by a test rather than by whoever last
+remembered to.
 
 **Five cards are left to the table**, and after 2026-09-04 they are one
 problem rather than three. The list was seven clauses on 2026-08-31, down from
@@ -380,10 +387,12 @@ służyły do *powiedzenia* jej, co się stało:
 | 1–6 w tabelach kostki na kartach i Obszarach | wszędzie | tylko **Rzuć** |
 | ± przy Mieczu, Magii, Życiu, Złocie | Karta gracza | nic |
 
-Tryb `companion` zachowuje wszystkie z nich i musi: tam plansza na stole jest
-prawdą, a aplikacja jej zapisem — sędzia, którego nie można poprawić, jest
-gorszy niż żaden. Ten tryb jest jednak **wstrzymany** (`COMPANION_PARKED`), więc
-w praktyce nie da się dziś otworzyć stołu, na którym te kontrolki są widoczne.
+Tryb `companion` zachowywał wszystkie z nich i musiał: tam plansza na stole
+była prawdą, a aplikacja jej zapisem — sędzia, którego nie można poprawić, jest
+gorszy niż żaden. Ten tryb został jednak **usunięty** (2026-09-05) razem z tymi
+kontrolkami, więc dziś nie ma stołu, na którym cokolwiek wpisuje się ręcznie.
+Jedyne, co nadal tworzy stan z niczego, to konsola testowa — i mówi o tym
+wprost: każdy jej wiersz w kronice jest oznaczony jako `manual`.
 
 **Skutki wykonuje aplikacja.** Tabela kostki na Obszarze i skrypt Karty są
 rozpatrywane po stronie serwera: jedno naciśnięcie, serwer rzuca, odczytuje

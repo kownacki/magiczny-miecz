@@ -108,14 +108,17 @@ table may take the role without being given it. Without this a table
 whose host closed their laptop can never be started or configured again, which
 is the failure mode host migration exists to prevent.
 
-**Companion mode is parked** (`COMPANION_PARKED`), so everything in this
-document marked companion-only is currently unreachable. It is described in the
-present tense because none of it has been removed and the mode is one boolean
-away from returning.
+**Companion mode was deleted on 2026-09-05**, so everything in this document
+marked companion-only is gone — not unreachable, gone: the code, the
+`games.mode` column, and the host-seats-for-others form in the lobby. Those
+rows are kept here in the past tense because the *shape* of the problem they
+solved recurs — one screen acting for a person who is not holding it — and
+because host migration below was built for a table that had one.
 
-**Companion mode.** The host's device is also the one that plays for everybody
-in *sędzia przy planszy* mode, because there is one screen in the middle of a
-real table. That is the same role, not a second one.
+**Companion mode, while it existed.** The host's device was also the one that
+played for everybody in *sędzia przy planszy* mode, because there was one
+screen in the middle of a real table. That was the same role, not a second one
+— which is why deleting the mode left host migration untouched.
 
 ---
 
