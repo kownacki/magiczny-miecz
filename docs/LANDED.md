@@ -1493,3 +1493,56 @@ screen, with the die table, the Obszar dropdown and the pack tile as leaves. The
 three renders diffed byte-identical apart from the die table becoming a
 component.
 
+
+## The tools for working on this, built in one day
+
+2026-09-05/06. A session that set out to make the repo easier to develop, and
+ended up mostly building ways to find out what is true.
+
+**`npm run ask`** (`scripts/ask.ts`). `ask id <name>` says which of the five id
+spaces claim a name — the query that matters, because `czarodziej` and `demon`
+each name a Postać *and* a Karta, and that collision has caused two real bugs.
+`card`, `character` (clauses numbered by the index `LIVE_ABILITIES` keys on) and
+`ability` answer the rest. It exists because a grep of `abilities.ts` — which
+holds the ability data for cards *and* characters — produced the confident claim
+that Rusałka is a Postać. She is a Przyjaciel, and the claim cost a design
+decision.
+
+**`ask where <thing>`** answers the other half: not what the box says but where
+the code is. It hand-lists nothing — files and exports are read at ask-time, the
+verbs from `SPECS`, the recipes from WHERE.md's own headings. The trick is that
+the best-matching console verb's *name* becomes a second needle, which is how
+`przeprawa` reaches `payFerry` and `FERRY_TOLL`, words it shares no letters
+with. `SPECS` is the only table carrying both languages, so the bridge is read
+rather than maintained.
+
+**A transcript is a test.** `mm` already played the whole game at a prompt and
+took piped input; it now exits non-zero on a refusal, takes `--script` with
+`file:line` on failure, has an `expect` directive (an `mm` directive, not a
+`Command` — the console vocabulary is shared with the browser and stays about
+the game), and can `record`/`replay`, which `record.ts` had supported all along
+with no way to reach it. Four transcripts run as part of the suite; adding one
+needs no code change. Breaking `afterRoll` makes the mount transcript fail with
+`mount-widens-the-move.mm:36: expected 8 Obszary offered; it offers 2`.
+
+Writing them found the first thing this session learned by *playing* rather than
+reading: 18.1's „rozpatrzcie osobno" has no console door.
+
+**`docs/BRIEFING.md`** carries the standing rules every delegated brief was
+restating, so a brief can link them and spend its words on what is specific.
+Its most useful line is the one that was written nowhere: the test counts are an
+invariant, take the baseline yourself. That instruction went stale within an
+hour of being written as a hardcoded number, was caught by an agent measuring
+instead of believing, and now says to measure.
+
+**And CLAUDE.md lost a third of itself** — the asset pipeline to
+`docs/ASSETS.md` — because it is the one file loaded into every session and
+every agent, so its length is a tax rather than a choice. With TASKS.md trimmed
+back to being short on purpose, the mandatory read went from ~14,400 tokens to
+~9,300.
+
+All of it is marked unproven in CLAUDE.md, with a request that each session
+report which parts it reached for and which it forgot existed. `mm` is the
+cautionary tale: built months ago, documented, the fastest way to check
+anything, and ignored — including by the session that wrote the paragraph
+recommending it.
