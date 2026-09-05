@@ -86,20 +86,27 @@ describe("the character registries against the real character cards", () => {
 });
 
 describe("what the characters can actually do", () => {
-  it("keeps the Barbarzyńca safe where his card says", () => {
+  // A Postać's own powers are parked whole (`CHARACTER_POWERS_PARKED`,
+  // `src/lib/engine/disabled.ts`) — `abilitiesOfCharacter` hands back nothing
+  // while it stands, so the Barbarzyńca's field safety does not fire. Runs
+  // again with no other change once that flips to false.
+  it.skip("keeps the Barbarzyńca safe where his card says", () => {
     const b = abilitiesOfCharacter("barbarzynca");
     expect(skipsRollAt(b, "wilczy-parow")).toBe(true);
     expect(skipsRollAt(b, "urwisko-2")).toBe(true);
     expect(skipsRollAt(b, "kurhan")).toBe(false);
   });
 
-  it("lets the Karzeł past the Strażnik without paying", () => {
+  // Same parking as above — the Karzeł's toll waiver is a Charakterystyka
+  // power, and `CHARACTER_POWERS_PARKED` dims it along with the rest.
+  it.skip("lets the Karzeł past the Strażnik without paying", () => {
     expect(tollIsWaived(abilitiesOfCharacter("karzel"), "straznik-magicznych-wrot")).toBe(true);
     // He is not exempt from the ferryman.
     expect(tollIsWaived(abilitiesOfCharacter("karzel"), "przeprawa-1")).toBe(false);
   });
 
-  it("shaves a point off the guardian each of the two rogues knows", () => {
+  // Same parking — the roll modifiers are Charakterystyka powers too.
+  it.skip("shaves a point off the guardian each of the two rogues knows", () => {
     // Hobgoblin at the ruins, Obbol at the dead city — mirror abilities at the
     // two bridge entrances.
     expect(rollModifier(abilitiesOfCharacter("hobgoblin"), { fieldId: "ruiny-twierdzy" }).delta).toBe(-1);
@@ -107,11 +114,26 @@ describe("what the characters can actually do", () => {
     expect(rollModifier(abilitiesOfCharacter("hobgoblin"), { fieldId: "wymarle-miasto" }).delta).toBe(0);
   });
 
-  it("keeps a blade out of the Pustelnik's hands", () => {
+  // Same parking — the Pustelnik's „nie możesz używać Miecza, Sztyletu, Hełmu
+  // ani Zbroi" (`zakazane`) is dimmed on the Karta now too, deliberately, so
+  // the app must not enforce it either while it stands.
+  it.skip("keeps a blade out of the Pustelnik's hands", () => {
     const p = abilitiesOfCharacter("pustelnik");
     expect(isForbidden(p, "miecz")).toBe(true);
     expect(isForbidden(p, "zbroja")).toBe(true);
     expect(isForbidden(p, "latarnia")).toBe(false);
+  });
+
+  /**
+   * The parking above is real behaviour and needs its own coverage, not just
+   * an absence of the tests it silenced — a slip that quietly deleted
+   * `abilitiesOfCharacter`'s `CHARACTER_POWERS_PARKED` check would otherwise
+   * leave every one of those `it.skip`s the only sign anything changed.
+   */
+  it("hands back nothing for any Postać while CHARACTER_POWERS_PARKED stands", () => {
+    for (const id of Object.keys(CHARACTER_ABILITIES)) {
+      expect(abilitiesOfCharacter(asCharacterId(id)), id).toEqual([]);
+    }
   });
 });
 

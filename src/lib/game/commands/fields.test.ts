@@ -228,8 +228,15 @@ describe("Obszary that make you roll", () => {
     expect(await face("kurhan", 1, ["rusalka"])).toMatch(/bezpiecznie — bez rzutu/);
   });
 
-  /** A Postać's own ability does it too — the Goblin at these two, for nothing. */
-  it("is walked past by a Postać whose own Karta says so", async () => {
+  /**
+   * A Postać's own ability does it too — the Goblin at these two, for nothing.
+   *
+   * A Postać's own powers are parked whole (`CHARACTER_POWERS_PARKED`,
+   * `src/lib/engine/disabled.ts`) — `abilitiesOfCharacter` hands back nothing
+   * while it stands, so the Goblin's field safety does not fire. Runs again
+   * with no other change once that flips to false.
+   */
+  it.skip("is walked past by a Postać whose own Karta says so", async () => {
     const goblin = aTable({
       game: {
         turn_state: {
@@ -540,13 +547,21 @@ describe("the Urwisko, and one die for each Przyjaciel", () => {
    * Urwisko is a `po-kolei`, so the Opiekun, the Elflin and the Barbarzyńca
    * walked straight into it. The cards say *where*, not *how*.
    */
-  it("is walked past by the cards and Postacie written for it", async () => {
+  it("is walked past by the cards written for it", async () => {
     const byCard = await walkTheCliff("awanturnik", ["elflin", "pasterz"], [1, 1, 1]);
     expect(byCard.after.seats[0].life).toBe(4);
     expect(byCard.after.holdings).toHaveLength(2);
     expect(byCard.out.result.did.join(" ")).toMatch(/bezpiecznie — bez rzutu/);
+  });
 
-    // The Barbarzyńca's own Karta names both Urwiska.
+  /**
+   * The Barbarzyńca's own Karta names both Urwiska. A Postać's own powers are
+   * parked whole (`CHARACTER_POWERS_PARKED`, `src/lib/engine/disabled.ts`) —
+   * `abilitiesOfCharacter` hands back nothing while it stands, so his field
+   * safety does not fire here either. Runs again with no other change once
+   * that flips to false.
+   */
+  it.skip("is walked past by the Postać written for it", async () => {
     const byCharacter = await walkTheCliff("barbarzynca", ["pasterz"], [1, 1]);
     expect(byCharacter.after.seats[0].life).toBe(4);
     expect(byCharacter.after.holdings).toHaveLength(1);

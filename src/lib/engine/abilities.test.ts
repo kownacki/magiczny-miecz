@@ -110,6 +110,14 @@ describe("walking past what a field does to you", () => {
     // walked in and attacked you there.
     expect(canEscapeAt(abilitiesOf("elflin"), "kamienny-las", "wrog")).toBe(true);
     expect(canEscapeAt(abilitiesOf("elflin"), "kamienny-las", "postac")).toBe(false);
+  });
+
+  // The Postać half of the same claim, for the ELF (whose card carries the
+  // Elflin's escape rather than a held card doing it). A Postać's own powers
+  // are parked whole (`CHARACTER_POWERS_PARKED`, `src/lib/engine/disabled.ts`)
+  // — `abilitiesOfCharacter` hands back nothing, so there is no escape to be
+  // narrow about. Runs again with no other change once that flips to false.
+  it.skip("does not let the ELF's own escape from Wrogowie carry over to another Postać", () => {
     expect(canEscapeAt(abilitiesOfCharacter("elf"), "rownina-traw", "wrog")).toBe(true);
     expect(canEscapeAt(abilitiesOfCharacter("elf"), "rownina-traw", "postac")).toBe(false);
   });

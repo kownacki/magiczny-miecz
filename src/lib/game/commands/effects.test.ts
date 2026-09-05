@@ -392,8 +392,14 @@ describe("losing what you carry (strata)", () => {
      * by a Pustelnik must not be able to hand its caster a Miecz. Left out of
      * the pool of candidates rather than refused after picking one, so the
      * victim's gold — the card's own fallback — is what changes hands instead.
+     *
+     * A Postać's own powers are parked whole (`CHARACTER_POWERS_PARKED`,
+     * `src/lib/engine/disabled.ts`) — the Pustelnik's `zakazane` is dimmed on
+     * the Karta now too, deliberately, so the app must not enforce it either
+     * while it stands. Runs again with no other change once that flips to
+     * false.
      */
-    it("takes the gold instead when the only Przedmiot is forbidden to the taker", async () => {
+    it.skip("takes the gold instead when the only Przedmiot is forbidden to the taker", async () => {
       const withGold = aTable({
         seats: [
           aSeat({ id: "seat-a", seat_index: 0, gold: 1 }),

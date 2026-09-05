@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 import characters from "@/data/characters.json";
 import events from "@/data/events.json";
 import type { Character, EventCard } from "@/data/types";
-import { PARKED_ABILITIES, PARKED_CARDS, parkedAbility, parkedCard } from "./disabled";
+import { LIVE_ABILITIES, PARKED_CARDS, parkedAbility, parkedCard } from "./disabled";
+import { STARTING_KIT, abilitiesOfCharacter } from "./characters";
+import type { CharacterId } from "@/data/ids";
 import { coverageOf, manualNote } from "./coverage";
 
 /**
@@ -24,19 +26,26 @@ import { coverageOf, manualNote } from "./coverage";
  * this file exists.
  */
 const MUST_CONTAIN: Record<string, readonly (readonly [number, string])[]> = {
-  barbarzynca: [[2, "zaatakować ją po raz drugi"]],
-  demon: [[3, "w walce magicznej"]],
-  kat: [
-    [2, "ściąć jej głowę"],
-    [3, "możesz wybrać rodzaj walki"],
+  "bledny-rycerz": [[0, "Miecz i Zbroję"]],
+  czarodziej: [[0, "2 Zaklęcia"]],
+  demon: [[0, "1 Zaklęcie"]],
+  hummit: [[0, "1 Zaklęcie"]],
+  kaplan: [[0, "1 Zaklęcie"]],
+  kaplanka: [[0, "2 Zaklęcia"]],
+  karzel: [[0, "2 Zaklęcia"]],
+  kat: [[1, "1 Zaklęcie i Miecz"]],
+  krasnolud: [[0, "Tarczę i Sztylet"]],
+  ksiaze: [
+    [0, "5 Sztuk Złota"],
+    [1, "Hełm i Miecz"],
   ],
-  lotr: [
-    [2, "Ilekroć pokonasz inną Postać"],
-    [3, "walczysz nieuczciwie"],
-  ],
-  olbrzym: [[1, "przewyższa twój całkowity Miecz"]],
-  "rycerz-ciemnosci": [[3, "Podczas Turnieju Rycerskiego"]],
-  zdobywca: [[2, "odebrać pokonanej Postaci 2 punkty"]],
+  lotr: [[0, "Sztylet"]],
+  mag: [[0, "2 Zaklęcia"]],
+  magog: [[0, "1 Zaklęcie"]],
+  quark: [[0, "1 Zaklęcie"]],
+  "rycerz-ciemnosci": [[0, "1 Zaklęcie i Miecz"]],
+  wiedzma: [[0, "1 Zaklęcie"]],
+  zdobywca: [[0, "Miecz i Tarczę"]],
 };
 
 const CHARACTERS = characters as Character[];
@@ -50,7 +59,7 @@ describe("what is parked while Postać przeciw Postaci is unbuilt", () => {
   });
 
   it("names only Postacie that exist, and clauses they actually have", () => {
-    for (const [characterId, indices] of Object.entries(PARKED_ABILITIES)) {
+    for (const [characterId, indices] of Object.entries(LIVE_ABILITIES)) {
       const character = CHARACTERS.find((one) => one.id === characterId);
       expect(character, characterId).toBeDefined();
       for (const index of indices ?? []) {
@@ -59,34 +68,38 @@ describe("what is parked while Postać przeciw Postaci is unbuilt", () => {
     }
   });
 
-  it("dims the clause it means, not the one that moved into its place", () => {
+  it("keeps live exactly the clause each starting kit deals", () => {
     for (const [characterId, expected] of Object.entries(MUST_CONTAIN)) {
       const character = CHARACTERS.find((one) => one.id === characterId)!;
       for (const [index, words] of expected) {
         expect(character.abilities[index], `${characterId}[${index}]`).toContain(words);
+        expect(parkedAbility(characterId, index), `${characterId}[${index}]`).toBe(false);
       }
     }
   });
 
-  it("pins every parked index, so a new one cannot be added unpinned", () => {
-    const named = Object.entries(PARKED_ABILITIES)
-      .flatMap(([id, list]) => (list ?? []).map((index) => `${id}[${index}]`))
-      .sort();
-    const pinned = Object.entries(MUST_CONTAIN)
-      .flatMap(([id, list]) => list.map(([index]) => `${id}[${index}]`))
-      .sort();
-    expect(named).toEqual(pinned);
+  it("lists a live clause for every Postać that is dealt a kit, and no other", () => {
+    expect(Object.keys(LIVE_ABILITIES).sort()).toEqual(Object.keys(STARTING_KIT).sort());
+    expect(Object.keys(LIVE_ABILITIES).sort()).toEqual(Object.keys(MUST_CONTAIN).sort());
   });
 
-  it("leaves alone the clauses that are not duels", () => {
-    // The Błędny Rycerz's refight is „jeżeli przegrasz walkę" — any fight —
-    // and the Rycerz Ciemności's choice of form is 18.1b's, which is how he
-    // attacks a Wróg with Magia.
-    expect(parkedAbility("bledny-rycerz", 1)).toBe(false);
-    expect(parkedAbility("bledny-rycerz", 3)).toBe(false);
-    expect(parkedAbility("rycerz-ciemnosci", 1)).toBe(false);
-    // And the Olbrzym still steps past somebody standing in his way.
-    expect(parkedAbility("olbrzym", 0)).toBe(false);
+  it("parks every clause that is not the kit, on every Postać", () => {
+    for (const character of CHARACTERS) {
+      const live = LIVE_ABILITIES[character.id as CharacterId] ?? [];
+      character.abilities.forEach((_, index) => {
+        expect(parkedAbility(character.id, index), `${character.id}[${index}]`).toBe(
+          !live.includes(index),
+        );
+      });
+    }
+  });
+
+  it("hands out no encoded Postać power while they are parked", () => {
+    // One door: `abilitiesOfCharacter`. Nothing is deleted — `CHARACTER_ABILITIES`
+    // still holds all sixteen — and every reader that asks gets nothing.
+    for (const character of CHARACTERS) {
+      expect(abilitiesOfCharacter(character.id as CharacterId), character.id).toEqual([]);
+    }
   });
 
   it("answers for a card and for a seat with no character", () => {

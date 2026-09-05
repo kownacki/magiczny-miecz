@@ -116,8 +116,14 @@ describe("what the winner of a duel takes (17.9)", () => {
    * 5.3/8.1, sibling of `takeCard`'s: 17.9 hands the winner an item the same
    * way finding one does, so a Pustelnik still may not come to possess a
    * Miecz off a beaten rival.
+   *
+   * A Postać's own powers are parked whole (`CHARACTER_POWERS_PARKED`,
+   * `src/lib/engine/disabled.ts`) — the Pustelnik's `zakazane` is dimmed on
+   * the Karta now too, deliberately, so the app must not enforce it either
+   * while it stands. Runs again with no other change once that flips to
+   * false.
    */
-  it("refuses the Miecz to a Pustelnik winner (5.3, 8.1)", async () => {
+  it.skip("refuses the Miecz to a Pustelnik winner (5.3, 8.1)", async () => {
     await expect(
       settle(duel({ winnerCharacter: "pustelnik" }), {
         spoils: { take: "przedmiot", holdingId: "h1" },

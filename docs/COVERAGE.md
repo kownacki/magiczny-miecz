@@ -175,8 +175,8 @@ loss on death are the same either way, so nothing above this line changes.
 
 | | rule | status | where |
 |---|---|---|---|
-| 8.1 | each character has special abilities and limits | ◐ | the mechanical ones are encoded in the card vocabulary (`characters.ts`); the rest are named on screen |
-| 8.2 | an ability overrides the general rules | ◐ | encoded abilities join the seat's own, so they win where they apply |
+| 8.1 | each character has special abilities and limits | ⏸ | **parked** (`CHARACTER_POWERS_PARKED`). 89 clauses are printed across the 27 Kartas Postaci; the app carried 34 and now carries the 18 starting kits alone. The other 16 are still encoded in `CHARACTER_ABILITIES` and still read by seven readers — `abilitiesOfCharacter` simply hands back nothing while this stands. Every clause outside the kit is dimmed and struck on the Karta |
+| 8.2 | an ability overrides the general rules | ⏸ | **parked** with 8.1. The mechanism is intact — an encoded ability still joins the seat's own and still wins where it applies — and there are none to join while the tap is closed |
 
 ## 9. Zaklęcia
 
@@ -234,7 +234,7 @@ loss on death are the same either way, so nothing above this line changes.
 | 13.1 | nothing at all on the square a turn *starts* from | ✅ | `refuseUnlessSettledHere` requires a `field` frame, so trade is refused in the `roll` phase — it was not, and a character standing on a TARGOWISKO could empty it before moving |
 | 13.1 | only on the field your move ended on — or was moved to by a Spotkanie | ✅ | the second half was missing: `placeSeat` staged a teleport's destination as owing nothing, so an Obszar a Karta sent you to could not be drawn on or explored. It goes through the same `afterMove` a walk does now (`by: "karta"`), and 15.2's Obbol draws his Karta on Równina Traw. The position override is the one caller that still does not arrive |
 | 13.2 | meet another character *or* explore, not both | ✅ | the choice stays the player's and only the "not both" is enforced: attacking is refused once a Karta has been drawn or the Obszar's offer resolved, and drawing is refused once the turn has been spent meeting. The mark rides through the fight and back out (`endFight`), because a settled duel leaves nothing behind saying it happened — and a fight with a Wróg is not a meeting and does not spend the turn |
-| 13.3 | attack, or use an ability on them | ◐ | attacking works; abilities do not exist (8.1) |
+| 13.3 | attack, or use an ability on them | ⏸ | **parked**, both branches and for two different reasons. Attacking a Postać went with `PVP_PARKED`; using an ability on one was never built (no command sets `how: "zdolnosc"`) and its five clauses are now dimmed with the rest under `CHARACTER_POWERS_PARKED` |
 | 13.4 | draw only enough to bring the field up to its printed count | ✅ | `afterMove(field, from, waiting)` |
 | 13.5 | obey the field's instruction; beat or flee Wrogowie first | ◐ | text and die tables shown; ordering is the players' |
 

@@ -39,45 +39,63 @@ export const PARKED_CARDS: Readonly<Partial<Record<CardId, Parked>>> = {
 };
 
 /**
- * Printed clauses on a Karta Postaci that cannot fire, by their index in the
- * character's own `abilities` array.
+ * A Postać's own powers, parked whole — everything but the starting kit.
  *
- * A character is never parked — all 27 stay pickable — because a Charakterystyka
- * is several abilities and losing one is not losing the Postać. The Kat and the
- * Łotr lose two of their four and are weaker for it; that is a balance cost
- * taken knowingly rather than a reason to shorten the roster. Nobody loses
- * everything.
+ * Same shape and same promise as `PVP_PARKED` and `COMPANION_PARKED`: no code
+ * is deleted and one flip brings them back. `abilitiesOfCharacter` is the only
+ * door a character's typed abilities come through, so returning nothing from
+ * it while this stands switches off all sixteen of them — the six field
+ * safeties, the three escapes, the three roll modifiers, `bez-oplaty`,
+ * `magia-do-miecza`, `zakazane` and `natura-dowolna` — without touching a
+ * single reader.
  *
- * Indices into transcribed prose are exactly the sort of reference that rots
- * silently, so `disabled.test.ts` pins the opening words of every clause named
- * here. Re-transcribe a Karta Postaci and the test says which index moved
- * rather than the game quietly dimming the wrong sentence.
+ * Why all of them and not only the unbuilt ones: 89 clauses are printed across
+ * the 27 Kartas Postaci and the app ran 34. A Karta that keeps sixteen of its
+ * promises and breaks fifty-five is harder to play with than one that keeps
+ * none of them and says so, because a player cannot tell which sixteen. So the
+ * line is drawn where it can be stated in a sentence — the app deals your kit,
+ * and everything else on the card is yours to apply.
  */
-export const PARKED_ABILITIES: Readonly<Partial<Record<CharacterId, readonly number[]>>> = {
-  // „Jeżeli zaatakujesz inną Postać ... zaatakować ją po raz drugi."
-  barbarzynca: [2],
-  // „Jeżeli zwyciężysz inną Postać w walce magicznej..."
-  demon: [3],
-  // Beheading, and choosing the kind of fight — the second says „Atakując
-  // Postać" outright, so unlike the Rycerz Ciemności's it is a duel and only
-  // a duel.
-  kat: [2, 3],
-  // „Ilekroć pokonasz inną Postać", and fighting dishonestly against one.
-  lotr: [2, 3],
-  // „W czasie walki z Postacią, której całkowity Miecz przewyższa twój..."
-  // His [0], stepping past an occupied Obszar, is not a fight and stays.
-  olbrzym: [1],
-  // Only the Turniej clause. His „Atakując możesz wybrać formę walki" says
-  // nothing about a Postać and is 18.1b's own permission — it is how he
-  // attacks a Wróg with Magia, which still happens — so it stays. Getting
-  // this one wrong would have taken away the ability the character is for.
-  "rycerz-ciemnosci": [3],
-  // „Po wygraniu zwykłej walki możesz odebrać pokonanej Postaci 2 punkty Życia."
-  zdobywca: [2],
-  // The BŁĘDNY RYCERZ keeps everything, and is here to say so. His refight is
-  // „jeżeli przegrasz walkę" — any fight, a Wróg's included — and taking a
-  // Krzyżowiec off „każdej napotkanej Postaci" is 13.3's other branch, which
-  // is not a fight at all.
+export const CHARACTER_POWERS_PARKED = true;
+
+/**
+ * The clauses that are *not* dimmed: the starting kit, and nothing else.
+ *
+ * Stated as what is live rather than as what is parked, because the live list
+ * is a third the length and because it is the honest sentence — "these are the
+ * ones the app carries" — rather than its complement. Everything absent from
+ * here is struck through on the Karta.
+ *
+ * These are the clauses `STARTING_KIT` (characters.ts) actually deals, matched
+ * by hand to their index in each Postać's printed `abilities` array. The
+ * KSIĄŻĘ has two, his gold and his gear; his gear clause also promises he may
+ * always replace what he loses, and *that* half is not carried — a clause the
+ * app half keeps is kept, on the grounds that striking it through would deny
+ * the kit it does deal.
+ *
+ * Indices into transcribed prose rot in silence, so `disabled.test.ts` pins
+ * every one of them by words only that clause contains.
+ */
+export const LIVE_ABILITIES: Readonly<Partial<Record<CharacterId, readonly number[]>>> = {
+  "bledny-rycerz": [0],
+  czarodziej: [0],
+  demon: [0],
+  hummit: [0],
+  kaplan: [0],
+  kaplanka: [0],
+  karzel: [0],
+  // His [0] is choosing a Natura at setup, which nothing carries yet.
+  kat: [1],
+  krasnolud: [0],
+  // Gold and gear, the only Postać with two.
+  ksiaze: [0, 1],
+  lotr: [0],
+  mag: [0],
+  magog: [0],
+  quark: [0],
+  "rycerz-ciemnosci": [0],
+  wiedzma: [0],
+  zdobywca: [0],
 };
 
 /** Whether this Karta is out of the game entirely. */
@@ -85,10 +103,19 @@ export function parkedCard(cardId: string): Parked | null {
   return PARKED_CARDS[cardId as CardId] ?? null;
 }
 
-/** Whether this printed clause of a Charakterystyka cannot fire. */
+/**
+ * Whether this printed clause of a Charakterystyka cannot fire.
+ *
+ * The inverse of `LIVE_ABILITIES`, so a clause nobody has listed as carried is
+ * parked by default. That direction matters: a new Postać, or a clause the app
+ * learns to run, has to be *added* to be shown live — the failure mode is a
+ * card that under-promises, which a player can check against the paper, rather
+ * than one that over-promises, which they discover mid-fight.
+ */
 export function parkedAbility(characterId: string | null, index: number): boolean {
   if (!characterId) return false;
-  return (PARKED_ABILITIES[characterId as CharacterId] ?? []).includes(index);
+  if (!CHARACTER_POWERS_PARKED) return false;
+  return !(LIVE_ABILITIES[characterId as CharacterId] ?? []).includes(index);
 }
 
 /**
@@ -123,10 +150,12 @@ export function refuseIfParked(cardId: string): void {
  * Rycerz taking a Krzyżowiec) is not a fight, and neither is any Zaklęcie
  * spoken at another player.
  *
- * The Karta that has no other purpose goes with it, through `PARKED_CARDS`,
- * and the printed clauses that cannot fire are dimmed through
- * `PARKED_ABILITIES` rather than being hidden — a Karta Postaci is a
- * transcription of a real card, and a card in the box says what it says.
+ * The Karta that has no other purpose goes with it, through `PARKED_CARDS`.
+ * The duel clauses printed on eight Kartas Postaci are dimmed rather than
+ * hidden, but not by anything of this feature's own: since 2026-09-05
+ * `CHARACTER_POWERS_PARKED` dims every clause outside the starting kit, and
+ * the duel ones were never carried anyway. A Karta Postaci is a transcription
+ * of a real card, and a card in the box says what it says.
  */
 export const PVP_PARKED = true;
 

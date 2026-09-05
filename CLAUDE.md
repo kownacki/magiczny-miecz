@@ -223,9 +223,22 @@ anything.
 
 - **Content the app cannot run yet is *parked*, never half-built.** The list is
   `src/lib/engine/disabled.ts`: `PARKED_CARDS` for a whole Karta,
-  `PARKED_ABILITIES` for a printed clause on a Karta Postaci, and a feature
-  boolean beside them in the shape of `COMPANION_PARKED` — today `PVP_PARKED`,
-  for Postać przeciw Postaci. A parked card is **gone**: `freshDecks` never
+  `LIVE_ABILITIES` for the printed clauses of a Karta Postaci that the app does
+  carry, and a feature boolean beside them in the shape of `COMPANION_PARKED` —
+  today `PVP_PARKED` for Postać przeciw Postaci and `CHARACTER_POWERS_PARKED`
+  for a Postać's own powers.
+
+  **Clauses are stated as what is live, and the inverse is parked.** A clause
+  nobody has listed is dimmed by default, so one the app learns to run must be
+  *added* to appear live. That direction is deliberate: the failure mode is a
+  Karta that under-promises, which a player can check against the paper,
+  rather than one that over-promises, which they discover mid-fight.
+
+  **A whole subsystem parks at its one door, not at its readers.**
+  `abilitiesOfCharacter` returning nothing switches off all sixteen encoded
+  character abilities without a guard in any of the seven readers that ask —
+  the same way `attackSeat` and `sendRaider` are the only two doors into a
+  duel. Find the door before writing a guard. A parked card is **gone**: `freshDecks` never
   shuffles it in, and every console door that could conjure one
   (`placeCard`, `grantCard`, `stackForDraw`, `stageCards`) refuses through
   `refuseIfParked`. It keeps its entry in the Księga Tolimana, dimmed and

@@ -289,8 +289,14 @@ describe("taking a card", () => {
    * 8.1: „Nie możesz używać Miecza, Sztyletu, Hełmu ani Zbroi" — a
    * Charakterystyka's own restriction, converted into a possession refusal by
    * 5.3 the same way a Natura's is, at the same door.
+   *
+   * A Postać's own powers are parked whole (`CHARACTER_POWERS_PARKED`,
+   * `src/lib/engine/disabled.ts`) — the Pustelnik's `zakazane` is dimmed on
+   * the Karta now too, deliberately, so the app must not enforce it either
+   * while it stands. Runs again with no other change once that flips to
+   * false.
    */
-  it("refuses the four the Pustelnik's Charakterystyka forbids (5.3, 8.1)", () => {
+  it.skip("refuses the four the Pustelnik's Charakterystyka forbids (5.3, 8.1)", () => {
     const pustelnik = table({
       seats: [aSeat({ id: "seat-a", field_id: HERE, character_id: "pustelnik" })],
     });
@@ -651,8 +657,14 @@ describe("wearing a Przedmiot (slotowy)", () => {
    * Natura one is: `takeCard` already refuses the four to a Pustelnik, so this
    * fires on a card that arrived some other way (the console's `grantCard`, or
    * an old save).
+   *
+   * A Postać's own powers are parked whole (`CHARACTER_POWERS_PARKED`,
+   * `src/lib/engine/disabled.ts`) — the Pustelnik's `zakazane` is dimmed on
+   * the Karta now too, deliberately, so the app must not enforce it either
+   * while it stands. Runs again with no other change once that flips to
+   * false.
    */
-  it("refuses a card the wearer's Charakterystyka forbids (5.3, 8.1)", () => {
+  it.skip("refuses a card the wearer's Charakterystyka forbids (5.3, 8.1)", () => {
     const pustelnik = aTable({
       game: { eq_mode: "slots" },
       seats: [aSeat({ id: "seat-a", character_id: "pustelnik" })],

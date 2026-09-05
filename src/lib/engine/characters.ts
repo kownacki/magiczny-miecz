@@ -1,6 +1,7 @@
 /** What each of the 27 characters brings to the table, and what its own Charakterystyka does (8.1, 8.2). */
 
 import type { Ability } from "./abilities";
+import { CHARACTER_POWERS_PARKED } from "./disabled";
 import { isCharacterId, type CharacterId } from "@/data/ids";
 
 /**
@@ -348,7 +349,15 @@ export function asSeatCharacter(value: string | null | undefined): SeatCharacter
   return value === RANDOM_CHARACTER_ID ? RANDOM_CHARACTER_ID : null;
 }
 
+/**
+ * A Postać's own encoded powers — or none of them, while they are parked.
+ *
+ * The one door they come through, which is why parking them is one line here
+ * rather than a guard in each of the seven readers that ask. `CHARACTER_ABILITIES`
+ * below is untouched and still the transcription; this is the tap.
+ */
 export function abilitiesOfCharacter(characterId: CharacterId | null): readonly Ability[] {
+  if (CHARACTER_POWERS_PARKED) return [];
   return characterId ? (CHARACTER_ABILITIES[characterId] ?? []) : [];
 }
 

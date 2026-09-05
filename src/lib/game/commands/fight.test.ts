@@ -1635,7 +1635,13 @@ describe("ucieczka (17.6, 19)", () => {
     { cardId: "nobbin", cardClass: "foe" as const },
   ];
 
-  it("takes the character away from everything standing here, not just the one it faced (19.1)", async () => {
+  /**
+   * A Postać's own powers are parked whole (`CHARACTER_POWERS_PARKED`,
+   * `src/lib/engine/disabled.ts`) — `abilitiesOfCharacter` hands back nothing
+   * while it stands, so the HOBGOBLIN's escape does not fire. Runs again with
+   * no other change once that flips to false.
+   */
+  it.skip("takes the character away from everything standing here, not just the one it faced (19.1)", async () => {
     const table = aTable({
       game: {
         active_seat: 0,
@@ -1649,7 +1655,8 @@ describe("ucieczka (17.6, 19)", () => {
     expect(fieldIn(writes).fought).toEqual(["cyklop", "nobbin"]);
   });
 
-  it("settles the Wrogowie lying here even before a fight began", async () => {
+  /** Same parking as above. */
+  it.skip("settles the Wrogowie lying here even before a fight began", async () => {
     const table = aTable({
       game: {
         active_seat: 0,

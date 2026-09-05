@@ -278,6 +278,47 @@ LANDED.md for what is built (`src/lib/music/`, `/music`).
 
 ## Parked
 
+### Postacie' own powers — parked 2026-09-05 (`CHARACTER_POWERS_PARKED`)
+
+**Every printed clause on a Karta Postaci except the starting kit.** Same
+shape and same promise as the two parkings below: nothing deleted, one flip
+brings them back. `abilitiesOfCharacter` is the single door a character's
+typed abilities come through, so returning nothing from it switches off all
+sixteen — six field safeties, three escapes, three roll modifiers,
+`bez-oplaty`, `magia-do-miecza`, `zakazane`, `natura-dowolna` — without a
+guard in any of the seven readers that ask.
+
+**Why all of them rather than only the unbuilt ones.** 89 clauses are printed
+across the 27 Kartas Postaci and the app ran 34 of them: 18 starting kits and
+16 encoded abilities, the latter across only 10 characters. A Karta that keeps
+sixteen of its promises and breaks fifty-five is harder to play with than one
+that keeps none and says so, because a player cannot tell which sixteen. The
+line is drawn where it can be said in a sentence: **the app deals your kit,
+and everything else on the card is yours to apply.**
+
+**What is left, and it is not nothing.** Postacie still differ by their
+printed Miecz and Magia, by their starting gear and spells, by where they
+begin, and by their Natura. That is the character-selection decision mostly
+intact; what goes is the per-Obszar exception, which is also the part nobody
+could keep track of at a table anyway.
+
+**Stated as a live list, not a parked one.** `LIVE_ABILITIES` names the clauses
+the app carries — one per Postać, two for the Książę — and `parkedAbility`
+returns the inverse, so anything nobody has listed is dimmed **by default**.
+That direction is the point: a clause the app learns to run must be *added* to
+show live, so the failure mode is a Karta that under-promises and can be
+checked against the paper, rather than one that over-promises and is
+discovered mid-fight. `disabled.test.ts` pins every live index by words only
+that clause contains, and cross-checks the list against `STARTING_KIT`.
+
+**Known partial:** the Książę's gear clause also promises he may always replace
+what he loses, and that half is not carried. The clause stays live anyway,
+since striking it through would deny the kit it does deal.
+
+**What it costs to bring one back:** the reader already exists for all sixteen.
+Flipping the boolean restores them all at once; carrying a single clause
+instead means adding its index to `LIVE_ABILITIES` and gating the rest.
+
 ### Postać przeciw Postaci — parked 2026-09-05 (`PVP_PARKED`)
 
 **The feature is coming; it is not built.** `PVP_PARKED` in
