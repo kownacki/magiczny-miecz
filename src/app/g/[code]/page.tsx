@@ -90,7 +90,6 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
     toggleDrawer,
     closeDrawer,
     openField,
-    setInspectingCard,
     setConsoleOpen,
   } = surfaces;
   /**
@@ -621,7 +620,6 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
         endlessStock={game.endless_stock}
         eqMode={eqMode}
         nature={asNature(mySeat?.nature)}
-        onInspect={setInspectingCard}
         // "walcz" and the Obszary chips became `fight` and `go` in the console;
         // taking a card stayed, because this shelf is where somebody already is
         // when they want one, with the picture in front of them.

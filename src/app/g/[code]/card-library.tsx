@@ -233,7 +233,6 @@ function shelfTally(shelf: Shelf): string {
 
 export function CardLibrary({
   onClose,
-  onInspect,
   onGrant,
   eqMode = "classic",
   nature = null,
@@ -251,7 +250,6 @@ export function CardLibrary({
    * looked alike, and they drifted. One of them stacked over the bar and the
    * other did not. The Karta belongs to the page, like every other sheet.
    */
-  onInspect: (card: TileCard) => void;
   /**
    * Testing only, and absent in a deployed build.
    *
@@ -595,7 +593,6 @@ export function CardLibrary({
                     nature={nature}
                     dimmed={parked}
                     struck={parked}
-                    onClick={() => onInspect(card)}
                   >
                     {/* Not for a parked Karta — the console door behind this
                         button refuses one, and a button that always fails is
