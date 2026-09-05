@@ -198,14 +198,17 @@ is a **Status** (CONTEXT.md). The other three decisions, and the order:
          Tragarz — which `inPlayAt` alone never puts anywhere in slotowy —
          now carries there too, matching every other Przyjaciel's bonus;
          `abilities.ts`'s own `carryLimit` deleted with it), ~~crossings~~
-         (settled 2026-09-04, and **not** by folding: `przeprawa-kostki` is
-         printed on Rusałka, a Postać, so nothing held can produce it and
-         there is no second spelling to retire — `przeprawa` is a *granted*
-         crossing, a different fact. It stays on the Ability with that reason
-         written beside it, and what did move is `grantedCrossing`, from the
-         stored half to the whole `standing` list. Folding a Postać's own
-         printed text onto the list is a separate question, and the one to
-         answer for all of them at once in step 3), ~~`ocalenie`~~ (done
+         (settled 2026-09-04 — **on a wrong fact, corrected 2026-09-05**. The
+         reason given was that `przeprawa-kostki` is printed on Rusałka, a
+         Postać, so nothing held could produce it. Rusałka is a **Przyjaciel**,
+         a `friend` card in `events.json`, and `heldStatuses` walks friends —
+         so the twin would fire and this reader *can* be folded like the
+         others. What survives of the original reasoning is the narrower
+         half: `przeprawa` is a *granted* crossing and `przeprawa-kostki` is
+         how many dice, so there is no second spelling to retire and no bug —
+         only a reader that has not moved. What did move is `grantedCrossing`,
+         from the stored half to the whole `standing` list. **Open again**, as
+         a small fold nobody has done), ~~`ocalenie`~~ (done
          2026-09-04, and it was a duplicated projection rather than a
          reader: `spendLife` mapped `snapshot.effects` by hand into what
          `storedStatuses` already returns. It stays on the **stored** half

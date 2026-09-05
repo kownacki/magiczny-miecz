@@ -566,9 +566,12 @@ export async function crossRing(
     //
     // Rusałka's friendship is exactly this: one die at the Trzęsawiska instead
     // of two, which is the difference between a hard crossing and a likely one.
-    // Still the abilities and not `standing`: `przeprawa-kostki` is printed on
-    // Rusałka herself, and a Postać's own text is not on the Status list — see
-    // the note beside its `HELD_TWIN` entry for why it stays where it is.
+    // Still the abilities and not `standing`, and only because nobody has
+    // moved this reader yet. Rusałka is a Przyjaciel — a `friend` card, which
+    // `heldStatuses` walks — so the twin could be built and this could read
+    // the one list like every other reader. 9a63637 claimed she was a Postać
+    // and that nothing held could produce it; that was wrong about the data,
+    // and the note beside the `HELD_TWIN` entry now says so.
     const count = crossingDice(view.abilities, crossing.obstacle, crossing.test.dice);
     dice = await rollDice(ports.random, count, "trzęsawiska");
     // `parametr`, not `walka`: the Trzęsawiska are a threshold and not a fight,

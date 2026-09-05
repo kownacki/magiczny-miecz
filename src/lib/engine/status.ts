@@ -1004,12 +1004,16 @@ const HELD_TWIN: Record<Ability["kind"], ((ability: Ability) => Modifier | null)
   "podglad-zaklec": null, // read only when a Zaklęcie is drawn
   "odporny-na-zaklecie": null, // read only when a named Zaklęcie lands on the holder
   "punkty-na-polach": null, // read only on the named Obszar
-  // Not "read only at the crossing", which is what this said and was the wrong
-  // reason. Rusałka is the only thing in the box that prints it and she is a
-  // Postać, not a Karta — nothing held produces it, so a twin here could never
-  // fire. It stays on the Ability because there is no second spelling of it to
-  // retire: `przeprawa` is a *granted* crossing, which is a different fact, and
-  // nothing else in the game says how many dice one takes. See `crossingDice`.
+  // Rusałka is the only thing in the box that prints it, and she is a
+  // Przyjaciel — a `friend` card in `events.json`, which `heldStatuses` does
+  // walk. So a twin here *would* fire, and this could be folded the way the
+  // points and osłona readers were. It is not, yet, and that is the honest
+  // state rather than a reason: the fold's own commit (9a63637) argued she was
+  // a Postać and that nothing held could produce it, which was simply wrong
+  // about the data. What remains true is the narrower half — `przeprawa` is a
+  // *granted* crossing and `przeprawa-kostki` is how many dice one takes, so
+  // there is no second spelling to retire and no bug here to fix, only a
+  // reader that could move. See `crossingDice`.
   "przeprawa-kostki": null,
   skup: null, // a desk's price, not a fact about the holder
   "sprzedaj-w": null, // a card's own buyer, not a fact about the holder
