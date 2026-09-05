@@ -144,7 +144,6 @@ function shelfCards(shelf: Shelf): TileCard[] {
         cardId: character.id,
         name: character.name,
         text: character.abilities.join("\n\n"),
-        abilities: character.abilities,
         kindLabel: `Postać · Miecz ${character.miecz} · Magia ${character.magia}`,
         character: true,
       });

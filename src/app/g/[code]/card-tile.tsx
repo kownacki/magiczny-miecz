@@ -13,7 +13,7 @@ import {
   artFor,
   faceFor,
 } from "@/lib/view/cardImages";
-import { useCardPreview } from "./card-preview";
+import { CardLookupPanel, useCardPreview } from "./card-preview";
 import { CardMark, Corner, MARK_SIZE, ParkedWord, markText, StruckOut, WornMark } from "./card-mark";
 import { LAYER } from "./layers";
 import { Overlay } from "./overlay";
@@ -21,7 +21,7 @@ import { CloseButton } from "./chrome";
 import type { EqMode, Slot } from "@/lib/engine/slots";
 import type { Nature } from "@/data/types";
 import { manualNote, coverageOf, NOT_HANDLED } from "@/lib/engine/coverage";
-import { parkedAbility, parkedCard } from "@/lib/engine/disabled";
+import { parkedCard } from "@/lib/engine/disabled";
 import { numeralOf } from "@/lib/engine/cards";
 import { TileCaption } from "./tile-caption";
 
@@ -53,16 +53,6 @@ export interface TileCard {
    * registry hands back the wrong picture rather than none.
    */
   character?: boolean;
-  /**
-   * A Postać's own clauses, unjoined.
-   *
-   * `text` is these same strings run together for anything that only ever
-   * shows prose; this is kept apart so a card that carries one lets each
-   * clause answer `parkedAbility` for itself — a parked clause is dimmed and
-   * struck where it stands, not lost inside a paragraph that cannot mark part
-   * of itself.
-   */
-  abilities?: readonly string[];
   /** Could a hand contain this? Only Przedmioty, Przyjaciele and Zaklęcia can. */
   holdable?: boolean;
   /**
@@ -522,6 +512,11 @@ export function CardBack({ count }: { count: number }) {
  * Opened by tapping a tile. This is where the text lives now — off the seat
  * cards, which were carrying three lines of small print per possession and
  * became unreadable the moment anybody owned more than two things.
+ *
+ * Never a Postać. `overlays.tsx` sends one of those to `CharacterLookupOverlay`
+ * instead, so that a click and a hover show the same lookup — this used to
+ * carry a second, numbered rendering of a Postać's Charakterystyka that only
+ * this view drew, which is exactly the drift `card-preview.tsx` warned about.
  */
 export function CardDetail({ card, onClose }: { card: TileCard; onClose: () => void }) {
   // A Postać is looked up in its own manifest, and the flag is the only thing
@@ -588,26 +583,6 @@ export function CardDetail({ card, onClose }: { card: TileCard; onClose: () => v
             <p className="text-xs">
               <ParkedWord />
             </p>
-          ) : card.abilities ? (
-            // A Postać's clauses, one `<li>` each, so a parked one can be
-            // dimmed and struck without touching its neighbours — the same
-            // list the seat card folds under „Zdolności".
-            <ol className="flex list-decimal flex-col gap-1 pl-4 text-xs leading-relaxed text-muted">
-              {card.abilities.map((ability, index) => {
-                const off = parkedAbility(card.cardId, index);
-                return (
-                  <li key={index} className={off ? "opacity-45" : undefined}>
-                    <span className={off ? "line-through" : undefined}>{ability}</span>
-                    {off && (
-                      <>
-                        {" "}
-                        <ParkedWord />
-                      </>
-                    )}
-                  </li>
-                );
-              })}
-            </ol>
           ) : (
             card.text && (
               <p className="whitespace-pre-line text-xs leading-relaxed text-muted">{card.text}</p>
@@ -625,6 +600,31 @@ export function CardDetail({ card, onClose }: { card: TileCard; onClose: () => v
             </p>
           )}
         </div>
+      </div>
+    </Overlay>
+  );
+}
+
+/**
+ * A Postać, big, read exactly the way hovering one already reads it.
+ *
+ * Opened by tapping a Karta Postaci — `overlays.tsx` sends a Postać here and
+ * everything else to `CardDetail`. There is one lookup for a Postać
+ * (`CardLookupPanel`, shared with `CardPreview`'s hover), and this is only the
+ * other chrome around it: centred and dismissable by `Esc` or `zamknij`
+ * rather than anchored to a tile and dismissed by looking away.
+ */
+export function CharacterLookupOverlay({
+  card,
+  onClose,
+}: {
+  card: TileCard;
+  onClose: () => void;
+}) {
+  return (
+    <Overlay label={card.name} onDismiss={onClose} layer={LAYER.card}>
+      <div className="flex max-h-full max-w-2xl flex-col gap-4 overflow-y-auto rounded-lg border border-edge bg-panel p-4 sm:flex-row">
+        <CardLookupPanel card={card} onClose={onClose} />
       </div>
     </Overlay>
   );

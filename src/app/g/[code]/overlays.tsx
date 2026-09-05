@@ -10,7 +10,7 @@ import { TestConsole } from "./console";
 import { stageOf } from "@/lib/engine/console";
 import { AnnouncementModal } from "./announcement";
 import { ConfirmDialog } from "./confirm";
-import { CardDetail } from "./card-tile";
+import { CardDetail, CharacterLookupOverlay } from "./card-tile";
 import { RebornModal } from "./reborn-modal";
 import { CHARACTERS, asNature } from "./table";
 import { TurnFab, owedLabel } from "./turn-fab";
@@ -143,9 +143,15 @@ export function Overlays() {
           clicking away — the safest answer is the one you get by not deciding. */}
       <ConfirmDialog ask={ask} busy={busy} onCancel={() => setAsk(null)} />
 
-      {inspectingCard && (
-        <CardDetail card={inspectingCard} onClose={() => setInspectingCard(null)} />
-      )}
+      {/* One lookup for a Postać, shown whether it was hovered or clicked —
+          see the note on `CharacterLookupOverlay`. Everything else keeps the
+          full-size detail, clause list and coverage note included. */}
+      {inspectingCard &&
+        (inspectingCard.character ? (
+          <CharacterLookupOverlay card={inspectingCard} onClose={() => setInspectingCard(null)} />
+        ) : (
+          <CardDetail card={inspectingCard} onClose={() => setInspectingCard(null)} />
+        ))}
 
 
       {/* Offered, never forced — 4.4 says *może*. Opened from the line on the

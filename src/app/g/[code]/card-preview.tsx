@@ -27,6 +27,7 @@ import { CardFacts, hasFacts } from "./card-facts";
 import { numeralMeaning, numeralOf } from "@/lib/engine/cards";
 import type { Nature } from "@/data/types";
 import { CardMark, Corner, MARK_SIZE, ParkedWord } from "./card-mark";
+import { CloseButton } from "./chrome";
 import { LAYER } from "./layers";
 import type { EqMode } from "@/lib/engine/slots";
 import { parkedAbility, parkedCard } from "@/lib/engine/disabled";
@@ -52,17 +53,19 @@ export const PICTURE_WIDTH = 208;
 /**
  * A Karta Postaci, which is read rather than recognised.
  *
- * The same 340 the click-to-open detail draws one at, and for the same reason:
+ * The size a click on a Postać draws one at too, and for the same reason:
  * everything that decides the choice is printed *on* it — four numbered clauses
  * of small type, the two starting figures, the Natura and the MGR — and none of
  * that survives 208. Every other card in the box is a picture and a name, with
  * whatever the app knows about it set in real text beside the picture, so 208 is
  * plenty; a Postać carries no such column, because the abilities are the card.
  *
- * Kept in step with `CardDetail` by hand, which is the sort of thing that
- * drifts. It has not been pulled into one constant because the two disagree
- * about the *other* cards on purpose — the detail view has a whole overlay to
- * fill and this has to sit beside a tile without covering the board.
+ * One constant read by one component, `CardLookupPanel` — the hover and the
+ * click used to be two designs kept in step by hand, which is the sort of
+ * thing that drifts, and drifted: a Postać opened full-size once carried a
+ * numbered list of its clauses that the hover never had. Now there is only
+ * the one panel, and this is the size it draws a Karta Postaci at wherever it
+ * is asked to.
  */
 const CHARACTER_PICTURE_WIDTH = 340;
 /**
@@ -315,135 +318,41 @@ export function useCardPreview(
   return { handlers, preview, hovering: anchor !== null };
 }
 
-export function CardPreview({
+/**
+ * What a card's lookup says: the picture, and what the app knows beside it.
+ *
+ * The one thing `CardPreview`'s hover and a click on a Postać both show — see
+ * the note at the top of this file. Neither chrome is here: an anchored
+ * tooltip and a centred overlay place this differently and dismiss it
+ * differently, and both of those stay with the caller. `pinned` and `onClose`
+ * are each optional, and each name the one thing the *other* chrome has that
+ * this one does not — the hint about holding a key down is only true where a
+ * key does something, and `zamknij` is only true where a click opened this in
+ * the first place.
+ */
+export function CardLookupPanel({
   card,
-  anchor,
   imageless = false,
   eqMode = "classic",
   nature = null,
-  pinned = false,
-  onUnpin,
+  pinned,
+  onClose,
 }: {
   card: TileCard;
-  anchor: DOMRect;
-  /**
-   * Held open on purpose, and therefore reachable.
-   *
-   * Unpinned this thing is `pointer-events-none` — it has to be, because it is
-   * drawn over the tile it describes and the tile is a control. Pinned, it is
-   * the opposite: the reason to pin is to put the pointer *in* it, to select a
-   * line of a card's text or to follow a rule number into the Instrukcja.
-   */
-  pinned?: boolean;
-  onUnpin?: () => void;
-  nature?: Nature | null;
-  /**
-   * There is no picture of this and there should be no lookup for one.
-   *
-   * A field is not a card, and its id can collide with a card's — asking for
-   * the picture of "kurhan" could hand back a Miejsce card that merely shares
-   * the name. Its printed instruction is what there is to show.
-   */
   imageless?: boolean;
   eqMode?: EqMode;
+  nature?: Nature | null;
+  /** Whether this copy can be held open, and if so, is it. Omit outside the hover panel — see the note above. */
+  pinned?: boolean;
+  /** Present only where a click opened this and a click has to close it. */
+  onClose?: () => void;
 }) {
-  /**
-   * Placed from what it measures, not from what it was expected to be.
-   *
-   * Working the height out in advance only ever worked for a bare picture. The
-   * moment the panel had a column of text beside it — or a field's printed
-   * instruction instead of a card — the real height had nothing to do with the
-   * arithmetic, so the clamp used a wrong number and the bottom ran off the
-   * screen. A ref callback runs at commit, before paint, so measuring and then
-   * positioning is invisible rather than a jump.
-   *
-   * Measuring once is not enough either, which is what the cut-off panels were:
-   * a picture is `<img width height>` until the file lands and its own
-   * proportions take over, so the panel commits at one height and paints at
-   * another, and the difference — 89px on every Karta Zdarzeń, see `CARD_RATIO`
-   * — is exactly the strip that hung off the bottom of the window. So the panel
-   * watches its own box and places itself again whenever it changes, and the
-   * window's `resize` is the same fact from the other side: shrink the window
-   * under a pinned panel and it climbs back inside instead of being cropped by
-   * it.
-   *
-   * It cannot chase its own tail, because moving a fixed panel changes nothing
-   * about how wide its content wraps — only the caps below decide that.
-   *
-   * The CSS caps do the rest: whatever ends up inside, the panel can never be
-   * taller or wider than the window, and tall content scrolls instead of
-   * overflowing it.
-   */
-  /**
-   * The panel itself, kept so a press elsewhere can be told from a press in it.
-   *
-   * Set by the same ref callback that places it, rather than a second ref on
-   * the same element: two refs on one node is two things to keep in step, and
-   * the placement one already runs at exactly the moment the node appears.
-   */
-  const held = useRef<HTMLDivElement | null>(null);
-
-  const place = useCallback(
-    (node: HTMLDivElement | null) => {
-      held.current = node;
-      if (!node) return;
-      const put = () => {
-        const box = node.getBoundingClientRect();
-        const room = { x: window.innerWidth, y: window.innerHeight };
-        const fitsRight = room.x - anchor.right > box.width + GAP;
-        const wanted = fitsRight ? anchor.right + GAP : anchor.left - box.width - GAP;
-        node.style.left = `${clamp(wanted, GAP, room.x - box.width - GAP)}px`;
-        node.style.top = `${clamp(
-          anchor.top + anchor.height / 2 - box.height / 2,
-          GAP,
-          room.y - box.height - GAP,
-        )}px`;
-      };
-      put();
-      // Fires once with the size it already has, which is the placement above
-      // done twice and no harm; every firing after that is the panel having
-      // actually changed shape.
-      const watching = new ResizeObserver(put);
-      watching.observe(node);
-      window.addEventListener("resize", put);
-      return () => {
-        watching.disconnect();
-        window.removeEventListener("resize", put);
-        held.current = null;
-      };
-    },
-    [anchor],
-  );
-
-  /**
-   * A press anywhere else lets a pinned panel go.
-   *
-   * `pointerdown` and not `click`, so it releases as the press lands rather
-   * than after it — otherwise the click that dismisses the panel also lands on
-   * whatever was behind it, which on a seat card is a tile that picks a card
-   * up. Presses *inside* are the panel being used and are left alone.
-   *
-   * Nothing is bound while it is merely hovering: there is no state to leave
-   * behind then, and the mouse leaving the tile has already closed it.
-   */
-  useEffect(() => {
-    if (!pinned || !onUnpin) return;
-    const onPress = (event: PointerEvent) => {
-      if (held.current?.contains(event.target as Node)) return;
-      onUnpin();
-    };
-    window.addEventListener("pointerdown", onPress, true);
-    return () => window.removeEventListener("pointerdown", onPress, true);
-  }, [pinned, onUnpin]);
-
-  if (typeof document === "undefined") return null;
-
   // A character's id is not a card id, even when it looks like one: `demon` and
   // `czarodziej` name both. Going through the card registry for those two hands
   // back a Wróg and a Nieznajomy rather than the Postać being pointed at.
   const src = imageless ? null : faceFor(card);
-  // A Postać is read at the size the detail view reads one at; everything else
-  // is recognised at the smaller one. See `CHARACTER_PICTURE_WIDTH`.
+  // A Postać is read at the size a Karta Postaci is always read at; everything
+  // else is recognised at the smaller one. See `CHARACTER_PICTURE_WIDTH`.
   const pictureWidth = card.character ? CHARACTER_PICTURE_WIDTH : PICTURE_WIDTH;
   const pictureRatio = card.character ? CHARACTER_CARD_RATIO : CARD_RATIO;
   const profile = imageless
@@ -479,36 +388,15 @@ export function CardPreview({
   // be spoken, and what it is aimed at. Asked of the card id, which answers
   // for nothing else in the box.
   const spell = imageless ? null : spellFacts(card.cardId);
-  // Never true for a field or a Postać — see `CardDetail`'s own note.
+  // Never true for a field or a Postać: a Postać loses no card by parking a
+  // clause of its own Charakterystyka (8.2), and `PARKED_CARDS` names cards
+  // off the decks, never a character.
   const parked = imageless || card.character ? null : parkedCard(card.cardId);
   const anythingToSay =
     !src || card.text || card.kindLabel || profile?.slotLabel || spell || hasFacts(profile) || parked;
 
-  return createPortal(
-    <div
-      ref={place}
-      role="tooltip"
-      style={{
-        // A first guess, corrected before paint.
-        left: anchor.right + GAP,
-        top: anchor.top,
-        maxWidth: `calc(100vw - ${GAP * 2}px)`,
-        maxHeight: `calc(100vh - ${GAP * 2}px)`,
-      }}
-      /* Never under the pointer while it is only hovering: a preview you can
-         hover flickers, because it is drawn over the tile that opened it and
-         the pointer would cross from one to the other.
-
-         Pinned it is exactly the opposite. The whole reason to pin is to put
-         the pointer in it — to drag a line of the card's text, or to follow a
-         rule number into the Instrukcja — so it takes events, and says so with
-         a brighter edge. */
-      className={`fixed ${LAYER.hover} flex gap-3 overflow-y-auto rounded-lg border bg-night p-3 shadow-[0_8px_32px_rgba(0,0,0,0.6)] ${
-        pinned
-          ? "pointer-events-auto select-text border-ochre"
-          : "pointer-events-none select-none border-ochre/40"
-      }`}
-    >
+  return (
+    <>
       {src && (
         <div className="relative shrink-0 self-start">
           <Image
@@ -538,18 +426,25 @@ export function CardPreview({
             <p className="font-[family-name:var(--font-display)] text-sm text-ochre">
               {card.name}
             </p>
-            {/* The Roman numeral printed at the top of the card. Not an
-                identity and not a level — it is the class, and 15.2 resolves a
-                stack of cards drawn on one Obszar from the lowest up. Set apart
-                on the right the way it is on the card itself. */}
-            {numeral && (
-              <span
-                title={numeralMeaning(card.cardId) ?? undefined}
-                className="shrink-0 font-[family-name:var(--font-display)] text-sm leading-none text-ochre/50"
-              >
-                {numeral}
-              </span>
-            )}
+            <div className="flex shrink-0 items-center gap-2">
+              {/* The Roman numeral printed at the top of the card. Not an
+                  identity and not a level — it is the class, and 15.2 resolves
+                  a stack of cards drawn on one Obszar from the lowest up. Set
+                  apart on the right the way it is on the card itself. */}
+              {numeral && (
+                <span
+                  title={numeralMeaning(card.cardId) ?? undefined}
+                  className="font-[family-name:var(--font-display)] text-sm leading-none text-ochre/50"
+                >
+                  {numeral}
+                </span>
+              )}
+              {/* Only where a click opened this — see the note on `onClose`
+                  above. The hover panel closes by itself, on the pointer
+                  leaving, and gets no button that promises a click it does
+                  not need. */}
+              {onClose && <CloseButton onClose={onClose} />}
+            </div>
           </div>
           {/* Not for a Postać, whose figures are set out in full below:
               "Postać · Miecz 2 · Magia 4 · dowolna" was the same three facts
@@ -735,12 +630,177 @@ export function CardPreview({
            * At the foot of the column rather than over the picture, and in the
            * quietest ink on the panel — it is chrome about the panel, not
            * something the card says.
+           *
+           * Only where there is a pin to report on — `pinned` is undefined for
+           * the overlay a click opens, which has its own way to stay open (it
+           * simply does) and its own way to close (`zamknij`, just above).
            */}
-          <p className="mt-auto pt-2 text-[10px] leading-none text-muted/50">
-            {pinned ? `przypięte — puść ${holdKeyName()}, żeby odpiąć` : `${holdKeyName()} — przytrzymaj, żeby przypiąć`}
-          </p>
+          {pinned !== undefined && (
+            <p className="mt-auto pt-2 text-[10px] leading-none text-muted/50">
+              {pinned ? `przypięte — puść ${holdKeyName()}, żeby odpiąć` : `${holdKeyName()} — przytrzymaj, żeby przypiąć`}
+            </p>
+          )}
         </div>
       )}
+    </>
+  );
+}
+
+export function CardPreview({
+  card,
+  anchor,
+  imageless = false,
+  eqMode = "classic",
+  nature = null,
+  pinned = false,
+  onUnpin,
+}: {
+  card: TileCard;
+  anchor: DOMRect;
+  /**
+   * Held open on purpose, and therefore reachable.
+   *
+   * Unpinned this thing is `pointer-events-none` — it has to be, because it is
+   * drawn over the tile it describes and the tile is a control. Pinned, it is
+   * the opposite: the reason to pin is to put the pointer *in* it, to select a
+   * line of a card's text or to follow a rule number into the Instrukcja.
+   */
+  pinned?: boolean;
+  onUnpin?: () => void;
+  nature?: Nature | null;
+  /**
+   * There is no picture of this and there should be no lookup for one.
+   *
+   * A field is not a card, and its id can collide with a card's — asking for
+   * the picture of "kurhan" could hand back a Miejsce card that merely shares
+   * the name. Its printed instruction is what there is to show.
+   */
+  imageless?: boolean;
+  eqMode?: EqMode;
+}) {
+  /**
+   * Placed from what it measures, not from what it was expected to be.
+   *
+   * Working the height out in advance only ever worked for a bare picture. The
+   * moment the panel had a column of text beside it — or a field's printed
+   * instruction instead of a card — the real height had nothing to do with the
+   * arithmetic, so the clamp used a wrong number and the bottom ran off the
+   * screen. A ref callback runs at commit, before paint, so measuring and then
+   * positioning is invisible rather than a jump.
+   *
+   * Measuring once is not enough either, which is what the cut-off panels were:
+   * a picture is `<img width height>` until the file lands and its own
+   * proportions take over, so the panel commits at one height and paints at
+   * another, and the difference — 89px on every Karta Zdarzeń, see `CARD_RATIO`
+   * — is exactly the strip that hung off the bottom of the window. So the panel
+   * watches its own box and places itself again whenever it changes, and the
+   * window's `resize` is the same fact from the other side: shrink the window
+   * under a pinned panel and it climbs back inside instead of being cropped by
+   * it.
+   *
+   * It cannot chase its own tail, because moving a fixed panel changes nothing
+   * about how wide its content wraps — only the caps below decide that.
+   *
+   * The CSS caps do the rest: whatever ends up inside, the panel can never be
+   * taller or wider than the window, and tall content scrolls instead of
+   * overflowing it.
+   */
+  /**
+   * The panel itself, kept so a press elsewhere can be told from a press in it.
+   *
+   * Set by the same ref callback that places it, rather than a second ref on
+   * the same element: two refs on one node is two things to keep in step, and
+   * the placement one already runs at exactly the moment the node appears.
+   */
+  const held = useRef<HTMLDivElement | null>(null);
+
+  const place = useCallback(
+    (node: HTMLDivElement | null) => {
+      held.current = node;
+      if (!node) return;
+      const put = () => {
+        const box = node.getBoundingClientRect();
+        const room = { x: window.innerWidth, y: window.innerHeight };
+        const fitsRight = room.x - anchor.right > box.width + GAP;
+        const wanted = fitsRight ? anchor.right + GAP : anchor.left - box.width - GAP;
+        node.style.left = `${clamp(wanted, GAP, room.x - box.width - GAP)}px`;
+        node.style.top = `${clamp(
+          anchor.top + anchor.height / 2 - box.height / 2,
+          GAP,
+          room.y - box.height - GAP,
+        )}px`;
+      };
+      put();
+      // Fires once with the size it already has, which is the placement above
+      // done twice and no harm; every firing after that is the panel having
+      // actually changed shape.
+      const watching = new ResizeObserver(put);
+      watching.observe(node);
+      window.addEventListener("resize", put);
+      return () => {
+        watching.disconnect();
+        window.removeEventListener("resize", put);
+        held.current = null;
+      };
+    },
+    [anchor],
+  );
+
+  /**
+   * A press anywhere else lets a pinned panel go.
+   *
+   * `pointerdown` and not `click`, so it releases as the press lands rather
+   * than after it — otherwise the click that dismisses the panel also lands on
+   * whatever was behind it, which on a seat card is a tile that picks a card
+   * up. Presses *inside* are the panel being used and are left alone.
+   *
+   * Nothing is bound while it is merely hovering: there is no state to leave
+   * behind then, and the mouse leaving the tile has already closed it.
+   */
+  useEffect(() => {
+    if (!pinned || !onUnpin) return;
+    const onPress = (event: PointerEvent) => {
+      if (held.current?.contains(event.target as Node)) return;
+      onUnpin();
+    };
+    window.addEventListener("pointerdown", onPress, true);
+    return () => window.removeEventListener("pointerdown", onPress, true);
+  }, [pinned, onUnpin]);
+
+  if (typeof document === "undefined") return null;
+
+  return createPortal(
+    <div
+      ref={place}
+      role="tooltip"
+      style={{
+        // A first guess, corrected before paint.
+        left: anchor.right + GAP,
+        top: anchor.top,
+        maxWidth: `calc(100vw - ${GAP * 2}px)`,
+        maxHeight: `calc(100vh - ${GAP * 2}px)`,
+      }}
+      /* Never under the pointer while it is only hovering: a preview you can
+         hover flickers, because it is drawn over the tile that opened it and
+         the pointer would cross from one to the other.
+
+         Pinned it is exactly the opposite. The whole reason to pin is to put
+         the pointer in it — to drag a line of the card's text, or to follow a
+         rule number into the Instrukcja — so it takes events, and says so with
+         a brighter edge. */
+      className={`fixed ${LAYER.hover} flex gap-3 overflow-y-auto rounded-lg border bg-night p-3 shadow-[0_8px_32px_rgba(0,0,0,0.6)] ${
+        pinned
+          ? "pointer-events-auto select-text border-ochre"
+          : "pointer-events-none select-none border-ochre/40"
+      }`}
+    >
+      <CardLookupPanel
+        card={card}
+        imageless={imageless}
+        eqMode={eqMode}
+        nature={nature}
+        pinned={pinned}
+      />
     </div>,
     document.body,
   );

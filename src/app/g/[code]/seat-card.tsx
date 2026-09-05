@@ -509,7 +509,6 @@ export function SeatCard({
                         cardId: character.id,
                         name: character.name,
                         text: character.abilities.join("\n\n"),
-                        abilities: character.abilities,
                         kindLabel: characterKind(character),
                         character: true,
                       })
@@ -743,16 +742,19 @@ export function SeatCard({
                   return (
                     <li key={index} className={off ? "opacity-45" : undefined}>
                       <span className={off ? "line-through" : undefined}>{ability}</span>
-                      {off && (
-                        <>
-                          {" "}
-                          <ParkedWord />
-                        </>
-                      )}
                     </li>
                   );
                 })}
               </ol>
+              {/* Once, under the list. The strike says *which* clauses; this
+                  says what they are — and with most of a Charakterystyka
+                  dimmed, the word after every line said it less than one line
+                  does. Same word and same colour as everywhere else parked. */}
+              {character.abilities.some((_, index) => parkedAbility(character.id, index)) && (
+                <p className="mt-1 pl-4 text-[11px]">
+                  <ParkedWord />
+                </p>
+              )}
             </Fold>
           )}
         </>
