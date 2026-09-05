@@ -76,7 +76,7 @@ reaches for is worse than no tool, because it looks like coverage.
   number is a promise you can keep.
 - **[CONTEXT.md](../CONTEXT.md)** — Snapshot, Changeset, Command, Status. Use
   the repo's words in code and in your report.
-- **`node scripts/ask.mjs`** — ask the box a question rather than grepping the
+- **`npm run ask`** (`scripts/ask.ts`) — ask the box a question rather than grepping the
   data. *Is `rusalka` a card or a character? Which ids does `czarodziej` claim?
   What does the Pustelnik print, and which of his clauses are live?* Grepping
   `abilities.ts` for a name once produced the answer "Rusałka is a Postać",

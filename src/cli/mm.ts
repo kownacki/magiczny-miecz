@@ -2,6 +2,7 @@
 
 import { createInterface } from "node:readline/promises";
 import { appendFileSync, mkdirSync } from "node:fs";
+import { readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { stdin, stdout } from "node:process";
 import { helpLines, parseCommand, permits, worksOffTable } from "@/lib/engine/console";
@@ -10,12 +11,32 @@ import { paintFor } from "./paint";
 import type { EqMode } from "@/lib/engine/slots";
 import type { CommandSpec } from "@/lib/engine/console";
 import { stageOf, type Stage } from "@/lib/engine/console";
+import { READABLE } from "@/lib/engine/consoleCatalogue";
+import { findByName } from "@/lib/engine/search";
+import { cardName } from "@/lib/engine/polish";
 import { top } from "@/lib/engine/stack";
 import { runCommand } from "@/lib/game/consoleStore";
-import { cardLines } from "@/lib/game/consoleLines";
+import { cardLines, fieldName, fieldNamed } from "@/lib/game/consoleLines";
+import { seatView } from "@/lib/game/commands/seat";
+import { makeJoinCode } from "@/lib/game/codes";
 import { activeStore, setStore } from "@/lib/game/gameStore";
-import { deleteSave, homeDir, listSaves, newSave, openSave, writeSave } from "@/lib/game/saves";
-import { startRecording, stopRecording, type Recorded } from "@/lib/game/record";
+import {
+  deleteSave,
+  fileStore,
+  homeDir,
+  listSaves,
+  newSave,
+  openSave,
+  writeSave,
+  type SaveFile,
+} from "@/lib/game/saves";
+import {
+  scriptRolls,
+  startRecording,
+  stopRecording,
+  stopScripting,
+  type Recorded,
+} from "@/lib/game/record";
 import { journalRows, seatsFor, usersFor } from "@/lib/game/store";
 import { memoryHandle } from "@/lib/game/gameStore";
 import { journalLines, type JournalEntry } from "@/lib/engine/journalText";
@@ -93,6 +114,33 @@ const LOCAL: CommandSpec[] = [
     group: "override",
     offTable: true,
   },
+  {
+    name: "expect",
+    aliases: [],
+    usage: "expect <life|gold|sword|magic|at|holds|phase|reaches|refused|ok|says> …",
+    summary: "assert what is true; a failed one fails the run — `expect life 3 Ola`",
+    needs: "play",
+    group: "table",
+    offTable: true,
+  },
+  {
+    name: "record",
+    aliases: [],
+    usage: "record [<file>|off]",
+    summary: "write down what is typed and what the dice say, for `replay`",
+    needs: "play",
+    group: "table",
+    offTable: true,
+  },
+  {
+    name: "replay",
+    aliases: [],
+    usage: "replay <file>",
+    summary: "play a recording back into a fresh table, with the dice it fell on",
+    needs: "play",
+    group: "table",
+    offTable: true,
+  },
   { name: "quit", aliases: ["exit"], usage: "quit", summary: "leave", needs: "play", group: "table", offTable: true },
 ];
 
@@ -100,6 +148,8 @@ const LOCAL: CommandSpec[] = [
 const FAMILIES: Record<string, string[]> = {
   table: ["new", "open", "delete"],
   testmode: ["on", "off"],
+  record: ["off"],
+  expect: ["life", "gold", "sword", "magic", "at", "holds", "phase", "reaches", "refused", "ok", "says"],
 };
 
 /** Every word this prompt answers to that the game does not, for Tab. */
@@ -155,11 +205,100 @@ let stage: Stage = "none";
  */
 let rl: ReturnType<typeof createInterface>;
 
-/** Off unless there is a terminal on the other end — see `paintFor`. */
-const paint = paintFor(stdin.isTTY);
+/* --------------------------------------------------------------------------
+ * A run whose exit code means something.
+ * ----------------------------------------------------------------------- */
 
+/**
+ * The file of commands to play, when there is one.
+ *
+ * `--script` rather than a bare argument: `mm` already reads stdin, and a
+ * positional path would have to be told apart from a table code somebody meant
+ * to open. A file buys the one thing a pipe cannot give — the line number of
+ * the command that failed.
+ */
+const SCRIPT = ((): string | null => {
+  const args = process.argv.slice(2);
+  const at = args.indexOf("--script");
+  if (at >= 0) return args[at + 1] ?? "";
+  const inline = args.find((one) => one.startsWith("--script="));
+  return inline === undefined ? null : inline.slice("--script=".length);
+})();
+
+/**
+ * A human at a keyboard, or a run somebody will read an exit code off.
+ *
+ * The whole of what the distinction decides: a typo at a prompt is a typo, and
+ * the same typo in a script is a broken test. So refusals are only *counted*
+ * when nobody is typing — piped input or `--script` — and an interactive
+ * session exits 0 however much it argued with you.
+ */
+const INTERACTIVE = Boolean(stdin.isTTY) && SCRIPT === null;
+
+/** Everything this run got wrong, in order, each with where it was asked. */
+const problems: string[] = [];
+
+/**
+ * A refusal from the line before, not yet accounted for.
+ *
+ * Held rather than counted on the spot, because `expect refused` is a real
+ * assertion: a transcript that pins a rule saying no needs the refusal to be
+ * the *expected* outcome. So a refusal waits one line — claimed by an `expect
+ * refused`, and counted as a failure by anything else, which is the default the
+ * brief asks for.
+ */
+let pending: { text: string; where: string | null } | null = null;
+
+/** What the last line printed, for `expect says`. */
+let heard: string[] = [];
+
+/** Where the line being run came from: `file:12`, `stdin:4`, or nothing typed. */
+let where: string | null = null;
+
+/** Off unless there is a terminal on the other end — see `paintFor`. */
+const paint = paintFor(INTERACTIVE);
+
+/** Something the program said, kept so an assertion can look at it. */
 function say(text: string): void {
+  heard.push(text);
   stdout.write(`${text}\n`);
+}
+
+/** Something *about* the program: an echoed command, a verdict. Never asserted on. */
+function echo(text: string): void {
+  stdout.write(`${text}\n`);
+}
+
+/**
+ * Said where it happened, counted for the end.
+ *
+ * Said through `echo` rather than `say`, so a complaint about the last line
+ * cannot become part of what the *next* `expect says` is looking at — and said
+ * at all in an interactive session, where nothing prints the tally.
+ */
+function fault(text: string, at: string | null = where): void {
+  const said = at === null ? text : `${at}: ${text}`;
+  echo(`FAIL ${said}`);
+  problems.push(said);
+}
+
+/** An unclaimed refusal is a failure. Called before every line that is not an `expect`. */
+function settlePending(): void {
+  if (pending !== null) fault(`refused — ${pending.text}`, pending.where);
+  pending = null;
+}
+
+/**
+ * The game, or this prompt, saying no.
+ *
+ * Every refusal goes through here rather than through `say`, so that the one
+ * thing a scripted run has to know — did anything not happen — is decided in
+ * one place instead of at forty call sites.
+ */
+function refuse(text: string): void {
+  say(text);
+  settlePending();
+  pending = { text, where };
 }
 
 /* --------------------------------------------------------------------------
@@ -258,7 +397,7 @@ async function openTable(code: string): Promise<void> {
 }
 
 async function makeTable(names: string[], eqMode: EqMode): Promise<void> {
-  if (names.length === 0) return say("Who is playing? `table new Michał, Ola`");
+  if (names.length === 0) return refuse("Who is playing? `table new Michał, Ola`");
   const { code, gameId, tables, log, store } = await newSave(names, eqMode);
   setStore(store);
   table = { code, gameId, tables, log };
@@ -321,7 +460,7 @@ async function handover(): Promise<void> {
   if (announced !== null) {
     say("");
     // A script has nobody to press enter, and waiting for one would hang it.
-    if (stdin.isTTY) await rl.question(`— ${who.label}'s turn — [enter] `);
+    if (INTERACTIVE) await rl.question(`— ${who.label}'s turn — [enter] `);
     else say(`— ${who.label}'s turn —`);
   }
   announced = game.active_seat;
@@ -385,10 +524,10 @@ async function recent(count: number): Promise<void> {
 
 async function run(line: string): Promise<void> {
   const parsed = parseCommand(line);
-  if ("error" in parsed) return say(parsed.error);
+  if ("error" in parsed) return refuse(parsed.error);
 
   const allowed = permits(parsed.ok, { testmode });
-  if (!allowed.ok) return say(allowed.why);
+  if (!allowed.ok) return refuse(allowed.why);
 
   const who = await actorNow();
   /**
@@ -409,12 +548,266 @@ async function run(line: string): Promise<void> {
   } catch (error) {
     // The message is the game refusing something and belongs on screen; the
     // stack is a bug and belongs in a file.
-    say((error as Error).message ?? "Something went wrong.");
+    refuse((error as Error).message ?? "Something went wrong.");
     if (!(error as Error).message) say(`(written to ${trace(error)})`);
     // A refused line changed nothing, so there is nothing to replay — but the
     // dice have to be dropped or they would land on the next line's entry.
     stopRecording();
   }
+}
+
+/* --------------------------------------------------------------------------
+ * `record` and `replay`: a session written down, and played back.
+ * ----------------------------------------------------------------------- */
+
+/**
+ * What `record` is holding on to while it is on.
+ *
+ * `from` is where in the table's own log this recording starts, and `start` is
+ * the rows as they stood at that moment. Both, because a recording that begins
+ * mid-game is only replayable against the game it began in — the lines are
+ * relative to a state, and a file that carries the lines alone would replay
+ * them against whatever happened to be open.
+ */
+let recording: { path: string; from: number; start: Tables } | null = null;
+
+/**
+ * Where a recording goes when the name says nothing about where.
+ *
+ * A bare `record turn-seven.json` lands beside the saves rather than in
+ * whatever directory `mm` happened to be started from, because that is already
+ * this program's own corner of the disk and a recording is the same kind of
+ * thing as a save. Anything with a separator in it is taken as written.
+ */
+function recordingAt(said: string): string {
+  return said.includes("/") ? said : join(homeDir(), said);
+}
+
+async function recordDirective(said: string): Promise<void> {
+  if (said === "") {
+    say(
+      recording === null
+        ? "Not recording. `record <file>` starts; `record off` writes it out."
+        : `Recording to ${recording.path} — ${table!.log.length - recording.from} line(s) so far.`,
+    );
+    return;
+  }
+
+  if (said.toLowerCase() === "off") {
+    if (recording === null) return refuse("Nothing is being recorded.");
+    const { path, from, start } = recording;
+    const log = table!.log.slice(from);
+    recording = null;
+    await writeFile(
+      path,
+      JSON.stringify({ version: 1, savedAt: new Date().toISOString(), tables: start, log }, null, 2),
+      "utf8",
+    );
+    say(`Recorded ${log.length} line(s) to ${path}.`);
+    return;
+  }
+
+  if (!table) return refuse("`record` needs a table. `table new Michał, Ola` opens one.");
+  if (recording !== null) return refuse(`Already recording to ${recording.path}. \`record off\` first.`);
+  const path = recordingAt(said);
+  recording = { path, from: table.log.length, start: structuredClone(table.tables) };
+  say(`Recording to ${path}. \`record off\` writes it out.`);
+}
+
+/**
+ * A recording played back into a table of its own.
+ *
+ * A fresh join code rather than the one it was recorded under, so a replay
+ * cannot overwrite the save it came from — a replay is a reconstruction, and a
+ * reconstruction that destroys the original is not one you can compare against.
+ *
+ * The dice are handed back a line at a time through `scriptRolls`, which is the
+ * half of `record.ts` that already existed for this. Testmode is forced on for
+ * the duration: `permits` is a gate on what somebody may *type*, every line in
+ * the file was permitted when it was typed, and the flag is not part of the
+ * game — it is never written down because it never changed a revision.
+ */
+async function replayFile(said: string): Promise<void> {
+  if (said === "") return refuse("Which recording? `replay <file>`.");
+  const path = recordingAt(said);
+  const file = JSON.parse(await readFile(path, "utf8")) as SaveFile;
+  if (file.version !== 1) return refuse(`Nieznana wersja zapisu: ${String(file.version)}`);
+
+  const tables = structuredClone(file.tables);
+  const row = tables.games[0] as Record<string, unknown> | undefined;
+  const gameId = row?.id;
+  if (typeof gameId !== "string") return refuse(`${path} nie zawiera gry.`);
+  const code = makeJoinCode();
+  row!.join_code = code;
+
+  const log: Recorded[] = [];
+  const store = fileStore(code, tables, log);
+  setStore(store);
+  table = { code, gameId, tables, log };
+  announced = null;
+  await knowTable();
+  say(`Replaying ${file.log.length} line(s) from ${path} into table ${code}.`);
+
+  const was = testmode;
+  testmode = true;
+  const asked = where;
+  try {
+    for (const one of file.log) {
+      where = `${path}#${one.seq}`;
+      echo(`  ${one.line}`);
+      scriptRolls(one.rolls);
+      await run(one.line);
+      stopScripting();
+    }
+  } finally {
+    testmode = was;
+    where = asked;
+  }
+  say(`Replayed into ${code}.`);
+}
+
+/* --------------------------------------------------------------------------
+ * `expect`: what a transcript claims.
+ * ----------------------------------------------------------------------- */
+
+/**
+ * Why this is not a `Command`.
+ *
+ * The console vocabulary in `consoleSpec.ts` is the one the browser types at
+ * too, and it is about the game — `roll`, `fight`, `cast`. An assertion is
+ * about the *run*: it reads what is already there, writes nothing, and has
+ * nothing to say to a player at a table. So it is handled here, before a line
+ * ever reaches `parseCommand`, and there is no kind for it in the union.
+ */
+async function expectDirective(said: string): Promise<void> {
+  const parts = said.split(/\s+/).filter(Boolean);
+  const what = (parts[0] ?? "").toLowerCase();
+  const rest = said.slice(parts[0]?.length ?? 0).trim();
+
+  if (what === "refused") {
+    if (pending === null) return fault("expected the line before to be refused; it was not");
+    pending = null;
+    return;
+  }
+  if (what === "ok") {
+    if (pending !== null) {
+      const was = pending;
+      pending = null;
+      return fault(`expected the line before to be accepted; it was refused — ${was.text}`);
+    }
+    return;
+  }
+  if (what === "says") {
+    if (rest === "") return fault("`expect says <substring>` needs something to look for");
+    if (!heard.join("\n").includes(rest)) {
+      return fault(`expected the last line to say \`${rest}\`; it said: ${heard.join(" / ") || "nothing"}`);
+    }
+    return;
+  }
+
+  if (!table) return fault("`expect` needs a table");
+  const snapshot = await activeStore().load(table.gameId);
+
+  if (what === "phase") {
+    const now = stageOf(snapshot.game.status, top(snapshot.game.turn_state).phase);
+    if (now !== rest.toLowerCase()) return fault(`expected phase ${rest || "?"}; it is ${now}`);
+    return;
+  }
+
+  if (what === "reaches") {
+    const frame = top(snapshot.game.turn_state);
+    if (frame.phase !== "move") return fault(`expected a move to be offered; the phase is ${frame.phase}`);
+    const count = frame.options.length;
+    if (String(count) !== rest) return fault(`expected ${rest || "?"} Obszary offered; it offers ${count}`);
+    return;
+  }
+
+  /**
+   * The rest are about one seat, so the last word may name whose.
+   *
+   * The active seat when nothing is named — the same "me" the prompt uses, so
+   * a transcript reads the way the turn does and only says a name when it is
+   * asking about somebody else's chair.
+   */
+  const asked = await seatAsked(parts.slice(1));
+  if ("error" in asked) return fault(asked.error);
+  const { seat, value, label } = asked;
+
+  switch (what) {
+    case "life":
+    case "gold": {
+      const has = what === "life" ? seat.life : seat.gold;
+      if (String(has) !== value) fault(`expected ${label} ${what} ${value || "?"}; it is ${has}`);
+      return;
+    }
+    case "sword":
+    case "magic": {
+      const view = seatView(snapshot, seat.id);
+      const has = what === "sword" ? view.parametr.miecz : view.parametr.magia;
+      if (String(has) !== value) fault(`expected ${label} ${what} ${value || "?"}; it is ${has}`);
+      return;
+    }
+    case "at": {
+      // The console's own reader, so an Obszar may be named the way it is
+      // printed on the board or by its id — `Step I` and `step-1` both.
+      const wanted = fieldNamed(value);
+      if (seat.field_id !== wanted) {
+        fault(`expected ${label} at ${fieldName(wanted)}; standing on ${fieldName(seat.field_id ?? null)}`);
+      }
+      return;
+    }
+    case "holds": {
+      const hit = findByName(READABLE, (one) => one.name, value);
+      if ("ambiguous" in hit) return fault(`Which one — ${hit.ambiguous.slice(0, 6).join(", ")}?`);
+      if ("missing" in hit) return fault(`No card called \`${value}\`.`);
+      const held = snapshot.holdings.filter((one) => one.seat_id === seat.id);
+      if (!held.some((one) => one.card_id === hit.found.id)) {
+        fault(
+          `expected ${label} to hold ${cardName(hit.found.id)}; holding ` +
+            (held.map((one) => cardName(one.card_id)).join(", ") || "nothing"),
+        );
+      }
+      return;
+    }
+    default:
+      fault(`\`expect ${what || "?"}\`? I know: ${FAMILIES.expect.join(", ")}.`);
+  }
+}
+
+/**
+ * Whose seat an assertion is about, and what it is asserting about it.
+ *
+ * One reader for both, because the player's name is optional and comes *last*
+ * — `expect life 3 Ola` — so telling the value from the name is the same act as
+ * finding the seat.
+ *
+ * The last word is a player only when it *is* one, and the whole of the rest is
+ * the value otherwise. Nothing else works: every Obszar and most Karty are
+ * several words — `expect at Step I`, `expect holds TOPÓR ŚWIATŁA I CIEMNOŚCI`
+ * — and a rule that peels the last word off unconditionally would ask the board
+ * about "Step" and the table about "I". The cost is that a misspelt name is
+ * read as part of the value, and the message then complains about the wrong
+ * half; the names at a table are short and there are at most six of them.
+ */
+async function seatAsked(
+  words: readonly string[],
+): Promise<{ error: string } | { seat: Awaited<ReturnType<typeof seatsFor>>[number]; value: string; label: string }> {
+  const at = table!;
+  const [seats, people] = await Promise.all([seatsFor(at.gameId), usersFor(at.gameId)]);
+  const last = words.length > 1 ? words[words.length - 1] : null;
+  const hit = last === null ? { missing: true as const } : findByName(people, (one) => one.name, last);
+
+  if ("missing" in hit) {
+    const who = await actorNow();
+    const seat = seats.find((one) => one.id === who.seatId);
+    if (!seat) return { error: "Nieznane miejsce." };
+    return { seat, value: words.join(" "), label: who.label };
+  }
+  const value = words.slice(0, -1).join(" ");
+  if ("ambiguous" in hit) return { error: `Which one — ${hit.ambiguous.join(", ")}?` };
+  const seat = seats.find((one) => one.seat_index === hit.found.seat_index);
+  if (!seat) return { error: `${hit.found.name} drives no seat.` };
+  return { seat, value, label: hit.found.name };
 }
 
 async function local(line: string): Promise<boolean> {
@@ -450,7 +843,7 @@ async function local(line: string): Promise<boolean> {
       return true;
     }
     if (verb !== "on" && verb !== "off") {
-      say("`testmode on` or `testmode off`.");
+      refuse("`testmode on` or `testmode off`.");
       return true;
     }
     testmode = verb === "on";
@@ -459,6 +852,16 @@ async function local(line: string): Promise<boolean> {
         ? "Testmode on — the commands that overrule the rules are available."
         : "Testmode off.",
     );
+    return true;
+  }
+
+  if (family === "record") {
+    await recordDirective([second, ...rest].join(" ").trim());
+    return true;
+  }
+
+  if (family === "replay") {
+    await replayFile([second, ...rest].join(" ").trim());
     return true;
   }
 
@@ -496,21 +899,135 @@ async function local(line: string): Promise<boolean> {
       return true;
     }
     case "open":
-      if (!tail) return say("Which table? `table` lists them."), true;
+      if (!tail) return refuse("Which table? `table` lists them."), true;
       await openTable(tail.toUpperCase());
       return true;
     case "delete":
-      if (!tail) return say("Which table?"), true;
+      if (!tail) return refuse("Which table?"), true;
       await deleteSave(tail.toUpperCase());
       say(`Deleted: ${tail.toUpperCase()}.`);
       return true;
     default:
-      say(`\`table ${named}\`? I know: ${FAMILIES.table.join(", ")} — or bare \`table\`.`);
+      refuse(`\`table ${named}\`? I know: ${FAMILIES.table.join(", ")} — or bare \`table\`.`);
       return true;
   }
 }
 
+/**
+ * One line, from wherever it came.
+ *
+ * Lifted out of the read loop when `--script` arrived, because a file of
+ * commands and a pipe of commands must be the same program — a script that took
+ * a different path through this would be testing that path rather than the
+ * game.
+ */
+async function handleLine(line: string): Promise<void> {
+  /**
+   * An assertion looks at the line *before* it, so it must not clear what that
+   * line left behind — neither what was said nor whether it was refused.
+   */
+  if (/^expect\b/i.test(line)) {
+    // Its own catch: a name nothing answers to throws out of the readers this
+    // borrows, and a failed assertion is a failure rather than a stack trace.
+    try {
+      await expectDirective(line.replace(/^expect\s*/i, ""));
+    } catch (error) {
+      fault((error as Error).message ?? "expect failed");
+    }
+    return;
+  }
+
+  settlePending();
+  heard = [];
+
+  try {
+    if (await local(line)) return;
+    if (/^(help|\?)\b/.test(line)) {
+      // Shared, so the local list must not shadow it — and it needs to know
+      // which half of the vocabulary is reachable.
+      const asked = line.split(/\s+/)[1] ?? null;
+      const all = asked === "all";
+      // Where you are, before what you can do — the list is filtered by it,
+      // so a list with no heading is a list you cannot check.
+      if (asked === null || all) say(paint.dim(await whereWeAre(all)));
+      for (const one of helpLines(all ? null : asked, { testmode, stage, all }, LOCAL)) say(one);
+    } else if (offTable(line)) {
+      // Reading a Karta touches no game, so it must not need one. Somebody
+      // deciding whether to play wants to read what they would be playing.
+      try {
+        for (const one of cardLines(line.replace(/^\S+\s*/, ""))) say(one);
+      } catch (error) {
+        refuse((error as Error).message);
+      }
+    } else if (!table && !known(line)) {
+      // A word nothing answers to is a word nothing answers to, whether or
+      // not a table is open. Saying "open a table first" to `asdasdas` told
+      // somebody to fix the wrong thing — and said the same to `sdf` as to
+      // `start`, which is a real command that simply needs a game.
+      const parsed = parseCommand(line);
+      refuse("error" in parsed ? parsed.error : `No command \`${line.split(/\s+/)[0]}\`.`);
+    } else if (!table) {
+      refuse("`" + line.split(/\s+/)[0] + "` needs a table. `table new Michał, Ola` opens one.");
+    } else if (/^journal\b/.test(line)) {
+      await recent(Number(line.split(/\s+/)[1] ?? 10) || 10);
+    } else {
+      await run(line);
+    }
+  } catch (error) {
+    // Everything above `run` throws its own way out — a save that is not there,
+    // a recording that is not JSON — and none of it should end the session with
+    // a stack trace where a refusal would do.
+    refuse((error as Error).message ?? "Something went wrong.");
+    if (!(error as Error).message) say(`(written to ${trace(error)})`);
+  }
+}
+
+/**
+ * A file of commands instead of a prompt.
+ *
+ * Blank lines and `#` comments are skipped so a transcript can say what it is
+ * proving, and the line number is kept beside every failure — which is the
+ * whole reason a file beats a pipe for this.
+ */
+async function runScript(path: string): Promise<void> {
+  const text = await readFile(path, "utf8");
+  const lines = text.split("\n");
+  for (let at = 0; at < lines.length; at++) {
+    const line = lines[at].trim();
+    if (line === "" || line.startsWith("#")) continue;
+    where = `${path}:${at + 1}`;
+    echo(`\n${path}:${at + 1}> ${line}`);
+    await handleLine(line);
+    if (leaving) return;
+  }
+}
+
+/** What the run is worth as a check: nothing typed at a terminal, but a script's verdict. */
+function verdict(): void {
+  settlePending();
+  if (INTERACTIVE || problems.length === 0) return;
+  echo(`\n${problems.length} failed.`);
+  process.exitCode = 1;
+}
+
 async function main(): Promise<void> {
+  if (SCRIPT !== null) {
+    if (SCRIPT === "") {
+      echo("`--script <file>` needs a file.");
+      process.exitCode = 2;
+      return;
+    }
+    try {
+      await runScript(SCRIPT);
+    } catch (error) {
+      // A script that cannot be opened at all is a broken check, not a stack
+      // trace — the exit code is the whole reason `--script` exists.
+      fault(`cannot be read — ${(error as Error).message}`, SCRIPT);
+    }
+    verdict();
+    return;
+  }
+
   const found = await listSaves();
   rl = createInterface({
     input: stdin,
@@ -545,42 +1062,15 @@ async function main(): Promise<void> {
   };
 
   await prompt();
+  /** Piped input has no file to point at, but it still has a line to count. */
+  let typed = 0;
   for await (const raw of rl) {
     const line = raw.trim();
+    typed++;
     if (line !== "") {
-      if (await local(line)) {
-        if (leaving) break;
-      } else if (/^(help|\?)\b/.test(line)) {
-        // Shared, so the local list must not shadow it — and it needs to know
-        // which half of the vocabulary is reachable.
-        const asked = line.split(/\s+/)[1] ?? null;
-        const all = asked === "all";
-        // Where you are, before what you can do — the list is filtered by it,
-        // so a list with no heading is a list you cannot check.
-        if (asked === null || all) say(paint.dim(await whereWeAre(all)));
-        for (const one of helpLines(all ? null : asked, { testmode, stage, all }, LOCAL)) say(one);
-      } else if (offTable(line)) {
-        // Reading a Karta touches no game, so it must not need one. Somebody
-        // deciding whether to play wants to read what they would be playing.
-        try {
-          for (const one of cardLines(line.replace(/^\S+\s*/, ""))) say(one);
-        } catch (error) {
-          say((error as Error).message);
-        }
-      } else if (!table && !known(line)) {
-        // A word nothing answers to is a word nothing answers to, whether or
-        // not a table is open. Saying "open a table first" to `asdasdas` told
-        // somebody to fix the wrong thing — and said the same to `sdf` as to
-        // `start`, which is a real command that simply needs a game.
-        const parsed = parseCommand(line);
-        say("error" in parsed ? parsed.error : `No command \`${line.split(/\s+/)[0]}\`.`);
-      } else if (!table) {
-        say("`" + line.split(/\s+/)[0] + "` needs a table. `table new Michał, Ola` opens one.");
-      } else if (/^journal\b/.test(line)) {
-        await recent(Number(line.split(/\s+/)[1] ?? 10) || 10);
-      } else {
-        await run(line);
-      }
+      where = INTERACTIVE ? null : `stdin:${typed}`;
+      await handleLine(line);
+      if (leaving) break;
     }
     await prompt();
   }
@@ -596,6 +1086,12 @@ async function main(): Promise<void> {
    */
   rl.close();
   say("Bye.");
+  verdict();
 }
 
-void main();
+void main().catch((error: unknown) => {
+  // Nothing above this catches, and a prompt that dies silently with a zero
+  // exit code is the one failure a scripted run must never report as a pass.
+  echo(`${(error as Error).message ?? "Something went wrong."} (written to ${trace(error)})`);
+  process.exitCode = 1;
+});

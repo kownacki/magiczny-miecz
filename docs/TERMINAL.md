@@ -132,6 +132,61 @@ are the whole of what a game is.
 - Because commit is a CAS, a half-written file is detectable rather than silently
   wrong: write to a temp file and rename.
 
+## A transcript is a test
+
+**Built.** A list of commands piped in — or handed to `mm --script <file>` — is
+a check the suite can run. `src/cli/transcripts/*.mm` holds them and
+`src/cli/transcripts.test.ts` plays every one of them; **adding a transcript is
+adding a file**, because the directory is read at run time.
+
+The point is what it costs. Everything else that tests this game has to build a
+`Snapshot` by hand before it can assert anything, and that fixture is most of
+the work — which is why a bug found while playing usually stays a bug found
+while playing. A transcript is the lines you already typed to find it, plus a
+sentence saying what should have happened.
+
+```
+table new Ala, Ola
+pick MAGOG
+ready
+start
+roll
+expect phase move
+expect reaches 2
+```
+
+Four pieces make it work:
+
+- **An exit code.** A command the console does not know, or one the rules
+  refuse, fails the run. Only when nobody is typing, though: `mm` counts
+  refusals when stdin is not a terminal or `--script` was given, and an
+  interactive session exits 0 however much it argued with you. A typo at a
+  prompt is a typo; the same typo in a file is a broken check.
+- **`--script <file>`**, which is what a pipe cannot be: a failure says
+  `file:line`. Blank lines and `#` comments are skipped, so a transcript can
+  explain itself — and the three in the directory do, at length, because the
+  explanation is half of what they are for.
+- **`expect`**, which is deliberately **not** a `Command`. The console
+  vocabulary in `consoleSpec.ts` is the one the browser types at and it is about
+  the game; an assertion is about the *run*. So it is handled in `mm.ts` before
+  a line ever reaches `parseCommand`, and there is no kind for it in the union.
+  It reads a tracked value (`life`, `gold`, `sword`, `magic`), where a figure
+  stands (`at`), what a hand holds (`holds`), what the turn is waiting for
+  (`phase`, `reaches`), what the last line printed (`says`), and whether the
+  line before was refused (`refused`, and `ok`, which is the default — an
+  unclaimed refusal fails the run).
+- **`record <file>` / `record off` / `replay <file>`**, the doors `record.ts`
+  never had. A recording carries the rows as they stood when it started and the
+  lines typed since, with the dice each one threw; `replay` plays them into a
+  table with a fresh join code, so a reconstruction cannot overwrite what it was
+  reconstructing. A bare filename lands beside the saves.
+
+`expect` can only name what is the same on every run, which is the one thing to
+know before writing a transcript: the dice differ, so assert what the dice do
+not decide. The mount transcript works because a plain roll offers two Obszary
+from anywhere on an unbranched stretch of ring and a WIERZCHOWIEC's 1..3 offers
+eight, whatever the die said.
+
 ## One vocabulary, two capability sets
 
 Today the browser console mixes lawful and rule-breaking verbs, and that is
