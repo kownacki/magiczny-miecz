@@ -10,6 +10,7 @@ import { EVENT_COPIES, SPELL_COPIES, decksOf } from "../decks";
 import { aHolding, aSeat, aTable } from "../fixture";
 import { drawAll, drawCard, drawSpell, drawSpellWithWand, shopStock } from "./draw";
 import { plural } from "@/lib/engine/polish";
+import type { CardId, SpellId } from "@/data/ids";
 
 /**
  * Real slice refs, not invented ones.
@@ -18,8 +19,8 @@ import { plural } from "@/lib/engine/polish";
  * and a ref written out by hand would be a card no lookup can find — which is
  * a failure mode two of the tests below are specifically about.
  */
-const eventRef = (cardId: string) => EVENT_COPIES.get(cardId)![0];
-const spellRef = (spellId: string) => SPELL_COPIES.get(spellId)![0];
+const eventRef = (cardId: CardId) => EVENT_COPIES.get(cardId)![0];
+const spellRef = (spellId: SpellId) => SPELL_COPIES.get(spellId)![0];
 
 const pile = (draw: readonly string[], discard: readonly string[] = []): DeckState => ({
   draw: [...draw],
@@ -100,9 +101,9 @@ describe("ciągnięcie Karty Zdarzeń", () => {
      * These build the frame directly, so they state the remainder rather than
      * the printed number.
      */
-    const owed = (draw: number, drawn: { cardId: string; cardClass: "foe" }[]) =>
+    const owed = (draw: number, drawn: { cardId: CardId; cardClass: "foe" }[]) =>
       table({ game: { turn_state: onField({ draw, drawn }) } });
-    const lying = [{ cardId: "cyklop", cardClass: "foe" as const }];
+    const lying: { cardId: CardId; cardClass: "foe" }[] = [{ cardId: "cyklop", cardClass: "foe" }];
 
     it("refuses once the Karty lying here fill the number", () => {
       // HERE is Step I, which prints „wyciągnij 1 kartę" — and the refusal says
@@ -264,7 +265,7 @@ describe("wyciągnięcie wszystkich Kart naraz", () => {
   const atMgly = (
     over: {
       draw?: number;
-      drawn?: { cardId: string; cardClass: CardClass }[];
+      drawn?: { cardId: CardId; cardClass: CardClass }[];
       events?: DeckState;
     } = {},
   ) =>
@@ -584,7 +585,7 @@ describe("stan Wyposażenia (21.2)", () => {
         aHolding({ id: "h-2", card_id: "magiczny-miecz", seat_id: "seat-b" }),
       ],
     });
-    expect(shopStock(table)["magiczny-miecz"]).toBe(PRINTED_STOCK["magiczny-miecz"] - 2);
+    expect(shopStock(table)["magiczny-miecz"]).toBe((PRINTED_STOCK["magiczny-miecz"] ?? 0) - 2);
   });
 
   /** 12.1 and 16.8: a card left lying on an Obszar is still out of the shop. */

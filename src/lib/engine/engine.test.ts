@@ -22,6 +22,7 @@ import { scriptedRandom } from "./ports";
 import type { Item } from "@/data/types";
 import type { Holding, Seat } from "./state";
 import type { CardId } from "@/data/ids";
+import type { TurnCard } from "./state";
 
 const seat = (over: Partial<Seat> = {}): Seat => ({
   id: "s1",
@@ -60,7 +61,7 @@ const item = (id: CardId, over: Partial<Item> = {}): Item => ({
   ...over,
 });
 
-const held = (cardId: string, kind: Holding["kind"] = "item"): Holding => ({
+const held = (cardId: CardId, kind: Holding["kind"] = "item"): Holding => ({
   cardId,
   kind,
   face: "open",
@@ -229,24 +230,25 @@ describe("the Beast (14.7)", () => {
 
 describe("card resolution order (15.2, 16.4)", () => {
   it("resolves by ascending class numeral", () => {
-    const drawn = [
-      { cardId: "gold", cardClass: "item" as const },
-      { cardId: "niedzwiedz", cardClass: "foe" as const },
-      { cardId: "sciezka", cardClass: "encounter" as const },
+    const drawn: TurnCard[] = [
+      { cardId: "1-sztuka-zlota", cardClass: "item" },
+      { cardId: "niedzwiedz", cardClass: "foe" },
+      { cardId: "zakleta-sciezka", cardClass: "encounter" },
     ];
     expect(resolutionOrder(drawn).map((c) => c.cardId)).toEqual([
-      "sciezka",
+      "zakleta-sciezka",
       "niedzwiedz",
-      "gold",
+      "1-sztuka-zlota",
     ]);
   });
 
   it("keeps draw order within one class", () => {
-    const drawn = [
-      { cardId: "a", cardClass: "foe" as const },
-      { cardId: "b", cardClass: "foe" as const },
+    // Two real Wrogowie of the same class: what is read here is the order.
+    const drawn: TurnCard[] = [
+      { cardId: "wilk", cardClass: "foe" },
+      { cardId: "cyklop", cardClass: "foe" },
     ];
-    expect(resolutionOrder(drawn).map((c) => c.cardId)).toEqual(["a", "b"]);
+    expect(resolutionOrder(drawn).map((c) => c.cardId)).toEqual(["wilk", "cyklop"]);
   });
 });
 

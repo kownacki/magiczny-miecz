@@ -1,6 +1,7 @@
 /** Things that are true of a character for a while, and what makes them stop being true. */
 
 import type { Nature } from "@/data/types";
+import type { SpellId } from "@/data/ids";
 import type { Holding } from "./state";
 import type { EqMode } from "./slots";
 import { type Ability, abilitiesOf } from "./abilities";
@@ -188,7 +189,7 @@ export type Modifier =
    * prints belongs on the status the card causes rather than in a branch
    * somewhere that has to remember it.
    */
-  | { kind: "frozen"; oprocz?: readonly string[] }
+  | { kind: "frozen"; oprocz?: readonly SpellId[] }
   /**
    * A Wróg on the board that may not be attacked and does nothing (19.1): the
    * Krąg Płomieni's flames, the Władca Gromu's paralysis.
@@ -325,7 +326,7 @@ export type Modifier =
    */
   | {
       kind: "spoken";
-      spell: string;
+      spell: SpellId;
       /** When the window closes and it takes effect on its own. */
       until: number;
       /** Whom or what it was aimed at, exactly as the caster said it. */
@@ -526,10 +527,10 @@ export function frozen(statuses: readonly Status[]): boolean {
  */
 export function frozenBy(
   statuses: readonly Status[],
-): { label: string; oprocz: readonly string[] } | null {
+): { label: string; oprocz: readonly SpellId[] } | null {
   const held = statuses.find((status) => status.modifier.kind === "frozen");
   if (!held) return null;
-  const modifier = held.modifier as { kind: "frozen"; oprocz?: readonly string[] };
+  const modifier = held.modifier as { kind: "frozen"; oprocz?: readonly SpellId[] };
   return { label: held.label, oprocz: modifier.oprocz ?? [] };
 }
 
@@ -757,7 +758,7 @@ export function spokenSpell(
   statuses: readonly Status[],
 ): {
   id: string;
-  spell: string;
+  spell: SpellId;
   until: number;
   target?: {
     seatIndex?: number;

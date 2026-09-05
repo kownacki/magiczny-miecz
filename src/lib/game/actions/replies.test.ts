@@ -4,6 +4,7 @@ import { describe, expectTypeOf, it } from "vitest";
 import type { TurnReplies } from "./turn";
 import type { HoldingsReplies } from "./holdings";
 import type { Reply } from "../requests";
+import type { SpellId } from "@/data/ids";
 
 /**
  * These are type-level assertions: `expectTypeOf` runs at compile time and
@@ -18,7 +19,7 @@ describe("what an action's reply actually is", () => {
   });
 
   it("spell answers the Zaklęcie drawn, or none left to draw", () => {
-    expectTypeOf<HoldingsReplies["spell"]>().toEqualTypeOf<{ spellId: string | null }>();
+    expectTypeOf<HoldingsReplies["spell"]>().toEqualTypeOf<{ spellId: SpellId | null }>();
   });
 
   it("a run with nothing to say answers { ok: true } on the wire", () => {
@@ -32,7 +33,7 @@ describe("what an action's reply actually is", () => {
 describe("what a route answers, off the wire", () => {
   it("turn/holdings narrow to the one action named", () => {
     expectTypeOf<Reply<"turn", "friend-heal">>().toEqualTypeOf<{ healed: number }>();
-    expectTypeOf<Reply<"holdings", "spell">>().toEqualTypeOf<{ spellId: string | null }>();
+    expectTypeOf<Reply<"holdings", "spell">>().toEqualTypeOf<{ spellId: SpellId | null }>();
   });
 
   it("join answers a claim token, for the caller who reads one", () => {

@@ -5,6 +5,7 @@ import { putBackOnTop } from "@/lib/engine/deck";
 import { SPELL_BY_REF, decksOf } from "../decks";
 import type { Outcome, Snapshot } from "../change";
 import { seatById } from "./seat";
+import type { SpellId } from "@/data/ids";
 
 export interface AnswerAsk {
   /** Who is answering. The frame says whose answer it is, and refuses anyone else. */
@@ -29,7 +30,7 @@ export interface AnswerAsk {
  * on, so a second device cannot answer somebody else's question — which for a
  * hidden hand (9.3) would be reading it as well as answering it.
  */
-export function answerAsk(snapshot: Snapshot, command: AnswerAsk): Outcome<string> {
+export function answerAsk(snapshot: Snapshot, command: AnswerAsk): Outcome<SpellId> {
   const frame = askOnTop(snapshot.game.turn_state);
   if (!frame) throw new Error("Nic tu nie czeka na odpowiedź.");
 

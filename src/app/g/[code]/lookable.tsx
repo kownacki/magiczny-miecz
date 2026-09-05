@@ -14,6 +14,8 @@
 import { fieldWithText } from "@/lib/view/fieldText";
 import { asFieldId } from "@/lib/engine/board";
 import { useCardPreview } from "./card-preview";
+import type { TileCard } from "./card-tile";
+import { isCardId } from "@/data/ids";
 import charactersData from "@/data/characters.json";
 import type { Character } from "@/data/types";
 import type { EqMode } from "@/lib/engine/slots";
@@ -50,18 +52,32 @@ export function Lookable({
   // picture rather than none.
   const character = kind === "character" ? CHARACTERS.get(id) : null;
 
+  /**
+   * Which of the three this name is, decided once, here.
+   *
+   * `id` arrives as a plain string — off a journal row, off the wire — and
+   * `kind` is what says which registry it belongs to. So the id is narrowed on
+   * the way into the tile rather than at each lookup inside it, and a Postać
+   * whose id also names a Karta (`demon`, `czarodziej`) can no longer be
+   * looked up as one. A name none of the three knows still hovers, with its
+   * name and nothing else, which is what it did before.
+   */
+  const card: TileCard = character
+    ? {
+        cardId: character.id,
+        name,
+        text: character.abilities.join("\n\n"),
+        kindLabel: characterKind(character),
+        character: true,
+      }
+    : fieldId
+      ? { cardId: fieldId, name, text: field?.text ?? undefined, kindLabel: "Obszar", field: true }
+      : isCardId(id)
+        ? { cardId: id, name }
+        : { cardId: id, name, ...(kind === "field" ? { kindLabel: "Obszar" } : {}), noCard: true };
+
   const { handlers, preview } = useCardPreview(
-    {
-      cardId: id,
-      name,
-      text: character ? character.abilities.join("\n\n") : (field?.text ?? undefined),
-      kindLabel: character
-        ? characterKind(character)
-        : kind === "field"
-          ? "Obszar"
-          : undefined,
-      ...(character ? { character: true } : {}),
-    },
+    card,
     // A field has no card to show; its printed instruction is what there is.
     kind === "field",
     eqMode,

@@ -24,6 +24,7 @@ import { overflowOf, waysOut } from "./commands/overflow";
 import type { Snapshot } from "./change";
 import { fold } from "@/lib/engine/search";
 import type { EnvelopeEffect } from "./wire";
+import type { CardId } from "@/data/ids";
 
 
 /**
@@ -297,16 +298,29 @@ export function cardLines(name: string): string[] {
  * `buy` is the only one: what is on sale is the Obszar's list rather than
  * anything in a hand, so there is no holding to look the id up from.
  */
-export function idNamed(said: string): string {
+export function idNamed(said: string): CardId {
   const found = cardIdNamed(said);
   if ("id" in found) return found.id;
   if ("candidates" in found) throw new Error(`Which one — ${found.candidates.join(", ")}?`);
   throw new Error(`No card called \`${found.missing}\`.`);
 }
 
+/**
+ * Whether two printed names are the one name, however it was typed.
+ *
+ * Its own door beside `sameName`, which takes an *id* and looks the name up.
+ * Three callers had a name in hand already and went through that one anyway —
+ * a player's own name, a Postać's, a Karta's — and it worked by accident,
+ * because `cardName` hands back whatever it cannot find. That accident is what
+ * let a Postać's id be passed to a Karta lookup: see `raid`.
+ */
+export function samePrinted(name: string, said: string): boolean {
+  return fold(name) === fold(said.trim());
+}
+
 /** Whether a card id is the card somebody just named. */
-export function sameName(cardId: string, said: string): boolean {
-  return fold(cardName(cardId)) === fold(said.trim());
+export function sameName(cardId: CardId, said: string): boolean {
+  return samePrinted(cardName(cardId), said);
 }
 
 /**
@@ -504,7 +518,7 @@ export function catalogue(kinds: readonly Catalogue[]): string {
  * with. Empty when there is nothing to say — a hand worth less than one Miecz
  * has no waste to warn about, only a total.
  */
-export function trophyLedger(cardIds: readonly string[], mirror: { miecz: number }): string {
+export function trophyLedger(cardIds: readonly CardId[], mirror: { miecz: number }): string {
   const points = cardIds.reduce((sum, cardId) => sum + trophyPointsOf(cardId, mirror), 0);
   const swords = Math.floor(points / TROPHY_RATE);
   const wasted = points - swords * TROPHY_RATE;
@@ -524,7 +538,7 @@ export function trophyLedger(cardIds: readonly string[], mirror: { miecz: number
  * one Miecz using everything it has needs no menu, and the line above already
  * said so.
  */
-export function tradeMenu(cardIds: readonly string[], mirror: { miecz: number }): string[] {
+export function tradeMenu(cardIds: readonly CardId[], mirror: { miecz: number }): string[] {
   const offers = offersFor(
     cardIds.map((cardId) => ({ cardId, points: trophyPointsOf(cardId, mirror) })),
   );

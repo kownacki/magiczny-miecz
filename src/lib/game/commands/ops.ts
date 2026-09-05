@@ -41,6 +41,7 @@ import { seatView } from "./seat";
 import { isForbidden, isSpared } from "@/lib/engine/abilities";
 import { abilitiesOfCharacter, asCharacterId } from "@/lib/engine/characters";
 import { BY_REF, decksOf, EVENTS } from "../decks";
+import type { CardId } from "@/data/ids";
 
 /**
  * What the player has already decided, in the order the effect asks.
@@ -106,7 +107,7 @@ export interface OpContext {
   fieldId?: FieldId;
   fieldCardId?: string;
   toSeatId?: string;
-  cardId?: string;
+  cardId?: CardId;
 }
 
 /** Nothing left to do: what was done, and no question owed. */
@@ -849,7 +850,7 @@ const OPS: { [K in LeafOp]: OpRun<K> } = {
       // The bag as well as what is in it, but only while there is something in
       // it: "Przedmiot ten i Sakwę" is a pair, and an empty bag is a bag.
       const bags = new Set(stored.map((held) => makerOf(held.slot as Slot)));
-      const spared = (held: { card_id: string; slot: string | null }) =>
+      const spared = (held: { card_id: CardId; slot: string | null }) =>
         STORAGE.includes(held.slot as Slot) || bags.has(held.card_id);
       const mine = at.holdings.flatMap((held) =>
         held.seat_id === row.id && held.kind !== "carried" && !spared(held)

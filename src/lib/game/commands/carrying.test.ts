@@ -4,6 +4,7 @@ import { aHolding, aSeat, aTable } from "../fixture";
 import { apply } from "../change";
 import { refuseWhileOverLimit, seatView } from "./seat";
 import { dropCard } from "./holdings";
+import type { CardId } from "@/data/ids";
 
 /**
  * Losing the transport, and what the Obszar is left holding (5.4-5.6).
@@ -17,9 +18,9 @@ import { dropCard } from "./holdings";
  * gives that to the player and 5.6 only says it must happen at once.
  */
 
-const ITEMS = ["miecz", "sztylet", "tarcza", "helm", "zbroja", "rekawice"];
+const ITEMS: readonly CardId[] = ["miecz", "sztylet", "tarcza", "helm", "zbroja", "rekawice"];
 
-const packed = (transport: string | null) =>
+const packed = (transport: CardId | null) =>
   aTable({
     seats: [aSeat({ id: "seat-a", field_id: asFieldId("wrzosowiska") })],
     holdings: [

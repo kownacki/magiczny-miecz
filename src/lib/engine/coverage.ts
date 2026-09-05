@@ -162,7 +162,7 @@ const MANUAL: Readonly<Partial<Record<CardId, string>>> = {
     "Rzucony na Przyjaciela ratuje go od śmierci — to wciąż wasze. Użyty w walce, by uczynić jej wynik nierozstrzygniętym — też wasze.",
 };
 
-export function coverageOf(cardId: string): Coverage {
+export function coverageOf(cardId: CardId): Coverage {
   /**
    * All four registries, because a card is encoded in whichever one fits its
    * shape and the player does not care which.
@@ -186,8 +186,8 @@ export function coverageOf(cardId: string): Coverage {
 }
 
 /** The clause the players have to apply themselves, if there is one. */
-export function manualNote(cardId: string): string | null {
-  return MANUAL[cardId as CardId] ?? null;
+export function manualNote(cardId: CardId): string | null {
+  return MANUAL[cardId] ?? null;
 }
 
 /**

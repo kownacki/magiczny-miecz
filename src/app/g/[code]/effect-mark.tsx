@@ -9,6 +9,7 @@ import { useCardPreview } from "./card-preview";
 import { ART_BORDER, PICKABLE } from "./pickable";
 import { type TileCard } from "./card-tile";
 import { plural } from "@/lib/engine/polish";
+import { isCardId } from "@/data/ids";
 
 /** Twice what it was, and the shape every other card in the app is drawn in. */
 
@@ -157,8 +158,19 @@ function EffectMark({
   const stone = source === STONE;
   const name = stone ? STONE_CARD.name : source === null ? undefined : CARD_NAMES.get(source);
   const card: TileCard | null = stone
-    ? { cardId: STONE_CARD.cardId, name: STONE_CARD.name, ref: STONE_CARD.ref, text: STONE_CARD.text, kindLabel: mark.title }
-    : source !== null && name
+    ? {
+        cardId: STONE_CARD.cardId,
+        name: STONE_CARD.name,
+        ref: STONE_CARD.ref,
+        text: STONE_CARD.text,
+        kindLabel: mark.title,
+        // A marker off the sheet, in none of the three decks — see `TileCard`.
+        noCard: true,
+      }
+    : // `Status.source` is a Karta's id *or* one of the four sentinels — see
+      // its own note — so it is asked rather than assumed. The names it fails
+      // on are exactly the ones `CARD_NAMES` already had nothing for.
+      source !== null && name && isCardId(source)
       ? { cardId: source, name, text: CARD_TEXTS.get(source), kindLabel: mark.title }
       : null;
   const { handlers, preview } = useCardPreview(card, false, "classic", nature);

@@ -36,6 +36,7 @@ import { hasAttacked } from "@/lib/engine/status";
 import { pointsOf } from "./seat";
 import { asFieldId, ringFields } from "@/lib/engine/board";
 import { nothing, owedAt, runOp, type Decisions, type Opens, type Resolution } from "./ops";
+import type { CardId } from "@/data/ids";
 
 export type { Decisions, Opens, Resolution } from "./ops";
 
@@ -95,7 +96,7 @@ export interface ApplyEffect {
    * which card it is. Absent when an effect is not about its own card, which is
    * every other one.
    */
-  cardId?: string;
+  cardId?: CardId;
   /**
    * The cursor points at a node that has not run — see `held` on the frame.
    *

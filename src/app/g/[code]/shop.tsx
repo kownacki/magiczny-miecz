@@ -14,6 +14,7 @@ import type { Confirmation } from "./confirm";
 import type { EqMode } from "@/lib/engine/slots";
 import type { Nature } from "@/data/types";
 import type { OnService } from "./turn-controls";
+import type { CardId } from "@/data/ids";
 
 /**
  * The shop, as a shelf of cards.
@@ -100,7 +101,7 @@ export function Shop({
               card={{
                 ...(cardId
                   ? tileFor({ cardId, granted: false })
-                  : { cardId: towar.co, name: towar.co }),
+                  : { cardId: towar.co, name: towar.co, noCard: true as const }),
                 holdable: true,
               }}
               badge={`${towar.cena} Sz. Z.`}
@@ -167,7 +168,7 @@ function askToBuy({
   onAsk,
   onService,
 }: {
-  cardId: string;
+  cardId: CardId;
   cena: number;
   gold: number;
   onAsk: (ask: Confirmation) => void;

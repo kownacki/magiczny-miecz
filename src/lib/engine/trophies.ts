@@ -2,6 +2,7 @@
 
 import { combatValueOf } from "./cards";
 import { EVENTS } from "@/lib/game/decks";
+import type { CardId } from "@/data/ids";
 
 /**
  * 1.4: seven points of beaten Wróg buy one point of Miecz.
@@ -14,7 +15,7 @@ export const TROPHY_RATE = 7;
 
 /** One beaten Wróg, and the Miecz printed on it. */
 export interface Trophy {
-  readonly cardId: string;
+  readonly cardId: CardId;
   readonly points: number;
 }
 
@@ -28,7 +29,7 @@ export interface Offer {
   /** Miecze bought. Never zero — an offer that buys nothing is not an offer. */
   readonly swords: number;
   /** The Karty handed in, in the order they were held. */
-  readonly cardIds: readonly string[];
+  readonly cardIds: readonly CardId[];
   /** What they total. */
   readonly points: number;
   /** Points above the multiple of seven, which 1.4 says are lost. */
@@ -166,7 +167,7 @@ function better(one: Offer, than: Offer): boolean {
  * may import — the console included, which is what docs/STACK.md's open
  * thread thought was the obstacle.
  */
-export function trophyPointsOf(cardId: string, mirror?: { miecz: number }): number {
+export function trophyPointsOf(cardId: CardId, mirror?: { miecz: number }): number {
   const card = EVENTS.find((one) => one.id === cardId);
   const worth = card ? combatValueOf(card, mirror) : null;
   return worth?.kind === "ordinary" ? worth.total : 0;
@@ -174,7 +175,7 @@ export function trophyPointsOf(cardId: string, mirror?: { miecz: number }): numb
 
 /** One beaten Wróg on the shelf, and whether his Karta is still in hand. */
 export interface Beaten {
-  readonly cardId: string;
+  readonly cardId: CardId;
   /** Beaten, and no longer held: traded away (1.4) or put down. */
   readonly gone: boolean;
   /**
@@ -222,8 +223,8 @@ export interface Beaten {
  * was written, so it predates every entry that has a date at all.
  */
 export function shelfFor(
-  beaten: readonly string[],
-  held: readonly { holdingId: string; cardId: string }[],
+  beaten: readonly CardId[],
+  held: readonly { holdingId: string; cardId: CardId }[],
 ): Beaten[] {
   const left = [...held];
   const dated: Beaten[] = beaten.map((cardId) => {

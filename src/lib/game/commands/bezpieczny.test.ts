@@ -6,6 +6,7 @@ import { applyEffect } from "./effects";
 import type { Effect } from "@/lib/engine/cardScript";
 import type { FieldId } from "@/lib/engine/board";
 import type { Nature } from "@/data/types";
+import type { CardId } from "@/data/ids";
 
 /**
  * The nine cards that carry a character past what an Obszar does to them.
@@ -17,7 +18,7 @@ import type { Nature } from "@/data/types";
  * mistake this suite exists to catch.
  */
 
-const standing = (field: FieldId, cards: string[], nature: Nature = "good") =>
+const standing = (field: FieldId, cards: CardId[], nature: Nature = "good") =>
   aTable({
     seats: [aSeat({ id: "seat-a", field_id: field, life: 4, nature })],
     holdings: cards.map((cardId, at) =>

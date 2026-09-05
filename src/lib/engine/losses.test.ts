@@ -28,7 +28,7 @@ describe("what a loss reaches for", () => {
   });
 
   it("takes nothing when there is nothing of that kind", () => {
-    const empty = [{ id: "t1", cardId: "upior", kind: "trophy" as const }];
+    const empty: Losable[] = [{ id: "t1", cardId: "upior", kind: "trophy" }];
     expect(chooseLosses(empty, { co: "przedmiot", wybor: "losowo" })).toEqual([]);
   });
 
@@ -52,7 +52,7 @@ describe("what a loss reaches for", () => {
   it("survives a chooser that hands back nonsense", () => {
     // A bad port should cost a predictable card, not throw in the middle of
     // resolving one.
-    for (const bad of [-5, 1.7, 1e9, Number.NaN]) {
+    for (const bad of [-5, 1.7, 1e9, Number.NaN] as const) {
       const taken = chooseLosses(pack, { co: "przedmiot", wybor: "losowo" }, () => bad);
       expect(taken).toHaveLength(1);
       expect(["i1", "i2"]).toContain(taken![0]);
@@ -91,10 +91,10 @@ describe("saying what went", () => {
 });
 
 describe("a whole hand at once (Przesilenie, Władca Czarów)", () => {
-  const hand = [
-    { id: "a", cardId: "fatum", kind: "spell" as const },
-    { id: "b", cardId: "golem", kind: "spell" as const },
-    { id: "c", cardId: "miecz", kind: "item" as const },
+  const hand: Losable[] = [
+    { id: "a", cardId: "fatum", kind: "spell" },
+    { id: "b", cardId: "golem", kind: "spell" },
+    { id: "c", cardId: "miecz", kind: "item" },
   ];
 
   it("takes every Zaklęcie and asks nobody which", () => {

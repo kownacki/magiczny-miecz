@@ -103,7 +103,7 @@ describe("wycofanie Postaci z gry", () => {
             aHolding({
               id: "h1",
               seat_id: "seat-a",
-              card_id: "blyskawica",
+              card_id: "olsnienie",
               kind: "spell",
               face: "hidden",
             }),

@@ -10,6 +10,7 @@ import type { TurnPhase } from "@/lib/engine/turn";
 import type { FieldId } from "@/lib/engine/board";
 import { pointsOf, seatView } from "./seat";
 import { dropCard, takeCard } from "./holdings";
+import type { CardId } from "@/data/ids";
 
 /**
  * Przyjaciele, which the rulebook barely describes.
@@ -21,7 +22,7 @@ import { dropCard, takeCard } from "./holdings";
  * rather than the chapter.
  */
 
-const withCards = (...cards: { id: string; kind?: "item" | "friend" }[]) =>
+const withCards = (...cards: { id: CardId; kind?: "item" | "friend" }[]) =>
   aTable({
     seats: [aSeat({ id: "seat-a", sword_own: 2, magic_own: 1 })],
     holdings: cards.map((card, at) =>
@@ -246,7 +247,7 @@ const onField = (over: Partial<Extract<TurnPhase, { phase: "field" }>> = {}): Tu
 });
 
 /** Two characters, the second placed however far off the test wants. */
-const twoSeats = (theirField: FieldId, cards: string[] = ["poszukiwacz-przygod"]) =>
+const twoSeats = (theirField: FieldId, cards: CardId[] = ["poszukiwacz-przygod"]) =>
   aTable({
     game: { turn_state: onField(), active_seat: 0 },
     seats: [
@@ -438,7 +439,7 @@ describe("paying a Przyjaciel by the turn (Najemnik)", () => {
  * `spell` one: 2.6 must not count it and nothing that takes "your Zaklęcia"
  * may reach it.
  */
-const carrying = (friend: string, gold = 2) =>
+const carrying = (friend: CardId, gold = 2) =>
   aTable({
     seats: [aSeat({ id: "seat-a", gold })],
     holdings: [
@@ -524,7 +525,7 @@ describe("a Zaklęcie carried by a Przyjaciel", () => {
  * cards behaved exactly as they would have with the clause absent.
  */
 describe("a friend who mends you at her own Obszar (Księżniczka, Władca)", () => {
-  const at = (field: FieldId | null, friend = "ksiezniczka", life = 1, gold = 0) =>
+  const at = (field: FieldId | null, friend: CardId = "ksiezniczka", life = 1, gold = 0) =>
     aTable({
       seats: [aSeat({ id: "seat-a", field_id: field, life, gold })],
       holdings: [aHolding({ id: "h-friend", seat_id: "seat-a", card_id: friend, kind: "friend" })],
@@ -581,7 +582,7 @@ describe("a friend who mends you at her own Obszar (Księżniczka, Władca)", ()
 });
 
 describe("giving that friend up for gold, where she belongs", () => {
-  const at = (field: FieldId | null, friend = "ksiezniczka") =>
+  const at = (field: FieldId | null, friend: CardId = "ksiezniczka") =>
     aTable({
       seats: [aSeat({ id: "seat-a", field_id: field, gold: 1 })],
       holdings: [aHolding({ id: "h-friend", seat_id: "seat-a", card_id: friend, kind: "friend" })],

@@ -1,5 +1,7 @@
 /** What a card takes off you when it says you lose something. */
 
+import type { CardId } from "@/data/ids";
+
 /** The shape `strata` carries on a card's script. */
 export interface Loss {
   co:
@@ -11,7 +13,7 @@ export interface Loss {
     | "wszystkie-zaklecia"
     | "wszyscy-przyjaciele-oprocz";
   /** Cards a sweeping loss leaves alone, by id (the Zły Duch spares the Południca). */
-  oprocz?: readonly string[];
+  oprocz?: readonly CardId[];
   count?: number;
   /** Whose choice it is. Absent means the holder's, which is the rulebook's default (5.6). */
   wybor?: "ty" | "losowo";
@@ -19,7 +21,7 @@ export interface Loss {
 
 export interface Losable {
   id: string;
-  cardId: string;
+  cardId: CardId;
   kind: "item" | "friend" | "trophy" | "spell";
 }
 

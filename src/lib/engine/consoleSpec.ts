@@ -4,7 +4,8 @@ import { type FieldId } from "./board";
 import type { CardClass } from "@/data/types";
 import type { TurnPhase } from "./turn";
 import { findByName } from "./search";
-import { RANDOM_CHARACTER_ID, RANDOM_CHARACTER_NAME } from "./characters";
+import { RANDOM_CHARACTER_ID, RANDOM_CHARACTER_NAME, type SeatCharacter } from "./characters";
+import type { CardId } from "@/data/ids";
 import {
   AS,
   AT,
@@ -244,9 +245,9 @@ export type Command =
   | { kind: "host"; who: string }
   /* Postacie. `seat` is the number printed beside a seat, counting from one;
      exactly one of the two is ever set. */
-  | { kind: "pick"; characterId: string | null; seat: number | null }
-  | { kind: "remove"; seat: number | null; characterId: string | null; hard: boolean }
-  | { kind: "revive"; seat: number | null; characterId: string | null }
+  | { kind: "pick"; characterId: SeatCharacter | null; seat: number | null }
+  | { kind: "remove"; seat: number | null; characterId: SeatCharacter | null; hard: boolean }
+  | { kind: "revive"; seat: number | null; characterId: SeatCharacter | null }
   /**
    * A parameter moved, or put where you want it.
    *
@@ -271,7 +272,7 @@ export type Command =
    * in for a draw has to be able to stand in for the whole of one. Empty lists
    * what there is to ask for, as bare `give` used to.
    */
-  | { kind: "deal"; cardIds: string[] }
+  | { kind: "deal"; cardIds: CardId[] }
   /**
    * A Karta laid on an Obszar, and — with no card named — the catalogue of what
    * there is to lay.
@@ -281,7 +282,7 @@ export type Command =
    * and the other with "Which card?" made the shorter list the harder one to
    * find.
    */
-  | { kind: "place"; cardId: string | null; fieldId: FieldId | null; gold: null }
+  | { kind: "place"; cardId: CardId | null; fieldId: FieldId | null; gold: null }
   /**
    * The money half, which is not a card and never was.
    *
@@ -307,7 +308,7 @@ export type Command =
    * By name, or by where it lies in the draw order — which is what `pile`
    * prints, numbered from the top, so the two read as one another's halves.
    */
-  | { kind: "stack"; cardId: string; pile: null; at: null }
+  | { kind: "stack"; cardId: CardId; pile: null; at: null }
   | { kind: "stack"; cardId: null; pile: "events" | "spells"; at: number }
   /**
    * Test mode: everything lying on an Obszar, off it (`place`'s inverse).
@@ -321,7 +322,7 @@ export type Command =
   | {
       kind: "clear";
       fieldId: FieldId | null;
-      cardIds: string[];
+      cardIds: CardId[];
       gold: null;
       classes: CardClass[];
     }
@@ -337,7 +338,7 @@ export type Command =
   | {
       kind: "clear";
       fieldId: FieldId | null;
-      cardIds: string[];
+      cardIds: CardId[];
       gold: number | "all";
       classes: CardClass[];
     }
@@ -382,7 +383,7 @@ export type Command =
    */
   | { kind: "card"; name: string }
   /* Encounters. What is standing in front of you, and the two ways past it. */
-  | { kind: "fight"; cardId: string | null }
+  | { kind: "fight"; cardId: CardId | null }
   | { kind: "escape" }
   | { kind: "attack"; who: string }
   | { kind: "raid"; who: string }
@@ -567,7 +568,7 @@ function trailing(parts: readonly string[], flag: string): { on: boolean; rest: 
 function postac(
   tail: string,
   usage: string,
-): { seat: number | null; characterId: string | null; hard: boolean } | { error: string } {
+): { seat: number | null; characterId: SeatCharacter | null; hard: boolean } | { error: string } {
   const { on: hard, rest } = trailing(tail.split(/\s+/).filter(Boolean), "hard");
   const said = rest.join(" ");
   if (said === "") return missing(usage, "Which Postać?");
@@ -1566,7 +1567,7 @@ export const SPECS: { [K in Command["kind"]]: Spec<K> } = {
        * would not have fixed.
        */
       const said = tail.split(",").map((one) => one.trim()).filter(Boolean);
-      const cardIds: string[] = [];
+      const cardIds: CardId[] = [];
       for (const one of said) {
         // Every Karta in the box, because every Karta can be drawn. The two
         // verbs this replaced each matched a slice of the deck, which is why
@@ -1706,7 +1707,7 @@ export const SPECS: { [K in Command["kind"]]: Spec<K> } = {
        * the word, the way `deal` names the card it could not find.
        */
       const classes: CardClass[] = [];
-      const cardIds: string[] = [];
+      const cardIds: CardId[] = [];
       let money: number | "all" | null = null;
       for (const one of words) {
         // The money, with or without an amount, and in the list like

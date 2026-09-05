@@ -58,6 +58,7 @@ import {
   type CastSpell,
 } from "./commands/spells";
 import { attackSeat as attackSeatOn, sendRaider as sendRaiderOn, beginFight as beginFightOn, escape as escapeOn, fightRoll as fightRollOn } from "./commands/fight";
+import type { CardId, SpellId } from "@/data/ids";
 import { resolveFight as resolveFightOn, type Spoils } from "./commands/spoils";
 import {
   crossRing as crossRingOn,
@@ -207,11 +208,11 @@ export async function drawAll(
  * not "raz". What bounds it is the setup hand — cast down to it, refill, and
  * that is as often as the wand can be asked.
  */
-export async function drawSpellWithWand(gameId: string, seatId: string): Promise<string | null> {
+export async function drawSpellWithWand(gameId: string, seatId: string): Promise<SpellId | null> {
   return change(gameId, drawSpellWithWandOn, (of) => ({ seatId, shuffle: shuffleFor(of.game) }));
 }
 
-export async function drawSpell(gameId: string, seatId: string): Promise<string | null> {
+export async function drawSpell(gameId: string, seatId: string): Promise<SpellId | null> {
   return change(gameId, drawSpellOn, (of) => ({ seatId, shuffle: shuffleFor(of.game) }));
 }
 
@@ -226,7 +227,7 @@ export async function shopStock(
   // Both lists are usually already in hand at the call site — the table state
   // reads them anyway — and fetching them a second time is two more round
   // trips on a request every device makes every couple of seconds.
-  known?: { holdings: HoldingRow[]; fieldCards: { card_id: string }[] },
+  known?: { holdings: HoldingRow[]; fieldCards: { card_id: CardId }[] },
 ): Promise<Record<string, number>> {
   return countStock(
     known ?? {
@@ -263,7 +264,7 @@ export async function releaseSpellFloor(gameId: string, seatId: string): Promise
   await change(gameId, releaseFloor, { seatId });
 }
 
-export async function beginFight(gameId: string, cardIds: string[]): Promise<void> {
+export async function beginFight(gameId: string, cardIds: CardId[]): Promise<void> {
   await change(gameId, beginFightOn, { cardIds });
 }
 
@@ -287,7 +288,7 @@ export async function beginFight(gameId: string, cardIds: string[]): Promise<voi
 export async function stageFight(
   gameId: string,
   seatId: string,
-  cardId: string,
+  cardId: CardId,
 ): Promise<void> {
   const card = EVENTS.find((c) => c.id === cardId);
   if (!card) throw new Error(`Nieznana karta: ${cardId}`);
@@ -372,8 +373,8 @@ export async function stageFight(
 export async function stageCards(
   gameId: string,
   seatId: string,
-  cardIds: readonly string[],
-): Promise<string[]> {
+  cardIds: readonly CardId[],
+): Promise<CardId[]> {
   const cards = cardIds.map((cardId) => {
     const card = EVENTS.find((one) => one.id === cardId);
     if (!card) throw new Error(`Nieznana karta: ${cardId}`);
@@ -550,7 +551,7 @@ export async function answerAsk(
   gameId: string,
   seatId: string | null,
   choice: number,
-): Promise<string> {
+): Promise<SpellId> {
   return change(
     gameId,
     async (snapshot, command, ports) =>
@@ -654,7 +655,7 @@ export async function settleFight(
 export async function takeCard(
   gameId: string,
   seatId: string,
-  cardId: string,
+  cardId: CardId,
   /**
    * The mark of the copy being taken, when the caller knows which copy it is.
    *
@@ -844,7 +845,7 @@ export async function spendHolding(gameId: string, holdingId: string): Promise<U
 export async function tradeTrophies(
   gameId: string,
   seatId: string,
-  want: { swords?: number; cardIds?: readonly string[] } = {},
+  want: { swords?: number; cardIds?: readonly CardId[] } = {},
 ): Promise<number> {
   return change(gameId, tradeTrophiesFor, { seatId, ...want });
 }
@@ -965,7 +966,7 @@ export async function attackSeat(gameId: string, targetSeatId: string): Promise<
 }
 
 /** Buys a turn of the Najemnik's sword. Returns the card, so the console can name him. */
-export async function payFriend(gameId: string, seatId?: string): Promise<string> {
+export async function payFriend(gameId: string, seatId?: string): Promise<CardId> {
   return await change(gameId, payFriendOn, { seatId });
 }
 
@@ -1132,7 +1133,7 @@ export async function endGame(gameId: string, seatId: string, won: boolean): Pro
  * all. Rule 14.7 adds that the Tarcza Tolimana is what gets you into the Zamek
  * — without one you must walk past it.
  */
-export function bridgeRequirements(holdings: readonly { cardId: string }[]): {
+export function bridgeRequirements(holdings: readonly { cardId: CardId }[]): {
   hasSword: boolean;
   hasShield: boolean;
 } {
@@ -1251,7 +1252,7 @@ export async function takeNewCharacter(
 export async function buyGoods(
   gameId: string,
   seatId: string,
-  cardId: string,
+  cardId: CardId,
 ): Promise<void> {
   await change(gameId, thenResolve(thenHold(buyGoodsFor)), { seatId, cardId });
 }
@@ -1317,7 +1318,7 @@ export async function payHealer(
 export async function placeCard(
   gameId: string,
   seatId: string,
-  cardId: string,
+  cardId: CardId,
   target: FieldId | null,
 ): Promise<FieldId> {
   return change(gameId, placeCardOn, { seatId, cardId, target });
@@ -1344,7 +1345,7 @@ export async function placeGold(
 export async function stackCard(
   gameId: string,
   seatId: string,
-  cardId: string,
+  cardId: CardId,
 ): Promise<"events" | "spells"> {
   return change(gameId, stackForDrawOn, { seatId, cardId });
 }
@@ -1360,7 +1361,7 @@ export async function stackNth(
   seatId: string,
   pile: "events" | "spells",
   at: number,
-): Promise<{ pile: "events" | "spells"; cardId: string }> {
+): Promise<{ pile: "events" | "spells"; cardId: CardId }> {
   const cardId = await change(gameId, stackAtOn, { seatId, pile, at });
   return { pile, cardId };
 }
@@ -1376,11 +1377,11 @@ export async function clearField(
   gameId: string,
   seatId: string,
   fieldId: FieldId,
-  cardIds?: readonly string[],
+  cardIds?: readonly CardId[],
   gold?: number | "all",
   /** Whole kinds at a time — `clear strangers, places`. Empty is "not asked". */
   classes?: readonly CardClass[],
-): Promise<{ cards: string[]; gold: number }> {
+): Promise<{ cards: CardId[]; gold: number }> {
   return change(gameId, clearFieldOn, {
     seatId,
     fieldId,
@@ -1390,7 +1391,7 @@ export async function clearField(
   });
 }
 
-export async function grantCard(gameId: string, seatId: string, cardId: string): Promise<void> {
+export async function grantCard(gameId: string, seatId: string, cardId: CardId): Promise<void> {
   await change(gameId, thenHold(grantCardOn), { seatId, cardId });
 }
 
@@ -1490,7 +1491,7 @@ export async function resolveFieldOffer(
  */
 export async function resolveDrawnCard(
   gameId: string,
-  cardId: string,
+  cardId: CardId,
   decided: Decisions = {},
 ): Promise<{ card: string; face?: number; did: string[]; pending: Effect | null }> {
   return change(gameId, resolveDrawnCardOn, (of) => ({

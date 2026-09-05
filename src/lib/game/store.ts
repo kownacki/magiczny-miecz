@@ -12,6 +12,7 @@ import {
 } from "./commands/presence";
 import { asSeatCharacter, type SeatCharacter } from "@/lib/engine/characters";
 import { asFieldId, type FieldId } from "@/lib/engine/board";
+import { isCardId, type CardId } from "@/data/ids";
 import { Failure } from "./failure";
 import { asTurnState, type TurnState } from "@/lib/engine/stack";
 
@@ -42,8 +43,13 @@ export interface SeatRow {
    *
    * Written in `points` mode, where the Karta is on the pile and nothing else
    * remembers the Wilkołak. Never read by a rule — see db/schema.sql.
+   *
+   * Narrowed at `seatsFor` like the other two ids on this row, and a name the
+   * box does not carry is dropped: the shelf can neither price it nor draw it,
+   * and the trophy tile was casting the column to a `CardId` unchecked to get
+   * that far.
    */
-  trophy_beaten: string[];
+  trophy_beaten: CardId[];
   nature: string | null;
   turns_lost: number;
   stone_until_round: number | null;
@@ -422,14 +428,16 @@ export async function seatsFor(gameId: string, on: DbHandle = handleNow()): Prom
   // nowhere — and it degrades to "figure is off the board, put it back with the
   // override", which a table can act on. Throwing would take the whole table
   // down over one bad row.
-  type StoredSeat = Omit<SeatRow, "field_id" | "character_id"> & {
+  type StoredSeat = Omit<SeatRow, "field_id" | "character_id" | "trophy_beaten"> & {
     field_id: string | null;
     character_id: string | null;
+    trophy_beaten: string[] | null;
   };
   return ((data ?? []) as StoredSeat[]).map((row) => ({
     ...row,
     field_id: asFieldId(row.field_id),
     character_id: asSeatCharacter(row.character_id),
+    trophy_beaten: (row.trophy_beaten ?? []).filter(isCardId),
   }));
 }
 
@@ -611,7 +619,7 @@ export async function verifyUser(gameId: string, token: string): Promise<UserRow
 export interface HoldingRow {
   id: string;
   seat_id: string;
-  card_id: string;
+  card_id: CardId;
   /**
    * `carried` is a card belonging to another card rather than to the character
    * — the Zaklęcie the Krzyżowiec and the Gnom each walk around with. It is
@@ -632,7 +640,7 @@ export interface HoldingRow {
    * commit. There is one Krzyżowiec and one Gnom in the box, so the card
    * identifies him well enough.
    */
-  carried_by: string | null;
+  carried_by: CardId | null;
   /**
    * Conjured by the test shortcut rather than drawn, bought or found.
    *
@@ -642,6 +650,12 @@ export interface HoldingRow {
    */
   granted: boolean;
 }
+
+/** A holdings row as it comes back: `card_id` is still whatever the column held. */
+type StoredHolding = Omit<HoldingRow, "card_id" | "carried_by"> & {
+  card_id: string;
+  carried_by: string | null;
+};
 
 export async function holdingsFor(gameId: string, on: DbHandle = handleNow()): Promise<HoldingRow[]> {
   const { data, error } = await on
@@ -654,7 +668,26 @@ export async function holdingsFor(gameId: string, on: DbHandle = handleNow()): P
     .order("ordinal", { nullsFirst: false })
     .order("created_at");
   if (error) throw new Failure(`holdingsFor: ${error.message}`);
-  return (data ?? []) as HoldingRow[];
+  // The one place a stored `card_id` becomes a `CardId`, on the same reasoning
+  // as `seatsFor` and its `field_id`: the column is a string, the box is a
+  // closed set, and narrowing here means every rule that asks what somebody is
+  // carrying gets an answer the compiler has already checked.
+  //
+  // A row naming something that is not a card in the box is dropped rather than
+  // carried. There is no null to degrade to the way a seat's field has one, and
+  // nothing downstream could say anything about it anyway — no name, no class,
+  // no Charakterystyka, no coverage — so keeping it would only be a row the app
+  // has to pretend to understand. Dropping it degrades to "the card is not in
+  // your hand", which the console can put back; throwing would take the whole
+  // table down over one bad row.
+  //
+  // `carried_by` goes through the same door: it names the Przyjaciel a Zaklęcie
+  // walks around with, and a name that is not a Karta is nobody to walk with.
+  return ((data ?? []) as StoredHolding[]).flatMap((row) =>
+    isCardId(row.card_id)
+      ? [{ ...row, card_id: row.card_id, carried_by: isCardId(row.carried_by) ? row.carried_by : null }]
+      : [],
+  );
 }
 
 /**
@@ -667,7 +700,7 @@ export async function holdingsFor(gameId: string, on: DbHandle = handleNow()): P
 export interface FieldCardRow {
   id: string;
   field_id: string;
-  card_id: string;
+  card_id: CardId;
   /** Dropped here by a test grant; it goes nowhere when it leaves again. */
   granted: boolean;
   /**
@@ -709,6 +742,9 @@ export async function fieldGoldFor(
   return (data ?? []) as FieldGoldRow[];
 }
 
+/** A field_cards row as it comes back, before its `card_id` has been looked at. */
+type StoredFieldCard = Omit<FieldCardRow, "card_id"> & { card_id: string };
+
 export async function fieldCardsFor(gameId: string, on: DbHandle = handleNow()): Promise<FieldCardRow[]> {
   const { data, error } = await on
     .from("field_cards")
@@ -716,7 +752,11 @@ export async function fieldCardsFor(gameId: string, on: DbHandle = handleNow()):
     .eq("game_id", gameId)
     .order("created_at");
   if (error) throw new Error(error.message);
-  return (data ?? []) as FieldCardRow[];
+  // Narrowed at the door, and a card the box does not have is dropped — see
+  // `holdingsFor`, which does the same thing for the same reason.
+  return ((data ?? []) as StoredFieldCard[]).filter((row): row is FieldCardRow =>
+    isCardId(row.card_id),
+  );
 }
 
 /**

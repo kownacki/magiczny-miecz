@@ -11,8 +11,9 @@ import {
 } from "./holdings";
 import type { Holding } from "./state";
 import type { Slot } from "./slots";
+import type { CardId } from "@/data/ids";
 
-const held = (cardId: string, kind: Holding["kind"], face: Holding["face"] = "open"): Holding => ({
+const held = (cardId: CardId, kind: Holding["kind"], face: Holding["face"] = "open"): Holding => ({
   cardId,
   kind,
   face,
@@ -58,7 +59,7 @@ describe("bonuses from a hand (1.5, 2.5)", () => {
    * champion. Same for the Poszukiwacz Przygód and the 3 he raids with.
    */
   it("lends nothing for a friend who fights on his own account", () => {
-    for (const who of ["rycerz", "poszukiwacz-przygod"]) {
+    for (const who of ["rycerz", "poszukiwacz-przygod"] as const) {
       expect(bonusFromHoldings([held(who, "friend")], "classic", "parametr")).toEqual({ miecz: 0, magia: 0 });
       expect(bonusFromHoldings([held(who, "friend")], "classic", "walka")).toEqual({ miecz: 0, magia: 0 });
     }
@@ -69,14 +70,17 @@ describe("bonuses from a hand (1.5, 2.5)", () => {
   });
 
   it("gives a spell nothing", () => {
-    expect(bonusFromHoldings([held("cokolwiek", "spell", "hidden")], "classic", "parametr")).toEqual({
+    expect(bonusFromHoldings([held("fatum", "spell", "hidden")], "classic", "parametr")).toEqual({
       miecz: 0,
       magia: 0,
     });
   });
 
-  it("treats an untranscribed card as inert rather than failing", () => {
-    expect(bonusFromHoldings([held("nie-ma-takiej", "item")], "classic", "parametr")).toEqual({ miecz: 0, magia: 0 });
+  it("treats a card with no bonus recorded as inert rather than failing", () => {
+    // A Karta in the box that lends nothing — which is what „untranscribed"
+    // amounts to now that the parameter is a `CardId` and an id the box does
+    // not have cannot be written at all.
+    expect(bonusFromHoldings([held("mgla", "item")], "classic", "parametr")).toEqual({ miecz: 0, magia: 0 });
   });
 
   it("sums a whole hand", () => {
@@ -171,7 +175,7 @@ describe("a card its holder may not hold", () => {
 });
 
 describe("concealment (9.3, 5.2, 6.2)", () => {
-  const hand = [held("excalibur", "item"), held("zaklecie", "spell", "hidden")];
+  const hand = [held("excalibur", "item"), held("fatum", "spell", "hidden")];
 
   it("hides another player's spells but counts them", () => {
     const seen = visibleTo(hand, { own: false });
@@ -265,7 +269,7 @@ describe("the two figures a character has (1.5)", () => {
  * are now the engine's, and the tests here are what keeps the two in step.
  */
 describe("whyNotCollectHere", () => {
-  const item = [{ cardId: "miecz" }];
+  const item: { cardId: CardId }[] = [{ cardId: "miecz" }];
 
   it("says nothing where the Obszar is clear", () => {
     expect(whyNotCollectHere(item, [], 0)).toBeNull();
@@ -327,13 +331,13 @@ describe("whyNotCollectHere", () => {
 });
 
 describe("whyPackIsFull", () => {
-  const inPack = (cardId: string, slot: Slot | null = null) => ({
+  const inPack = (cardId: CardId, slot: Slot | null = null) => ({
     cardId,
     kind: "item" as const,
     face: "open" as const,
     slot,
   });
-  const arriving = { cardId: "miecz", kind: "item" as const, nature: null };
+  const arriving = { cardId: "miecz" as CardId, kind: "item" as const, nature: null };
 
   it("says nothing while there is room", () => {
     expect(

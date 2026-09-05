@@ -9,6 +9,7 @@ import { apply, type Snapshot } from "../change";
 import { beginFight } from "./fight";
 import { castSpell } from "./spells";
 import { claimFloor } from "./spellFloor";
+import type { CardId } from "@/data/ids";
 
 /**
  * PRZYBYSZ Z KRAINY CIENI, who refuses most of what you are carrying.
@@ -30,7 +31,7 @@ const totalIn = (writes: { game?: { turn_state?: unknown } }) =>
   (top(writes.game?.turn_state as TurnState) as Extract<TurnPhase, { phase: "fight" }>).fight
     .playerTotal;
 
-const facing = (foe: string, cards: string[], spells: string[] = []): Snapshot =>
+const facing = (foe: CardId, cards: CardId[], spells: CardId[] = []): Snapshot =>
   aTable({
     game: {
       active_seat: 0,

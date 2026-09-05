@@ -4,6 +4,7 @@
 import { abilitiesOf, isForbidden, stealsLife } from "@/lib/engine/abilities";
 import { abilitiesOfCharacter, asCharacterId } from "@/lib/engine/characters";
 import { combatValueOf } from "@/lib/engine/cards";
+import { isCardId } from "@/data/ids";
 import {
   advanceLoop,
   closeLoopFrame,
@@ -423,9 +424,14 @@ export async function resolveFight(
     const which = { creature: inLoop.round, round: inLoop.done + 1, times: inLoop.times };
     const step = advanceLoop(inLoop, fight.result.outcome);
     if (step.go === "again") {
-      const fresh = againstThese(apply(snapshot, mergeAll(upToNow, stolen)), seat.id, [
-        inLoop.of.cardId,
-      ]);
+      // `Fight.cardId` is a display id — a joined pack, a `pole:` guardian —
+      // so only a real Karta is worth asking the „przeciw" abilities about. A
+      // name that is not one matches none of them, which is what this says.
+      const fresh = againstThese(
+        apply(snapshot, mergeAll(upToNow, stolen)),
+        seat.id,
+        isCardId(inLoop.of.cardId) ? [inLoop.of.cardId] : [],
+      );
       const next = roundOf(step.loop);
       return {
         state: push(replaceTop(popped, step.loop), {
@@ -567,6 +573,11 @@ async function tollFor(
 ): Promise<Changeset> {
   let writes: Changeset = {};
   for (const cardId of fight.fought ?? [fight.cardId]) {
+    // `fought` is not a list of `CardId`s: 17.5 joins a pack into one fight
+    // whose `cardId` is their names run together, and a guardian's is
+    // `pole:`/`seat:`. None of those has a script, which is what this guard
+    // says — the same answer `scriptFor` gave when it took a bare string.
+    if (!isCardId(cardId)) continue;
     const owed = scriptFor(cardId)?.przegrana;
     if (!owed) continue;
     const done = await applyEffect(
@@ -772,7 +783,10 @@ function trophiesFrom(snapshot: Snapshot, seat: SeatRow, fight: Fight): Changese
      * share of it is not separable.
      */
     const foe = card ? combatValueOf(card, { miecz: fight.playerTotal }) : null;
-    return foe && foe.kind === "ordinary" ? [{ cardId, points: foe.total }] : [];
+    // `card.id` rather than the key it was found by: `fought` holds a joined
+    // pack name and a `pole:`/`seat:` guardian too, and only a row the deck
+    // actually has is a trophy. Same list, said as an id.
+    return card && foe && foe.kind === "ordinary" ? [{ cardId: card.id, points: foe.total }] : [];
   });
   if (won.length === 0) return {};
 

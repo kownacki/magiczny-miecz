@@ -39,13 +39,17 @@ describe("overflowLines", () => {
       table(
         [
           aHolding({ id: "h-1", card_id: "fatum", kind: "spell" }),
-          aHolding({ id: "h-2", card_id: "blyskawica", kind: "spell" }),
+          aHolding({ id: "h-2", card_id: "olsnienie", kind: "spell" }),
         ],
         1,
         "zaklecia",
       ),
     );
-    const ways = lines.filter((line) => line.includes("fatum") || line.includes("blyskawica"));
+    // By the printed name, which is what the line says. This used to filter on
+    // the ids, and matched only because one of the two fixtures named a card the
+    // box does not have — `cardName` hands an unknown id straight back, so the
+    // line carried it verbatim while FATUM's said "FATUM".
+    const ways = lines.filter((line) => line.includes("FATUM") || line.includes("OLŚNIENIE"));
     expect(ways.length).toBeGreaterThan(0);
     for (const way of ways) {
       expect(way).toContain("odrzuć");
@@ -59,10 +63,10 @@ describe("overflowLines", () => {
       table(
         [
           aHolding({ id: "h-1", card_id: "miecz" }),
-          aHolding({ id: "h-2", card_id: "topor" }),
+          aHolding({ id: "h-2", card_id: "zbroja" }),
           aHolding({ id: "h-3", card_id: "helm" }),
           aHolding({ id: "h-4", card_id: "tarcza" }),
-          aHolding({ id: "h-5", card_id: "luk" }),
+          aHolding({ id: "h-5", card_id: "sztylet" }),
         ],
         2,
         "przedmioty",

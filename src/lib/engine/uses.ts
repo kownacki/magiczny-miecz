@@ -150,8 +150,8 @@ export const USES: Readonly<Partial<Record<CardId, Use>>> = {
  * wherever it is called — including inside route handlers and journal
  * rendering, neither of which has ever seen a component.
  */
-export function usageOf(cardId: string): Use | null {
-  return USES[cardId as CardId] ?? null;
+export function usageOf(cardId: CardId): Use | null {
+  return USES[cardId] ?? null;
 }
 
 /**
@@ -166,7 +166,7 @@ export const USE_VERB = "użyj";
 export const USE_VERB_PAST = "używa";
 
 /** Whether this is a card you spend rather than one you keep. */
-export function isUsable(cardId: string): boolean {
+export function isUsable(cardId: CardId): boolean {
   return usageOf(cardId) !== null;
 }
 

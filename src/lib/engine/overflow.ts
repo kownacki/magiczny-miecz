@@ -10,6 +10,7 @@ import { RELICS, type EqMode, type Slot } from "./slots";
 import { pop, push, top, type TurnState } from "./stack";
 import type { TurnPhase } from "./turn";
 import { cardName, plural } from "./polish";
+import type { CardId } from "@/data/ids";
 
 /**
  * How far over a seat is, or null when it is not.
@@ -83,7 +84,7 @@ export interface WayUnder {
    */
   kind: "odrzuc" | "uzyj" | "zaloz" | "zniszcz";
   holdingId: string;
-  cardId: string;
+  cardId: CardId;
   /** Where the card ends up, in the language the rest of the app uses. */
   gdzie: "obszar" | "stos" | "na-sobie";
 }
@@ -123,7 +124,7 @@ export function waysUnder<T extends Holding & { id: string }>(
    * all — see `uses.ts`. The caller knows what moment the turn is in; this
    * function only knows what would help.
    */
-  canUse: (cardId: string) => boolean = isUsable,
+  canUse: (cardId: CardId) => boolean = isUsable,
   /**
    * Set when a Magiczna Sakwa or a Tragarz is what put this seat over.
    *

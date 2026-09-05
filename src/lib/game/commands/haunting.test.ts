@@ -11,6 +11,7 @@ import { asSeatCharacter } from "@/lib/engine/characters";
 import { CROSSINGS } from "@/lib/engine/rings";
 import type { TurnPhase } from "@/lib/engine/turn";
 import type { FieldId } from "@/lib/engine/board";
+import type { CardId } from "@/data/ids";
 
 /**
  * The two Spotkania you cannot decline, and cannot simply put down.
@@ -21,7 +22,7 @@ import type { FieldId } from "@/lib/engine/board";
  * named since the day it was written.
  */
 
-const drawing = (field: FieldId, card: string, friends: string[] = []) =>
+const drawing = (field: FieldId, card: CardId, friends: CardId[] = []) =>
   aTable({
     game: {
       active_seat: 0,
@@ -47,7 +48,7 @@ const drawing = (field: FieldId, card: string, friends: string[] = []) =>
     ),
   });
 
-const meet = async (table: ReturnType<typeof drawing>, cardId: string) =>
+const meet = async (table: ReturnType<typeof drawing>, cardId: CardId) =>
   apply(
     table,
     (

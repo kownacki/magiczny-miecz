@@ -1,9 +1,11 @@
 /** The game state the engine reads and returns, independent of how it is stored or rendered. */
 
 import { CARD_CLASS, type CardClass, type Nature } from "@/data/types";
+import type { CardId } from "@/data/ids";
 import type { Slot } from "./slots";
 import type { FieldId } from "./board";
 import { goesToAField, reopensTheDrawing } from "./cardScript";
+import type { SeatCharacter } from "./characters";
 
 /**
  * One player's live state.
@@ -18,7 +20,7 @@ export interface Seat {
   id: string;
   index: number;
   name: string | null;
-  characterId: string | null;
+  characterId: SeatCharacter | null;
   fieldId: FieldId | null;
 
   swordOwn: number;
@@ -41,7 +43,7 @@ export interface Seat {
 }
 
 export interface Holding {
-  cardId: string;
+  cardId: CardId;
   /**
    * `carried` belongs to another card rather than to the character — the
    * Zaklęcie the Krzyżowiec and the Gnom walk around with. Not in the hand, so
@@ -60,7 +62,7 @@ export interface Holding {
 }
 
 export interface TurnCard {
-  cardId: string;
+  cardId: CardId;
   cardClass: CardClass;
   /** Which physical slice this is. */
   ref?: string;

@@ -102,11 +102,11 @@ describe("turn phases (10.1)", () => {
 
   it("keeps drawn cards in resolution order however they arrive (15.2)", () => {
     let phase: TurnPhase = afterMove(DOLNY_KRAG.find((f) => f.id === "bezdroza")!);
-    phase = afterDraw(phase, { cardId: "gold", cardClass: "item" });
+    phase = afterDraw(phase, { cardId: "1-sztuka-zlota", cardClass: "item" });
     phase = afterDraw(phase, { cardId: "wilk", cardClass: "foe" });
     phase = afterDraw(phase, { cardId: "mgla", cardClass: "encounter" });
     if (phase.phase !== "field") throw new Error("expected pole");
-    expect(phase.drawn.map((c) => c.cardId)).toEqual(["mgla", "wilk", "gold"]);
+    expect(phase.drawn.map((c) => c.cardId)).toEqual(["mgla", "wilk", "1-sztuka-zlota"]);
   });
 });
 
@@ -184,20 +184,22 @@ describe("fights", () => {
 
   it("settles every creature of a pack that attacked as one (17.5)", () => {
     let phase: TurnPhase = afterDraw(field, { cardId: "wilk", cardClass: "foe" });
-    phase = afterDraw(phase, { cardId: "wilki", cardClass: "foe" });
+    phase = afterDraw(phase, { cardId: "wilkolak", cardClass: "foe" });
     phase = startFight(
       phase,
       {
-        cardId: "wilk+wilki",
-        cardName: "WILK + WILKI",
+        // Joined for display, which is why `Fight.cardId` is a `string` and
+        // `settles` beside it is a list of real Karty.
+        cardId: "wilk+wilkolak",
+        cardName: "WILK + WILKOŁAK",
         miecz: 7,
-        settles: ["wilk", "wilki"],
+        settles: ["wilk", "wilkolak"],
       },
       { miecz: 3, magia: 5 },
     );
     const back = endFight(phase);
     if (back.phase !== "field") throw new Error("expected pole");
-    expect(back.fought).toEqual(["wilk", "wilki"]);
+    expect(back.fought).toEqual(["wilk", "wilkolak"]);
   });
 
   it("settles nothing in a duel — the other character is still standing (17.9)", () => {
@@ -247,34 +249,34 @@ describe("turn order", () => {
 
 describe("resolution numerals (15.2, 16.6)", () => {
   it("puts Nieznajomy (IV) after Wróg (II) and before Przedmiot (V)", () => {
-    const drawn = [
-      { cardId: "gold", cardClass: "item" as const },
-      { cardId: "cudotworca", cardClass: "stranger" as const },
-      { cardId: "cyklop", cardClass: "foe" as const },
+    const drawn: TurnCard[] = [
+      { cardId: "1-sztuka-zlota", cardClass: "item" },
+      { cardId: "cudotworca", cardClass: "stranger" },
+      { cardId: "cyklop", cardClass: "foe" },
     ];
     expect(resolutionOrder(drawn).map((c) => c.cardId)).toEqual([
       "cyklop",
       "cudotworca",
-      "gold",
+      "1-sztuka-zlota",
     ]);
   });
 
   it("treats Przedmiot and Przyjaciel as equals, both printing V", () => {
     // Rule 16.6 names them in one clause and the cards agree, so drawing order
     // decides between them rather than an invented precedence.
-    const drawn = [
-      { cardId: "alchemik", cardClass: "friend" as const },
-      { cardId: "gold", cardClass: "item" as const },
+    const drawn: TurnCard[] = [
+      { cardId: "alchemik", cardClass: "friend" },
+      { cardId: "1-sztuka-zlota", cardClass: "item" },
     ];
-    expect(resolutionOrder(drawn).map((c) => c.cardId)).toEqual(["alchemik", "gold"]);
+    expect(resolutionOrder(drawn).map((c) => c.cardId)).toEqual(["alchemik", "1-sztuka-zlota"]);
     const reversed = [drawn[1], drawn[0]];
-    expect(resolutionOrder(reversed).map((c) => c.cardId)).toEqual(["gold", "alchemik"]);
+    expect(resolutionOrder(reversed).map((c) => c.cardId)).toEqual(["1-sztuka-zlota", "alchemik"]);
   });
 
   it("still puts Miejsce (VI) last", () => {
-    const drawn = [
-      { cardId: "swiatynia", cardClass: "place" as const },
-      { cardId: "mgla", cardClass: "encounter" as const },
+    const drawn: TurnCard[] = [
+      { cardId: "nieznana-swiatynia", cardClass: "place" },
+      { cardId: "mgla", cardClass: "encounter" },
     ];
     expect(resolutionOrder(drawn)[0].cardId).toBe("mgla");
   });
@@ -551,8 +553,8 @@ describe("a table where everybody owes a turn", () => {
 
 describe("dealing a Karta into a turn", () => {
   const HERE = asFieldId("karczma")!;
-  const card = { cardId: "helm", cardClass: "item" as const, granted: true as const };
-  const other = { cardId: "cyklop", cardClass: "foe" as const };
+  const card: TurnCard = { cardId: "helm", cardClass: "item", granted: true };
+  const other: TurnCard = { cardId: "cyklop", cardClass: "foe" };
 
   const field = (drawn: TurnCard[] = []): TurnPhase => ({
     phase: "field",
@@ -663,7 +665,7 @@ describe("numbering the Karty on one Obszar", () => {
 
   it("hands out a number per Karta, and never the same one twice", () => {
     let phase = field();
-    for (const cardId of ["targowisko", "targowisko", "targowisko"]) {
+    for (const cardId of ["targowisko", "targowisko", "targowisko"] as const) {
       phase = afterDraw(phase, { cardId, cardClass: "place" });
     }
     expect(nths(phase)).toEqual([1, 2, 3]);

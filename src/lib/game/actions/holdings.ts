@@ -12,6 +12,7 @@
 
 import type { Slot } from "@/lib/engine/slots";
 import { requireFieldId } from "@/lib/engine/board";
+import { requireCardId } from "@/data/ids";
 import type { Body, HoldingsAction } from "../requests";
 import { action, type ActionContext, type Actions, type RepliesOf } from "./shape";
 import {
@@ -46,7 +47,7 @@ const seatOr = (body: Body<"holdings">, { seat }: ActionContext) => String(body.
 
 export const HOLDINGS = {
   take: holdings({
-    from: (body, ctx) => ({ seatId: seatOr(body, ctx), cardId: String(body.cardId) }),
+    from: (body, ctx) => ({ seatId: seatOr(body, ctx), cardId: requireCardId(body.cardId as string) }),
     run: (gameId, { seatId, cardId }) => takeCard(gameId, seatId, cardId),
   }),
   // From the board rather than from the turn's stack — see `takeFromField`.
@@ -84,7 +85,7 @@ export const HOLDINGS = {
   // The three establishment verbs. What each of them costs is read off the
   // board inside these, never taken from the request.
   buy: holdings({
-    from: (body, ctx) => ({ seatId: seatOr(body, ctx), cardId: String(body.cardId) }),
+    from: (body, ctx) => ({ seatId: seatOr(body, ctx), cardId: requireCardId(body.cardId as string) }),
     run: (gameId, { seatId, cardId }) => buyGoods(gameId, seatId, cardId),
   }),
   sell: holdings({
@@ -190,7 +191,7 @@ export const HOLDINGS = {
         // Naming nothing hands in everything, which is what the command means
         // by an absent list — so an empty array is not the same as no array
         // and must not be flattened into one.
-        ...(Array.isArray(body.cardIds) ? { cardIds: body.cardIds.map(String) } : {}),
+        ...(Array.isArray(body.cardIds) ? { cardIds: body.cardIds.map((one) => requireCardId(one as string)) } : {}),
         ...(typeof body.swords === "number" ? { swords: body.swords } : {}),
       },
     }),

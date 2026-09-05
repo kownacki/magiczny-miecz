@@ -7,6 +7,8 @@ import { asSeatCharacter } from "@/lib/engine/characters";
 import { SPELLS } from "@/lib/engine/spells";
 import { manualNote } from "@/lib/engine/coverage";
 import type { TurnPhase } from "@/lib/engine/turn";
+import { isSpellId, type CardId } from "@/data/ids";
+import type { FieldCardRow } from "../store";
 
 /**
  * Zaklęcia that the app carries out rather than announces.
@@ -18,7 +20,7 @@ import type { TurnPhase } from "@/lib/engine/turn";
  * marks the difference in the data rather than in a branch.
  */
 
-const table = (spell: string, victimCards: string[] = [], mine: string[] = []) =>
+const table = (spell: CardId, victimCards: CardId[] = [], mine: CardId[] = []) =>
   aTable({
     game: {
       active_seat: 0,
@@ -46,8 +48,8 @@ const table = (spell: string, victimCards: string[] = [], mine: string[] = []) =
   });
 
 const cast = async (
-  spell: string,
-  over: { dice?: number[]; target?: object; victim?: string[]; mine?: string[] } = {},
+  spell: CardId,
+  over: { dice?: number[]; target?: object; victim?: CardId[]; mine?: CardId[] } = {},
 ) => {
   const t = table(spell, over.victim ?? [], over.mine ?? []);
   const out = await castSpell(
@@ -149,7 +151,7 @@ describe("every Zaklęcie is carried out, and the halves that are not are named"
    * what happens to another Zaklęcie. `reactive` is how the casting knows.
    */
   it("answers a spell rather than applying one", () => {
-    for (const id of ["zwierciadlo", "wladca-zaklec"]) {
+    for (const id of ["zwierciadlo", "wladca-zaklec"] as const) {
       const script = (SPELLS as Record<string, { stosuje?: unknown; reactive?: boolean }>)[id];
       expect(script.stosuje, id).toBeUndefined();
       expect(script.reactive, id).toBe(true);
@@ -177,9 +179,9 @@ describe("every Zaklęcie is carried out, and the halves that are not are named"
     // Magiczne", and it does now, so both halves of the card are carried.
     // The WŁADCA GROMU went the same way when a Wróg lying on an Obszar
     // gained somewhere to carry a status.
-    const partial = ["krag-plomieni", "ocalony"];
-    for (const id of partial) expect(manualNote(id), id).toBeTruthy();
-    for (const id of Object.keys(SPELLS)) {
+    const partial: readonly string[] = ["krag-plomieni", "ocalony"];
+    for (const id of ["krag-plomieni", "ocalony"] as const) expect(manualNote(id), id).toBeTruthy();
+    for (const id of Object.keys(SPELLS).filter(isSpellId)) {
       if (partial.includes(id)) continue;
       expect(manualNote(id), id).toBeNull();
     }
@@ -204,7 +206,7 @@ describe("every Zaklęcie is carried out, and the halves that are not are named"
  */
 describe("Władca Zdarzeń, and the answer it waits for", () => {
   const HERE = "wrzosowiska";
-  const lying = { id: "fc1", field_id: HERE, card_id: "cyklop", granted: false, pool: null };
+  const lying: FieldCardRow = { id: "fc1", field_id: HERE, card_id: "cyklop", granted: false, pool: null };
 
   const table = (over: { seats?: unknown[] } = {}) =>
     aTable({

@@ -37,7 +37,7 @@ describe("what an item gives, and when", () => {
 
   /** 6.3 gives a Przyjaciel no place on the body, so he only ever has the one. */
   it("says only when it counts for a Przyjaciel", () => {
-    for (const id of ["giermek", "krzyzowiec"]) {
+    for (const id of ["giermek", "krzyzowiec"] as const) {
       expect(itemProfile(id, "slots").facts[0].when, id).toEqual(["tylko w walce (1.5)"]);
     }
   });
@@ -81,7 +81,9 @@ describe("what an item gives, and when", () => {
   it("has nothing to say about a card with no formalised rules", () => {
     // Absence is normal: a card the app carries no rule for still works, its
     // text is shown, and the players apply it.
-    const profile = itemProfile("nie-ma-takiej", "slots");
+    // „No formalised rules" is now a Karta in the box with nothing encoded,
+    // rather than an id the box does not have: the parameter is a `CardId`.
+    const profile = itemProfile("czarna-hybryda", "slots");
     expect(profile.facts).toEqual([]);
     expect(profile.slotLabel).toBeNull();
   });
@@ -142,7 +144,9 @@ describe("what an item asks of you (5.3)", () => {
 
   it("restricts nothing else", () => {
     expect(forbiddenNatures("miecz")).toBeUndefined();
-    expect(forbiddenNatures("nie-ma-takiej")).toBeUndefined();
+    // The line that used to sit here named an id the box does not have. It
+    // cannot be written any more: the parameter is a `CardId`.
+
   });
 });
 
@@ -245,7 +249,7 @@ describe("how long a Nieznajomy or a Miejsce stays", () => {
    * Spotkanie it is the answer nobody wonders about, and absence says it.
    */
   it("stays quiet about a Spotkanie that is over when it is over", () => {
-    for (const id of ["zaraza", "zasadzka", "straz", "danina", "przesilenie"]) {
+    for (const id of ["zaraza", "zasadzka", "straz", "danina", "przesilenie"] as const) {
       expect(staysAs(id), id).toBeNull();
     }
   });
@@ -396,7 +400,7 @@ describe("a Spotkanie's condition", () => {
 
   /** Two live arms are content, not a gate: neither one is „tylko". */
   it("says nothing where both branches act", () => {
-    for (const id of ["sabat-czarownic", "slup-ognia", "poslancy-bogow", "zatrute-ziola"]) {
+    for (const id of ["sabat-czarownic", "slup-ognia", "poslancy-bogow", "zatrute-ziola"] as const) {
       expect(requirementOf(id, "good"), id).toBeNull();
     }
   });

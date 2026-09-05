@@ -8,6 +8,7 @@ import { SCRIPTS } from "./cardScript";
 import { coverageOf, manualNote } from "./coverage";
 import { SPELLS } from "./spells";
 import { USES } from "./uses";
+import { isCardId } from "@/data/ids";
 
 /**
  * Every card the app will ever be asked about — the Zaklęcia included.
@@ -84,7 +85,7 @@ describe("what the app claims about itself", () => {
     expect(coverageOf("krag-plomieni")).not.toBe("brak");
 
     // And the general form, so a fifth registry cannot reopen it quietly.
-    for (const card of [...Object.keys(USES), ...Object.keys(SPELLS)]) {
+    for (const card of [...Object.keys(USES), ...Object.keys(SPELLS)].filter(isCardId)) {
       expect(coverageOf(card), card).not.toBe("brak");
     }
   });

@@ -40,6 +40,7 @@ import { addCardEffect, storedStatuses } from "./turn";
 import type { SeatRow } from "../store";
 import { shutFight } from "./fight";
 import { refuseWhileOverflow } from "./overflow";
+import { isCardId, isSpellId, type SpellId } from "@/data/ids";
 
 /* --------------------------------------------------------------------------
  * Speaking into one.
@@ -185,7 +186,7 @@ function standingSpell(
 ): {
   seatId: string;
   id: string;
-  spell: string;
+  spell: SpellId;
   until: number;
   target: NonNullable<CastSpell["target"]>;
   decided: Decisions | undefined;
@@ -199,10 +200,15 @@ function standingSpell(
     const modifier = row.modifier as { kind: string } & Record<string, unknown>;
     if (modifier.kind !== "spoken") continue;
     if ((modifier.until as number) <= now) continue;
+    // The one id on this row, narrowed rather than asserted: `modifier` is a
+    // jsonb column and „the Zaklęcie in the air" is a Zaklęcie, or this row is
+    // not one of these at all.
+    const spell = modifier.spell;
+    if (typeof spell !== "string" || !isSpellId(spell)) continue;
     return {
       seatId: row.seat_id,
       id: row.id,
-      spell: modifier.spell as string,
+      spell,
       until: modifier.until as number,
       target: (modifier.target ?? {}) as NonNullable<CastSpell["target"]>,
       decided: modifier.decided as Decisions | undefined,
@@ -424,7 +430,7 @@ async function landSpell(
   snapshot: Snapshot,
   input: {
     casterId: string;
-    cardId: string;
+    cardId: SpellId;
     target: NonNullable<CastSpell["target"]>;
     decided?: CastSpell["decided"];
     shuffle?: Shuffle;
@@ -647,8 +653,14 @@ export async function castSpell(
       (h.kind === "spell" || (command.viaFriend === true && h.kind === "carried")),
   );
   if (!held) throw new Error("Ta Postać nie ma tego Zaklęcia.");
+  // The row's `kind` says it is a Zaklęcie; this says it in the id, which is
+  // what everything below wants. The message is the same one, because from a
+  // caster's side a row naming a card the box does not have is a card they do
+  // not have.
+  if (!isSpellId(held.card_id)) throw new Error("Ta Postać nie ma tego Zaklęcia.");
+  const spellId = held.card_id;
 
-  const script = spellScript(held.card_id);
+  const script = spellScript(spellId);
   const spell = SPELL_BY_ID.get(held.card_id);
 
   // 9.7: "Żadne Zaklęcie nie działa na istoty napotkane na Kamiennym Moście ani
@@ -707,7 +719,13 @@ export async function castSpell(
    * whatever it would have done, and 9.6 would otherwise have spent the Karta
    * on the way to doing nothing.
    */
-  if (state.phase === "fight" && refusesArms(state.fight.fought ?? [state.fight.cardId])) {
+  // `fought` is not a list of `CardId`s — a joined pack, a `pole:` guardian —
+  // and only the Przybysz refuses arms, so anything that is not a Karta is not
+  // him. See `Fight.cardId`.
+  if (
+    state.phase === "fight" &&
+    refusesArms((state.fight.fought ?? [state.fight.cardId]).filter(isCardId))
+  ) {
     throw new Error(`${state.fight.cardName}: nie można tu używać Zaklęć.`);
   }
 

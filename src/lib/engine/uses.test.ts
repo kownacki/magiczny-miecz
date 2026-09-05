@@ -49,7 +49,7 @@ describe("which cards are spent by using them", () => {
   it("leaves a card it cannot carry to the table", () => {
     // The Kryształ shifts a fight roll and the Jabłko a Świątynia roll, at a
     // moment nothing can be held across. Claiming those would be a lie.
-    for (const id of ["krysztal-losu", "jablko-natchnienia", "rozdzka-przeznaczenia"]) {
+    for (const id of ["krysztal-losu", "jablko-natchnienia", "rozdzka-przeznaczenia"] as const) {
       expect(usageOf(id)!.rozpatruje, id).toBe("stol");
     }
   });

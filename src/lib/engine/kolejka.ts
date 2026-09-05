@@ -3,6 +3,7 @@
 import { CARD_CLASS, type CardClass } from "@/data/types";
 import { scriptFor } from "./cardScript";
 import { listed, placedFirst, type TurnCard } from "./state";
+import type { CardId } from "@/data/ids";
 
 /**
  * Two words that are not the same word.
@@ -89,7 +90,7 @@ export interface KolejkaFrame {
  * the instruction must be carried out, and an untranscribed card is one nobody
  * has checked — skipping it silently is the worse of the two mistakes.
  */
-export function mayWalkPast(cardId: string): boolean {
+export function mayWalkPast(cardId: CardId): boolean {
   return scriptFor(cardId)?.optional === true;
 }
 

@@ -12,7 +12,7 @@ import { FIELDS, type FieldId } from "@/lib/engine/board";
 import type { Nature, Region } from "@/data/types";
 import type { Character, EventCard, Item, Spell } from "@/data/types";
 import { CARD_CLASS_LABEL, isFoeClass, type CardClass } from "@/data/types";
-import { CardTile, cardKey, type TileCard } from "./card-tile";
+import { CardTile, cardIdOf, cardKey, type TileCard } from "./card-tile";
 import { parkedCard } from "@/lib/engine/disabled";
 import { TileRow } from "./tile-row";
 import { Fold } from "./fold";
@@ -28,6 +28,7 @@ import { fieldWithText } from "@/lib/view/fieldText";
 import { plural } from "@/lib/engine/polish";
 import { fold } from "@/lib/engine/search";
 import { Drawer } from "./drawer";
+import type { CardId } from "@/data/ids";
 
 /**
  * Every card in the box, to look at.
@@ -180,7 +181,7 @@ function FieldChip({
 }) {
   const field = fieldWithText(fieldId);
   const { handlers, preview } = useCardPreview(
-    { cardId: fieldId, name, text: field?.text ?? undefined, kindLabel: "Obszar" },
+    { cardId: fieldId, name, text: field?.text ?? undefined, kindLabel: "Obszar", field: true },
     true,
     eqMode,
   );
@@ -267,7 +268,7 @@ export function CardLibrary({
    * in front of them, and `give` would mean closing it to type the name of the
    * thing they are looking at.
    */
-  onGrant?: (cardId: string) => void;
+  onGrant?: (cardId: CardId) => void;
   /** The reader's own Natura, so a 5.3 restriction says whether it shuts them out. */
   nature?: Nature | null;
   /**
@@ -584,7 +585,10 @@ export function CardLibrary({
                   // Not hidden — a parked Karta keeps its entry on the shelf,
                   // dimmed and crossed out where it lies, the same as any
                   // other card that is done with (`StruckOut`'s own note).
-                  const parked = parkedCard(card.cardId) !== null;
+                  // Asked only of a Karta: the shelf holds Postacie too, and a
+                  // Postać is never parked whole (8.2). See `cardIdOf`.
+                  const asCard = cardIdOf(card);
+                  const parked = asCard !== null && parkedCard(asCard) !== null;
                   return (
                   <CardTile
                     key={card.cardId}
@@ -599,7 +603,7 @@ export function CardLibrary({
                         worse than no button. */}
                     {onGrant && card.holdable && !parked && (
                       <button
-                        onClick={() => onGrant(card.cardId)}
+                        onClick={() => asCard !== null && onGrant(asCard)}
                         className="text-[9px] text-ochre/80 underline transition hover:text-ochre"
                       >
                         weź (test)

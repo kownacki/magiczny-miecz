@@ -5,6 +5,7 @@ import { scriptedRandom } from "@/lib/engine/ports";
 import { resolveFight } from "./spoils";
 import { asSeatCharacter } from "@/lib/engine/characters";
 import type { TurnPhase } from "@/lib/engine/turn";
+import type { CardId } from "@/data/ids";
 
 /**
  * "Po każdej zwycięskiej walce Postać zyskuje także 1 punkt Życia (zabierając
@@ -21,7 +22,7 @@ const fight = (over: {
   raid?: boolean;
   eqMode?: "slots" | "classic";
   slot?: string | null;
-  blade?: string;
+  blade?: CardId;
   theirLife?: number;
   myLife?: number;
 } = {}) =>

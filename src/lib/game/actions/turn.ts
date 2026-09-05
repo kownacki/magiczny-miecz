@@ -3,6 +3,7 @@
 import type { Spoils } from "../commands/spoils";
 import type { Decisions } from "../turnStore";
 import { asFieldId } from "@/lib/engine/board";
+import { requireCardId } from "@/data/ids";
 import type { Body, Requests, TurnAction } from "../requests";
 import { action, type Actions, type RepliesOf } from "./shape";
 import {
@@ -87,7 +88,10 @@ export const TURN = {
   draw: turn({ from: () => undefined, run: (gameId) => drawAll(gameId) }),
   fight: turn({
     // One Wróg, or several at once (17.5) whose Miecze add together.
-    from: (body) => (Array.isArray(body.cardIds) ? body.cardIds.map(String) : [String(body.cardId)]),
+    from: (body) =>
+      Array.isArray(body.cardIds)
+        ? body.cardIds.map((one) => requireCardId(one as string))
+        : [requireCardId(body.cardId as string)],
     run: (gameId, cardIds) => beginFight(gameId, cardIds),
   }),
   "fight-roll": turn({
@@ -201,7 +205,7 @@ export const TURN = {
   // The card's own script, applied by the app for the same reason the field's
   // table is.
   "karta-efekt": turn({
-    from: (body) => ({ cardId: String(body.cardId ?? ""), decided: decisionsFrom(body) }),
+    from: (body) => ({ cardId: requireCardId(body.cardId as string), decided: decisionsFrom(body) }),
     run: (gameId, { cardId, decided }) => resolveDrawnCard(gameId, cardId, decided),
   }),
   /**

@@ -13,7 +13,8 @@ import {
 import type { Status } from "./status";
 import { classOf } from "./cards";
 import { cardRows, describeEffect } from "./effectText";
-import { abilitiesOfCharacter, asCharacterId } from "./characters";
+import { abilitiesOfCharacter } from "./characters";
+import type { CardId, CharacterId } from "@/data/ids";
 import {
   NATURE_LABEL,
   NATURE_LABEL_G,
@@ -73,7 +74,17 @@ export type AbilityWhen = "gdy założony" | "tylko w walce (1.5)" | "warunek";
  */
 export function whenApplies(
   ability: Ability,
-  cardId: string,
+  /**
+   * The Karta the ability is printed on, or null when it is not printed on one.
+   *
+   * A Postać's Charakterystyka is the null case: it is worn nowhere and stowed
+   * nowhere, so the first of the two lines below can never be true of it. It
+   * used to be passed the character id instead, which typechecked while
+   * `CardId` was a `string` and was the same mistake that put „Tylko Postać:
+   * dobra" on a Karta Postaci — `czarodziej` and `demon` each name a Postać and
+   * a Karta.
+   */
+  cardId: CardId | null,
   eqMode: EqMode,
 ): AbilityWhen[] {
   // A requirement is not something that happens at a moment; it is true or the
@@ -88,7 +99,7 @@ export function whenApplies(
    * plecaku" is true of almost everything and so tells a player nothing; the
    * line is worth printing only where there is a condition to meet.
    */
-  if (eqMode === "slots" && isWearable(cardId)) when.push("gdy założony");
+  if (eqMode === "slots" && cardId !== null && isWearable(cardId)) when.push("gdy założony");
 
   /**
    * And when it counts, which is a property of the card and true in both
@@ -141,7 +152,7 @@ export function whenApplies(
  * the Karta happens and is over, and the housekeeping sentence in the rows
  * below still says where it goes.
  */
-export function staysAs(cardId: string): string | null {
+export function staysAs(cardId: CardId): string | null {
   const cardClass = classOf(cardId);
   const resident = cardClass === "stranger" || cardClass === "place";
   if (!resident && cardClass !== "encounter") return null;
@@ -235,8 +246,8 @@ const IS_A_REQUIREMENT = new Set<Ability["kind"]>(["tylko-natura"]);
  */
 const IS_SPECIAL = new Set<Ability["kind"]>(["niedostepny"]);
 
-export function itemProfile(cardId: string, eqMode: EqMode = "classic"): ItemProfile {
-  const abilities = ABILITIES[cardId as keyof typeof ABILITIES] ?? [];
+export function itemProfile(cardId: CardId, eqMode: EqMode = "classic"): ItemProfile {
+  const abilities = ABILITIES[cardId] ?? [];
   const slots = slotsFor(cardId);
   const lines = abilities.map((ability) => ({
     ability,
@@ -258,7 +269,7 @@ export function itemProfile(cardId: string, eqMode: EqMode = "classic"): ItemPro
       ...lines.filter((l) => IS_SPECIAL.has(l.ability.kind)).map((l) => l.fact.what),
       ...specialOf(cardId),
     ],
-    notes: CARD_NOTES[cardId as keyof typeof CARD_NOTES] ?? [],
+    notes: CARD_NOTES[cardId] ?? [],
   };
 }
 
@@ -271,7 +282,7 @@ export function itemProfile(cardId: string, eqMode: EqMode = "classic"): ItemPro
  * not say at all: the prose is right there, and a half-rendered rule reads as
  * the app claiming to know more than it does.
  */
-function specialOf(cardId: string): string[] {
+function specialOf(cardId: CardId): string[] {
   const script = scriptFor(cardId);
   if (!script) return [];
   /**
@@ -326,11 +337,11 @@ function specialOf(cardId: string): string[] {
  * The one place that question is answered, so the rule and the hover cannot
  * disagree about it.
  */
-export function forbiddenNatures(cardId: string): readonly Nature[] | undefined {
+export function forbiddenNatures(cardId: CardId): readonly Nature[] | undefined {
   // 5.3 only, so this stays on the abilities: whom a card may be *held* by is a
   // different question from whom a Nieznajomy serves, and `servedNatures`
   // deliberately answers both for the sheet.
-  const abilities = ABILITIES[cardId as keyof typeof ABILITIES] ?? [];
+  const abilities = ABILITIES[cardId] ?? [];
   const only = abilities.find((ability) => ability.kind === "tylko-natura");
   if (!only || only.kind !== "tylko-natura") return undefined;
   return (["good", "evil", "chaotic"] as const).filter(
@@ -366,16 +377,16 @@ export function forbiddenNatures(cardId: string): readonly Nature[] | undefined 
  * still not a gate: two live arms are content, and the SABAT would otherwise
  * claim to be for Złe Postacie only while changing the Natura of everyone else.
  */
-function wholeCardGate(cardId: string): Extract<Effect, { op: "gdy" }> | null {
+function wholeCardGate(cardId: CardId): Extract<Effect, { op: "gdy" }> | null {
   const effect = scriptFor(cardId)?.effect;
   if (effect?.op !== "gdy") return null;
   return effect.inaczej === undefined || effect.inaczej.op === "nic" ? effect : null;
 }
 
 function servedNatures(
-  cardId: string,
+  cardId: CardId,
 ): { natures: readonly Nature[]; rule: string | null; valence: Valence | null } | undefined {
-  const abilities = ABILITIES[cardId as keyof typeof ABILITIES] ?? [];
+  const abilities = ABILITIES[cardId] ?? [];
   const only = abilities.find((ability) => ability.kind === "tylko-natura");
   // 5.3 is a rule about *holding* a card, so it is cited on the cards it is
   // about. A Nieznajomy serving one Natura is not 5.3 and cites nothing: no
@@ -439,7 +450,7 @@ function subject(reader: Reader): { who: string; a: string; feminine: boolean } 
 }
 
 export function requirementOf(
-  cardId: string,
+  cardId: CardId,
   reader: Nature | null | Reader,
 ): {
   label: string;
@@ -659,9 +670,10 @@ export function describeAggression(
  * merely come back empty: for those two it comes back with somebody else's
  * rules. Which is why this is a separate door rather than a fallback.
  */
-export function characterProfile(characterId: string): ItemProfile {
-  const known = asCharacterId(characterId);
-  const abilities = known ? abilitiesOfCharacter(known) : [];
+export function characterProfile(characterId: CharacterId | null): ItemProfile {
+  // Null is the „Losowa" card, which is nobody yet and has no Charakterystyka
+  // to print — the same answer `startingKit` and `notesForCharacter` give it.
+  const abilities = abilitiesOfCharacter(characterId);
   return {
     // A Postać is not a Karta lying on an Obszar.
     visit: null,
@@ -675,7 +687,7 @@ export function characterProfile(characterId: string): ItemProfile {
       what: describeAbility(ability),
       // A character wears nothing and carries nothing: klasyczny keeps this to
       // the plain answer, and only the combat-only rules narrow it.
-      when: whenApplies(ability, characterId, "classic"),
+      when: whenApplies(ability, null, "classic"),
     })),
   };
 }

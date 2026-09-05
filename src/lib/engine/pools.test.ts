@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { afterVisit, drawsFromPool, poolRemains, startingPool } from "./pools";
 
 /** The three the box gives a pool, and one of each currency. */
-const WELLS = ["drzewo-zycia", "jezioro-magiczne", "zaklete-zrodlo"];
+const WELLS = ["drzewo-zycia", "jezioro-magiczne", "zaklete-zrodlo"] as const;
 
 describe("startingPool (16.7)", () => {
   it("lays out four points at each of the three wells", () => {
@@ -18,7 +18,9 @@ describe("startingPool (16.7)", () => {
   it("lays out nothing for a card of any other class, or none at all", () => {
     expect(startingPool("wilk")).toBeNull();
     expect(startingPool("cudotworca")).toBeNull();
-    expect(startingPool("nie-ma-takiej-karty")).toBeNull();
+    // The line that used to sit here named an id the box does not have. It
+    // cannot be written any more: the parameter is a `CardId`.
+
   });
 });
 

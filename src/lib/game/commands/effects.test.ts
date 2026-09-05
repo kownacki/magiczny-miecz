@@ -21,6 +21,7 @@ import { resolveDrawnCard, resolveFieldOffer, spendHolding } from "./resolving";
 import { EVENT_COPIES } from "../decks";
 import { asFieldId } from "@/lib/engine/board";
 import { asSeatCharacter } from "@/lib/engine/characters";
+import type { CardId } from "@/data/ids";
 
 /** Piles are not shuffled in these; the order in is the order out. */
 const asIs = <T,>(items: readonly T[]): T[] => [...items];
@@ -51,7 +52,7 @@ describe("a threshold on a character's points", () => {
   const lost = { op: "tura-stracona", turns: 1 } as const;
   const labirynt = { op: "gdy", warunek: { is: "prog", stat: "magic", ponizej: 5 }, to: lost } as const;
 
-  const standing = (magicOwn: number, cards: string[] = []) =>
+  const standing = (magicOwn: number, cards: CardId[] = []) =>
     aTable({
       seats: [aSeat({ id: "seat-a", seat_index: 0, magic_own: magicOwn })],
       holdings: cards.map((cardId, at) =>
@@ -552,7 +553,7 @@ describe("moving a Karta that is lying on the board", () => {
  * „Odrzucenie jednej z wyciągniętych Kart i wyciągnięcie w zamian innej."
  */
 describe("swapping the Karta in front of you", () => {
-  const drawn = (over: { drawn?: { cardId: string; cardClass: string }[]; resolved?: string[] } = {}) =>
+  const drawn = (over: { drawn?: { cardId: CardId; cardClass: string }[]; resolved?: string[] } = {}) =>
     aTable({
       seats: [aSeat({ id: "seat-a", seat_index: 0 })],
       game: {
@@ -581,7 +582,7 @@ describe("swapping the Karta in front of you", () => {
   it("puts the Karta back on the used pile and turns over the next", async () => {
     const { writes, result } = await swap(drawn());
     const state = top((writes.game as { turn_state: TurnState }).turn_state) as {
-      drawn: { cardId: string }[];
+      drawn: { cardId: CardId }[];
     };
     expect(state.drawn.map((one) => one.cardId)).toEqual(["wilkolak"]);
     // Odrzucona, not gone: 15.5 draws on that pile when the deck runs out.
@@ -600,7 +601,7 @@ describe("swapping the Karta in front of you", () => {
     });
     const { writes } = await swap(table);
     const state = top((writes.game as { turn_state: TurnState }).turn_state) as {
-      drawn: { cardId: string }[];
+      drawn: { cardId: CardId }[];
     };
     expect(state.drawn.map((one) => one.cardId)).toEqual(["cyklop", "wilkolak"]);
   });
@@ -662,7 +663,7 @@ describe("Kometa sweeps a class of Karta off the whole Krąg", () => {
     expect(writes.fieldCards?.delete).toEqual(["fc-cudotworca"]);
 
     const state = top((writes.game as { turn_state: TurnState }).turn_state) as {
-      drawn: { cardId: string }[];
+      drawn: { cardId: CardId }[];
     };
     expect(state.drawn).toEqual([]);
 
@@ -751,7 +752,7 @@ describe("a Karta that draws three more (SKALNE WROTA)", () => {
     );
 
   const queue = (writes: { game?: { turn_state?: TurnState } }) =>
-    (top(writes.game!.turn_state!) as { drawn: { cardId: string }[] }).drawn.map(
+    (top(writes.game!.turn_state!) as { drawn: { cardId: CardId }[] }).drawn.map(
       (one) => one.cardId,
     );
 
@@ -813,7 +814,7 @@ describe("a Karta that draws three more (SKALNE WROTA)", () => {
  * past in silence and that is indistinguishable from the app losing the Karta.
  */
 describe("a Karta whose instruction comes to nothing", () => {
-  const walk = (over: { cardId?: string } = {}) =>
+  const walk = (over: { cardId?: CardId } = {}) =>
     applyEffect(
       aTable({ seats: [aSeat({ id: "seat-a", seat_index: 0 })] }),
       { seatId: "seat-a", effect: { op: "nic" }, reason: "KARTA", shuffle: asIs, ...over },
@@ -974,7 +975,7 @@ describe("the rest of the vocabulary", () => {
  * ----------------------------------------------------------------------- */
 
 
-const holding = (cardId: string) =>
+const holding = (cardId: CardId) =>
   aTable({
     game: { active_seat: 0 },
     seats: [aSeat({ id: "seat-a", seat_index: 0, field_id: "karczma" })],
@@ -1143,7 +1144,7 @@ describe("settling one of two copies", () => {
 
   const settledEach = (table: ReturnType<typeof twice>, writes: Parameters<typeof apply>[1]) => {
     const field = top(apply(table, writes).game.turn_state) as {
-      drawn: { cardId: string; nth?: number }[];
+      drawn: { cardId: CardId; nth?: number }[];
       resolved?: string[];
     };
     return field.drawn.map((one) => listed(field.resolved ?? [], one));
@@ -1178,7 +1179,7 @@ describe("settling one of two copies", () => {
 });
 
 describe("a Karta drawn onto the Obszar (16.1)", () => {
-  const drawn = (cardId: string) =>
+  const drawn = (cardId: CardId) =>
     aTable({
       game: {
         active_seat: 0,
@@ -1200,9 +1201,11 @@ describe("a Karta drawn onto the Obszar (16.1)", () => {
   });
 
   it("hands an untranscribed Karta to the table rather than guessing", async () => {
-    const unknown = drawn("nie-ma-takiej-karty");
+    // A Karta in the box that nobody has transcribed, which is what
+    // „untranscribed" means now that the parameter is a `CardId`.
+    const unknown = drawn("arondight");
     await expect(
-      resolveDrawnCard(unknown, { cardId: "nie-ma-takiej-karty", shuffle: asIs }, ports()),
+      resolveDrawnCard(unknown, { cardId: "arondight", shuffle: asIs }, ports()),
     ).rejects.toThrow(/rozpatrzcie sami/);
   });
 
@@ -1241,7 +1244,7 @@ describe("a Karta drawn onto the Obszar (16.1)", () => {
  * as many words.
  */
 describe("resolving a Karta that only offers itself (12.1)", () => {
-  const lying = (drawn: { cardId: string; cardClass: string }[], resolved: string[] = []) =>
+  const lying = (drawn: { cardId: CardId; cardClass: string }[], resolved: string[] = []) =>
     aTable({
       game: {
         active_seat: 0,
@@ -1258,7 +1261,7 @@ describe("resolving a Karta that only offers itself (12.1)", () => {
       seats: [aSeat({ id: "seat-a", seat_index: 0, field_id: asFieldId("wrzosowiska") })],
     });
 
-  const wrogFirst = [
+  const wrogFirst: { cardId: CardId; cardClass: string }[] = [
     { cardId: "targowisko", cardClass: "place" },
     { cardId: "cyklop", cardClass: "foe" },
   ];

@@ -12,6 +12,7 @@ import { addEffect, keepOnly, storedStatuses } from "./turn";
 import { castSpell, type Cast, type CastSpell } from "./spells";
 import { takeCard } from "./holdings";
 import { asReturnable, putOnPile } from "./piles";
+import type { CardId } from "@/data/ids";
 
 /**
  * Why the friend mechanics are in two places.
@@ -190,7 +191,7 @@ export function partWithFriend(
   };
 }
 
-export function payFriend(snapshot: Snapshot, command: { seatId?: string }): Outcome<string> {
+export function payFriend(snapshot: Snapshot, command: { seatId?: string }): Outcome<CardId> {
   const seat = command.seatId ? seatById(snapshot, command.seatId) : activeSeat(snapshot);
   const view = seatView(snapshot, seat.id);
   const terms = sellsPoints(

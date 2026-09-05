@@ -3,6 +3,7 @@
 import events from "@/data/events.json";
 import { CARD_CLASS, isFoeClass, type CardClass, type EventCard } from "@/data/types";
 import type { CombatKind } from "./combat";
+import type { CardId } from "@/data/ids";
 
 /**
  * The same two numbers appear on cards that fight and on cards you carry, and
@@ -64,11 +65,11 @@ export interface FightRounds {
  * the point. "How many fights is this creature" is a question about the card,
  * asked in one place, and the map is where a second such creature would go.
  */
-const FIGHTS_IN_ROUNDS: ReadonlyMap<string, FightRounds> = new Map([
+const FIGHTS_IN_ROUNDS: ReadonlyMap<CardId, FightRounds> = new Map<CardId, FightRounds>([
   ["trogglowy-smok", { times: 3, round: "głowa" }],
 ]);
 
-export function roundsOf(cardId: string): FightRounds | null {
+export function roundsOf(cardId: CardId): FightRounds | null {
   return FIGHTS_IN_ROUNDS.get(cardId) ?? null;
 }
 
@@ -91,7 +92,7 @@ const MAGICAL = new Set(
     .map((card) => card.id),
 );
 
-export function isMagicalItem(cardId: string): boolean {
+export function isMagicalItem(cardId: CardId): boolean {
   return MAGICAL.has(cardId);
 }
 
@@ -103,9 +104,9 @@ export function isMagicalItem(cardId: string): boolean {
  * and for the same reason: "what is different about fighting this creature" is
  * a question about the card, asked in one place.
  */
-const REFUSES_ARMS = new Set(["przybysz-z-krainy-cieni"]);
+const REFUSES_ARMS = new Set<CardId>(["przybysz-z-krainy-cieni"]);
 
-export function refusesArms(cardIds: readonly string[]): boolean {
+export function refusesArms(cardIds: readonly CardId[]): boolean {
   return cardIds.some((cardId) => REFUSES_ARMS.has(cardId));
 }
 
@@ -119,7 +120,7 @@ export function refusesArms(cardIds: readonly string[]): boolean {
  * are not Broń are the two Różdżki, both Magiczne. So the union is right at
  * both edges, and neither half of it reaches a Tarcza, a Hełm or a Przyjaciel.
  */
-export function isArms(cardId: string, wornIn: readonly string[]): boolean {
+export function isArms(cardId: CardId, wornIn: readonly string[]): boolean {
   return isMagicalItem(cardId) || wornIn.includes("main-hand");
 }
 
@@ -184,23 +185,23 @@ export function bonusOf(card: Pick<EventCard, "cardClass" | "miecz" | "magia">):
  */
 const NUMERAL = ["", "I", "II", "III", "IV", "V", "VI"] as const;
 
-const CLASS_BY_ID = new Map<string, CardClass>(
+const CLASS_BY_ID = new Map<CardId, CardClass>(
   (events as EventCard[]).map((card) => [card.id, card.cardClass] as const),
 );
 
 /** The class a card belongs to, or null for anything that is not a Karta Zdarzeń. */
-export function classOf(cardId: string): CardClass | null {
+export function classOf(cardId: CardId): CardClass | null {
   return CLASS_BY_ID.get(cardId) ?? null;
 }
 
 /** What is printed at the top of the card, or null when nothing is. */
-export function numeralOf(cardId: string): string | null {
+export function numeralOf(cardId: CardId): string | null {
   const cardClass = classOf(cardId);
   return cardClass ? NUMERAL[CARD_CLASS[cardClass]] : null;
 }
 
 /** What the numeral means, said in full for a hover. */
-export function numeralMeaning(cardId: string): string | null {
+export function numeralMeaning(cardId: CardId): string | null {
   const cardClass = classOf(cardId);
   if (!cardClass) return null;
   return (

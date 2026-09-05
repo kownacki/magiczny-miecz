@@ -3,18 +3,22 @@ import events from "@/data/events.json";
 import items from "@/data/items.json";
 import type { EventCard, Item } from "@/data/types";
 import { SLOTS, SLOT_LABEL, SLOT_OF, fitsIn, isWearable, slotsFor } from "./slots";
+import type { CardId } from "@/data/ids";
 
 /** Every Przedmiot in the box, by id, from both the event deck and the shop. */
-const ITEM_IDS = new Set<string>([
+const ITEM_IDS = new Set<CardId>([
   ...(events as EventCard[]).filter((c) => c.cardClass === "item").map((c) => c.id),
   ...(items as Item[]).map((i) => i.id),
 ]);
+
+/** The same list as bare names, for the one check whose input is `Object.keys`. */
+const ITEM_ID_NAMES: ReadonlySet<string> = new Set(ITEM_IDS);
 
 describe("slotted equipment", () => {
   it("only assigns places to cards that exist", () => {
     // A typo in the map would otherwise sit there doing nothing until somebody
     // wondered why their Excalibur would not go in a hand.
-    expect(Object.keys(SLOT_OF).filter((id) => !ITEM_IDS.has(id))).toEqual([]);
+    expect(Object.keys(SLOT_OF).filter((id) => !ITEM_ID_NAMES.has(id))).toEqual([]);
   });
 
   it("gives every place at least one card and a label", () => {
@@ -47,7 +51,7 @@ describe("slotted equipment", () => {
   it("takes a weapon in the main hand and a shield in the off one, and neither in the other", () => {
     // A weapon in each hand is a character ability nobody in this box has, so
     // until somebody does, a sword goes where a sword goes.
-    for (const weapon of ["miecz", "excalibur", "swieta-wlocznia", "rozdzka-zaklec"]) {
+    for (const weapon of ["miecz", "excalibur", "swieta-wlocznia", "rozdzka-zaklec"] as const) {
       expect(fitsIn(weapon, "main-hand")).toBe(true);
       expect(fitsIn(weapon, "off-hand")).toBe(false);
     }
@@ -61,7 +65,7 @@ describe("slotted equipment", () => {
     // going for the win was fighting the rest of the game unarmed.
     expect(fitsIn("magiczny-miecz", "magiczny-miecz")).toBe(true);
     expect(fitsIn("magiczny-miecz", "main-hand")).toBe(false);
-    for (const shield of ["tarcza-tolimana", "tarcza-boga-tolimana"]) {
+    for (const shield of ["tarcza-tolimana", "tarcza-boga-tolimana"] as const) {
       expect(fitsIn(shield, "tarcza-tolimana")).toBe(true);
       expect(fitsIn(shield, "off-hand")).toBe(false);
     }
@@ -80,7 +84,7 @@ describe("slotted equipment", () => {
       "zwierciadlo-zniszczenia",
       "srebrna-strzala",
       "latarnia",
-    ]) {
+    ] as const) {
       expect(ITEM_IDS.has(id)).toBe(true);
       expect(isWearable(id)).toBe(false);
     }
@@ -89,8 +93,12 @@ describe("slotted equipment", () => {
   it("has nothing that takes both hands", () => {
     // Checked against the art: the Włócznia and the Topór are the only
     // candidates by weapon type and both are drawn in one gauntleted hand.
-    for (const id of Object.keys(SLOT_OF)) {
-      expect(slotsFor(id).length).toBe(1);
+    // Walked over the box rather than over `SLOT_OF`'s keys, which
+    // `Object.keys` hands back as bare strings: every wearable Przedmiot is a
+    // key here, and the test above is what holds the two lists together.
+    for (const id of ITEM_IDS) {
+      if (!isWearable(id)) continue;
+      expect(slotsFor(id).length, id).toBe(1);
     }
   });
 
@@ -108,7 +116,7 @@ describe("slotted equipment", () => {
       "czarodziejska-kosc",
       "jablko-natchnienia",
       "owoc-jarzebiny-wiedzy",
-    ]) {
+    ] as const) {
       expect(ITEM_IDS.has(id)).toBe(true);
       expect(isWearable(id)).toBe(false);
     }
@@ -116,10 +124,10 @@ describe("slotted equipment", () => {
 
   it("puts everything that carries things in the mount or bag place", () => {
     // The cards rule 5.4 names as transport, plus the two sakwy.
-    for (const id of ["kon", "mul", "zaprzeg", "wierzchowiec", "bojowy-rumak"]) {
+    for (const id of ["kon", "mul", "zaprzeg", "wierzchowiec", "bojowy-rumak"] as const) {
       expect(slotsFor(id)).toEqual(["mount"]);
     }
-    for (const id of ["magiczna-sakwa", "tajemna-sakwa"]) {
+    for (const id of ["magiczna-sakwa", "tajemna-sakwa"] as const) {
       expect(slotsFor(id)).toEqual(["pouch"]);
     }
   });
@@ -164,13 +172,13 @@ describe("every Przedmiot in the box, one at a time", () => {
    */
   describe("what goes in the Tajemna Sakwa", () => {
     it("takes an ordinary Przedmiot, worn or not", () => {
-      for (const id of ["miecz", "helm", "kon", "eliksir-sily", "latarnia"]) {
+      for (const id of ["miecz", "helm", "kon", "eliksir-sily", "latarnia"] as const) {
         expect(fitsIn(id, "tajemna-sakwa"), id).toBe(true);
       }
     });
 
     it("refuses the relics, which have places of their own and are already outside 5.4", () => {
-      for (const id of ["magiczny-miecz", "tarcza-tolimana", "tarcza-boga-tolimana"]) {
+      for (const id of ["magiczny-miecz", "tarcza-tolimana", "tarcza-boga-tolimana"] as const) {
         expect(fitsIn(id, "tajemna-sakwa"), id).toBe(false);
       }
     });

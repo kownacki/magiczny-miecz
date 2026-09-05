@@ -12,6 +12,7 @@ import { nextFrame } from "./kolejka";
 import { resolutionOrder, type Holding, type TurnCard } from "./state";
 import type { FieldId } from "./board";
 import type { Nature } from "@/data/types";
+import type { CardId } from "@/data/ids";
 
 const EVENTS = events as EventCard[];
 
@@ -48,7 +49,7 @@ export type HoldingKind = Holding["kind"];
  */
 export function whyNotCollectHere(
   /** Everything lying on the Obszar, both lists together. */
-  lying: readonly { cardId: string }[],
+  lying: readonly { cardId: CardId }[],
   /** Karty already settled this turn — fought, fled from, or worked through. */
   settled: readonly string[],
   /** Karty the Obszar still owes (13.4). */
@@ -70,7 +71,7 @@ export function whyNotCollectHere(
  * standing is attacking them (16.2).
  */
 export function whyFoeStandsHere(
-  lying: readonly { cardId: string }[],
+  lying: readonly { cardId: CardId }[],
   settled: readonly string[],
 ): string | null {
   const found = lying.find((one) => {
@@ -82,7 +83,7 @@ export function whyFoeStandsHere(
   return `Najpierw ${nameOf(found.cardId)} — dopiero potem zbieranie (12.1a).`;
 }
 
-const nameOf = (cardId: string) => EVENTS.find((card) => card.id === cardId)?.name ?? cardId;
+const nameOf = (cardId: CardId) => EVENTS.find((card) => card.id === cardId)?.name ?? cardId;
 
 /**
  * The rest of 12.1's window, closed while the Obszar's kolejka is unfinished.
@@ -107,7 +108,7 @@ const nameOf = (cardId: string) => EVENTS.find((card) => card.id === cardId)?.na
  * each Karta's own text decides, through `mayWalkPast`.
  */
 export function whyQueuedHere(
-  lying: readonly { cardId: string; unattackable?: true }[],
+  lying: readonly { cardId: CardId; unattackable?: true }[],
   settled: readonly string[],
 ): string | null {
   const cards: TurnCard[] = [];
@@ -261,7 +262,7 @@ export interface HeldTotals {
  * card nobody has encoded an ability for (the Relikwiarz) is exactly the kind
  * of fact a second, hand-rolled lookup would quietly drop.
  */
-export function lentBy(cardId: string): Lent | undefined {
+export function lentBy(cardId: CardId): Lent | undefined {
   return BONUS_BY_ID.get(cardId);
 }
 
@@ -288,7 +289,7 @@ export function lentBy(cardId: string): Lent | undefined {
  * Friends are never worn and always count. So are trophies, which are not
  * carried at all but kept for trading (1.4).
  */
-export function inEffect<T extends { cardId: string; slot?: string | null }>(
+export function inEffect<T extends { cardId: CardId; slot?: string | null }>(
   holdings: readonly T[],
   eqMode: EqMode,
   /**
@@ -311,7 +312,7 @@ export function inEffect<T extends { cardId: string; slot?: string | null }>(
    */
   nature: Nature | null = null,
 ): T[] {
-  const allowed = (cardId: string) => {
+  const allowed = (cardId: CardId) => {
     if (nature === null) return true;
     const forbidden = forbiddenNatures(cardId);
     return !forbidden || !forbidden.includes(nature);
@@ -347,7 +348,7 @@ export function forbiddenSaid(name: string): string {
   return `${name} — twoja Natura nie pozwala ci tego użyć (5.3).`;
 }
 
-export function forbiddenTo(cardId: string, nature: Nature | null): boolean {
+export function forbiddenTo(cardId: CardId, nature: Nature | null): boolean {
   if (nature === null) return false;
   const forbidden = forbiddenNatures(cardId);
   return Boolean(forbidden?.includes(nature));
@@ -377,7 +378,7 @@ export function forbiddenTo(cardId: string, nature: Nature | null): boolean {
  * the rule.
  */
 export function forbiddenIn(
-  cardId: string,
+  cardId: CardId,
   slot: Slot | null,
   nature: Nature | null,
   eqMode: EqMode,
@@ -408,7 +409,7 @@ function countsAsUsing(slot: Slot | null, eqMode: EqMode): boolean {
  */
 export function characterForbiddenIn(
   abilities: readonly Ability[],
-  cardId: string,
+  cardId: CardId,
   slot: Slot | null,
   eqMode: EqMode,
 ): boolean {
@@ -561,7 +562,7 @@ export function visibleTo<T extends Holding>(
  * Klasyczny has no places, so the answer there is always the Plecak.
  */
 export function slotOnArrival(arriving: {
-  cardId: string;
+  cardId: CardId;
   kind: string;
   eqMode: EqMode;
   nature: Nature | null;
@@ -588,7 +589,7 @@ export function slotOnArrival(arriving: {
  * taken mid-game (4.4).
  */
 export function slotsOnArrival(
-  arriving: readonly { cardId: string; kind: string }[],
+  arriving: readonly { cardId: CardId; kind: string }[],
   at: { eqMode: EqMode; nature: Nature | null; worn: readonly (Slot | null)[] },
 ): (Slot | null)[] {
   const worn = [...at.worn];
@@ -619,7 +620,7 @@ export function slotsOnArrival(
  */
 export function whyPackIsFull(
   arriving: {
-    cardId: string;
+    cardId: CardId;
     kind: HoldingKind;
     eqMode: EqMode;
     nature: Nature | null;

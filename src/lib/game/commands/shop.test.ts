@@ -8,6 +8,7 @@ import { TROPHY_RATE, buyGoods, offerOn, payHealer, sellHolding, tradeTrophies }
 import { goodsId } from "@/lib/engine/goods";
 import { only } from "@/lib/engine/stack";
 import type { TurnPhase } from "@/lib/engine/turn";
+import type { CardId } from "@/data/ids";
 
 /** The board's own establishments, read off `fieldScript.ts` rather than guessed. */
 const GROD = asFieldId("grod")!; // Lichwiarz, 1 Sz. Z.
@@ -217,7 +218,7 @@ describe("trading trophies (1.4)", () => {
    * only thing this block has to prove is that no Karta goes back twice.
    */
   describe("in punkty mode", () => {
-    const scoring = (cardIds: string[], sword = 2) =>
+    const scoring = (cardIds: CardId[], sword = 2) =>
       aTable({
         game: { trophy_mode: "points" },
         seats: [aSeat({ id: "seat-a", sword_own: sword })],

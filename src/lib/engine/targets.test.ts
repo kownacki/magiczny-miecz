@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { seatsTargeted, type TargetSeat } from "./targets";
+import { CHARACTER_IDS } from "@/data/ids";
 
 function seat(seatIndex: number, over: Partial<TargetSeat> = {}): TargetSeat {
   return {
     seatIndex,
-    characterId: `postac-${seatIndex}`,
+    // A real Postać per chair: the ids only have to differ.
+    characterId: CHARACTER_IDS[seatIndex],
     fieldId: "karczma",
     nature: "good",
     eliminated: false,

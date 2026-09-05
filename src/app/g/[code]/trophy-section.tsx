@@ -451,7 +451,7 @@ function TrophyTile({
   inTrade,
   onPick,
 }: {
-  cardId: string;
+  cardId: CardId;
   /**
    * What he counts for towards 1.4's sevens, worked out where the shelf is —
    * the Sobowtór's is his holder's own Miecz, which a tile has no way to know.
@@ -473,11 +473,10 @@ function TrophyTile({
   onPick?: () => void;
 }) {
   const name = CARD_NAMES.get(cardId) ?? cardId;
-  // `trophy_beaten` is a `text[]` off the wire, so it is narrowed here rather
-  // than trusted — the one boundary this component has. An id the box does not
-  // know draws its own name and no picture, which is what `tileFor` does with
-  // anything it cannot place.
-  const card = tileFor({ cardId: cardId as CardId, kind: "trophy" });
+  // `trophy_beaten` is a `text[]` in the column and becomes a list of `CardId`s
+  // at `seatsFor`, where every other stored id is narrowed. It used to be cast
+  // to one here instead, which looked like the boundary and checked nothing.
+  const card = tileFor({ cardId, kind: "trophy" });
   return (
     <ItemSlot
       item={{ holdingId: cardId, cardId, card, inert: false }}

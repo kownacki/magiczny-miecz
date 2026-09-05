@@ -14,6 +14,8 @@ import {
   takeCard,
   takeFromField,
 } from "./holdings";
+import { requireCardId, type CardId } from "@/data/ids";
+import type { FieldCardRow } from "../store";
 import {
   equipCard,
   reorderPack,
@@ -143,9 +145,10 @@ describe("taking a card", () => {
   });
 
   it("refuses a card it has never heard of", () => {
-    expect(() => takeCard(table(), { seatId: "seat-a", cardId: "smok-z-tarnowa" })).toThrow(
-      "Nieznana karta: smok-z-tarnowa",
-    );
+    // The refusal moved to the door. Every command below takes a `CardId`, so a
+    // name the box does not have is turned away by `requireCardId` where the
+    // request is read — before any of them sees it.
+    expect(() => requireCardId("smok-z-tarnowa")).toThrow("nie ma takiej Karty");
   });
 
   /** A Spotkanie is read and set aside; nobody carries one. */
@@ -212,7 +215,7 @@ describe("taking a card", () => {
     it("lets a full pack still put something on", () => {
       // Four things that cannot be worn, so the pack is full and the body bare.
       const full = slotted({
-        holdings: ["lodz", "latarnia", "kij-i-sznur", "kij-i-sznur"].map((cardId, at) =>
+        holdings: (["lodz", "latarnia", "kij-i-sznur", "kij-i-sznur"] as const).map((cardId, at) =>
           aHolding({ id: `p${at}`, seat_id: "seat-a", card_id: cardId, slot: null }),
         ),
       });
@@ -374,7 +377,7 @@ describe("taking a card", () => {
   /** 5.4: four Przedmioty, and a Wróg or a Przyjaciel is neither. */
   it("refuses a fifth Przedmiot (5.4)", () => {
     const full = table({
-      holdings: ["helm", "tarcza", "miecz", "zbroja"].map((cardId, i) =>
+      holdings: (["helm", "tarcza", "miecz", "zbroja"] as const).map((cardId, i) =>
         aHolding({ id: `h${i}`, card_id: cardId, kind: "item" }),
       ),
     });
@@ -385,7 +388,7 @@ describe("taking a card", () => {
 
   it("still takes a Przyjaciel with a full pack (6.3 puts no limit on them)", () => {
     const full = table({
-      holdings: ["helm", "tarcza", "miecz", "zbroja"].map((cardId, i) =>
+      holdings: (["helm", "tarcza", "miecz", "zbroja"] as const).map((cardId, i) =>
         aHolding({ id: `h${i}`, card_id: cardId, kind: "item" }),
       ),
     });
@@ -397,10 +400,10 @@ describe("taking a card", () => {
    * is not on the pile — held by anybody, or lying on any field.
    */
   it("refuses a shop card when every printed copy is already in play (21.2)", () => {
-    const printed = PRINTED_STOCK["magiczny-miecz"];
+    const printed = PRINTED_STOCK["magiczny-miecz"] ?? 0;
     expect(printed).toBeGreaterThan(0);
     const gone = table({
-      fieldCards: Array.from({ length: printed }, (_, i) => ({
+      fieldCards: Array.from({ length: printed }, (_, i): FieldCardRow => ({
         id: `fc${i}`,
         field_id: ELSEWHERE,
         card_id: "magiczny-miecz",
@@ -756,7 +759,7 @@ describe("wearing a Przedmiot (slotowy)", () => {
  * ======================================================================= */
 
 describe("picking something up off the Obszar (12.1)", () => {
-  const lying = { id: "fc1", field_id: HERE, card_id: "helm", granted: false, pool: null };
+  const lying: FieldCardRow = { id: "fc1", field_id: HERE, card_id: "helm", granted: false, pool: null };
 
   const table = (over: Parameters<typeof aTable>[0] = {}) =>
     aTable({
@@ -865,8 +868,8 @@ describe("picking something up off the Obszar (12.1)", () => {
 
   /** The field card goes first, so 21.2's stock does not count it twice. */
   it("counts the copy it is lifting as gone before checking the stock (21.2)", () => {
-    const printed = PRINTED_STOCK["tarcza-tolimana"];
-    const all = Array.from({ length: printed }, (_, i) => ({
+    const printed = PRINTED_STOCK["tarcza-tolimana"] ?? 0;
+    const all = Array.from({ length: printed }, (_, i): FieldCardRow => ({
       id: `fc${i}`,
       field_id: HERE,
       card_id: "tarcza-tolimana",
@@ -918,9 +921,10 @@ describe("placing a card by fiat", () => {
   });
 
   it("refuses a card it has never heard of", () => {
-    expect(() => placeCard(table(), { seatId: "seat-a", cardId: "gruszka", target: null })).toThrow(
-      "Nie wiem, czym jest: gruszka",
-    );
+    // The refusal moved to the door. Every command below takes a `CardId`, so a
+    // name the box does not have is turned away by `requireCardId` where the
+    // request is read — before any of them sees it.
+    expect(() => requireCardId("gruszka")).toThrow("nie ma takiej Karty");
   });
 
   it("refuses an unknown seat", () => {
@@ -989,9 +993,10 @@ describe("granting a card by fiat", () => {
   });
 
   it("refuses a card it has never heard of", () => {
-    expect(() => grantCard(table(), { seatId: "seat-a", cardId: "gruszka" })).toThrow(
-      "Nie wiem, czym jest: gruszka",
-    );
+    // The refusal moved to the door. Every command below takes a `CardId`, so a
+    // name the box does not have is turned away by `requireCardId` where the
+    // request is read — before any of them sees it.
+    expect(() => requireCardId("gruszka")).toThrow("nie ma takiej Karty");
   });
 });
 
@@ -1003,7 +1008,7 @@ describe("granting a card by fiat", () => {
  * an arriving turn. A test table that dressed a field had no way to undress it.
  */
 describe("clearing an Obszar", () => {
-  const table = (cards: { id: string; card_id: string; granted?: boolean }[]) =>
+  const table = (cards: { id: string; card_id: CardId; granted?: boolean }[]) =>
     aTable({
       seats: [aSeat({ id: "seat-a", field_id: HERE })],
       fieldCards: cards.map((one) => ({
@@ -1117,7 +1122,7 @@ describe("clearing an Obszar", () => {
    * only the app knows which.
    */
   describe("and the Karty the turn is holding face up", () => {
-    const standing = (drawn: { cardId: string; granted?: boolean }[], over: Record<string, unknown> = {}) =>
+    const standing = (drawn: { cardId: CardId; granted?: boolean }[], over: Record<string, unknown> = {}) =>
       aTable({
         seats: [aSeat({ id: "seat-a", field_id: HERE })],
         game: {

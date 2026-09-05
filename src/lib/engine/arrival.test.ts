@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { STARTING_KIT } from "./characters";
+import { STARTING_KIT, type StartingKit } from "./characters";
 import { slotOnArrival, slotsOnArrival } from "./holdings";
 import { slotsFor } from "./slots";
+import type { CardId } from "@/data/ids";
 
 /**
  * Where a Przedmiot lands when it arrives, whichever way it arrived.
@@ -13,7 +14,7 @@ import { slotsFor } from "./slots";
  * nothing.
  */
 
-const arriving = (...cardIds: string[]) => cardIds.map((cardId) => ({ cardId, kind: "item" }));
+const arriving = (...cardIds: CardId[]) => cardIds.map((cardId) => ({ cardId, kind: "item" }));
 const at = (worn: (string | null)[] = []) => ({
   eqMode: "slots" as const,
   nature: null,
@@ -39,13 +40,13 @@ describe("a Przedmiot arriving", () => {
     // TOPÓR ŚWIATŁA I CIEMNOŚCI: "nie może być w posiadaniu Chaotycznych".
     const chaotic = { eqMode: "slots" as const, nature: "chaotic" as const, worn: [] };
     const good = { eqMode: "slots" as const, nature: "good" as const, worn: [] };
-    const card = { cardId: "topor-swiatla-i-ciemnosci", kind: "item" };
+    const card = { cardId: "topor-swiatla-i-ciemnosci" as CardId, kind: "item" };
     expect(slotOnArrival({ ...card, ...chaotic })).toBeNull();
     expect(slotOnArrival({ ...card, ...good })).not.toBeNull();
   });
 
   it("goes in the Plecak for anything that is not a Przedmiot", () => {
-    for (const kind of ["friend", "spell", "trophy", "carried"]) {
+    for (const kind of ["friend", "spell", "trophy", "carried"] as const) {
       expect(slotOnArrival({ cardId: "helm", kind, ...at() }), kind).toBeNull();
     }
   });
@@ -80,7 +81,7 @@ describe("several arriving together", () => {
  * says so rather than quietly dropping it in the Plecak.
  */
 describe("wyposażenie początkowe w wariancie slotowym", () => {
-  const kitOf = (kit: unknown) => (kit as { items?: readonly string[] }).items ?? [];
+  const kitOf = (kit: StartingKit | undefined) => kit?.items ?? [];
 
   it("finds a place for every starting Przedmiot in the box", () => {
     const homeless: string[] = [];

@@ -26,6 +26,7 @@ import spells from "@/data/spells.json";
 import type { Character, EventCard, Item, Spell } from "@/data/types";
 import { FIELDS, type FieldId } from "./board";
 import type { Effect, Target } from "./cardScript";
+import type { CardId } from "@/data/ids";
 
 /** Polish counts three ways, and the game deals in small numbers. */
 export function plural(n: number, one: string, few: string, many: string): string {
@@ -57,6 +58,12 @@ export function fieldName(fieldId: FieldId): string {
  * Two of the five that card names are expansion characters and are in no box
  * here (see `oprocz` in `cardScript.ts`), so a miss is expected rather than a
  * fault and falls back to the id like the other two lookups.
+ */
+/*
+ * `string` on both of these, deliberately. Two Postacie a base-game card names
+ * — the Zaklinacz Czasu's CZARODZIEJKA and SZCZĘŚCIARZ — are expansion cards
+ * and are in no `CharacterId`, so narrowing the parameter would make the two
+ * ids these functions exist to answer for unwritable. See `NOT_IN_THIS_BOX`.
  */
 export function characterName(characterId: string): string {
   return (
@@ -105,7 +112,7 @@ export function isInThisBox(characterId: string): boolean {
  * off a column and answers "—" for an empty one. Those fallbacks are the
  * surfaces' own sentences, not this lookup wearing a guard.
  */
-export function cardName(cardId: string): string {
+export function cardName(cardId: CardId): string {
   return (
     (events as EventCard[]).find((card) => card.id === cardId)?.name ??
     (items as Item[]).find((item) => item.id === cardId)?.name ??

@@ -13,6 +13,7 @@ import { USE_VERB_PAST } from "./uses";
 import type { Ends } from "./status";
 import { describeEnd } from "./statusRows";
 import type { JournalKind } from "./journal";
+import type { SeatCharacter } from "./characters";
 
 /** One row of `magiczny_miecz.moves`, as the route hands it over. */
 export interface JournalEntry {
@@ -64,7 +65,7 @@ export interface JournalSeat {
   id: string;
   seatIndex: number;
   playerName: string | null;
-  characterId: string | null;
+  characterId: SeatCharacter | null;
 }
 
 /**

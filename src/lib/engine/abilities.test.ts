@@ -3,6 +3,7 @@ import events from "@/data/events.json";
 import items from "@/data/items.json";
 import type { EventCard, Item } from "@/data/types";
 import { bonusOf } from "./cards";
+import type { Holding } from "./state";
 import { bonusFromHoldings } from "./holdings";
 import { FIELDS, type FieldId } from "./board";
 import {
@@ -160,7 +161,7 @@ describe("the two places a bonus can come from", () => {
     // two, and nothing on screen would say so. Read as `walka`, because the
     // encoded ability is `tylkoWalka` — which is the whole point: the corner
     // number cannot say *when*, and the encoding can.
-    const held = [{ cardId: "excalibur", kind: "item" as const, face: "open" as const }];
+    const held: Holding[] = [{ cardId: "excalibur", kind: "item", face: "open" }];
     expect(bonusFromHoldings(held, "classic", "walka")).toEqual({ miecz: 1, magia: 0 });
     expect(bonusFromHoldings(held, "classic", "parametr")).toEqual({ miecz: 0, magia: 0 });
   });
@@ -168,7 +169,7 @@ describe("the two places a bonus can come from", () => {
   it("counts a card whose bonus is only in its text", () => {
     // Srebrna Strzała prints no numbers at all; before it was encoded it added
     // nothing, which was an undercount rather than a safe default.
-    const held = [{ cardId: "srebrna-strzala", kind: "item" as const, face: "open" as const }];
+    const held: Holding[] = [{ cardId: "srebrna-strzala", kind: "item", face: "open" }];
     expect(bonusFromHoldings(held, "classic", "parametr")).toEqual({ miecz: 1, magia: 1 });
   });
 

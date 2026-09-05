@@ -2,7 +2,7 @@
 
 import type { Nature } from "@/data/types";
 import type { FieldId } from "./board";
-import type { CardId } from "@/data/ids";
+import type { CardId, SpellId } from "@/data/ids";
 
 /**
  * Why this exists, and why it is not one big "effect" type.
@@ -79,7 +79,7 @@ export type Ability =
    * is not immunity — it is a ban on a spell an *opponent* would otherwise be
    * free to cast on themselves, which `odporny-na-zaklecie` has no shape for.
    */
-  | { kind: "bez-zaklec"; przeciwnikBez: readonly string[] }
+  | { kind: "bez-zaklec"; przeciwnikBez: readonly SpellId[] }
   /**
    * Passes a named field without what it normally does to you. `rzut` skips a
    * field's die roll entirely (Opiekun, Przewodnik); `life` keeps the point it
@@ -168,7 +168,7 @@ export type Ability =
    */
   | { kind: "bez-oplaty"; fields: readonly FieldId[] }
   /** Cards this character may not hold at all — the Pustelnik bears no blade. */
-  | { kind: "zakazane"; cardIds: readonly string[] }
+  | { kind: "zakazane"; cardIds: readonly CardId[] }
   /**
    * Shifts a die roll, either at named fields or in a kind of fight.
    *
@@ -217,7 +217,7 @@ export type Ability =
    * ability at all: it is read off whoever the Zaklęcie was aimed at, never off
    * the caster.
    */
-  | { kind: "odporny-na-zaklecie"; zaklecia: readonly string[] }
+  | { kind: "odporny-na-zaklecie"; zaklecia: readonly SpellId[] }
   /**
    * Points at named Obszary, on whichever parameter the Obszar reads.
    *
@@ -370,7 +370,7 @@ export type Ability =
    * `modyfikator-rzutu` cannot say this: its `gdzie` knows fields and the kind
    * of fight, never who is being fought.
    */
-  | { kind: "przeciw"; komu: readonly string[]; miecz?: number; magia?: number }
+  | { kind: "przeciw"; komu: readonly CardId[]; miecz?: number; magia?: number }
   /**
    * Points bought by the turn rather than lent for nothing (Najemnik).
    *
@@ -716,18 +716,22 @@ export const ABILITIES: Readonly<Partial<Record<CardId, readonly Ability[]>>> = 
   ],
 };
 
-export function abilitiesOf(cardId: string): readonly Ability[] {
-  // The registry's *keys* are checked — a typo in one of the ~250 card names
-  // above is a compile error, which is the whole point. The lookup itself takes
-  // a plain string on purpose: it is fed card ids that came off the wire or out
-  // of the database, and its contract is already "nothing, if I do not know it".
-  // Narrowing every caller instead would move a runtime miss into a runtime
-  // miss with more ceremony.
-  return ABILITIES[cardId as CardId] ?? [];
+export function abilitiesOf(cardId: CardId): readonly Ability[] {
+  // Both ends are checked now. The registry's *keys* are `CardId`, so a typo in
+  // one of the ~250 card names above is a compile error; and the argument is a
+  // `CardId` too, so a Postać cannot be asked what a Karta of the same name
+  // does. `czarodziej` and `demon` each name both, and this took the parameter
+  // as a plain string for as long as it was fed ids straight off the wire.
+  // It is not any more: a stored `card_id` becomes a `CardId` at `holdingsFor`,
+  // the way a stored `field_id` becomes a `FieldId` at `seatsFor`.
+  //
+  // The registry is still partial, so the contract is unchanged: nothing, for a
+  // card that has no standing rule.
+  return ABILITIES[cardId] ?? [];
 }
 
 /** Every standing rule a seat is currently holding. */
-export function heldAbilities(cardIds: readonly string[]): Ability[] {
+export function heldAbilities(cardIds: readonly CardId[]): Ability[] {
   return cardIds.flatMap((cardId) => abilitiesOf(cardId));
 }
 
@@ -799,13 +803,13 @@ export function isSpared(
  * settles by its own rules. It is not on this list because beating it without a
  * fight would walk a character across the bridge for free.
  */
-const DEMONY: ReadonlySet<string> = new Set(["demon", "ksiaze-demonow"]);
+const DEMONY: ReadonlySet<CardId> = new Set<CardId>(["demon", "ksiaze-demonow"]);
 
 /** Whether a held card beats this Wróg outright, without a fight being fought. */
 export function beatsWithoutFighting(
-  cardIds: readonly string[],
-  foeId: string,
-): string | null {
+  cardIds: readonly CardId[],
+  foeId: CardId,
+): CardId | null {
   for (const cardId of cardIds) {
     for (const ability of abilitiesOf(cardId)) {
       if (ability.kind !== "pokonuje-bez-walki") continue;
@@ -816,10 +820,10 @@ export function beatsWithoutFighting(
 }
 
 export function insteadAgainst(
-  cardIds: readonly string[],
-  foeIds: readonly string[],
-): { cardId: string; miecz: number; magia: number }[] {
-  const swapped: { cardId: string; miecz: number; magia: number }[] = [];
+  cardIds: readonly CardId[],
+  foeIds: readonly CardId[],
+): { cardId: CardId; miecz: number; magia: number }[] {
+  const swapped: { cardId: CardId; miecz: number; magia: number }[] = [];
   for (const cardId of cardIds) {
     for (const ability of abilitiesOf(cardId)) {
       if (ability.kind !== "przeciw") continue;
@@ -830,7 +834,7 @@ export function insteadAgainst(
   return swapped;
 }
 
-export function unavailableIn(cardId: string): "dolny" | null {
+export function unavailableIn(cardId: CardId): "dolny" | null {
   for (const ability of abilitiesOf(cardId)) {
     if (ability.kind === "niedostepny") return ability.region;
   }
@@ -872,7 +876,7 @@ export function spellsOverLimit(abilities: readonly Ability[]): number {
  * their own spell — which is right, and the only reading of "daje odporność"
  * that means anything.
  */
-export function immuneToSpell(abilities: readonly Ability[], spellId: string): boolean {
+export function immuneToSpell(abilities: readonly Ability[], spellId: SpellId): boolean {
   return abilities.some(
     (ability) => ability.kind === "odporny-na-zaklecie" && ability.zaklecia.includes(spellId),
   );
@@ -969,13 +973,13 @@ export function tollIsWaived(abilities: readonly Ability[], fieldId: FieldId): b
  * 13.1, and `standingShopper`'s. This answers only "what is it worth here".
  */
 export function buyerFor(
-  cardId: string,
+  cardId: CardId,
   /** Where the seller is standing; null before anybody has been placed. */
   fieldId: FieldId | null,
   /** What this Obszar's desk pays for anything, or null where there is none. */
   desk: number | null,
   /** Every Karta the seller is carrying, for a desk they are carrying too. */
-  carrying: readonly string[],
+  carrying: readonly CardId[],
 ): { price: number; from: "karta" | "obszar" | "sakwa" } | null {
   const named =
     fieldId === null
@@ -991,7 +995,7 @@ export function buyerFor(
 }
 
 /** Cards this character may never hold (its own Charakterystyka, 8.1). */
-export function isForbidden(abilities: readonly Ability[], cardId: string): boolean {
+export function isForbidden(abilities: readonly Ability[], cardId: CardId): boolean {
   return abilities.some(
     (ability) => ability.kind === "zakazane" && ability.cardIds.includes(cardId),
   );
@@ -1041,7 +1045,7 @@ export function spellWards(abilities: readonly Ability[]): Set<string> {
 }
 
 /** Whether holding this card costs one of the places it opens (5.4). */
-export function fillsAPlace(cardId: string): boolean {
+export function fillsAPlace(cardId: CardId): boolean {
   return !abilitiesOf(cardId).some(
     (ability) => ability.kind === "udzwig" && ability.samaSieNieLiczy === true,
   );
@@ -1136,8 +1140,8 @@ export function entryPrice(
 }
 
 export function raidsForYou(
-  cardIds: readonly string[],
-): { cardId: string; miecz: number; magia: number } | null {
+  cardIds: readonly CardId[],
+): { cardId: CardId; miecz: number; magia: number } | null {
   for (const cardId of cardIds) {
     for (const ability of abilitiesOf(cardId)) {
       if (ability.kind === "walczy-za-ciebie" && ability.tylkoWyprawa) {
@@ -1154,8 +1158,8 @@ export function raidsForYou(
  * spoken. Null when this character has nobody carrying one.
  */
 export function carriesSpell(
-  cardIds: readonly string[],
-): { cardId: string; cena: number; znika: boolean; mozeszObejrzec: boolean } | null {
+  cardIds: readonly CardId[],
+): { cardId: CardId; cena: number; znika: boolean; mozeszObejrzec: boolean } | null {
   for (const cardId of cardIds) {
     for (const ability of abilitiesOf(cardId)) {
       if (ability.kind !== "nosi-zaklecie") continue;
@@ -1171,8 +1175,8 @@ export function carriesSpell(
 }
 
 export function sellsPoints(
-  cardIds: readonly string[],
-): { cardId: string; cena: number; miecz: number; magia: number; razNaTure: boolean } | null {
+  cardIds: readonly CardId[],
+): { cardId: CardId; cena: number; miecz: number; magia: number; razNaTure: boolean } | null {
   for (const cardId of cardIds) {
     for (const ability of abilitiesOf(cardId)) {
       if (ability.kind !== "za-oplata") continue;
@@ -1211,10 +1215,10 @@ export function addsMagiaToMiecz(abilities: readonly Ability[]): boolean {
  * the flag he would offer his life every time you lost a fight of your own.
  */
 export function diesForYou(
-  cardIds: readonly string[],
+  cardIds: readonly CardId[],
   { raiding = false }: { raiding?: boolean } = {},
-): { cardId: string; onRollUpTo?: number }[] {
-  const offers: { cardId: string; onRollUpTo?: number }[] = [];
+): { cardId: CardId; onRollUpTo?: number }[] {
+  const offers: { cardId: CardId; onRollUpTo?: number }[] = [];
   for (const cardId of cardIds) {
     for (const ability of abilitiesOf(cardId)) {
       if (ability.kind !== "ginie-zamiast-ciebie") continue;

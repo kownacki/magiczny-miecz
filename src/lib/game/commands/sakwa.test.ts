@@ -27,9 +27,10 @@ import { inEffect } from "@/lib/engine/holdings";
 import { carryLimit } from "@/lib/engine/derive";
 import { apply } from "../change";
 import type { EqMode } from "@/lib/engine/slots";
+import type { CardId } from "@/data/ids";
 
 const table = (
-  holdings: { card_id: string; slot?: string | null }[],
+  holdings: { card_id: CardId; slot?: string | null }[],
   eqMode: EqMode = "classic",
 ) =>
   aTable({
@@ -44,7 +45,7 @@ const packed = (snapshot: ReturnType<typeof table>, eqMode: EqMode) =>
   carriedCount(snapshot.holdings.map(asHolding), eqMode);
 
 describe("what the Sakwa does to 5.4's count", () => {
-  const withBag = [
+  const withBag: { card_id: CardId; slot?: string | null }[] = [
     { card_id: "tajemna-sakwa" },
     { card_id: "miecz", slot: "tajemna-sakwa" },
     { card_id: "helm" },
@@ -166,7 +167,7 @@ describe("putting something in it", () => {
  * Przedmiot.
  */
 describe("a bag that is not open", () => {
-  const held = (slot: string | null) => [
+  const held = (slot: string | null): { card_id: CardId; slot: string | null }[] => [
     { card_id: "tajemna-sakwa", slot },
     { card_id: "miecz", slot: "tajemna-sakwa" },
   ];
@@ -239,7 +240,7 @@ describe("taking the bag off, end to end", () => {
     await grantCard(gameId, seat, "tajemna-sakwa");
     await grantCard(gameId, seat, "miecz");
 
-    const held = async (cardId: string) =>
+    const held = async (cardId: CardId) =>
       (await activeStore().load(gameId)).holdings.find((one) => one.card_id === cardId)!;
 
     // `grantCard` wears what it can, so the bag is already in the pouch.
@@ -267,7 +268,7 @@ describe("taking the bag off, end to end", () => {
  * every fight would be a strictly better sword for no reason the Karta gives.
  */
 describe("a Karta in the Sakwa is out of play, not on the body", () => {
-  const held = (cardId: string, slot: Slot | null) => ({
+  const held = (cardId: CardId, slot: Slot | null) => ({
     cardId,
     slot,
     kind: "item" as const,

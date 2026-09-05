@@ -12,6 +12,7 @@ import { storedStatuses } from "./turn";
 import type { TurnPhase } from "@/lib/engine/turn";
 import type { FieldId } from "@/lib/engine/board";
 import { asSeatCharacter } from "@/lib/engine/characters";
+import type { CardId } from "@/data/ids";
 
 /**
  * Obszary that do something to whoever stops on them.
@@ -22,7 +23,7 @@ import { asSeatCharacter } from "@/lib/engine/characters";
  * Sznur) had nothing to guard against.
  */
 
-const standing = (field: FieldId, cards: string[] = []) =>
+const standing = (field: FieldId, cards: CardId[] = []) =>
   aTable({
     game: {
       turn_state: {
@@ -74,7 +75,7 @@ describe("the Ruchome Skały (Tracisz 1 Życie)", () => {
   });
 
   it("is kept by the Rękawice and by the Święty Graal", async () => {
-    for (const card of ["rekawice", "swiety-graal"]) {
+    for (const card of ["rekawice", "swiety-graal"] as const) {
       const table = standing("ruchome-skaly-1", [card]);
       const { after, out } = await arrive(table, "ruchome-skaly-1");
       expect(after.seats[0].life).toBe(4);
@@ -149,7 +150,7 @@ describe("the Bagna (Tracisz 1 Przedmiot lub Przyjaciela, wedle własnego wyboru
  * protection of their own, and the Goblin and the Barbarzyńca — the fixture's
  * usual stand-ins — both happen to walk past two of these fields for free.
  */
-const rolling = (field: FieldId, die: number, cards: string[] = []) =>
+const rolling = (field: FieldId, die: number, cards: CardId[] = []) =>
   aTable({
     game: {
       turn_state: {
@@ -171,7 +172,7 @@ const rolling = (field: FieldId, die: number, cards: string[] = []) =>
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } as any) as ReturnType<typeof standing>;
 
-const face = async (field: FieldId, die: number, cards: string[] = []) => {
+const face = async (field: FieldId, die: number, cards: CardId[] = []) => {
   const owed = compulsoryOffer(field, []);
   if (!owed) throw new Error(`nothing owed at ${field}`);
   const table = rolling(field, die, cards);
@@ -264,7 +265,7 @@ describe("Obszary that make you roll", () => {
  * back matching, and the Studnia came back with something missing that the
  * Relikwiarz claims — see the note on its script.
  */
-const asNature = (field: FieldId, nature: "good" | "evil" | "chaotic", cards: string[] = []) =>
+const asNature = (field: FieldId, nature: "good" | "evil" | "chaotic", cards: CardId[] = []) =>
   aTable({
     game: {
       turn_state: {
@@ -292,7 +293,7 @@ const visit = async (
   nature: "good" | "evil" | "chaotic",
   die: number,
   choices: number[] = [],
-  cards: string[] = [],
+  cards: CardId[] = [],
 ) => {
   const table = asNature(field, nature, cards);
   const dice = { random: scriptedRandom([die, die, die]) };
@@ -485,7 +486,7 @@ describe("being held in place, and throwing to get out", () => {
  * them or none — which is neither a `strata` (nobody chooses) nor a `rzut`
  * (one die settling one outcome for the whole seat).
  */
-const onTheCliff = (who: string, friends: string[]) =>
+const onTheCliff = (who: string, friends: CardId[]) =>
   aTable({
     game: {
       turn_state: {
@@ -507,7 +508,7 @@ const onTheCliff = (who: string, friends: string[]) =>
     ),
   });
 
-const walkTheCliff = async (who: string, friends: string[], dice: number[]) => {
+const walkTheCliff = async (who: string, friends: CardId[], dice: number[]) => {
   const table = onTheCliff(who, friends);
   const out = await resolveFieldOffer(
     table,
@@ -581,7 +582,7 @@ describe("the Urwisko, and one die for each Przyjaciel", () => {
  * like boilerplate: it sits under a "WYCIĄGNIJ 2 KARTY" on six different
  * Obszary, and an audit that stripped the draw sentence stripped this with it.
  */
-const meeting = (field: FieldId, foes: string[]) =>
+const meeting = (field: FieldId, foes: CardId[]) =>
   aTable({
     game: {
       active_seat: 0,
@@ -596,7 +597,7 @@ const meeting = (field: FieldId, foes: string[]) =>
     seats: [aSeat({ id: "seat-a", field_id: field })],
   });
 
-const strengthAt = (field: FieldId, foes: string[]) =>
+const strengthAt = (field: FieldId, foes: CardId[]) =>
   (
     top(beginFight(meeting(field, foes), { cardIds: foes }).writes.game!.turn_state!) as {
       fight: { enemyTotal: number };

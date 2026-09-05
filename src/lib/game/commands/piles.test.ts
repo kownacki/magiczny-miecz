@@ -3,6 +3,7 @@ import type { DeckState } from "@/lib/engine/deck";
 import { EVENT_COPIES, SPELL_COPIES, decksOf } from "../decks";
 import { aTable } from "../fixture";
 import { putOnPile, stackAt, stackForDraw, trophiesToPile } from "./piles";
+import type { CardId, SpellId } from "@/data/ids";
 
 /**
  * The one door every card leaves a hand through, and the two things it keeps out.
@@ -20,8 +21,8 @@ import { putOnPile, stackAt, stackForDraw, trophiesToPile } from "./piles";
  * untested exception is how an invariant stops being one.
  */
 
-const eventRef = (cardId: string) => EVENT_COPIES.get(cardId)![0];
-const spellRef = (spellId: string) => SPELL_COPIES.get(spellId)![0];
+const eventRef = (cardId: CardId) => EVENT_COPIES.get(cardId)![0];
+const spellRef = (spellId: SpellId) => SPELL_COPIES.get(spellId)![0];
 const pile = (draw: readonly string[] = [], discard: readonly string[] = []): DeckState => ({
   draw: [...draw],
   discard: [...discard],
@@ -68,7 +69,7 @@ describe("putting a card back (9.5, 21.2)", () => {
 describe("trofea going back (1.4, 4.4)", () => {
   // Rows as the holdings table hands them over, which is what the four callers
   // pass — `trophiesToPile` reads `card_id`, not `cardId`.
-  const beaten = [{ card_id: "cyklop", granted: false }];
+  const beaten: { card_id: CardId; granted: boolean }[] = [{ card_id: "cyklop", granted: false }];
 
   it("sends the Karta back in the mode where it was being hoarded", () => {
     const writes = trophiesToPile(table({ game: { trophy_mode: "cards" } }), beaten);
@@ -97,7 +98,7 @@ describe("trofea going back (1.4, 4.4)", () => {
  */
 describe("stacking a card for the next draw", () => {
   const seatId = "seat-a";
-  const stacked = (over: Parameters<typeof aTable>[0], cardId: string) =>
+  const stacked = (over: Parameters<typeof aTable>[0], cardId: CardId) =>
     stackForDraw(table(over), { seatId, cardId });
 
   it("brings a card up from the middle of the draw pile", () => {

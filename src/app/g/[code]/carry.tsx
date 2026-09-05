@@ -7,6 +7,7 @@ import Image from "next/image";
 import { cardArtUrl } from "@/lib/view/cardImages";
 import { LAYER } from "./layers";
 import { dismissableOpen } from "./overlay";
+import type { CardId } from "@/data/ids";
 
 /**
  * A card picked up and stuck to the pointer.
@@ -22,7 +23,7 @@ import { dismissableOpen } from "./overlay";
  */
 export interface Carried {
   holdingId: string;
-  cardId: string;
+  cardId: CardId;
   name: string;
   /** Where it came from, so putting it back is a no-op rather than a move. */
   from: string | null;
@@ -140,15 +141,15 @@ export function useCarry(): {
   /** On the cursor, put there by a click. */
   carried: Carried | null;
   /** In the air under a held button, said a tick late — see `announceDrag`. */
-  dragging: { cardId: string; holdingId: string } | null;
+  dragging: { cardId: CardId; holdingId: string } | null;
   /** The card that is not where it lives, whichever way it was lifted. */
   lifted: string | null;
   /** Which card it is, for the places that answer whether they would take it. */
-  movingCardId: string | null;
+  movingCardId: CardId | null;
   pickUp: (carried: Carried) => void;
   putDown: () => void;
   /** Says what a drag has picked up, and null when it ends. */
-  announceDrag: (moving: { cardId: string; holdingId: string } | null) => void;
+  announceDrag: (moving: { cardId: CardId; holdingId: string } | null) => void;
 } {
   const [carried, setCarried] = useState<Carried | null>(null);
   /**
@@ -158,7 +159,7 @@ export function useCarry(): {
    * drag is carrying — only the drop is — so without this the place under the
    * pointer could not say whether it would accept before it was let go.
    */
-  const [dragging, setDragging] = useState<{ cardId: string; holdingId: string } | null>(null);
+  const [dragging, setDragging] = useState<{ cardId: CardId; holdingId: string } | null>(null);
 
   /**
    * Says what a drag has picked up — a tick after it picks it up.
@@ -171,7 +172,7 @@ export function useCarry(): {
    * a drag abandoned in the same breath cannot leave a hollow behind.
    */
   const timer = useRef<number | null>(null);
-  const announceDrag = useCallback((moving: { cardId: string; holdingId: string } | null) => {
+  const announceDrag = useCallback((moving: { cardId: CardId; holdingId: string } | null) => {
     if (timer.current !== null) window.clearTimeout(timer.current);
     timer.current = null;
     if (!moving) return setDragging(null);

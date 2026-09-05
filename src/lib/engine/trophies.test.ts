@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { EVENT_IDS, type CardId } from "@/data/ids";
 import {
   TROPHY_RATE,
   mostSwords,
@@ -15,8 +16,16 @@ import {
  * choose. These are the cases where choosing badly costs something real.
  */
 
+/**
+ * A hand of trofea by *value*, which is the only thing the search reads.
+ *
+ * The ids are identities and nothing more, so they are taken off the real deck
+ * in order rather than written as `c0`, `c1` — those are `CardId`s nothing in
+ * the box answers to, and now the compiler says so.
+ */
+const NAMES: readonly CardId[] = EVENT_IDS;
 const hand = (...points: number[]) =>
-  points.map((one, at) => ({ cardId: `c${at}`, points: one }));
+  points.map((one, at) => ({ cardId: NAMES[at], points: one }));
 
 describe("what a hand of trofea can buy", () => {
   it("buys nothing below the rate", () => {
@@ -46,14 +55,14 @@ describe("what a hand of trofea can buy", () => {
    */
   it("breaks a tie towards the earlier Karty", () => {
     const [offer] = offersFor(hand(3, 3, 4));
-    expect(offer.cardIds).toEqual(["c0", "c2"]);
+    expect(offer.cardIds).toEqual([NAMES[0], NAMES[2]]);
   });
 
   it("prefers fewer Karty when two sets waste the same", () => {
     // 7 alone and 3+4 both buy one Miecz and waste nothing. The single card
     // goes, keeping the small denominations back for the next exact seven.
     const [one] = offersFor(hand(7, 3, 4));
-    expect(one.cardIds).toEqual(["c0"]);
+    expect(one.cardIds).toEqual([NAMES[0]]);
   });
 
   it("offers every count the hand can reach, in order", () => {
@@ -104,7 +113,7 @@ describe("what a hand of trofea can buy", () => {
   /** Two Nobbiny are two cards worth the same, not one card counted twice. */
   it("treats equal Karty as separate cards", () => {
     const [one] = offersFor(hand(2, 2, 3));
-    expect([...one.cardIds].sort()).toEqual(["c0", "c1", "c2"]);
+    expect([...one.cardIds].sort()).toEqual([NAMES[0], NAMES[1], NAMES[2]].sort());
   });
 
   /** The whole box, to show the search is not a performance question. */
@@ -188,7 +197,7 @@ describe("every offer is the best the hand can do", () => {
       // Up to ten Karty, each worth what a Wróg in the box is worth (1 to 10).
       const size = roll(10);
       const held = Array.from({ length: size }, (_, at) => ({
-        cardId: `w${at}`,
+        cardId: NAMES[at],
         points: roll(10),
       }));
 
@@ -248,7 +257,9 @@ describe("what a beaten Wróg is worth (1.4, 16.2)", () => {
 
   it("is nothing for a card that is not a Wróg at all", () => {
     expect(trophyPointsOf("helm")).toBe(0);
-    expect(trophyPointsOf("nie-ma-takiej-karty")).toBe(0);
+    // There used to be a second line here, for an id the box does not have.
+    // It cannot be written any more: the parameter is a `CardId`, and a stored
+    // `card_id` that is not one never gets past `holdingsFor`.
   });
 
   /**

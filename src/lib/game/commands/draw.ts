@@ -1,14 +1,14 @@
 /** Taking a card off a pile: the Obszar's Karty Zdarzeń (15.1, 15.2), the Zaklęcia of 9.2 and 9.5, the Różdżka's refill, and what the Wyposażenie has left (21.2). */
 
 import type { EventCard } from "@/data/types";
-import type { EventId } from "@/data/ids";
+import type { CardId, EventId, SpellId } from "@/data/ids";
 import { spellsAtSetup } from "@/lib/engine/characters";
 import { spellsPeeked } from "@/lib/engine/abilities";
 import { openAsk, type AskFrame } from "@/lib/engine/ask";
 import { drawFrom, remaining, type Shuffle } from "@/lib/engine/deck";
 import { cardName, plural } from "@/lib/engine/polish";
 import { wandRefills } from "@/lib/engine/derive";
-import { PRINTED_STOCK, stockLeft } from "@/lib/engine/stock";
+import { STOCKED, stockLeft } from "@/lib/engine/stock";
 import { FIELDS } from "@/lib/engine/board";
 import { afterDraw, type TurnPhase } from "@/lib/engine/turn";
 import { replaceTop, requireTop, whatIsOpen, type TurnState } from "@/lib/engine/stack";
@@ -444,7 +444,7 @@ export function peekSpells(
   };
 }
 
-export function drawSpell(snapshot: Snapshot, command: DrawSpell): Outcome<string | null> {
+export function drawSpell(snapshot: Snapshot, command: DrawSpell): Outcome<SpellId | null> {
   const seat = seatById(snapshot, command.seatId);
   const mine = holdingsOf(snapshot, seat.id);
   const held = mine.filter((h) => h.kind === "spell").length;
@@ -562,7 +562,7 @@ const ROZDZKA_ZAKLEC: EventId = "rozdzka-zaklec";
  * not "raz". What bounds it is the setup hand — cast down to it, refill, and
  * that is as often as the wand can be asked.
  */
-export function drawSpellWithWand(snapshot: Snapshot, command: DrawSpell): Outcome<string | null> {
+export function drawSpellWithWand(snapshot: Snapshot, command: DrawSpell): Outcome<SpellId | null> {
   const seat = seatById(snapshot, command.seatId);
   const mine = holdingsOf(snapshot, seat.id);
 
@@ -600,8 +600,8 @@ export function drawSpellWithWand(snapshot: Snapshot, command: DrawSpell): Outco
  * this too.
  */
 interface Counted {
-  holdings: readonly { card_id: string }[];
-  fieldCards: readonly { card_id: string }[];
+  holdings: readonly { card_id: CardId }[];
+  fieldCards: readonly { card_id: CardId }[];
   /** The table's answer to 21.2. Absent reads as the printed rule. */
   game?: { endless_stock?: boolean };
 }
@@ -622,7 +622,7 @@ interface Counted {
 export function shopStock(snapshot: Counted): Record<string, number> {
   const stock: Record<string, number> = {};
   const endless = snapshot.game?.endless_stock ?? false;
-  for (const cardId of Object.keys(PRINTED_STOCK)) {
+  for (const cardId of STOCKED) {
     const inPlay =
       snapshot.holdings.filter((h) => h.card_id === cardId).length +
       snapshot.fieldCards.filter((c) => c.card_id === cardId).length;

@@ -99,8 +99,8 @@ export const LIVE_ABILITIES: Readonly<Partial<Record<CharacterId, readonly numbe
 };
 
 /** Whether this Karta is out of the game entirely. */
-export function parkedCard(cardId: string): Parked | null {
-  return PARKED_CARDS[cardId as CardId] ?? null;
+export function parkedCard(cardId: CardId): Parked | null {
+  return PARKED_CARDS[cardId] ?? null;
 }
 
 /**
@@ -112,10 +112,10 @@ export function parkedCard(cardId: string): Parked | null {
  * card that under-promises, which a player can check against the paper, rather
  * than one that over-promises, which they discover mid-fight.
  */
-export function parkedAbility(characterId: string | null, index: number): boolean {
+export function parkedAbility(characterId: CharacterId | null, index: number): boolean {
   if (!characterId) return false;
   if (!CHARACTER_POWERS_PARKED) return false;
-  return !(LIVE_ABILITIES[characterId as CharacterId] ?? []).includes(index);
+  return !(LIVE_ABILITIES[characterId] ?? []).includes(index);
 }
 
 /**
@@ -134,7 +134,7 @@ export const PARKED_SAID = "Niedostępne";
  * off plumbing refusals for exactly that reason, and a citation here would
  * point a reader at a rule that is perfectly fine.
  */
-export function refuseIfParked(cardId: string): void {
+export function refuseIfParked(cardId: CardId): void {
   if (parkedCard(cardId)) throw new Error(`${cardName(cardId)} — ${PARKED_SAID.toLowerCase()}.`);
 }
 

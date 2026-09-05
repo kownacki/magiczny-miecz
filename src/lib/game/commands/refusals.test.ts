@@ -17,6 +17,7 @@ import { spendLife } from "./life";
 import { refuseWhileBeastAwaits } from "./beast";
 import { refuseWhileHeld } from "./seat";
 import { attackSeat } from "./fight";
+import type { CardId } from "@/data/ids";
 
 /**
  * 20.3 and 20.5, which are two rows of the coverage table and one idea:
@@ -205,7 +206,7 @@ describe("a Postać Zamieniona w Kamień", () => {
  * in cardboard — "nie może z niej zrezygnować jeśli posiada Tarczę Tolimana".
  */
 describe("standing in the Zamek Bestii", () => {
-  const atCastle = (cards: readonly string[], fieldId = "zamek-bestii") =>
+  const atCastle = (cards: readonly CardId[], fieldId = "zamek-bestii") =>
     aTable({
       game: { round: 1, active_seat: 0, turn_state: { phase: "roll" } as TurnPhase },
       seats: [aSeat({ id: "seat-a", seat_index: 0, field_id: asFieldId(fieldId) })],

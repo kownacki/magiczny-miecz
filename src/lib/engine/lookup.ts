@@ -6,6 +6,7 @@ import itemCards from "@/data/items.json";
 import spellCards from "@/data/spells.json";
 import type { Character } from "@/data/types";
 import { fold } from "./search";
+import { isCardId, type CardId } from "@/data/ids";
 
 /**
  * Why this is not in `consoleStore.ts` with the rest of the console.
@@ -97,11 +98,15 @@ export function everyCardName(): string[] {
  */
 export function cardIdNamed(
   name: string,
-): { id: string } | { candidates: string[] } | { missing: string } {
+): { id: CardId } | { candidates: string[] } | { missing: string } {
   const wanted = fold(name.trim());
   if (wanted === "") return { missing: name };
   const hit = CARDS.find((one) => fold(one.name) === wanted);
-  if (hit) return { id: hit.id };
+  // `CARDS` is the three decks, and `ids.ts` is generated from those same three
+  // files with `ids.test.ts` failing the build if it has gone stale — so every
+  // id in here is a `CardId` already. The guard is how the compiler is told,
+  // not a doubt about the data.
+  if (hit) return isCardId(hit.id) ? { id: hit.id } : { missing: name };
   const near = CARDS.filter((one) => fold(one.name).startsWith(wanted)).map((one) => one.name);
   return near.length > 0 ? { candidates: [...new Set(near)] } : { missing: name };
 }

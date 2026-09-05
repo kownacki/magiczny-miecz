@@ -7,6 +7,7 @@ import { beginFight, fightRoll } from "./fight";
 import { castSpell } from "./spells";
 import { takeCard } from "./holdings";
 import type { TurnPhase } from "@/lib/engine/turn";
+import type { CardId } from "@/data/ids";
 
 /**
  * Four abilities that were written into the registry, rendered in the hover
@@ -14,12 +15,12 @@ import type { TurnPhase } from "@/lib/engine/turn";
  * the app would have done without them, silently.
  */
 
-const held = (cards: string[]) =>
+const held = (cards: CardId[]) =>
   cards.map((cardId, at) =>
     aHolding({ id: `h${at}`, seat_id: "seat-a", card_id: cardId, kind: "item" }),
   );
 
-const inFight = (kind: "ordinary" | "magical", cards: string[] = []) =>
+const inFight = (kind: "ordinary" | "magical", cards: CardId[] = []) =>
   aTable({
     game: {
       turn_state: {
@@ -44,7 +45,7 @@ const inFight = (kind: "ordinary" | "magical", cards: string[] = []) =>
     holdings: held(cards),
   });
 
-const facing = (foe: string, cards: string[] = []) =>
+const facing = (foe: CardId, cards: CardId[] = []) =>
   aTable({
     game: {
       turn_state: {

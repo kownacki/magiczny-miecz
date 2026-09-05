@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { FIELDS } from "./board";
+import { isCardId } from "@/data/ids";
 import {
   cardName,
   characterName,
@@ -147,8 +148,10 @@ describe("naming what is printed on a card", () => {
 
   it("falls back to the id for a card nothing knows", () => {
     // Legible enough to debug with: a card the deck does not know is a bug to
-    // see, not one to hide behind "?".
-    expect(cardName("nie-ma-takiej-karty")).toBe("nie-ma-takiej-karty");
+    // see, not one to hide behind "?". The fallback is still there and can no
+    // longer be reached through the type — `cardName` takes a `CardId` — so
+    // what is checked here is the guard now standing in front of it.
+    expect(isCardId("nie-ma-takiej-karty")).toBe(false);
   });
 
   it("tells a character and a card of the same id apart", () => {

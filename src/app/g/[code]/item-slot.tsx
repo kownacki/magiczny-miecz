@@ -23,6 +23,7 @@ import type { TileCard } from "./card-tile";
 import { CardMark, Corner, StruckOut, type SlotMark } from "./card-mark";
 import { ART_BORDER, PICKABLE } from "./pickable";
 import { TileCaption } from "./tile-caption";
+import type { CardId } from "@/data/ids";
 
 /**
  * One size, everywhere.
@@ -57,7 +58,7 @@ const STEP_ASIDE = Math.round(SLOT_WIDTH * 0.45);
 
 export interface SlotOccupant {
   holdingId: string;
-  cardId: string;
+  cardId: CardId;
   card: TileCard;
   /**
    * Conjured by the test shortcut rather than won.

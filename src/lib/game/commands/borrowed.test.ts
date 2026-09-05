@@ -8,6 +8,7 @@ import type { TurnPhase } from "@/lib/engine/turn";
 import { aSeat, aTable, ports } from "../fixture";
 import { apply, type Snapshot } from "../change";
 import { resolveDrawnCard } from "./resolving";
+import type { CardId } from "@/data/ids";
 
 /**
  * The two Kapliczki, which borrow a Świątynia's table (`jak-pole`).
@@ -26,7 +27,7 @@ import { resolveDrawnCard } from "./resolving";
 
 const asIs = <T,>(pile: readonly T[]): T[] => [...pile];
 
-const facing = (cardId: string): Snapshot =>
+const facing = (cardId: CardId): Snapshot =>
   aTable({
     game: {
       active_seat: 0,
@@ -66,7 +67,7 @@ describe("a Karta that borrows an Obszar's table", () => {
    * do with a Kapliczka was leave it for later.
    */
   it("is never itself the question", () => {
-    for (const id of ["kapliczka-nemed", "kapliczka-tolimana"]) {
+    for (const id of ["kapliczka-nemed", "kapliczka-tolimana"] as const) {
       expect(pendingIn(scriptFor(id)!.effect, []), id).toBeNull();
     }
   });

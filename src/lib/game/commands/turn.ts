@@ -28,6 +28,7 @@ import { holdOverflow, refuseWhileOverflow } from "./overflow";
 import { refuseWhileBeastAwaits } from "./beast";
 import { putOnPile } from "./piles";
 import { dutiesBeforeEnding, whyCannotEnd } from "@/lib/engine/duties";
+import type { CardId } from "@/data/ids";
 
 /**
  * 13.2's fork: a turn is spent meeting somebody, or exploring the Obszar.
@@ -162,7 +163,7 @@ export function refuseWhileQueued(snapshot: Snapshot, seatId: string): void {
  * to *hold* it there. This is what holds it: the Wrota is optional, so it lives
  * in the window, and the window opens when the Obszar is worked through.
  */
-export function refuseWhileQueuedFor(snapshot: Snapshot, seatId: string, cardId: string): void {
+export function refuseWhileQueuedFor(snapshot: Snapshot, seatId: string, cardId: CardId): void {
   if (!mayWalkPast(cardId)) return;
   refuseWhileQueued(snapshot, seatId);
 }

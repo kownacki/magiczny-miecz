@@ -19,6 +19,7 @@ import {
   type SeatRow,
   type UserRow,
 } from "./store";
+import type { CardId } from "@/data/ids";
 import { asTurnState, type TurnState } from "@/lib/engine/stack";
 import type { Ends, Modifier } from "@/lib/engine/status";
 import type { RandomPort } from "@/lib/engine/ports";
@@ -117,14 +118,14 @@ export interface NewUser {
 
 export interface NewHolding {
   seat_id: string;
-  card_id: string;
+  card_id: CardId;
   kind: HoldingRow["kind"];
   face?: HoldingRow["face"];
   slot?: string | null;
   ordinal?: number | null;
   granted?: boolean;
   /** For `kind: "carried"`: the card_id of the Przyjaciel it lies with. */
-  carried_by?: string | null;
+  carried_by?: CardId | null;
 }
 
 export interface HoldingPatch {
@@ -134,7 +135,7 @@ export interface HoldingPatch {
 
 export interface NewFieldCard {
   field_id: string;
-  card_id: string;
+  card_id: CardId;
   granted?: boolean;
   /** Seeded from the card's own `zostaje-z-pula`; absent for everything else. */
   pool?: number | null;

@@ -27,6 +27,7 @@ import type { Decisions } from "./ops";
 import { applyEffect, heldAt, markResolved, markRolled, type ApplyEffect } from "./effects";
 import { classOf } from "@/lib/engine/cards";
 import { cardStatuses, magiaDoubled } from "@/lib/engine/status";
+import type { CardId } from "@/data/ids";
 
 export interface UseResult {
   card: string;
@@ -336,7 +337,7 @@ function doubleDemons(
  */
 export async function resolveDrawnCard(
   snapshot: Snapshot,
-  command: { cardId: string; decided?: Decisions; shuffle: Shuffle },
+  command: { cardId: CardId; decided?: Decisions; shuffle: Shuffle },
   ports: CommandPorts,
 ): Promise<Outcome<{ card: string; face?: number; did: string[]; pending: Effect | null }>> {
   const seat = activeSeat(snapshot);

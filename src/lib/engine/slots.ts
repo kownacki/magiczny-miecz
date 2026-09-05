@@ -213,19 +213,19 @@ export const SLOT_OF: Partial<Record<CardId, readonly Slot[]>> = {
  * exists because spending two of your four places on things you cannot use is
  * a tax on attempting to win at all.
  */
-export const RELICS: ReadonlySet<string> = new Set([
+export const RELICS: ReadonlySet<CardId> = new Set<CardId>([
   "magiczny-miecz",
   "tarcza-tolimana",
   "tarcza-boga-tolimana",
 ]);
 
 /** The places this Przedmiot may be worn; empty when it is only ever carried. */
-export function slotsFor(cardId: string): readonly Slot[] {
-  return SLOT_OF[cardId as CardId] ?? [];
+export function slotsFor(cardId: CardId): readonly Slot[] {
+  return SLOT_OF[cardId] ?? [];
 }
 
 /** Whether this card may be worn in this place. */
-export function fitsIn(cardId: string, slot: Slot): boolean {
+export function fitsIn(cardId: CardId, slot: Slot): boolean {
   if (STORAGE.includes(slot)) return goesInStorage(cardId);
   return slotsFor(cardId).includes(slot);
 }
@@ -346,7 +346,7 @@ export function makerOf(slot: Slot): string | null {
  * pack.
  */
 export function openStorage(
-  holdings: readonly { cardId: string; slot?: string | null }[],
+  holdings: readonly { cardId: CardId; slot?: string | null }[],
   eqMode: EqMode,
 ): Slot[] {
   return STORAGE.filter((slot) => {
@@ -361,12 +361,12 @@ export function openStorage(
   });
 }
 
-export function goesInStorage(cardId: string): boolean {
+export function goesInStorage(cardId: CardId): boolean {
   return !RELICS.has(cardId) && cardId !== "magiczna-sakwa" && cardId !== "tajemna-sakwa";
 }
 
 /** Whether this card has any place on the body at all. */
-export function isWearable(cardId: string): boolean {
+export function isWearable(cardId: CardId): boolean {
   return slotsFor(cardId).length > 0;
 }
 

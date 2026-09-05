@@ -32,14 +32,14 @@ describe("the two cards that are a crossing", () => {
    * a spell spent is spent when it works.
    */
   it("expire on the clock, not on the crossing", () => {
-    for (const id of ["lodz", "latarnia"]) {
+    for (const id of ["lodz", "latarnia"] as const) {
       const effect = scriptFor(id)?.effect as { ends?: { kind?: string; turns?: number } };
       expect(effect.ends, id).toEqual({ kind: "turns", turns: 1 });
     }
   });
 
   it("go to the used pile either way", () => {
-    for (const id of ["lodz", "latarnia"]) {
+    for (const id of ["lodz", "latarnia"] as const) {
       expect(scriptFor(id)?.disposition, id).toEqual({ kind: "odloz" });
     }
   });

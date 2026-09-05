@@ -2,6 +2,7 @@
 
 import items from "@/data/items.json";
 import type { Item } from "@/data/types";
+import type { CardId } from "@/data/ids";
 
 /**
  * The printed supply.
@@ -17,14 +18,23 @@ import type { Item } from "@/data/types";
  * Wyposażenie sheet has four Magiczne Miecze and four Tarcze Tolimana on it, and
  * one Latarnia.
  */
-export const PRINTED_STOCK: Readonly<Record<string, number>> = (() => {
-  const counts: Record<string, number> = {};
+export const PRINTED_STOCK: Readonly<Partial<Record<CardId, number>>> = (() => {
+  const counts: Partial<Record<CardId, number>> = {};
   for (const item of items as Item[]) counts[item.id] = (counts[item.id] ?? 0) + 1;
   return counts;
 })();
 
+/**
+ * Every card the sheet prints, once each — `PRINTED_STOCK`'s keys, typed.
+ *
+ * `Object.keys` hands back `string[]` whatever the record says, so the one
+ * caller that walks the whole shop would have had to cast. This is the same
+ * list built from `Item.id`, which is an `ItemId` already.
+ */
+export const STOCKED: readonly CardId[] = [...new Set((items as Item[]).map((item) => item.id))];
+
 /** Whether this card comes from the equipment pile at all. */
-export function fromTheShop(cardId: string): boolean {
+export function fromTheShop(cardId: CardId): boolean {
   return cardId in PRINTED_STOCK;
 }
 
@@ -41,7 +51,7 @@ export function fromTheShop(cardId: string): boolean {
  * `endless` is the table's answer to 21.2 — see `endless_stock` in schema.sql.
  * It does not reach the two relics: see `RELICS` below.
  */
-export function stockLeft(cardId: string, inPlay: number, endless = false): number {
+export function stockLeft(cardId: CardId, inPlay: number, endless = false): number {
   const printed = PRINTED_STOCK[cardId];
   if (printed === undefined) return Infinity;
   if (endless && !RELICS.has(cardId)) return Infinity;

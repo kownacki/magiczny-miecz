@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { asFieldId } from "@/lib/engine/board";
 import { marksFor } from "./fieldMarks";
+import type { CardId } from "@/data/ids";
 
-const at = (id: string, lying: { cardId: string }[] = []) =>
+const at = (id: string, lying: { cardId: CardId }[] = []) =>
   marksFor(asFieldId(id)!, lying);
 
 /**

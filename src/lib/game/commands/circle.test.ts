@@ -9,6 +9,7 @@ import { apply, type Snapshot } from "../change";
 import { beginFight } from "./fight";
 import { castSpell } from "./spells";
 import { claimFloor } from "./spellFloor";
+import type { CardId } from "@/data/ids";
 
 /**
  * A cast that reaches the fight beneath it — law 4's cash-in (docs/STACK.md).
@@ -48,7 +49,7 @@ const fieldOn = (state: TurnState) => {
 };
 
 /** Ania fighting, Bartek two fields away with the Krąg in hand. */
-const table = (foe: string, holdings = [] as unknown[]): Snapshot =>
+const table = (foe: CardId, holdings = [] as unknown[]): Snapshot =>
   aTable({
     game: {
       active_seat: 0,
@@ -81,7 +82,7 @@ describe("the rule, read off the card rather than declared twice", () => {
 
   /** Every other Zaklęcie leaves the fight where it was. */
   it("nothing else does", () => {
-    for (const id of ["odrodzenie", "siedem-wichrow", "magia-i-miecz"]) {
+    for (const id of ["odrodzenie", "siedem-wichrow", "magia-i-miecz"] as const) {
       expect(unattackableAfter(spellScript(id)), id).toBe(false);
     }
   });

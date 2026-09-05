@@ -8,6 +8,7 @@ import { overflowSaid } from "@/lib/engine/overflow";
 import { apply, merge, type Changeset, type Snapshot } from "../change";
 import { EVENT_COPIES, decksOf } from "../decks";
 import { dropCard as dropCardOn } from "./holdings";
+import type { CardId } from "@/data/ids";
 import {
   holdOverflow,
   overflowOf,
@@ -18,7 +19,7 @@ import {
 } from "./overflow";
 
 /** Klasyczny, where 5.4 counts everything and the limit is four. */
-const table = (cards: readonly string[], over: Record<string, unknown> = {}) =>
+const table = (cards: readonly CardId[], over: Record<string, unknown> = {}) =>
   aTable({
     game: { eq_mode: "classic", turn_state: only({ phase: "roll" }), ...over },
     seats: [
@@ -30,8 +31,9 @@ const table = (cards: readonly string[], over: Record<string, unknown> = {}) =>
     ),
   });
 
-const FOUR = ["helm", "zbroja", "lina", "kij"];
-const FIVE = [...FOUR, "lodz"];
+// Four real Przedmioty: what is being counted here is how many, not which.
+const FOUR: readonly CardId[] = ["helm", "zbroja", "latarnia", "kij-i-sznur"];
+const FIVE: readonly CardId[] = [...FOUR, "lodz"];
 
 describe("who is over, and by how much", () => {
   it("says nothing while the pack is inside 5.4's four", () => {
@@ -77,8 +79,8 @@ describe("the frame", () => {
     // The fifth card arrives in this very change. Asked of the snapshot alone
     // the answer would be "nobody is over", which is the state before the card.
     const at = table(FOUR);
-    const arriving = {
-      holdings: { insert: [{ seat_id: "seat-a", card_id: "lodz", kind: "item" as const }] },
+    const arriving: Changeset = {
+      holdings: { insert: [{ seat_id: "seat-a", card_id: "lodz", kind: "item" }] },
     };
     expect(holdOverflow(at, arriving).game).toBeDefined();
   });
@@ -91,7 +93,7 @@ describe("the frame", () => {
   });
 
   it("keeps waiting while the seat is still over, so four over is answered four times", () => {
-    const at = table([...FIVE, "sznur", "namiot"]);
+    const at = table([...FIVE, "miecz", "sztylet"]);
     const waiting = apply(at, holdOverflow(at));
     const one = releaseOverflow(waiting, { holdings: { delete: ["h6"] } });
     expect(one).toEqual({});
@@ -143,7 +145,7 @@ describe("who waits", () => {
 describe("a container whose load perishes with it", () => {
   // Six ordinary Przedmioty besides the Sakwa: under its boosted nine, over
   // klasyczny's plain four once it is gone.
-  const SIX = ["helm", "zbroja", "eliksir-sily", "kij", "sznur", "namiot"];
+  const SIX: readonly CardId[] = ["helm", "zbroja", "eliksir-sily", "kij-i-sznur", "miecz", "sztylet"];
 
   const withSakwa = () =>
     aTable({

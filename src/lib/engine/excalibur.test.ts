@@ -48,7 +48,7 @@ describe("what a weapon lends, and when", () => {
       "topor-swiatla-i-ciemnosci",
       "miecz-chaosu",
       "swieta-wlocznia",
-    ]) {
+    ] as const) {
       const hand = [{ cardId: id, kind: "item" as const, face: "open" as const }];
       expect(bonusFromHoldings(hand, "classic", "parametr").miecz, id).toBe(0);
       expect(bonusFromHoldings(hand, "classic", "walka").miecz, id).toBeGreaterThan(0);

@@ -7,6 +7,7 @@ import { coverageOf, manualNote } from "./coverage";
 import { FIELDS } from "./board";
 import { LIVE_ABILITIES } from "./disabled";
 import { CHARACTER_ABILITIES } from "./characters";
+import type { CardId } from "@/data/ids";
 
 /**
  * A number written in prose is a claim, and claims about data rot in silence.
@@ -43,7 +44,7 @@ function claim(text: string, pattern: RegExp, what: string): number {
   return Number(found![1]);
 }
 
-const EVENTS = events as { id: string; cardClass?: string }[];
+const EVENTS = events as { id: CardId; cardClass?: string }[];
 const DISTINCT = [...new Set(EVENTS.map((card) => card.id))];
 
 describe("what COVERAGE.md claims about the deck", () => {
@@ -76,7 +77,7 @@ describe("what COVERAGE.md claims about the deck", () => {
 
   it("counts the Zaklęcia, and how many are carried whole", () => {
     // Distinct, not rows: three Zaklęcia have a second copy in the pile.
-    const distinct = [...new Set((spells as { id: string }[]).map((one) => one.id))];
+    const distinct = [...new Set((spells as { id: CardId }[]).map((one) => one.id))];
     const partly = distinct.filter((id) => manualNote(id)).length;
     expect(claim(COVERAGE, /all (\d+) Zaklęcia/, "the Zaklęcia")).toBe(distinct.length);
     expect(claim(COVERAGE, /(\d+) of them fully/, "how many Zaklęcia are whole")).toBe(

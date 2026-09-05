@@ -5,6 +5,7 @@ import type { TurnPhase } from "@/lib/engine/turn";
 import { aHolding, aSeat, aTable } from "../fixture";
 import { apply } from "../change";
 import { finishTurn, leaveCardsBehind, passTurn, resetTurn, tickEffects } from "./turn";
+import type { CardId } from "@/data/ids";
 
 const two = (over: Partial<Parameters<typeof aTable>[0]> = {}) =>
   aTable({
@@ -307,7 +308,7 @@ describe("effects counting down", () => {
  * the card prints itself.
  */
 describe("what is left on the Obszar at the end of a turn", () => {
-  const leaving = (...cardIds: string[]) =>
+  const leaving = (...cardIds: CardId[]) =>
     leaveCardsBehind(aTable({ seats: [aSeat({ id: "seat-a" })] }), {
       fieldId: "przelecz-wichrow",
       seatId: "seat-a",
@@ -326,7 +327,7 @@ describe("what is left on the Obszar at the end of a turn", () => {
    * Wrota będą czekać na tym Obszarze na kogoś odważniejszego." They did not.
    */
   describe("a Karta that is discarded by being read", () => {
-    const ending = (cardId: string, settled: string[]) =>
+    const ending = (cardId: CardId, settled: string[]) =>
       leaveCardsBehind(aTable({ seats: [aSeat({ id: "seat-a" })] }), {
         fieldId: "przelecz-wichrow",
         seatId: "seat-a",
@@ -335,7 +336,7 @@ describe("what is left on the Obszar at the end of a turn", () => {
         settled,
       });
 
-    const lyingAfter = (cardId: string, settled: string[]) =>
+    const lyingAfter = (cardId: CardId, settled: string[]) =>
       (ending(cardId, settled).fieldCards?.insert ?? []).map((row) => row.card_id);
 
     it("waits on the Obszar when nobody went through it", () => {
@@ -375,7 +376,7 @@ describe("what is left on the Obszar at the end of a turn", () => {
    * players could drink from one Drzewo forever and it never withered.
    */
   describe("a Miejsce with a pool (16.7)", () => {
-    const pooled = (cardId: string, pool?: number | null) =>
+    const pooled = (cardId: CardId, pool?: number | null) =>
       leaveCardsBehind(aTable({ seats: [aSeat({ id: "seat-a" })] }), {
         fieldId: "przelecz-wichrow",
         seatId: "seat-a",
@@ -441,7 +442,7 @@ describe("what is left on the Obszar at the end of a turn", () => {
  */
 describe("handing the turn on anyway (the test console's `force`)", () => {
   /** Klasyczny counts everything and 5.4's limit is four; five is one over. */
-  const FIVE = ["helm", "zbroja", "miecz", "sztylet", "latarnia"];
+  const FIVE: readonly CardId[] = ["helm", "zbroja", "miecz", "sztylet", "latarnia"];
 
   const overloaded = (over: Partial<Parameters<typeof aTable>[0]> = {}) =>
     aTable({

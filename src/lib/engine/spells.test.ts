@@ -13,15 +13,18 @@ import {
   type SpellTiming,
 } from "./spells";
 import type { Fight, TurnPhase } from "./turn";
+import { isSpellId, type CardId, type SpellId } from "@/data/ids";
 
-const IDS = new Set<string>((spells as Spell[]).map((s) => s.id));
+const IDS = new Set<SpellId>((spells as Spell[]).map((s) => s.id));
+/** The same list as bare names, for the membership check whose input is `Object.keys`. */
+const ID_NAMES: ReadonlySet<string> = new Set(IDS);
 
 describe("the spell registry against the real pile", () => {
   it("covers every spell in the box, and invents none", () => {
     // Unlike the event deck, this one is small enough to finish — and a spell
     // with no entry could never be cast at all, which is the bug this replaces.
     for (const id of IDS) expect(spellScript(id), id).not.toBeNull();
-    for (const id of Object.keys(SPELLS)) expect(IDS.has(id), id).toBe(true);
+    for (const id of Object.keys(SPELLS)) expect(ID_NAMES.has(id), id).toBe(true);
   });
 
   it("gives every spell a window and something to do", () => {
@@ -51,7 +54,7 @@ describe("when a spell may be spoken", () => {
   it("always allows the two that answer other spells", () => {
     // Władca Zaklęć negates "Zaklęcie rzucone bezpośrednio przed nim", so it
     // must be castable in a window nobody chose in advance.
-    for (const id of ["wladca-zaklec", "zwierciadlo"]) {
+    for (const id of ["wladca-zaklec", "zwierciadlo"] as const) {
       const script = spellScript(id)!;
       expect(script.reactive, id).toBe(true);
       expect(castableNow(script, "w-walce"), id).toBe(true);
@@ -113,7 +116,7 @@ describe("the two spells the app carries out (9.6)", () => {
   it("leaves the interconnected ones alone", () => {
     // The reason CAST_IS_ANNOUNCED exists: these answer other spells, and a
     // referee getting one subtly wrong is worse than one staying out of it.
-    for (const id of ["zwierciadlo", "wladca-zaklec", "wojna-zywiolow", "odmiana-losu"]) {
+    for (const id of ["zwierciadlo", "wladca-zaklec", "wojna-zywiolow", "odmiana-losu"] as const) {
       expect(spellScript(id)?.applies).toBeUndefined();
     }
   });
@@ -172,7 +175,7 @@ describe("momentsIn", () => {
   });
 
   it("notices a Wróg standing on the Obszar", () => {
-    const onField = (drawn: { cardId: string; cardClass: string }[]): TurnPhase =>
+    const onField = (drawn: { cardId: CardId; cardClass: string }[]): TurnPhase =>
       ({ phase: "field", fieldId: "step-1", from: null, draw: 1, drawn } as unknown as TurnPhase);
 
     expect(momentsIn(onField([{ cardId: "helm", cardClass: "item" }]))).toEqual(
@@ -181,13 +184,13 @@ describe("momentsIn", () => {
     expect(momentsIn(onField([{ cardId: "helm", cardClass: "item" }]))).not.toContain(
       "spotkanie",
     );
-    expect(momentsIn(onField([{ cardId: "goblin", cardClass: "foe" }]))).toEqual(
+    expect(momentsIn(onField([{ cardId: "niedzwiedz", cardClass: "foe" }]))).toEqual(
       expect.arrayContaining(["spotkanie", "przed-walka"]),
     );
   });
 
   it("always leaves dowolna-chwila open", () => {
-    for (const state of [{ phase: "roll" } as TurnPhase, { phase: "end" } as TurnPhase]) {
+    for (const state of [{ phase: "roll" } as TurnPhase, { phase: "end" } as TurnPhase] as const) {
       expect(momentsIn(state)).toContain("dowolna-chwila");
     }
   });
@@ -214,7 +217,7 @@ describe("momentsIn", () => {
  */
 describe("what a Zaklęcie says about itself", () => {
   it("names a window for every Zaklęcie the app carries", () => {
-    for (const id of Object.keys(SPELLS)) {
+    for (const id of Object.keys(SPELLS).filter(isSpellId)) {
       const facts = spellFacts(id);
       expect(facts, id).not.toBeNull();
       expect(facts!.when, id).not.toBe("");
@@ -225,7 +228,7 @@ describe("what a Zaklęcie says about itself", () => {
     // „brak" is a real answer and „—" is not a target; the panel leaves the
     // half-line out rather than printing a dash after the window.
     for (const [id, script] of Object.entries(SPELLS)) {
-      if (script?.target !== "brak") continue;
+      if (script?.target !== "brak" || !isSpellId(id)) continue;
       expect(spellFacts(id)!.at, id).toBeNull();
     }
   });

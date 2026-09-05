@@ -20,6 +20,7 @@ import { ItemSlot } from "./item-slot";
 import { DRAG_TYPE, startHoldingDrag } from "./slot-panel";
 import { asHoldings, asNature, tileFor, type Seat, wornBySlot } from "./table";
 import { forbiddenTo } from "@/lib/engine/holdings";
+import type { CardId } from "@/data/ids";
 
 /**
  * What a seat is carrying.
@@ -58,7 +59,7 @@ export function Hand({
   liftedHoldingId: string | null;
   onCarry: (carried: Carried | null) => void;
   /** The card id being dragged out of the pack, or null when the drag ends. */
-  onDragging: (moving: { cardId: string; holdingId: string } | null) => void;
+  onDragging: (moving: { cardId: CardId; holdingId: string } | null) => void;
   onDrop: (holdingId: string) => void;
   /**
    * Cards asked about and not yet answered, greyed where they lie.
@@ -71,7 +72,7 @@ export function Hand({
   asked?: readonly string[];
   onEquip: (holdingId: string, slot: Slot | null) => void;
   /** Spend a card by using it. Absent on somebody else's pack. */
-  onUse?: (holdingId: string, cardId: string) => void;
+  onUse?: (holdingId: string, cardId: CardId) => void;
   /** Takes a Zaklęcie on the Różdżka's terms, not 2.6's. */
   onWand?: () => void;
   /** The pack, in the order its owner wants it. Absent on somebody else's. */
@@ -186,7 +187,7 @@ export function Hand({
    * the word existed, which is exactly how the corner arrow and the
    * double-click had already come to disagree about the Sakwa.
    */
-  const wear = (holdingId: string, cardId: string, index: number) => {
+  const wear = (holdingId: string, cardId: CardId, index: number) => {
     const slot = placeFor(cardId);
     if (!slot) return;
     onCarry(null);
@@ -897,6 +898,6 @@ const slottedIrrelevant = "classic" as const;
  * the corner is the whole gesture. What goes in a Sakwa is put there by hand,
  * which is what a bag you choose one thing to put in wants anyway.
  */
-function placeFor(cardId: string): Slot | null {
+function placeFor(cardId: CardId): Slot | null {
   return slotsFor(cardId)[0] ?? null;
 }

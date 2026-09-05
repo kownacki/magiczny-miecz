@@ -8,6 +8,8 @@ import { killSeat } from "./life";
 import { turnToStone } from "./stone";
 import { clearField, placeGold, takeCard, takeFieldGold } from "./holdings";
 import { RULE_FOR } from "@/lib/engine/journalRules";
+import type { CardId } from "@/data/ids";
+import type { TurnCard } from "@/lib/engine/state";
 
 const HERE = asFieldId("mroczna-polana")!;
 
@@ -134,7 +136,7 @@ describe("taking gold off an Obszar (12.1)", () => {
    * rule is actually about.
    */
   it("refuses over a Wróg the turn is holding, not only one lying on the board", () => {
-    const wilk = { cardId: "wilk", cardClass: "foe" as const, granted: false };
+    const wilk: TurnCard = { cardId: "wilk", cardClass: "foe", granted: false };
     const mid = table({
       fieldGold: [{ id: "fg1", field_id: HERE, gold: 3 }],
       game: { active_seat: 0, turn_state: only(arrived({ drawn: [wilk] })) },
@@ -145,7 +147,7 @@ describe("taking gold off an Obszar (12.1)", () => {
     expect(() => takeCard(mid, { seatId: "seat-a", cardId: "miecz" })).toThrow(/WILK/);
   });
 
-  const wilkDrawn = { cardId: "wilk", cardClass: "foe" as const, granted: false };
+  const wilkDrawn: TurnCard = { cardId: "wilk", cardClass: "foe", granted: false };
 
   /** Beaten or fled, 17.4 settles him and the loot is loose (16.2). */
   it("lets both through once he is settled", () => {
@@ -207,8 +209,8 @@ describe("taking gold off an Obszar (12.1)", () => {
    * which of the two shapes the money happened to be in.
    */
   it("holds the gold Karta to the same two exceptions as the coins", () => {
-    const wilk = { cardId: "wilk", cardClass: "foe" as const, granted: false };
-    const coin = { cardId: "1-sztuka-zlota", cardClass: "item" as const, granted: false };
+    const wilk: TurnCard = { cardId: "wilk", cardClass: "foe", granted: false };
+    const coin: TurnCard = { cardId: "1-sztuka-zlota", cardClass: "item", granted: false };
     const guarded = table({
       game: { active_seat: 0, turn_state: only(arrived({ drawn: [wilk, coin] })) },
     });
@@ -232,7 +234,7 @@ describe("taking gold off an Obszar (12.1)", () => {
   /** 3.5: "Sztuki Złota nie są wliczane do limitu Przedmiotów". */
   it("is not stopped by a full Plecak (3.5, 5.4)", () => {
     const full = withGold(3, {
-      holdings: ["miecz", "helm", "tarcza", "zbroja"].map((cardId, at) =>
+      holdings: (["miecz", "helm", "tarcza", "zbroja"] as const).map((cardId, at) =>
         aHolding({ id: `h${at}`, seat_id: "seat-a", card_id: cardId, kind: "item" }),
       ),
     });
@@ -414,7 +416,7 @@ describe("sweeping an Obszar by kind", () => {
   const crowded = () =>
     apply(table(), {
       fieldCards: {
-        insert: ["cudotworca", "targowisko", "cyklop", "demon"].map((card_id) => ({
+        insert: (["cudotworca", "targowisko", "cyklop", "demon"] as const).map((card_id) => ({
           field_id: HERE,
           card_id,
           granted: true,
@@ -462,7 +464,7 @@ describe("sweeping an Obszar by kind", () => {
   it("takes every copy of the kind, not one", () => {
     const before = apply(table(), {
       fieldCards: {
-        insert: ["targowisko", "targowisko", "cyklop"].map((card_id) => ({
+        insert: (["targowisko", "targowisko", "cyklop"] as const).map((card_id) => ({
           field_id: HERE,
           card_id,
           granted: true,
@@ -530,7 +532,7 @@ describe("sweeping an Obszar by kind", () => {
       classes: ["stranger"],
     });
     expect(result.cards).toEqual(["cudotworca"]);
-    const frame = top(apply(before, writes).game.turn_state) as { drawn: { cardId: string }[] };
+    const frame = top(apply(before, writes).game.turn_state) as { drawn: { cardId: CardId }[] };
     expect(frame.drawn.map((one) => one.cardId)).toEqual(["cyklop"]);
   });
 });
@@ -546,7 +548,7 @@ describe("sweeping several named Karty", () => {
   const twoOfEach = () =>
     apply(table(), {
       fieldCards: {
-        insert: ["miecz", "miecz", "helm", "cudotworca"].map((card_id) => ({
+        insert: (["miecz", "miecz", "helm", "cudotworca"] as const).map((card_id) => ({
           field_id: HERE,
           card_id,
           granted: true,
@@ -650,12 +652,12 @@ describe("sweeping several named Karty", () => {
  */
 describe("choosing between duplicate Karty", () => {
   /** `granted` is what a test shortcut leaves on a card; a drawn one has none. */
-  const onBoard = (rows: { card_id: string; granted: boolean }[]) =>
+  const onBoard = (rows: { card_id: CardId; granted: boolean }[]) =>
     apply(table(), {
       fieldCards: { insert: rows.map((row) => ({ field_id: HERE, ...row })) },
     });
 
-  const swept = (before: ReturnType<typeof onBoard>, cardIds: string[]) => {
+  const swept = (before: ReturnType<typeof onBoard>, cardIds: CardId[]) => {
     const after = apply(before, clearField(before, { seatId: "seat-a", fieldId: HERE, cardIds }).writes);
     return before.fieldCards
       .filter((row) => !after.fieldCards.some((one) => one.id === row.id))

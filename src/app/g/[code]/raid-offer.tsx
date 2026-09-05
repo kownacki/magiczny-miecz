@@ -44,7 +44,7 @@ export function raidTargets(
   from: FieldId | null,
   mySeatId: string,
   seats: readonly Seat[],
-  fieldCards: readonly { id: string; fieldId: string | null; cardId: string }[],
+  fieldCards: readonly { id: string; fieldId: string | null; cardId: CardId }[],
 ): RaidTarget[] {
   if (from === null) return [];
 
@@ -113,7 +113,7 @@ export function RaidOffer({
   /** The character doing the sending — their field is where the range is measured from. */
   seat: Seat;
   seats: readonly Seat[];
-  fieldCards: readonly { id: string; fieldId: string | null; cardId: string }[];
+  fieldCards: readonly { id: string; fieldId: string | null; cardId: CardId }[];
   busy: boolean;
   onRaid: (target: RaidTarget) => void;
 }) {

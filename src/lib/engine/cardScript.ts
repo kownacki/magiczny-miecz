@@ -359,7 +359,7 @@ export type Effect =
          */
         | "wszyscy-przyjaciele-oprocz";
       /** Cards a sweeping loss leaves alone, by id. */
-      oprocz?: readonly string[];
+      oprocz?: readonly CardId[];
       count?: number;
       /** Who picks which one goes: the holder, or chance. */
       wybor?: "ty" | "losowo";
@@ -392,6 +392,11 @@ export type Effect =
    * sells Zaklęcia at one Sztuka Złota each, and the Gród and Osada do the same
    * from the board itself — so this is a shape the game uses repeatedly rather
    * than a special case for one card.
+   */
+  /*
+   * `co` is the name printed on the Karta, not an id — „Miecz", „Hełm", „Kij i
+   * Sznur" — because that is what the Obszar prints and this is a
+   * transcription. `goodsId` is the one door from that name to an `ItemId`.
    */
   | { op: "kup"; towar: { co: string; cena: number }[] }
   /**
@@ -474,7 +479,7 @@ export type Effect =
    * an event rather than an Obszar offering a cure, which is the difference
    * between shaking something off and being freed of it.
    */
-  | { op: "uwolnij"; od: string }
+  | { op: "uwolnij"; od: CardId }
   /**
    * Takes a card off somebody else and gives it to the caster.
    *
@@ -562,11 +567,10 @@ export const SCRIPTS: Readonly<Partial<Record<CardId, CardScript>>> = {
 /**
  * Whether a card is spent by being resolved rather than kept.
  *
- * Takes a plain string for the same reason `scriptFor` does: it is asked about
- * ids that came off the wire, and its answer for anything it does not know is
- * "no, this is an ordinary card".
+ * Answers "no, this is an ordinary card" for anything with no script, which is
+ * most of the box.
  */
-export function isConsumedOnResolve(cardId: string): boolean {
+export function isConsumedOnResolve(cardId: CardId): boolean {
   return scriptFor(cardId)?.consumed === true;
 }
 
@@ -587,7 +591,7 @@ export function isConsumedOnResolve(cardId: string): boolean {
  * Read off the script rather than listed, so a fourth transcribed tomorrow is
  * ordered correctly without anybody remembering this rule exists.
  */
-export function goesToAField(cardId: string): boolean {
+export function goesToAField(cardId: CardId): boolean {
   return scriptFor(cardId)?.placed !== undefined;
 }
 
@@ -641,7 +645,7 @@ export function instructionIn(script: CardScript, lying: boolean | undefined): E
  * behind everything **except another Miejsce drawn after it** — ties keep
  * arrival order. This is the key that closes that one case.
  */
-export function reopensTheDrawing(cardId: string): boolean {
+export function reopensTheDrawing(cardId: CardId): boolean {
   const script = scriptFor(cardId);
   if (!script) return false;
   return JSON.stringify(script.effect).includes('"wyciagnij"');
@@ -726,13 +730,15 @@ export function valenceOf(effect: Effect): Valence | null {
   }
 }
 
-export function scriptFor(cardId: string): CardScript | null {
-  // The registry's *keys* are checked — a typo in one of the ~250 card names
-  // above is a compile error, which is the whole point. The lookup itself takes
-  // a plain string on purpose: it is fed card ids that came off the wire or out
-  // of the database, and its contract is already "nothing, if I do not know it".
-  // Narrowing every caller instead would move a runtime miss into a runtime
-  // miss with more ceremony.
+export function scriptFor(cardId: CardId): CardScript | null {
+  // Both ends are checked. The registry's *keys* are `CardId`, so a typo in one
+  // of the ~250 card names above is a compile error; and so is the argument, so
+  // the Postać CZARODZIEJ cannot be handed to the Nieznajomy's script. A stored
+  // `card_id` becomes a `CardId` at `holdingsFor`, the way a stored `field_id`
+  // becomes a `FieldId` at `seatsFor`.
+  //
+  // The registry is partial, so the contract is unchanged: nothing, for a card
+  // nobody has transcribed.
   return SCRIPTS[cardId as CardId] ?? null;
 }
 

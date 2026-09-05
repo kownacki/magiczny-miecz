@@ -18,12 +18,14 @@ import {
   overflowLines,
   said,
   sameName,
+  samePrinted,
   tradeMenu,
   trophyLedger,
   waitingOn,
 } from "./consoleLines";
 import { ruleLines } from "@/lib/engine/ruleLines";
 import { cardIdNamed } from "@/lib/engine/lookup";
+import type { CardId } from "@/data/ids";
 
 import { asFieldId, FIELDS, requireFieldId } from "@/lib/engine/board";
 import { spellScript } from "@/lib/engine/spells";
@@ -960,7 +962,7 @@ export const VERBS: { [K in Command["kind"]]: VerbRun<K> } = {
     }
 
     const state = top(snapshot.game.turn_state) as {
-      drawn?: { cardId: string }[];
+      drawn?: { cardId: CardId }[];
       resolved?: string[];
     };
 
@@ -1065,7 +1067,9 @@ export const VERBS: { [K in Command["kind"]]: VerbRun<K> } = {
       const wanted = command.cardId
         ? waiting.filter((one) => one.cardId === command.cardId)
         : waiting;
-      if (wanted.length === 0) throw new Error(`${cardName(command.cardId ?? "")} is not here.`);
+      if (wanted.length === 0) {
+        throw new Error(`${command.cardId ? cardName(command.cardId) : ""} is not here.`);
+      }
       if (wanted.length > 1 && !command.cardId) {
         throw new Error(`Which one — ${wanted.map((one) => cardName(one.cardId)).join(", ")}?`);
       }
@@ -1183,8 +1187,12 @@ export const VERBS: { [K in Command["kind"]]: VerbRun<K> } = {
       const name = driver(one.seat_index)?.name;
       return (
         one.id !== me.id &&
-        ((name !== undefined && name !== null && sameName(name, command.who)) ||
-          sameName(cardName(one.character_id ?? ""), command.who))
+        ((name !== undefined && name !== null && samePrinted(name, command.who)) ||
+          // `characterName`, not `cardName`: a seat's `character_id` is a Postać
+          // and `demon` and `czarodziej` each name a Karta Zdarzeń too. Asked of
+          // the card registry, `raid BARBARZYŃCA` matched nothing at all and
+          // `raid CZARODZIEJ` matched the Nieznajomy's name by luck.
+          samePrinted(characterName(one.character_id ?? ""), command.who))
       );
     });
     if (player) {
@@ -1192,7 +1200,7 @@ export const VERBS: { [K in Command["kind"]]: VerbRun<K> } = {
       return `${named(me)} sends a Przyjaciel against ${named(player)}.`;
     }
 
-    const lying = snapshot.fieldCards.find((row) => sameName(cardName(row.card_id), command.who));
+    const lying = snapshot.fieldCards.find((row) => sameName(row.card_id, command.who));
     if (!lying) throw new Error(`No Postać or Wróg called \`${command.who}\`.`);
     await sendRaider(gameId, { fieldCardId: lying.id });
     return `${named(me)} sends a Przyjaciel against ${cardName(lying.card_id)}.`;
@@ -1592,7 +1600,7 @@ export const VERBS: { [K in Command["kind"]]: VerbRun<K> } = {
     if (!envSeat) throw new Error("Nieznane miejsce.");
     const own = envelope.mySeatIndex === envSeat.seat_index;
     /** Polish collation: ŁÓDŹ sorts after LIST, where somebody would look for it. */
-    const byName = (a: { cardId: string }, b: { cardId: string }) =>
+    const byName = (a: { cardId: CardId }, b: { cardId: CardId }) =>
       cardName(a.cardId).localeCompare(cardName(b.cardId), "pl");
     const spells = envSeat.holdings.filter((one) => one.kind === "spell").sort(byName);
     /**
@@ -1784,9 +1792,10 @@ export const VERBS: { [K in Command["kind"]]: VerbRun<K> } = {
               ? [
                   `Carried: ${escorted
                     .map((one) => {
-                      const by = one.carried_by ?? "";
-                      const may = carriesSpell([by])?.mozeszObejrzec ?? false;
-                      return `${cardName(by)} — ${may ? cardName(one.card_id) : "1 Zaklęcie (face down)"}`;
+                      const by = one.carried_by;
+                      const may = by !== null && (carriesSpell([by])?.mozeszObejrzec ?? false);
+                      const who = by === null ? "" : cardName(by);
+                      return `${who} — ${may ? cardName(one.card_id) : "1 Zaklęcie (face down)"}`;
                     })
                     .join(", ")}`,
                 ]

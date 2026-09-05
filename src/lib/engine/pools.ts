@@ -1,6 +1,7 @@
 /** The three Miejsca that lie on an Obszar with a pool of points, and what one visit does to it (16.7). */
 
 import { scriptFor } from "./cardScript";
+import type { CardId } from "@/data/ids";
 
 /**
  * "Po znalezieniu Drzewa, połóż przy nim 4 punkty Życia. Każdy, kto tu trafi,
@@ -26,13 +27,13 @@ import { scriptFor } from "./cardScript";
  */
 
 /** What this card lays out when it settles, or null if it lays out nothing. */
-export function startingPool(cardId: string): number | null {
+export function startingPool(cardId: CardId): number | null {
   const disposition = scriptFor(cardId)?.disposition;
   return disposition?.kind === "zostaje-z-pula" ? disposition.points : null;
 }
 
 /** Whether visiting this card draws its pool down by one. */
-export function drawsFromPool(cardId: string): boolean {
+export function drawsFromPool(cardId: CardId): boolean {
   return startingPool(cardId) !== null;
 }
 
@@ -49,7 +50,7 @@ export function drawsFromPool(cardId: string): boolean {
  * the Obszar without knowing which of the thirteen Miejsca it is.
  */
 export function afterVisit(
-  cardId: string,
+  cardId: CardId,
   pool: number | null,
 ): { left: number; dry: boolean } | null {
   if (!drawsFromPool(cardId)) return null;
@@ -74,7 +75,7 @@ export function afterVisit(
  * would otherwise offer a fifth drink from a four-point well if a row ever
  * survived its pool.
  */
-export function poolRemains(cardId: string, pool: number | null): boolean {
+export function poolRemains(cardId: CardId, pool: number | null): boolean {
   if (!drawsFromPool(cardId)) return true;
   return (pool ?? startingPool(cardId) ?? 0) > 0;
 }

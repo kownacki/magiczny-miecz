@@ -6,6 +6,7 @@ import { fromTheShop } from "@/lib/engine/stock";
 import { BY_REF, EVENT_COPIES, SPELL_BY_REF, SPELL_COPIES, decksOf } from "../decks";
 import type { Changeset, Outcome, Snapshot } from "../change";
 import { trophyModeOf } from "./seat";
+import type { CardId } from "@/data/ids";
 
 /**
  * All a pile ever looks at.
@@ -19,7 +20,7 @@ type Reads = Pick<Snapshot, "game">;
 
 /** What a card needs to say about itself to be put away. */
 export interface Returnable {
-  cardId: string;
+  cardId: CardId;
   /** Conjured by a test: it belongs to no pile and joins none. */
   granted?: boolean;
 }
@@ -59,7 +60,7 @@ export function takeGold(snapshot: Snapshot, fieldId: string, gold: number): Cha
     : { fieldGold: { patch: [{ id: already.id, patch: { gold: left } }] } };
 }
 
-export function asReturnable(row: { card_id: string; granted: boolean }): Returnable {
+export function asReturnable(row: { card_id: CardId; granted: boolean }): Returnable {
   return { cardId: row.card_id, granted: row.granted };
 }
 
@@ -111,7 +112,7 @@ export function putOnPile(
 export function pushOntoPile(
   snapshot: Reads,
   pile: "events" | "spells",
-  cardIds: readonly string[],
+  cardIds: readonly CardId[],
 ): Changeset {
   if (cardIds.length === 0) return {};
 
@@ -153,7 +154,7 @@ export function pushOntoPile(
  */
 export function stackForDraw(
   snapshot: Snapshot,
-  command: { seatId: string; cardId: string },
+  command: { seatId: string; cardId: CardId },
 ): Outcome<"events" | "spells"> {
   // Nothing may be stacked for a draw that no pile contains.
   refuseIfParked(command.cardId);
@@ -185,7 +186,7 @@ export function stackForDraw(
 export function stackAt(
   snapshot: Snapshot,
   command: { seatId: string; pile: "events" | "spells"; at: number },
-): Outcome<string> {
+): Outcome<CardId> {
   const { seatId, pile, at } = command;
   const decks = decksOf(snapshot.game);
   const draw = decks[pile].draw;
@@ -201,7 +202,10 @@ export function stackAt(
   // `ref` came off this very pile, so `stackOnTop` cannot fail to find it.
   if (!after) throw new Error("Nie ma tej Karty w talii.");
   const card = pile === "events" ? BY_REF.get(ref) : SPELL_BY_REF.get(ref);
-  const cardId = card?.id ?? ref;
+  // The same impossibility as the line above, said the same way: the ref came
+  // off this pile, so the index has the Karta it names.
+  if (!card) throw new Error("Nie ma tej Karty w talii.");
+  const cardId = card.id;
   return { ...wroteStack(snapshot, seatId, pile, decks, after, cardId), result: cardId };
 }
 
@@ -212,7 +216,7 @@ function wroteStack(
   pile: "events" | "spells",
   decks: ReturnType<typeof decksOf>,
   after: ReturnType<typeof stackOnTop>,
-  cardId: string,
+  cardId: CardId,
 ): Outcome<"events" | "spells"> {
   return {
     writes: {
@@ -242,7 +246,7 @@ function wroteStack(
  */
 export function trophiesToPile(
   snapshot: Snapshot,
-  trophies: readonly { card_id: string; granted: boolean }[],
+  trophies: readonly { card_id: CardId; granted: boolean }[],
 ): Changeset {
   if (trophies.length === 0) return {};
   if (trophyModeOf(snapshot.game) === "points") return {};

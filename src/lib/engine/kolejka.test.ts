@@ -3,12 +3,13 @@ import { isSpent, kolejkaFor, leavesWhenResolved, nextFrame, offeredNotQueued, o
 import { resolutionOrder, type TurnCard } from "./state";
 import events from "@/data/events.json";
 import type { EventCard } from "@/data/types";
+import type { CardId } from "@/data/ids";
 
-const classOf = (cardId: string) =>
+const classOf = (cardId: CardId) =>
   (events as EventCard[]).find((card) => card.id === cardId)!.cardClass;
 
 /** Built through `resolutionOrder`, because that is what the frame really gets. */
-const onField = (...cardIds: string[]): TurnCard[] =>
+const onField = (...cardIds: CardId[]): TurnCard[] =>
   resolutionOrder(cardIds.map((cardId) => ({ cardId, cardClass: classOf(cardId) })));
 
 const shape = (cards: TurnCard[], resolved: string[] = []) =>
@@ -189,7 +190,7 @@ describe("offeredNotQueued", () => {
 });
 
 describe("what is spent by being read (16.1, 16.5, 16.7)", () => {
-  const one = (cardId: string) => onField(cardId)[0];
+  const one = (cardId: CardId) => onField(cardId)[0];
 
   /** "Po osądzeniu cię, Bóstwo znika - odłóż jego Kartę." */
   it("is a Spotkanie, Nieznajomy or Miejsce whose own text says odłóż", () => {

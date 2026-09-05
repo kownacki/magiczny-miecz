@@ -6,6 +6,8 @@ import { asReturnable, putOnPile, trophiesToPile } from "./piles";
 import { passTurn } from "./turn";
 import { startTurn } from "@/lib/engine/turn";
 import { only } from "@/lib/engine/stack";
+import type { CardId } from "@/data/ids";
+import type { SeatCharacter } from "@/lib/engine/characters";
 
 /**
  * The two things 4.4 does not have a word for.
@@ -51,9 +53,9 @@ export interface RemoveCharacter {
 }
 
 export interface Removed {
-  characterId: string;
+  characterId: SeatCharacter;
   /** What went back on the piles. Nothing is left on the Obszar. */
-  returned: string[];
+  returned: CardId[];
 }
 
 /**

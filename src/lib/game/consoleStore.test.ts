@@ -7,6 +7,7 @@ import { setReady } from "./lobbyStore";
 import { grantCard, rollForMove, startGame, takeNewCharacter } from "./turnStore";
 import { activeStore } from "./gameStore";
 import { top } from "@/lib/engine/stack";
+import type { CardId } from "@/data/ids";
 
 /**
  * How a pack reads, which is not how it is stored.
@@ -44,7 +45,7 @@ describe("reading what a character is carrying", () => {
     const { gameId, actor, seat } = await playing("classic");
     // Deliberately out of order, and deliberately across the letter that a
     // default sort gets wrong.
-    for (const card of ["zbroja", "helm", "lodz", "miecz"]) {
+    for (const card of ["zbroja", "helm", "lodz", "miecz"] as const) {
       await grantCard(gameId, seat, card);
     }
 
@@ -133,7 +134,7 @@ describe("taking what a won duel owes", () => {
 describe("handing the turn on over a surplus", () => {
   const overloaded = async () => {
     const table = await playing("classic");
-    for (const card of ["helm", "zbroja", "miecz", "sztylet", "latarnia"]) {
+    for (const card of ["helm", "zbroja", "miecz", "sztylet", "latarnia"] as const) {
       await grantCard(table.gameId, table.seat, card);
     }
     return table;
@@ -160,7 +161,7 @@ describe("handing the turn on over a surplus", () => {
    * regression test for a refusal can quietly stop testing anything.
    */
   const overSpelled = async (gameId: string, actor: { userId: string; seatId: string }) => {
-    for (const spell of ["ocalony", "odrodzenie", "olsnienie"]) {
+    for (const spell of ["ocalony", "odrodzenie", "olsnienie"] as const) {
       await runCommand(gameId, actor, { kind: "deal", cardIds: [spell] });
     }
     expect(top((await activeStore().load(gameId)).game.turn_state)).toMatchObject({
@@ -229,7 +230,7 @@ describe("handing the turn on over a surplus", () => {
   it("takes 2.6's cap off one seat, and deals past it", async () => {
     const { gameId, actor } = await playing();
     await runCommand(gameId, actor, { kind: "effect", effect: "nolimit", who: null });
-    for (const spell of ["ocalony", "odrodzenie", "olsnienie", "fatum"]) {
+    for (const spell of ["ocalony", "odrodzenie", "olsnienie", "fatum"] as const) {
       await runCommand(gameId, actor, { kind: "deal", cardIds: [spell] });
     }
     // Four in a hand 2.6 caps at three at the very most, and the table has not
@@ -392,7 +393,7 @@ describe("spending one of two copies you are holding", () => {
 describe("dealing several Karty in one line", () => {
   /** The order the turn will reach them in, off the frame the deal wrote. */
   const waiting = async (gameId: string) =>
-    (top((await activeStore().load(gameId)).game.turn_state) as { drawn: { cardId: string }[] }).drawn.map(
+    (top((await activeStore().load(gameId)).game.turn_state) as { drawn: { cardId: CardId }[] }).drawn.map(
       (card) => card.cardId,
     );
 

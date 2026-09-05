@@ -33,6 +33,7 @@ import { asReturnable, dropGold, pushOntoPile, putOnPile, takeGold, trophiesToPi
 import { eqModeOf, holdingsOf, seatById, seatView } from "./seat";
 import { cardName } from "@/lib/engine/polish";
 import { replaceTop, requireTop, top, topIf } from "@/lib/engine/stack";
+import type { CardId } from "@/data/ids";
 
 /* --------------------------------------------------------------------------
  * The small pure things these commands need, which the store keeps as queries.
@@ -58,7 +59,7 @@ function forbiddenFor(card: EventCard): ("good" | "evil" | "chaotic")[] | undefi
  * the stack — gear lifted off the Obszar, a conjured one — simply is not found,
  * and nothing is written.
  */
-export function liftOffField(snapshot: Snapshot, cardId: string, index?: number): Changeset {
+export function liftOffField(snapshot: Snapshot, cardId: CardId, index?: number): Changeset {
   const state = topIf(snapshot.game.turn_state, "field");
   if (!state) return {};
   /**
@@ -89,7 +90,7 @@ export function liftOffField(snapshot: Snapshot, cardId: string, index?: number)
  * This is the denominator for 21.2: every copy in play is one that is not on
  * the pile to be bought.
  */
-function copiesInPlay(snapshot: Snapshot, cardId: string): number {
+function copiesInPlay(snapshot: Snapshot, cardId: CardId): number {
   return (
     snapshot.holdings.filter((held) => held.card_id === cardId).length +
     snapshot.fieldCards.filter((card) => card.card_id === cardId).length
@@ -102,7 +103,7 @@ function copiesInPlay(snapshot: Snapshot, cardId: string): number {
 
 export interface TakeCard {
   seatId: string;
-  cardId: string;
+  cardId: CardId;
   /** Set when this card came off a field that was holding a granted one. */
   granted?: boolean;
   /**
@@ -164,7 +165,7 @@ export interface Taken {
 function escortFor(
   snapshot: Snapshot,
   seatId: string,
-  cardId: string,
+  cardId: CardId,
   granted: boolean,
 ): Changeset {
   if (!carriesSpell([cardId])) return {};
@@ -236,7 +237,7 @@ function escortFor(
  * One question now, and `copiesRanked` answers it: the copy that leaves and the
  * mark it carries are read off the same entry.
  */
-function chosenHere(snapshot: Snapshot, seatId: string, cardId: string): FieldCopy | null {
+function chosenHere(snapshot: Snapshot, seatId: string, cardId: CardId): FieldCopy | null {
   const seat = snapshot.seats.find((row) => row.id === seatId);
   const state = top(snapshot.game.turn_state);
   const inTurn = state.phase === "field" && state.fieldId === seat?.field_id ? state.drawn : [];
@@ -257,7 +258,7 @@ function chosenHere(snapshot: Snapshot, seatId: string, cardId: string): FieldCo
  * `field_cards` row into the turn's frame and the end of the turn writes back
  * what nobody took, so which list a Karta is in says nothing a player can see.
  */
-function lyingHere(snapshot: Snapshot, seatId: string, cardId: string): boolean {
+function lyingHere(snapshot: Snapshot, seatId: string, cardId: CardId): boolean {
   const seat = snapshot.seats.find((one) => one.id === seatId);
   const state = top(snapshot.game.turn_state);
   const inTurn = state.phase === "field" ? state.drawn : [];
@@ -959,7 +960,7 @@ function sweepGold(
   fieldId: FieldId,
   want: number | "all",
   seatId: string,
-): Outcome<{ cards: string[]; gold: number }> {
+): Outcome<{ cards: CardId[]; gold: number }> {
   const lying = snapshot.fieldGold.find((row) => row.field_id === fieldId);
   if (!lying || lying.gold <= 0) throw new Error("Nie ma tu złota.");
 
@@ -990,8 +991,8 @@ function sweepGold(
 
 /** One copy of a Karta lying on an Obszar, in whichever of the two places it lies. */
 export type FieldCopy =
-  | { where: "board"; id: string; cardId: string; granted: boolean }
-  | { where: "turn"; at: number; cardId: string; granted: boolean };
+  | { where: "board"; id: string; cardId: CardId; granted: boolean }
+  | { where: "turn"; at: number; cardId: CardId; granted: boolean };
 
 /**
  * Every copy lying on one Obszar, best first — the answer to "which one?"
@@ -1033,7 +1034,7 @@ export type FieldCopy =
  * while the turn stands on it is one `place`d since — newer than anything drawn.
  */
 export function copiesRanked(
-  rows: readonly { id: string; card_id: string; granted: boolean }[],
+  rows: readonly { id: string; card_id: CardId; granted: boolean }[],
   inTurn: readonly TurnCard[],
 ): FieldCopy[] {
   return [
@@ -1069,7 +1070,7 @@ export function clearField(
      * copy: `clear MIECZ, MIECZ` takes two, which is the only way to say it,
      * since a name alone has always meant one.
      */
-    cardIds?: readonly string[];
+    cardIds?: readonly CardId[];
     gold?: number | "all";
     /**
      * Whole kinds at a time — `clear strangers, places`, and `enemies` for both
@@ -1080,7 +1081,7 @@ export function clearField(
      */
     classes?: readonly CardClass[];
   },
-): Outcome<{ cards: string[]; gold: number }> {
+): Outcome<{ cards: CardId[]; gold: number }> {
   const classes = command.classes ?? [];
   const byKind = classes.length > 0;
   const cardIds = command.cardIds ?? [];
@@ -1179,7 +1180,7 @@ export function clearField(
    * what 15.2 sorted them by. A card the deck has never heard of matches
    * nothing, which is the same answer `scriptFor` gives about one.
    */
-  const wanted = (cardId: string): boolean => {
+  const wanted = (cardId: CardId): boolean => {
     const card = EVENTS.find((one) => one.id === cardId);
     return card !== undefined && classes.includes(card.cardClass);
   };
@@ -1243,7 +1244,7 @@ export function clearField(
 
   const claimedRows = new Set<string>();
   const claimedInTurn = new Set<number>();
-  const missing: string[] = [];
+  const missing: CardId[] = [];
   for (const cardId of cardIds) {
     const found = candidates.find(
       (one) =>
@@ -1302,7 +1303,7 @@ export function clearField(
   const swept = new Set(takenFromTurn);
   const kept = inTurn.filter((_, index) => !swept.has(index));
   const left = new Set(kept.map((card) => keyOf(card)));
-  const leftByName = new Set(kept.map((card) => card.cardId));
+  const leftByName = new Set<string>(kept.map((card) => card.cardId));
   /**
    * The lists beside `drawn` name cards by id, so a card that has gone must go
    * out of them too — a `resolved` id with no Karta behind it is a card the
@@ -1400,7 +1401,7 @@ export function clearField(
  */
 export function placeCard(
   snapshot: Snapshot,
-  command: { seatId: string; cardId: string; target: FieldId | null },
+  command: { seatId: string; cardId: CardId; target: FieldId | null },
 ): Outcome<FieldId> {
   // Out of the game entirely — not in a pile, and not conjurable either.
   refuseIfParked(command.cardId);
@@ -1507,7 +1508,7 @@ export function placeGold(
  */
 export function grantCard(
   snapshot: Snapshot,
-  command: { seatId: string; cardId: string },
+  command: { seatId: string; cardId: CardId },
 ): Outcome<void> {
   // The one thing this shortcut does not step round. Everything else it
   // skips is a rule; a parked Karta is not in the box at all.

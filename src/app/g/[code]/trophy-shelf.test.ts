@@ -1,8 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { shelfFor } from "./trophy-shelf";
+import type { CardId } from "@/data/ids";
 
-/** The shelf takes holdings; these tests care about names, so ids are made up. */
-const holding = (cardId: string, at: number) => ({ holdingId: `h${at}`, cardId });
+/** The shelf takes holdings; these tests care about order, so the ids only have to differ. */
+const holding = (cardId: CardId, at: number) => ({ holdingId: `h${at}`, cardId });
+
+/** The same, as a list — so the ids stay `CardId`s rather than widening to `string`. */
+const held = (...cardIds: readonly CardId[]) => cardIds.map(holding);
+
+/** Four Wrogowie standing in for „a, b, c, d": what is being read here is the order. */
+const [A, B, C, D] = ["cyklop", "nobbin", "wilk", "wilkolak"] as const;
 
 /**
  * The shelf, which is `trophy_beaten` minus the hand.
@@ -17,14 +24,14 @@ describe("who is still in hand", () => {
 
   /** Newest first: the shelf grows at one end and that end is what you read. */
   it("keeps everyone still held, latest first", () => {
-    expect(names(shelfFor(["cyklop", "nobbin"], ["cyklop", "nobbin"].map(holding)))).toEqual([
+    expect(names(shelfFor(["cyklop", "nobbin"], held("cyklop", "nobbin")))).toEqual([
       "nobbin",
       "cyklop",
     ]);
   });
 
   it("marks the ones whose Karty have left", () => {
-    expect(names(shelfFor(["cyklop", "nobbin"], ["nobbin"].map(holding)))).toEqual(["nobbin", "cyklop*"]);
+    expect(names(shelfFor(["cyklop", "nobbin"], held("nobbin")))).toEqual(["nobbin", "cyklop*"]);
   });
 
   /**
@@ -32,14 +39,14 @@ describe("who is still in hand", () => {
    * two Nobbiny beaten and one handed in leaves one of each, not two held.
    */
   it("spends one entry per holding, not one per name", () => {
-    expect(names(shelfFor(["nobbin", "nobbin"], ["nobbin"].map(holding)))).toEqual([
+    expect(names(shelfFor(["nobbin", "nobbin"], held("nobbin")))).toEqual([
       "nobbin",
       "nobbin*",
     ]);
   });
 
   it("calls none of three gone when all three are held", () => {
-    const shelf = shelfFor(["nobbin", "nobbin", "nobbin"], ["nobbin", "nobbin", "nobbin"].map(holding));
+    const shelf = shelfFor(["nobbin", "nobbin", "nobbin"], held("nobbin", "nobbin", "nobbin"));
     expect(shelf.filter((one) => one.gone)).toEqual([]);
   });
 
@@ -48,12 +55,7 @@ describe("who is still in hand", () => {
    * running latest to oldest so they read the same direction.
    */
   it("puts the spent last, each half latest first", () => {
-    expect(names(shelfFor(["a", "b", "c", "d"], ["b", "d"].map(holding)))).toEqual([
-      "d",
-      "b",
-      "c*",
-      "a*",
-    ]);
+    expect(names(shelfFor([A, B, C, D], held(B, D)))).toEqual([D, B, `${C}*`, `${A}*`]);
   });
 
   /**
@@ -62,9 +64,9 @@ describe("who is still in hand", () => {
    * empty a row the player can see.
    */
   it("keeps a holding that never reached the shelf, as the oldest thing there", () => {
-    expect(names(shelfFor([], ["cyklop"].map(holding)))).toEqual(["cyklop"]);
+    expect(names(shelfFor([], held("cyklop")))).toEqual(["cyklop"]);
     // NOBBIN has a date and CYKLOP predates the shelf, so CYKLOP sorts behind.
-    expect(names(shelfFor(["nobbin"], ["nobbin", "cyklop"].map(holding)))).toEqual(["nobbin", "cyklop"]);
+    expect(names(shelfFor(["nobbin"], held("nobbin", "cyklop")))).toEqual(["nobbin", "cyklop"]);
   });
 
   /**

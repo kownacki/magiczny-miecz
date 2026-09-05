@@ -9,6 +9,7 @@ import { setTrophyMode } from "./lobby";
 import { dropCard } from "./holdings";
 import { asSeatCharacter } from "@/lib/engine/characters";
 import type { TurnPhase } from "@/lib/engine/turn";
+import type { CardId } from "@/data/ids";
 
 /**
  * Trophies, and the gap between having the machinery and having the rule.
@@ -70,7 +71,7 @@ const settle = async (table: ReturnType<typeof won>) => {
 };
 
 /** The refs of one card that have reached the stos zużytych. */
-const returned = (t: ReturnType<typeof apply>, cardId: string) => {
+const returned = (t: ReturnType<typeof apply>, cardId: CardId) => {
   const copies = EVENT_COPIES.get(cardId) ?? [];
   const deck = decksOf(t.game).events;
   return deck.discard.filter((ref) => copies.includes(ref));
@@ -226,7 +227,7 @@ describe("switching to punkty mid-game", () => {
       holdings,
     });
 
-  const trophy = (id: string, seat: string, cardId: string, granted = false) =>
+  const trophy = (id: string, seat: string, cardId: CardId, granted = false) =>
     aHolding({ id, seat_id: seat, card_id: cardId, kind: "trophy", granted });
 
   /**
@@ -334,7 +335,7 @@ describe("switching to punkty mid-game", () => {
 });
 
 describe("cashing them in (1.4)", () => {
-  const holding = (...foes: string[]) =>
+  const holding = (...foes: CardId[]) =>
     aTable({
       seats: [aSeat({ id: "seat-a", sword_own: 5 })],
       holdings: foes.map((cardId, at) =>

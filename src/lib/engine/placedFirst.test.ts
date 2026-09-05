@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { goesToAField, instructionIn, reopensTheDrawing, scriptFor } from "./cardScript";
 import { placedFirst, resolutionOrder } from "./state";
 import type { TurnCard } from "./state";
+import type { CardId } from "@/data/ids";
 
 /**
  * 15.1, which sits above 15.2's numerals.
@@ -13,7 +14,7 @@ import type { TurnCard } from "./state";
  * The point of the rule is that it overrides the printed class: the Upiór is a
  * Wróg and the Eremita a Spotkanie, and neither waits its turn.
  */
-const card = (cardId: string, cardClass: TurnCard["cardClass"]): TurnCard =>
+const card = (cardId: CardId, cardClass: TurnCard["cardClass"]): TurnCard =>
   ({ cardId, cardClass }) as TurnCard;
 
 describe("a card that sends itself to a named Obszar", () => {
@@ -22,7 +23,9 @@ describe("a card that sends itself to a named Obszar", () => {
     expect(goesToAField("eremita")).toBe(true);
     expect(goesToAField("lewiatan")).toBe(true);
     expect(goesToAField("cyklop")).toBe(false);
-    expect(goesToAField("nie-ma-takiej")).toBe(false);
+    // The line that used to sit here named an id the box does not have. It
+    // cannot be written any more: the parameter is a `CardId`.
+
   });
 
   /** Even reached through a die table, which is how all three reach it. */
@@ -98,7 +101,9 @@ describe("a card that re-opens the badanie", () => {
     // The other Miejsce that moves you about does not draw anything.
     expect(reopensTheDrawing("tajemne-przejscie")).toBe(false);
     expect(reopensTheDrawing("targowisko")).toBe(false);
-    expect(reopensTheDrawing("nie-ma-takiej")).toBe(false);
+    // The line that used to sit here named an id the box does not have. It
+    // cannot be written any more: the parameter is a `CardId`.
+
   });
 
   /**

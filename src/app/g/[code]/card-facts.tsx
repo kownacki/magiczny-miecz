@@ -21,6 +21,7 @@ import { requirementOf } from "@/lib/engine/abilityText";
 import type { Nature } from "@/data/types";
 import { sentence } from "@/lib/engine/polish";
 import { WithRules } from "./rule-ref";
+import type { CardId } from "@/data/ids";
 
 /** Whether there is any formalised line at all, or only the printed prose. */
 export function hasFacts(profile: ItemProfile | null): boolean {
@@ -106,7 +107,7 @@ export function CardFacts({
    */
   character = false,
 }: {
-  cardId: string;
+  cardId: CardId;
   profile: ItemProfile;
   nature: Nature | null;
   character?: boolean;

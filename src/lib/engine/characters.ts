@@ -2,7 +2,7 @@
 
 import type { Ability } from "./abilities";
 import { CHARACTER_POWERS_PARKED } from "./disabled";
-import { isCharacterId, type CharacterId } from "@/data/ids";
+import { isCharacterId, type CardId, type CharacterId } from "@/data/ids";
 
 /**
  * Rule 8.1 gives every character two to five printed powers, and until now the
@@ -100,7 +100,7 @@ export const CHARACTER_ABILITIES: Readonly<Partial<Record<CharacterId, readonly 
  */
 export interface StartingKit {
   /** Card ids from the equipment sheet, taken as items. */
-  items?: readonly string[];
+  items?: readonly CardId[];
   /** Zaklęcia dealt at setup (9.5). */
   spells?: number;
   gold?: number;
@@ -176,8 +176,14 @@ export const CHARACTER_GENDER: Readonly<Record<CharacterId, "m" | "f">> = {
   zdobywca: "m",
 };
 
-/** The gender of a Postać named by an id off the wire, masculine for an unknown one. */
-export function genderOf(characterId: string | null | undefined): "m" | "f" {
+/**
+ * The gender of a Postać, masculine for a seat that is not holding one.
+ *
+ * Takes the three states a seat's column can be in, not a bare string: the
+ * surprise has no gender to read and neither has an empty chair, and both come
+ * back masculine — which is what the sentences using this need anyway.
+ */
+export function genderOf(characterId: SeatCharacter | null | undefined): "m" | "f" {
   const known = characterId ? asCharacterId(characterId) : null;
   return known ? CHARACTER_GENDER[known] : "m";
 }
@@ -323,7 +329,16 @@ export const RANDOM_CHARACTER_ID = "losowa";
  */
 export const RANDOM_CHARACTER_NAME = "LOSOWA";
 
-/** Whether a seat is holding the surprise rather than a Karta Postaci. */
+/**
+ * Whether a seat is holding the surprise rather than a Karta Postaci.
+ *
+ * `string` on purpose, and one of the few left. This is a *guard*, in the same
+ * family as `isCharacterId` and `asSeatCharacter`: it is asked of a value that
+ * has not been looked at yet — a `characterId` off a request body, a name typed
+ * at the console — and answering "no" for anything that is not the sentinel is
+ * the whole of its contract. Narrowing the parameter would make it
+ * unanswerable, because no `CharacterId` is ever the sentinel.
+ */
 export function isRandomPick(characterId: string | null | undefined): boolean {
   return characterId === RANDOM_CHARACTER_ID;
 }
@@ -392,6 +407,6 @@ export function startingKit(characterId: CharacterId | null): StartingKit {
  * `wandRefills`. A stored `character_id` is narrowed on the way in, and an
  * unseated seat has no starting hand.
  */
-export function spellsAtSetup(characterId: string | null): number {
+export function spellsAtSetup(characterId: SeatCharacter | null): number {
   return startingKit(asCharacterId(characterId)).spells ?? 0;
 }

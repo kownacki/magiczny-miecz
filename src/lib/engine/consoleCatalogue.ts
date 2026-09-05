@@ -27,6 +27,7 @@ import type { FieldId } from "./board";
 import { SLOTS } from "./slots";
 import { findByName, fold } from "./search";
 import type { EffectName, Nature } from "./consoleSpec";
+import type { CardId } from "@/data/ids";
 
 /** Every card that can be fought: only a Wróg has a Miecz or a Magia to roll against. */
 export const FOES = (events as EventCard[]).filter((card) => isFoeClass(card.cardClass));
@@ -247,8 +248,10 @@ export const DEALABLE: readonly Catalogue[] = [...PLACEABLE, ZAKLECIA];
  * each name once, because you type a name and not a copy. Polish order, so ŁÓDŹ
  * sits after LATARNIA rather than past Z where nobody looks.
  */
-function byName(cards: readonly { id: string; name: string }[]): { id: string; name: string }[] {
-  const seen = new Map<string, { id: string; name: string }>();
+function byName<Id extends string>(
+  cards: readonly { id: Id; name: string }[],
+): { id: Id; name: string }[] {
+  const seen = new Map<Id, { id: Id; name: string }>();
   for (const card of cards) if (!seen.has(card.id)) seen.set(card.id, { id: card.id, name: card.name });
   return [...seen.values()].sort((a, b) => a.name.localeCompare(b.name, "pl"));
 }
@@ -262,7 +265,7 @@ function byName(cards: readonly { id: string; name: string }[]): { id: string; n
  * note above `GIVEABLE` describes. Deduped by id, because you name a card and
  * not one of its four copies.
  */
-export const STACKABLE: { id: string; name: string }[] = byName([
+export const STACKABLE: { id: CardId; name: string }[] = byName([
   ...(events as EventCard[]),
   ...(spells as Spell[]),
 ]);
@@ -271,7 +274,7 @@ export const STACKABLE: { id: string; name: string }[] = byName([
 export const STACK_KINDS: readonly Catalogue[] = [...byKind(events as EventCard[]), ZAKLECIA];
 
 /** Everything with a Karta worth reading, which is more than a hand may hold. */
-export const READABLE: { id: string; name: string }[] = [...CARDS, ...(spells as Spell[])];
+export const READABLE: { id: CardId; name: string }[] = [...CARDS, ...(spells as Spell[])];
 
 export const PEOPLE = characters as Character[];
 

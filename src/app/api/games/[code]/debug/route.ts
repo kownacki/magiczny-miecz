@@ -5,6 +5,7 @@ import { findGame, verifyActor } from "@/lib/game/store";
 import { abandonFight, grantCard, placeSeat, stageFight } from "@/lib/game/turnStore";
 import { runCommand } from "@/lib/game/consoleStore";
 import { parseCommand, permits } from "@/lib/engine/console";
+import { requireCardId } from "@/data/ids";
 
 /**
  * Shortcuts for reaching a game state without playing to it.
@@ -78,7 +79,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
       }
       case "grant":
         if (!seatId) return mustBeSeated();
-        await grantCard(game.id, seatId, String(body.cardId));
+        await grantCard(game.id, seatId, requireCardId(String(body.cardId)));
         break;
       case "teleport":
         if (!seatId) return mustBeSeated();
@@ -92,7 +93,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ cod
         // walking until the deck hands it over, and there are a hundred and
         // forty-five other cards in it.
         if (!seatId) return mustBeSeated();
-        await stageFight(game.id, seatId, String(body.cardId));
+        await stageFight(game.id, seatId, requireCardId(String(body.cardId)));
         break;
       case "leave-fight":
         // The way out of one. 17.4 ends a fight only when the dice are compared

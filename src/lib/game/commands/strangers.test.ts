@@ -11,6 +11,7 @@ import { hasAttacked, movementCap, stillStone } from "@/lib/engine/status";
 import { asSeatCharacter } from "@/lib/engine/characters";
 import { SPELLS as SPELL_CARDS } from "../decks";
 import type { TurnPhase } from "@/lib/engine/turn";
+import type { CardId } from "@/data/ids";
 
 /**
  * The last three Nieznajomi, and what each was waiting on.
@@ -39,7 +40,7 @@ const someSpells = () => ({
  * `liftFieldCards` marks, and the only thing that tells 15.1's two sentences
  * apart. Off by default: every other Nieznajomy here is being drawn.
  */
-const meeting = (card: string, gold: number, magic = 4, lying = false) =>
+const meeting = (card: CardId, gold: number, magic = 4, lying = false) =>
   aTable({
     game: {
       active_seat: 0,
@@ -64,7 +65,7 @@ const meeting = (card: string, gold: number, magic = 4, lying = false) =>
 
 const visit = async (
   table: ReturnType<typeof meeting>,
-  card: string,
+  card: CardId,
   choices: number[] = [],
   dice: number[] = [],
 ) => {

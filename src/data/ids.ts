@@ -275,3 +275,16 @@ export function isSpellId(value: string | null | undefined): value is SpellId {
 export function isCardId(value: string | null | undefined): value is CardId {
   return isEventId(value) || isItemId(value) || isSpellId(value);
 }
+
+/**
+ * The same door, for a place that cannot carry on without one.
+ *
+ * `requireFieldId` in `board.ts`, one id space over: a name off a request body
+ * or typed at the console either is a Karta in this box or the caller is told
+ * so, rather than a junk id travelling on into a holdings row nothing can
+ * describe. Where "not a card" is an ordinary answer, use `isCardId` instead.
+ */
+export function requireCardId(value: string | null | undefined, what = "Karta"): CardId {
+  if (!isCardId(value)) throw new Error(`${what}: nie ma takiej Karty — ${value}`);
+  return value;
+}

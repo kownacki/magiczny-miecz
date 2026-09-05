@@ -28,6 +28,7 @@ import type { EqMode, Slot } from "@/lib/engine/slots";
 import type { Nature } from "@/data/types";
 import type { HoldingRow, SeatRow } from "../store";
 import type { Outcome, Snapshot } from "../change";
+import type { CardId, SpellId } from "@/data/ids";
 
 export function eqModeOf(game: { eq_mode: string }): EqMode {
   return game.eq_mode === "slots" ? "slots" : "classic";
@@ -489,7 +490,7 @@ export function allStatusesOf(snapshot: Snapshot, seatId: string): Status[] {
 export function refuseWhileHeld(
   snapshot: Snapshot,
   seatId: string,
-  casting?: string,
+  casting?: SpellId,
 ): void {
   /**
    * Asked of everything, not of the rows.
@@ -615,8 +616,8 @@ export function setEndlessStock(
  * for a count above zero.
  */
 export function cardLending(
-  view: { holdings: readonly { cardId: string }[] },
+  view: { holdings: readonly { cardId: CardId }[] },
   holds: (abilities: Ability[]) => boolean,
-): string | null {
+): CardId | null {
   return view.holdings.find((held) => holds(heldAbilities([held.cardId])))?.cardId ?? null;
 }

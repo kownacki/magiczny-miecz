@@ -20,6 +20,7 @@ import { compareCombat, type CombatKind, type CombatResult } from "./combat";
 import type { Effect } from "./cardScript";
 import type { CardRef } from "./deck";
 import { stillStone } from "./status";
+import type { CardId } from "@/data/ids";
 
 /**
  * A turn is rule 10.1's two steps — move, then deal with where you landed —
@@ -112,6 +113,11 @@ export type TurnPhase =
        * A face and a card, and nothing about what it *did* — that is the
        * Dziennik's, and the six rows above are what a 4 means.
        */
+      /*
+       * `cardId` is a `string` and not a `CardId`: an Obszar's own table has
+       * no Karta, and its die is named `pole:<oferta>` the way a fight against
+       * a square's guardian is. See `markRolled`.
+       */
       rolled?: { cardId: string; face: number };
     }
   | { phase: "fight"; fight: Fight }
@@ -141,7 +147,7 @@ export type TurnPhase =
       phase: "script";
       seatId: string;
       /** The Karta being resolved, or null for an Obszar's own table. */
-      cardId: string | null;
+      cardId: CardId | null;
       /** What the journal calls this resolution — "GROTA (5)", "Urwisko". */
       reason: string;
       /** The root effect, as authored. The cursor points into it. */
@@ -241,7 +247,7 @@ export type TurnPhase =
       /** Law 5: whose answer this is. */
       seatId: string;
       /** The Karta whose Charakterystyka is asking, for the journal and the panel. */
-      cardId: string | null;
+      cardId: CardId | null;
       /** What to call this on screen — "CHOCHLIK". */
       reason: string;
       question: Question;
@@ -292,7 +298,7 @@ export type TurnPhase =
        * anywhere — it is destroyed with them. `cardId` is the carrier that
        * went, so the sentence and the ways under can both name it.
        */
-      because?: { kind: "container-lost"; cardId: string };
+      because?: { kind: "container-lost"; cardId: CardId };
     }
   | { phase: "end" };
 
@@ -337,6 +343,14 @@ export type Question = {
  * fighting with the wrong number is not.
  */
 export interface Fight {
+  /**
+   * Who is being fought, for display — a `string` and not a `CardId`.
+   *
+   * Three things write it and only one is a Karta. 17.5 joins a pack into one
+   * fight and the id is then their ids run together (`wilk+wilkolak`); a
+   * guardian in a doorway is `pole:<oferta>`; a duel is `seat:<n>`. `settles`
+   * beside it is the list of real Karty, and that one is typed.
+   */
   cardId: string;
   cardName: string;
   /** Staged by the test shortcut rather than drawn — see `TurnCard.granted`. */
@@ -383,6 +397,15 @@ export interface Fight {
    * started, and by the time it is settled there is nothing else left to say so.
    */
   raid?: {
+    /**
+     * Who was sent, as a `string` and deliberately.
+     *
+     * Two things write it and they are not one id space: a wyprawa carries the
+     * Przyjaciel's Karta id, and a creature conjured by a Zaklęcie carries that
+     * Zaklęcie's *printed name*, which is what `summonFighter` is handed. Both
+     * are only ever written — nothing looks either of them up — so narrowing
+     * this would mean choosing which of the two writers to break.
+     */
     cardId: string;
     /**
      * Conjured by a Zaklęcie rather than sent from a hand (GOLEM, HOMUNCULUS).
@@ -830,6 +853,7 @@ export function endTurn(): TurnPhase {
 export function startFight(
   phase: TurnPhase,
   card: {
+    /** Display, not a lookup — see `Fight.cardId`. */
     cardId: string;
     cardName: string;
     miecz?: number;
@@ -839,9 +863,10 @@ export function startFight(
     /**
      * The ids this fight settles. Several when 17.5 has a pack attack as one,
      * and `cardId` is then their ids joined together for display rather than
-     * something to look up.
+     * something to look up — which is why `Fight.cardId` beside them is a
+     * `string` and these are not.
      */
-    settles?: string[];
+    settles?: CardId[];
     /** Who is fighting instead of the character, and what they are sent at. */
     raid?: Fight["raid"];
   },

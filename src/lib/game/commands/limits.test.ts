@@ -6,6 +6,7 @@ import { scriptedRandom } from "@/lib/engine/ports";
 import { overCarried, overSpelled, refuseWhileOverLimit } from "./seat";
 import { rollForMove } from "./movement";
 import { dropCard } from "./holdings";
+import type { CardId } from "@/data/ids";
 
 /**
  * 5.6, in the direction nothing watched.
@@ -20,9 +21,9 @@ import { dropCard } from "./holdings";
  * wyłącznie od decyzji gracza" — so it stops the game instead and says how many
  * have to go.
  */
-const PACK = ["helm", "zbroja", "miecz", "sztylet", "tarcza"];
+const PACK: readonly CardId[] = ["helm", "zbroja", "miecz", "sztylet", "tarcza"];
 
-const carrying = (cards: readonly string[]) =>
+const carrying = (cards: readonly CardId[]) =>
   aTable({
     game: { active_seat: 0, turn_state: { phase: "roll" } },
     seats: [aSeat({ id: "seat-a", seat_index: 0, field_id: "mokradla-1" })],

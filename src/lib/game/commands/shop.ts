@@ -16,6 +16,7 @@ import { top } from "@/lib/engine/stack";
 import { cardName, plural } from "@/lib/engine/polish";
 import { TROPHY_RATE, offerFor, offersFor } from "@/lib/engine/trophies";
 import { pointsOf, seatById } from "./seat";
+import type { CardId } from "@/data/ids";
 
 /**
  * 1.4's rate, and the search over a hand that spends it well.
@@ -200,7 +201,7 @@ export function convertTrophies(snapshot: Snapshot): Changeset {
  * above reads as one expression.
  */
 function refuseSwords(
-  held: readonly { card_id: string }[],
+  held: readonly { card_id: CardId }[],
   swords: number,
   mirror: { miecz: number },
 ): never {
@@ -232,7 +233,7 @@ export function tradeTrophies(
    * on paper. Neither hands in everything, which is what a player cashing out
    * usually means.
    */
-  command: { seatId: string; swords?: number; cardIds?: readonly string[] },
+  command: { seatId: string; swords?: number; cardIds?: readonly CardId[] },
 ): Outcome<number> {
   const seat = seatById(snapshot, command.seatId);
 
@@ -247,7 +248,7 @@ export function tradeTrophies(
    * path below and not two: whatever the player said, by the time it is spent
    * it is a set of holdings.
    */
-  const named: readonly string[] | undefined =
+  const named: readonly CardId[] | undefined =
     command.cardIds ??
     (command.swords === undefined
       ? undefined
@@ -430,7 +431,7 @@ export function payHealer(
  */
 export function buyGoods(
   snapshot: Snapshot,
-  command: { seatId: string; cardId: string },
+  command: { seatId: string; cardId: CardId },
 ): Outcome<Taken> {
   const seat = standingShopper(snapshot, command.seatId);
   const desk = offerOn(snapshot, seat.field_id as FieldId, "kup");

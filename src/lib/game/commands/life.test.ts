@@ -129,7 +129,7 @@ describe("śmierć (4.4)", () => {
         aHolding({ id: "h-item", card_id: "helm", kind: "item" }),
         aHolding({ id: "h-friend", card_id: "wilk", kind: "friend" }),
         aHolding({ id: "h-spell", card_id: "krag-plomieni", kind: "spell" }),
-        aHolding({ id: "h-trophy", card_id: "goblin", kind: "trophy" }),
+        aHolding({ id: "h-trophy", card_id: "cyklop", kind: "trophy" }),
       ],
     });
 

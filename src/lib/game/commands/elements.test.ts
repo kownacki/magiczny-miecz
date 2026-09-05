@@ -5,6 +5,7 @@ import { aHolding, aSeat, aTable, aUser, ports } from "../fixture";
 import { apply, type Snapshot } from "../change";
 import { castSpell } from "./spells";
 import { pointsOf, seatView } from "./seat";
+import type { CardId } from "@/data/ids";
 
 /**
  * WOJNA ŻYWIOŁÓW, both halves at last.
@@ -26,7 +27,7 @@ import { pointsOf, seatView } from "./seat";
 
 const asIs = <T,>(pile: readonly T[]): T[] => [...pile];
 
-const table = (cards: string[]): Snapshot =>
+const table = (cards: CardId[]): Snapshot =>
   aTable({
     game: { active_seat: 0 },
     seats: [

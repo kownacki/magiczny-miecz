@@ -3,10 +3,11 @@
 import type { Nature } from "@/data/types";
 import { FIELDS, type FieldId } from "./board";
 import type { Target } from "./cardScript";
+import type { SeatCharacter } from "./characters";
 
 export interface TargetSeat {
   seatIndex: number;
-  characterId: string | null;
+  characterId: SeatCharacter | null;
   fieldId: FieldId | null;
   nature: Nature | null;
   eliminated: boolean;

@@ -21,6 +21,7 @@ import {
   type Status,
 } from "./status";
 import { describeEnd, markOf } from "./statusRows";
+import type { CardId } from "@/data/ids";
 
 function status(over: Partial<Status> = {}): Status {
   return {
@@ -400,7 +401,7 @@ describe("the held half: a card's own Abilities as Status rows", () => {
    */
   it("agrees with bonusFromHoldings on every lending card in the box", async () => {
     const { bonusFromHoldings } = await import("./holdings");
-    const events = (await import("@/data/events.json")).default as { id: string; cardClass: string }[];
+    const events = (await import("@/data/events.json")).default as { id: CardId; cardClass: string }[];
     const lending = events.filter((c) => c.cardClass === "item" || c.cardClass === "friend");
     for (const card of lending) {
       const kind = card.cardClass === "friend" ? "friend" : "item";

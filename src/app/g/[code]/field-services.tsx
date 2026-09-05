@@ -14,6 +14,7 @@ import { Shop } from "./shop";
 import type { Confirmation } from "./confirm";
 import type { Offer } from "./field-offers";
 import type { OnService } from "./turn-controls";
+import type { CardId } from "@/data/ids";
 
 /**
  * Everything the controls under an offer need, gathered into one.
@@ -33,7 +34,7 @@ export interface OfferContext {
   life: number;
   /** How many of each Wyposażenie card are left in the box (21.2). */
   stock?: Record<string, number>;
-  sellable?: { id: string; cardId: string }[];
+  sellable?: { id: string; cardId: CardId }[];
   /** What the buyer holds and how much room 5.4 leaves them — see `whyPackIsFull`. */
   pack?: { holdings: readonly Holding[]; carried: number; limit: number; eqMode: EqMode };
   /**

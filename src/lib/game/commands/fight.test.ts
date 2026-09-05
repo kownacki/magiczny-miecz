@@ -14,6 +14,8 @@ import { apply } from "../change";
 import { attackSeat, beginFight, closeFightFrame, escape, fightRoll, shieldSaves } from "./fight";
 import { resolveFight } from "./spoils";
 import { castSpell, settleSpell } from "./spells";
+import type { CardId } from "@/data/ids";
+import type { TurnCard } from "@/lib/engine/state";
 
 /** A character standing where its move ended, with cards turned over in front of it. */
 const pole = (over: Partial<Extract<TurnPhase, { phase: "field" }>> = {}): TurnPhase => ({
@@ -422,7 +424,7 @@ describe("the deal comes before the reading (13.4)", () => {
 
 describe("rzucenie Zaklęcia (9.6, 9.7, 17.3)", () => {
   const casting = (
-    over: { cardId?: string; state?: TurnPhase; fieldId?: string } = {},
+    over: { cardId?: CardId; state?: TurnPhase; fieldId?: string } = {},
   ) =>
     aTable({
       game: { active_seat: 0, turn_state: over.state ?? pole() },
@@ -574,7 +576,7 @@ describe("rzucenie Zaklęcia (9.6, 9.7, 17.3)", () => {
    * The Krąg Płomieni (9.6), and the door it was waiting for.
    * --------------------------------------------------------------------- */
 
-  const inFlames = (over: { seats?: ReturnType<typeof aSeat>[]; cardId?: string } = {}) =>
+  const inFlames = (over: { seats?: ReturnType<typeof aSeat>[]; cardId?: CardId } = {}) =>
     aTable({
       game: { active_seat: 0, turn_state: { phase: "roll" } },
       seats: over.seats ?? [
@@ -795,7 +797,7 @@ describe("rzucenie Zaklęcia (9.6, 9.7, 17.3)", () => {
    * --------------------------------------------------------------------- */
 
   /** Somebody else holding a Zwierciadło is what makes a spell wait at all. */
-  const withMirror = (over: { cardId?: string; target?: Record<string, unknown> } = {}) =>
+  const withMirror = (over: { cardId?: CardId; target?: Record<string, unknown> } = {}) =>
     aTable({
       game: { active_seat: 0, turn_state: { phase: "roll" } },
       seats: [
@@ -1607,9 +1609,9 @@ describe("ucieczka (17.6, 19)", () => {
       ...over,
     });
 
-  const twoWrogowie = [
-    { cardId: "cyklop", cardClass: "foe" as const },
-    { cardId: "nobbin", cardClass: "foe" as const },
+  const twoWrogowie: TurnCard[] = [
+    { cardId: "cyklop", cardClass: "foe" },
+    { cardId: "nobbin", cardClass: "foe" },
   ];
 
   /**

@@ -251,7 +251,7 @@ export function FieldModal({
   onService?: OnService;
   purse?: { gold: number; life: number };
   stock?: Record<string, number>;
-  sellable?: { id: string; cardId: string }[];
+  sellable?: { id: string; cardId: CardId }[];
   /** What this seat holds and how much room 5.4 leaves them — see `whyPackIsFull`. */
   pack?: OfferContext["pack"];
   /**

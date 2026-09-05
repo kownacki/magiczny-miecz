@@ -26,6 +26,7 @@ import { USE_VERB, isUsable, usageOf } from "@/lib/engine/uses";
 import { cornerClass } from "./card-mark";
 import { ItemSlot, SLOT_WIDTH, type SlotOccupant, type SlotTone } from "./item-slot";
 import { TILE_GAP } from "./tile-row";
+import type { CardId } from "@/data/ids";
 
 /**
  * What is in a place on the body.
@@ -135,10 +136,10 @@ export function SlotPanel({
   carrying: boolean;
   /** Announces what a drag has picked up — the card, and the holding it is —
       and null when it ends. */
-  onDragging: (moving: { cardId: string; holdingId: string } | null) => void;
+  onDragging: (moving: { cardId: CardId; holdingId: string } | null) => void;
   /** Which card is being moved, dragged or carried — so a place can say whether
       it would take it before the player finds out by being refused. */
-  movingCardId: string | null;
+  movingCardId: CardId | null;
   /** The card currently on the cursor, so the place it came from looks empty. */
   liftedHoldingId: string | null;
   /**
@@ -152,7 +153,7 @@ export function SlotPanel({
    * one of these places is not a place a card is used: what is in the Tajemna
    * Sakwa is put away, not worn. See `forbiddenIn`.
    */
-  mayPut?: (cardId: string, slot: Slot) => boolean;
+  mayPut?: (cardId: CardId, slot: Slot) => boolean;
   onPickUp: (item: SlotItem, from: Slot) => void;
   onTakeOff: (holdingId: string) => void;
   /**
@@ -163,7 +164,7 @@ export function SlotPanel({
    * charmed has fought. Without this it would have to be taken off before it
    * could be used, which is not a step the card describes.
    */
-  onUse?: (holdingId: string, cardId: string) => void;
+  onUse?: (holdingId: string, cardId: CardId) => void;
   /** Something was put into a place — dropped, or carried there and clicked. */
   /** Straight from the body to the Obszar, without the stop in the plecak. */
   onDrop?: (holdingId: string) => void;
@@ -228,7 +229,7 @@ export function SlotPanel({
         // Fits *and* may be used: two rules, one answer, because a place that
         // lights up green and then refuses the drop is worse than one that
         // never lit up.
-        const takes = (cardId: string) =>
+        const takes = (cardId: CardId) =>
           fitsIn(cardId, slot) && (mayPut?.(cardId, slot) ?? true);
         const tone: SlotTone =
           over === slot && movingCardId

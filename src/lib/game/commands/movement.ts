@@ -32,6 +32,7 @@ import { activeSeat, eqModeOf, refuseWhileHeld, refuseWhileOverLimit, seatView }
 import { refuseWhileOverflow } from "./overflow";
 import { refuseWhileBeastAwaits } from "./beast";
 import { driverOf, nameOfSeat } from "./lobby";
+import type { CardId } from "@/data/ids";
 
 /* --------------------------------------------------------------------------
  * Starting the game.
@@ -299,7 +300,7 @@ function startingGear(
  * it, five characters asking for a Miecz would each look at the same untouched
  * pile of three and all five would get one.
  */
-function onTheShelf(snapshot: Snapshot, cardId: string, taken: Record<string, number>): boolean {
+function onTheShelf(snapshot: Snapshot, cardId: CardId, taken: Record<string, number>): boolean {
   if (!fromTheShop(cardId)) return true;
   const inPlay =
     snapshot.holdings.filter((held) => held.card_id === cardId).length +

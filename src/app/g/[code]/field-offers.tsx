@@ -82,7 +82,7 @@ export interface Offer {
 export function offersHere(
   fieldId: FieldId,
   /** The Karty lying here, with what is left beside a well. */
-  fieldCards: readonly { id: string; cardId: string; pool?: number; granted?: boolean }[],
+  fieldCards: readonly { id: string; cardId: CardId; pool?: number; granted?: boolean }[],
 ): Offer[] {
   const script = fieldScriptFor(fieldId);
   const printed: Offer[] = script?.obowiazkowe

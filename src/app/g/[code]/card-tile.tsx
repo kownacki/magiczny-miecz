@@ -23,6 +23,9 @@ import type { Nature } from "@/data/types";
 import { manualNote, coverageOf, NOT_HANDLED } from "@/lib/engine/coverage";
 import { parkedCard } from "@/lib/engine/disabled";
 import { numeralOf } from "@/lib/engine/cards";
+import type { CardId } from "@/data/ids";
+import type { SeatCharacter } from "@/lib/engine/characters";
+import type { FieldId } from "@/lib/engine/board";
 import { TileCaption } from "./tile-caption";
 
 /**
@@ -38,21 +41,12 @@ import { TileCaption } from "./tile-caption";
  * none of them until the asset pipeline is run, so a card must still be usable
  * as a labelled tile.
  */
-export interface TileCard {
-  cardId: string;
+interface TileFacts {
   name: string;
   /** The exact printed copy, where it is known (simulation mode). */
   ref?: string;
   text?: string;
   kindLabel?: string;
-  /**
-   * This is a Postać, not a card off one of the decks.
-   *
-   * The id cannot be trusted to say so: `demon` and `czarodziej` name a
-   * character AND an event card each, so looking a character up in the card
-   * registry hands back the wrong picture rather than none.
-   */
-  character?: boolean;
   /** Could a hand contain this? Only Przedmioty, Przyjaciele and Zaklęcia can. */
   holdable?: boolean;
   /**
@@ -74,6 +68,54 @@ export interface TileCard {
    * the Księga's catalogue, the klasyczny variant, a card in the pack.
    */
   slot?: Slot | null;
+}
+
+/**
+ * One card the app can draw, which is two different things.
+ *
+ * `demon` and `czarodziej` each name a Karta Postaci AND a Karta Zdarzeń, so
+ * the id alone cannot say which shelf a tile came off — looking a character up
+ * in the card registry hands back the wrong picture rather than none. That is
+ * what `character` is for, and it is the *discriminant* now rather than a
+ * boolean beside a `string`: on a Postać the id is a `CharacterId` (or the
+ * „Losowa" sentinel, which is nobody yet), and everywhere else it is a
+ * `CardId`. So a component that has already asked `card.character` is handed
+ * the right kind of id by the compiler, and one that has not cannot reach
+ * either lookup. This is the same bug typed out of existence: `requirementOf`
+ * was handed a Postać's id and answered about the Nieznajomy of that name.
+ *
+ * The third shape is an Obszar, which is not a Karta at all — the chip in the
+ * Księga and the field names the Dziennik links. It carries a `FieldId` and its
+ * printed instruction, and it is exactly the `imageless` case: there is no card
+ * to draw and nothing in either card registry to look it up in.
+ */
+export type TileCard =
+  | (TileFacts & { cardId: CardId; character?: false; field?: false; noCard?: false })
+  | (TileFacts & { cardId: SeatCharacter; character: true; field?: false; noCard?: false })
+  | (TileFacts & { cardId: FieldId; character?: false; field: true; noCard?: false })
+  /**
+   * Something with a name and no Karta behind it.
+   *
+   * Two things arrive this way. A marker off the sheet — the Kamień card 20.1
+   * puts on the board — which has a picture and a printed text and is in none
+   * of the three decks. And a shop good whose printed word matched no Karta:
+   * `goodsId` is the door from „Miecz" to `miecz`, and this is what the shelf
+   * draws when that door answers nothing.
+   *
+   * Both are drawn from `ref` where they have one, and neither is looked up.
+   */
+  | (TileFacts & { cardId: string; character?: false; field?: false; noCard: true });
+
+/**
+ * The Karta a tile is, where it is one.
+ *
+ * The one narrowing, so no component works it out for itself: `null` for a
+ * Postać (whose id is in the other registry), for an Obszar (which is not a
+ * Karta at all) and for a name nothing matched. Everything else is a `CardId`
+ * the card lookups can be handed without a guard.
+ */
+export function cardIdOf(card: TileCard): CardId | null {
+  return card.character || card.field || card.noCard ? null : card.cardId;
 }
 
 /**
@@ -191,6 +233,9 @@ export function CardTile({
   // smear with a four-pixel title; the picture is the thing a player actually
   // recognises when reaching across a table. The whole card is one hover away.
   const src = artFor(card);
+  // The Karta this tile is, where it is one — see `TileCard`. Null for a Postać
+  // and for an Obszar, neither of which is in the card registry.
+  const cardId = cardIdOf(card);
   const width = size === "md" ? 132 : TILE_WIDTH;
   // The tile takes the shape of whichever family it is drawing, rather than
   // cropping the picture back into a box built for the other one. A Karta
@@ -325,14 +370,14 @@ export function CardTile({
             where it *is* beats what class it belongs to — the mark answers
             „can I take this off", and the numeral only explains an order the
             row it is missing from was not in anyway. */}
-        {numeral && !card.slot && !card.character && numeralOf(card.cardId) && (
+        {numeral && !card.slot && cardId !== null && numeralOf(cardId) && (
           <Corner at="top-right">
             <span
               aria-hidden
               style={{ fontSize: markText(MARK_SIZE.tile) }}
               className="block font-[family-name:var(--font-display)] leading-none text-ochre/80"
             >
-              {numeralOf(card.cardId)}
+              {numeralOf(cardId)}
             </span>
           </Corner>
         )}
@@ -524,16 +569,18 @@ export function CardDetail({ card, onClose }: { card: TileCard; onClose: () => v
   // event card, so the id alone would hand back the wrong picture rather than
   // none — the failure that is hardest to notice.
   const src = faceFor(card);
+  // The Karta this is, where it is one — see `TileCard`.
+  const cardId = cardIdOf(card);
   // Coverage is about Karty Zdarzeń — whether the app can carry out what a card
   // does when it is drawn. A Karta Postaci is not drawn and not resolved; it is
   // who you are for the whole game. Asking the registry about one got "brak"
   // by default, so every character opened with "rozpatrzcie sami — aplikacja
   // jej nie prowadzi" printed under it, which is not true of anything.
-  const coverage = card.character ? "pelne" : coverageOf(card.cardId);
-  const note = card.character ? null : manualNote(card.cardId);
+  const coverage = cardId === null ? "pelne" : coverageOf(cardId);
+  const note = cardId === null ? null : manualNote(cardId);
   // Never true for a Postać — `PARKED_CARDS` names cards off the decks, never
   // a character, because losing one ability is not losing the Postać (8.2).
-  const parked = card.character ? null : parkedCard(card.cardId);
+  const parked = cardId === null ? null : parkedCard(cardId);
 
   return (
     <Overlay label={card.name} onDismiss={onClose} layer={LAYER.card}>

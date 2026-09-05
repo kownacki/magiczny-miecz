@@ -2,7 +2,7 @@
 
 import { isFoeClass } from "@/data/types";
 import { refuseIfPvpParked } from "@/lib/engine/disabled";
-import type { SpellId } from "@/data/ids";
+import type { CardId, SpellId } from "@/data/ids";
 import {
   canEscapeAt,
   diesForYou,
@@ -85,7 +85,7 @@ const KRAG_PLOMIENI: SpellId = "krag-plomieni";
 
 export interface BeginFight {
   /** The creatures being taken on at once, which 17.5 may make one opponent. */
-  cardIds: readonly string[];
+  cardIds: readonly CardId[];
 }
 
 /**
@@ -111,7 +111,7 @@ export interface BeginFight {
 export function againstThese(
   snapshot: Snapshot,
   seatId: string,
-  foeIds: readonly string[],
+  foeIds: readonly CardId[],
 ): { miecz: number; magia: number } {
   const total = pointsOf(snapshot, seatId, "walka");
   const view = seatView(snapshot, seatId);

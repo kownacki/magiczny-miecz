@@ -1,5 +1,5 @@
 /** When a Zaklęcie may be cast, at what, and what casting it does (9.1, 9.6). */
-import type { SpellId } from "@/data/ids";
+import { isSpellId, type CardId, type SpellId } from "@/data/ids";
 import type { Effect } from "./cardScript";
 import { isFoeClass } from "@/data/types";
 import type { TurnPhase } from "./turn";
@@ -661,8 +661,12 @@ export const SPELLS: Readonly<Partial<Record<SpellId, SpellScript>>> = {
   },
 };
 
-export function spellScript(cardId: string): SpellScript | null {
-  return SPELLS[cardId as SpellId] ?? null;
+/**
+ * Takes any `CardId`, not only a `SpellId`: `spellFacts` is asked of whatever
+ * card is being looked at and „this is not a Zaklęcie" is one of the answers.
+ */
+export function spellScript(cardId: CardId): SpellScript | null {
+  return isSpellId(cardId) ? (SPELLS[cardId] ?? null) : null;
 }
 
 /**
@@ -816,7 +820,7 @@ export const TARGET_LABEL: Record<SpellTarget, string> = {
  * Null for a Zaklęcie the app carries no script for, which is the honest answer
  * rather than a guess at a window. The target is null where the card names none.
  */
-export function spellFacts(cardId: string): { when: string; at: string | null } | null {
+export function spellFacts(cardId: CardId): { when: string; at: string | null } | null {
   const script = spellScript(cardId);
   if (!script) return null;
   return {

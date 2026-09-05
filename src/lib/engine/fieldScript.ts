@@ -3,6 +3,7 @@
 import { scriptFor, type Effect } from "./cardScript";
 import { cardName } from "./polish";
 import type { FieldId } from "./board";
+import type { CardId } from "@/data/ids";
 
 /**
  * Ten of the board's fields are not events but establishments. They print a
@@ -922,13 +923,13 @@ export function offerNamed(
  * Karty drew no box at all. A Czarodziej who had settled on a Płaskowyż Mgieł
  * was visitable and invisible.
  */
-export function offersFromCard(cardId: string): boolean {
+export function offersFromCard(cardId: CardId): boolean {
   const script = scriptFor(cardId);
   if (!script) return false;
   return trades(script.effect) || residesOn(cardId);
 }
 
-export function residesOn(cardId: string): boolean {
+export function residesOn(cardId: CardId): boolean {
   const script = scriptFor(cardId);
   if (!script) return false;
   const stays =
@@ -1132,7 +1133,7 @@ export function trades(effect: Effect): boolean {
  */
 export function offerAmong<K extends Effect["op"]>(
   fieldId: FieldId,
-  lying: readonly string[],
+  lying: readonly CardId[],
   op: K,
 ): { from: string; effect: Extract<Effect, { op: K }> } | null {
   const found: { from: string; effect: Effect }[] = [];

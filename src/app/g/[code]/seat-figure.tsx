@@ -57,6 +57,8 @@ function cardOf(character: Character | null, stone: boolean): TileCard | null {
       text: STONE_CARD.text,
       ref: STONE_CARD.ref,
       kindLabel: "Karta Zamienionego w Kamień",
+      // A marker off the sheet, in none of the three decks — see `TileCard`.
+      noCard: true,
     };
   }
   if (!character) return null;

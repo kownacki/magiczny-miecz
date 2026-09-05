@@ -4,6 +4,7 @@ import { pointsAt, heldAbilities } from "@/lib/engine/abilities";
 import { scriptedRandom } from "@/lib/engine/ports";
 import { aHolding, aSeat, aTable, ports } from "../fixture";
 import { resolveBridgeOrdeal } from "./bridge";
+import type { CardId } from "@/data/ids";
 
 /**
  * CZARODZIEJSKA KOŚĆ in the two Pułapki (14.5).
@@ -24,7 +25,7 @@ import { resolveBridgeOrdeal } from "./bridge";
  * shift would be wrong the moment anything else read the number.
  */
 
-const onTheTrap = (field: "pulapka" | "magiczna-pulapka", cards: string[]) =>
+const onTheTrap = (field: "pulapka" | "magiczna-pulapka", cards: CardId[]) =>
   aTable({
     game: { active_seat: 0 },
     seats: [
@@ -39,7 +40,7 @@ const onTheTrap = (field: "pulapka" | "magiczna-pulapka", cards: string[]) =>
   });
 
 /** Three dice, and the fall is by how much they beat the parametr. */
-const ordeal = (field: "pulapka" | "magiczna-pulapka", cards: string[], dice: number[]) =>
+const ordeal = (field: "pulapka" | "magiczna-pulapka", cards: CardId[], dice: number[]) =>
   resolveBridgeOrdeal(
     onTheTrap(field, cards),
     undefined as never,

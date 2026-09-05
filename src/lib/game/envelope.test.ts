@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { envelopeFor, withoutDeck } from "./envelope";
 import { aHolding, aSeat, aTable, aUser } from "./fixture";
+import type { CardId } from "@/data/ids";
+import type { FieldCardRow } from "./store";
 import {
   AWAY_AFTER_MS,
 } from "./commands/presence";
@@ -73,7 +75,7 @@ describe("a concealed hand (9.3)", () => {
   it("gives each Zaklęcie to exactly one device, and it is its owner's", () => {
     const toA = envelopeFor(twoHands(), "usra", NOW);
     const toB = envelopeFor(twoHands(), "usrb", NOW);
-    const sees = (envelope: ReturnType<typeof envelopeFor>, seatId: string, cardId: string) =>
+    const sees = (envelope: ReturnType<typeof envelopeFor>, seatId: string, cardId: CardId) =>
       seatIn(envelope, seatId).holdings.some((card) => card.cardId === cardId);
 
     expect(sees(toA, "seat-a", "fatum")).toBe(true);
@@ -519,7 +521,13 @@ describe("a status on a Karta, not only on a seat", () => {
  * `granted` and `pool` two blocks above.
  */
 describe("what a lying Wróg is really worth", () => {
-  const wampirRow = { id: "fc-wampir", field_id: "wrzosowiska", card_id: "wampir", granted: false, pool: null };
+  const wampirRow: FieldCardRow = {
+    id: "fc-wampir",
+    field_id: "wrzosowiska",
+    card_id: "wampir",
+    granted: false,
+    pool: null,
+  };
 
   it("is absent for a Wróg nothing has grown", () => {
     const state = aTable({

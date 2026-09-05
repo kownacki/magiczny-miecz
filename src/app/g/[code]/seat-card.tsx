@@ -44,6 +44,7 @@ import { Lookable } from "./lookable";
 import { EffectMark, EffectTally, TONE_ORDER, effectsSaid } from "./effect-mark";
 import { EffectList } from "./effect-list";
 import { TILE_GAP } from "./tile-row";
+import type { CardId } from "@/data/ids";
 /**
  * How many marks the folded bar shows before it starts counting.
  *
@@ -87,7 +88,7 @@ export function SeatCard({
   trophyMode: "points" | "cards";
   onEquip: (holdingId: string, slot: Slot | null) => void;
   /** Spend a card by using it — asked about first, because it cannot be undone. */
-  onUse?: (holdingId: string, cardId: string) => void;
+  onUse?: (holdingId: string, cardId: CardId) => void;
   /** Takes a Zaklęcie on the Różdżka's terms, not 2.6's. */
   onWand?: () => void;
   /** The pack, in the order its owner wants it. */
@@ -178,7 +179,7 @@ export function SeatCard({
    * Tajemna Sakwa — where it does exactly as much as it does in the Plecak,
    * which is nothing.
    */
-  const mayPut = (cardId: string, slot: Slot | null) =>
+  const mayPut = (cardId: CardId, slot: Slot | null) =>
     !forbiddenIn(cardId, slot, asNature(seat.nature), slotted ? "slots" : "classic") &&
     // 8.1: the same question, off a Charakterystyka rather than a Natura —
     // the Pustelnik's forbidden four among them.

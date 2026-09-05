@@ -10,6 +10,7 @@ import { apply, type Snapshot } from "../change";
 import { beginFight, fightRoll } from "./fight";
 import { resolveFight } from "./spoils";
 import { continueTopScript } from "./effects";
+import type { CardId } from "@/data/ids";
 
 /**
  * ZŁOCZYŃCA, who charges for beating you.
@@ -29,7 +30,7 @@ const ZLOCZYNCA = "zloczynca";
 
 const phases = (state: TurnState) => state.stack.map((frame) => frame.phase);
 
-const facing = (foe: string): Snapshot =>
+const facing = (foe: CardId): Snapshot =>
   aTable({
     game: {
       active_seat: 0,
@@ -46,7 +47,7 @@ const facing = (foe: string): Snapshot =>
   });
 
 /** A fight lost: the character's 1 and a 1, against the creature and a 6. */
-async function lose(table: Snapshot, foe: string): Promise<Snapshot> {
+async function lose(table: Snapshot, foe: CardId): Promise<Snapshot> {
   let at = apply(table, beginFight(table, { cardIds: [foe] }).writes);
   const dice = ports({ random: scriptedRandom([1, 6, 6, 6, 6, 6]) });
   at = apply(at, (await fightRoll(at, { side: "player" }, dice)).writes);

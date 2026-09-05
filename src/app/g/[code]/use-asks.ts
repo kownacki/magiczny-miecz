@@ -26,6 +26,7 @@ import { fieldName } from "@/lib/engine/polish";
 import { askAbout, usageOf } from "@/lib/engine/uses";
 import { spellScript } from "@/lib/engine/spells";
 import { overflowOnTop } from "@/lib/engine/overflow";
+import type { CardId } from "@/data/ids";
 
 /**
  * What an Obszar is called, from an id that has not been narrowed yet.
@@ -80,7 +81,7 @@ export function useAsks({ game, seats, fieldCards, mySeatIndex, post, leave, ask
    * where a misclick costs something that cannot be put back. `uses.ts` writes
    * the question, so the words are the same here as in the hover.
    */
-  function askToUse(holdingId: string, cardId: string) {
+  function askToUse(holdingId: string, cardId: CardId) {
     const spend = usageOf(cardId);
     if (!spend) return;
     const name = CARD_NAMES.get(cardId) ?? cardId;
@@ -211,7 +212,7 @@ export function useAsks({ game, seats, fieldCards, mySeatIndex, post, leave, ask
    */
   function askToCast(
     holdingId: string,
-    cardId: string,
+    cardId: CardId,
     target: CastTarget = {},
   ) {
     const name = CARD_NAMES.get(cardId) ?? cardId;

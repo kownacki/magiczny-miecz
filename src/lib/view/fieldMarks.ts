@@ -3,6 +3,7 @@
 import { FIELDS, isFerry, type FieldId } from "@/lib/engine/board";
 import { crossingFrom } from "@/lib/engine/rings";
 import { scriptFor } from "@/lib/engine/cardScript";
+import type { CardId } from "@/data/ids";
 import {
   changesYou,
   fieldScriptFor,
@@ -56,7 +57,7 @@ export const MARK_TITLE: Record<FieldMark, string> = {
  * still be true when somebody walks there, and a Spotkanie is spent by the
  * first person to read it.
  */
-function marksFromCard(cardId: string): IconMark[] {
+function marksFromCard(cardId: CardId): IconMark[] {
   if (!offersFromCard(cardId)) return [];
   const script = scriptFor(cardId);
   if (!script) return [];
@@ -87,7 +88,7 @@ function marksFromCard(cardId: string): IconMark[] {
 export function marksFor(
   fieldId: FieldId,
   /** What has settled here (16.8), because a square's services are not all printed on it. */
-  lying: readonly { cardId: string }[] = [],
+  lying: readonly { cardId: CardId }[] = [],
 ): IconMark[] {
   const script = fieldScriptFor(fieldId);
   const chosen = script?.obowiazkowe ? [] : (script?.offers ?? []);

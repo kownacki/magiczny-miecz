@@ -4,8 +4,9 @@ import events from "@/data/events.json";
 import type { Character, EventCard } from "@/data/types";
 import { LIVE_ABILITIES, PARKED_CARDS, parkedAbility, parkedCard } from "./disabled";
 import { STARTING_KIT, abilitiesOfCharacter } from "./characters";
-import type { CharacterId } from "@/data/ids";
+import { isCardId, type CharacterId } from "@/data/ids";
 import { coverageOf, manualNote } from "./coverage";
+import { asCharacterId } from "./characters";
 
 /**
  * An index into transcribed prose is a reference that rots in silence.
@@ -53,7 +54,7 @@ const EVENTS = events as EventCard[];
 
 describe("what is parked while Postać przeciw Postaci is unbuilt", () => {
   it("names only Karty that exist", () => {
-    for (const cardId of Object.keys(PARKED_CARDS)) {
+    for (const cardId of Object.keys(PARKED_CARDS).filter(isCardId)) {
       expect(EVENTS.some((card) => card.id === cardId)).toBe(true);
     }
   });
@@ -73,7 +74,7 @@ describe("what is parked while Postać przeciw Postaci is unbuilt", () => {
       const character = CHARACTERS.find((one) => one.id === characterId)!;
       for (const [index, words] of expected) {
         expect(character.abilities[index], `${characterId}[${index}]`).toContain(words);
-        expect(parkedAbility(characterId, index), `${characterId}[${index}]`).toBe(false);
+        expect(parkedAbility(asCharacterId(characterId), index), `${characterId}[${index}]`).toBe(false);
       }
     }
   });
@@ -118,7 +119,7 @@ describe("what is parked while Postać przeciw Postaci is unbuilt", () => {
    * and this is what makes that a build failure rather than a paragraph.
    */
   it("never parks a card that also has a MANUAL note", () => {
-    for (const cardId of Object.keys(PARKED_CARDS)) {
+    for (const cardId of Object.keys(PARKED_CARDS).filter(isCardId)) {
       expect(manualNote(cardId), cardId).toBeNull();
     }
   });
@@ -129,7 +130,7 @@ describe("what is parked while Postać przeciw Postaci is unbuilt", () => {
    * consults about it.
    */
   it("reads as something other than a half-carried card", () => {
-    for (const cardId of Object.keys(PARKED_CARDS)) {
+    for (const cardId of Object.keys(PARKED_CARDS).filter(isCardId)) {
       expect(coverageOf(cardId), cardId).not.toBe("czesciowe");
     }
   });

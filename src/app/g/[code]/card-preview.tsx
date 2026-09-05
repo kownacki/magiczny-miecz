@@ -31,7 +31,7 @@ import { CloseButton } from "./chrome";
 import { LAYER } from "./layers";
 import type { EqMode } from "@/lib/engine/slots";
 import { parkedAbility, parkedCard } from "@/lib/engine/disabled";
-import { CardBack, CardTile, type TileCard } from "./card-tile";
+import { CardBack, CardTile, cardIdOf, type TileCard } from "./card-tile";
 import { asCharacterId, startingKit } from "@/lib/engine/characters";
 import charactersData from "@/data/characters.json";
 import type { Character } from "@/data/types";
@@ -351,6 +351,17 @@ export function CardLookupPanel({
   // `czarodziej` name both. Going through the card registry for those two hands
   // back a Wróg and a Nieznajomy rather than the Postać being pointed at.
   const src = imageless ? null : faceFor(card);
+  /**
+   * The Karta this tile is, where it is one — the one narrowing every lookup
+   * below then inherits.
+   *
+   * Null twice over, and for two different reasons. A Postać's id belongs to
+   * the other registry, and asking the card one for it is the bug this whole
+   * panel's comments keep pointing at. An Obszar chip has no Karta at all: it
+   * is a square with its printed instruction, which is why it comes in
+   * `imageless`.
+   */
+  const cardId = cardIdOf(card);
   // A Postać is read at the size a Karta Postaci is always read at; everything
   // else is recognised at the smaller one. See `CHARACTER_PICTURE_WIDTH`.
   const pictureWidth = card.character ? CHARACTER_PICTURE_WIDTH : PICTURE_WIDTH;
@@ -358,14 +369,16 @@ export function CardLookupPanel({
   const profile = imageless
     ? null
     : card.character
-      ? characterProfile(card.cardId)
-      : itemProfile(card.cardId, eqMode);
+      ? characterProfile(asCharacterId(card.cardId))
+      : cardId === null
+        ? null
+        : itemProfile(cardId, eqMode);
   // What is printed at the top of the card. Null for a Zaklęcie, a Karta
   // Postaci and anything off the Wyposażenie sheets — none of those is a Karta
   // Zdarzeń and none of them carries one.
   // Not for a Postać: a Karta Postaci prints no class numeral, and asking by
   // bare id gave the Postać CZARODZIEJ the Nieznajomy's „IV". See `CardFacts`.
-  const numeral = card.character ? null : numeralOf(card.cardId);
+  const numeral = cardId === null ? null : numeralOf(cardId);
   // Only a Postać has one, and `startingKit` answers with an empty kit for
   // anything else — including the "Losowa" card, which is nobody yet.
   const kit = card.character ? startingKit(asCharacterId(card.cardId)) : null;
@@ -387,11 +400,11 @@ export function CardLookupPanel({
   // What a Zaklęcie says about itself that is not printed on it: when it may
   // be spoken, and what it is aimed at. Asked of the card id, which answers
   // for nothing else in the box.
-  const spell = imageless ? null : spellFacts(card.cardId);
+  const spell = imageless || cardId === null ? null : spellFacts(cardId);
   // Never true for a field or a Postać: a Postać loses no card by parking a
   // clause of its own Charakterystyka (8.2), and `PARKED_CARDS` names cards
   // off the decks, never a character.
-  const parked = imageless || card.character ? null : parkedCard(card.cardId);
+  const parked = imageless || cardId === null ? null : parkedCard(cardId);
   const anythingToSay =
     !src || card.text || card.kindLabel || profile?.slotLabel || spell || hasFacts(profile) || parked;
 
@@ -433,7 +446,7 @@ export function CardLookupPanel({
                   apart on the right the way it is on the card itself. */}
               {numeral && (
                 <span
-                  title={numeralMeaning(card.cardId) ?? undefined}
+                  title={(cardId && numeralMeaning(cardId)) ?? undefined}
                   className="font-[family-name:var(--font-display)] text-sm leading-none text-ochre/50"
                 >
                   {numeral}
@@ -480,9 +493,9 @@ export function CardLookupPanel({
             </p>
           )}
 
-          {profile && (
+          {profile && cardId !== null && (
             <CardFacts
-              cardId={card.cardId}
+              cardId={cardId}
               profile={profile}
               nature={nature}
               character={card.character ?? false}
