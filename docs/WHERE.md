@@ -323,6 +323,12 @@ columns). The order matters:
 
 ## Before you commit
 
+**Play it first.** `npm run mm` is the whole game at a prompt — offline, no
+database, no browser — and it takes piped input, so seeing a rules change
+actually happen costs one command and ten seconds. See
+[BRIEFING.md](BRIEFING.md) for a copy-pasteable table, and
+[TERMINAL.md](TERMINAL.md) for what the surface is.
+
 ```
 npx tsc --noEmit
 npx eslint          # silent, or it failed

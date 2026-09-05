@@ -29,6 +29,21 @@ it**, then spend the brief's words on the part that is actually specific.
   say why, that is the finding, not a detail.
 - **A test that needs a cast or a `skip` to compile is telling you something.**
   Look at what it means before you change it.
+- **To see a change actually work, play the game — do not open a browser.**
+  `npm run mm` is the whole game at a prompt: offline, no database, no server,
+  and it takes piped input, so a verification is one shell command:
+
+  ```
+  printf 'table new Ala, Ola\npick MAGOG\nready\npick TROLL\nready\nstart\nlook\nroll\nlook\nquit\n' \
+    | npx tsx src/cli/mm.ts
+  ```
+
+  That reaches a rolled die and a list of reachable Obszary in about ten
+  seconds. `help` lists the vocabulary, `testmode on` unlocks the commands that
+  overrule the rules, and `look` / `me` / `who` say where things stand. The
+  browser is for layout — new panels, drag and drop, hover — and for nothing
+  else; CLAUDE.md's rule against driving Chrome to confirm a foregone
+  conclusion is about this.
 - **Report what you were unsure about.** The most useful line in any report
   this repo has had was an agent saying which of its own conclusions it had not
   proved. A wrong claim stated confidently costs more than the task saves —
