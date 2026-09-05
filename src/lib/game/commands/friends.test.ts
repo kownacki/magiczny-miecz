@@ -268,22 +268,34 @@ const fightOf = (writes: { game?: { turn_state?: unknown } }) =>
   (top(writes.game?.turn_state as TurnState) as Extract<TurnPhase, { phase: "fight" }>).fight;
 
 describe("sending a Przyjaciel out (Poszukiwacz Przygód)", () => {
-  it("fights with the friend's three points, not the character's five", () => {
+    // Parked with duels: a raid aimed at a Postać is a duel by proxy
+    // (`PVP_PARKED`, src/lib/engine/disabled.ts). The Wróg half of the
+    // same card is untouched and still tested below.
+  it.skip("fights with the friend's three points, not the character's five", () => {
     const out = sendRaider(twoSeats("przelecz-wichrow"), { targetSeatId: "seat-b" });
     expect(fightOf(out.writes).playerTotal).toBe(3);
   });
 
-  it("marks the fight as the friend's, so losing it can charge him", () => {
+    // Parked with duels: a raid aimed at a Postać is a duel by proxy
+    // (`PVP_PARKED`, src/lib/engine/disabled.ts). The Wróg half of the
+    // same card is untouched and still tested below.
+  it.skip("marks the fight as the friend's, so losing it can charge him", () => {
     const out = sendRaider(twoSeats("przelecz-wichrow"), { targetSeatId: "seat-b" });
     expect(fightOf(out.writes).raid).toEqual({ cardId: "poszukiwacz-przygod" });
   });
 
-  it("reaches exactly three Obszary", () => {
+    // Parked with duels: a raid aimed at a Postać is a duel by proxy
+    // (`PVP_PARKED`, src/lib/engine/disabled.ts). The Wróg half of the
+    // same card is untouched and still tested below.
+  it.skip("reaches exactly three Obszary", () => {
     // przeprawa-1 is 3 round the ring from mroczna-polana.
     expect(() => sendRaider(twoSeats("przeprawa-1"), { targetSeatId: "seat-b" })).not.toThrow();
   });
 
-  it("refuses a fourth", () => {
+    // Parked with duels: a raid aimed at a Postać is a duel by proxy
+    // (`PVP_PARKED`, src/lib/engine/disabled.ts). The Wróg half of the
+    // same card is untouched and still tested below.
+  it.skip("refuses a fourth", () => {
     expect(() => sendRaider(twoSeats("dolina-cienia"), { targetSeatId: "seat-b" })).toThrow(
       /Zbyt daleko/,
     );
@@ -293,7 +305,10 @@ describe("sending a Przyjaciel out (Poszukiwacz Przygód)", () => {
    * A Przeprawa is a turn's work that can fail, not a step. Counting one would
    * put most of the board within three Obszary of everywhere.
    */
-  it("will not count across rings at all", () => {
+    // Parked with duels: a raid aimed at a Postać is a duel by proxy
+    // (`PVP_PARKED`, src/lib/engine/disabled.ts). The Wróg half of the
+    // same card is untouched and still tested below.
+  it.skip("will not count across rings at all", () => {
     expect(() => sendRaider(twoSeats("kurhan"), { targetSeatId: "seat-b" })).toThrow(
       /Zbyt daleko/,
     );

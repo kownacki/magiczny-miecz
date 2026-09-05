@@ -904,6 +904,18 @@ export function sendRaider(snapshot: Snapshot, command: SendRaider): Outcome<voi
     withinRaid(seat.field_id as FieldId, fieldId);
 
   if (command.targetSeatId !== undefined) {
+    /**
+     * A raid aimed at a Postać is a duel by proxy, so it is parked with them.
+     *
+     * „Zlecić temu Przyjacielowi, by zaatakował Postać **lub** Wroga" — the
+     * card offers two targets and only the first is Postać przeciw Postaci.
+     * `attackSeat` is not the only way to reach one after all, which is the
+     * kind of thing a second door is for: the Poszukiwacz goes instead of you,
+     * but the Życie that would be lost is another player's all the same.
+     * Raiding a Wróg is untouched and is what the Przyjaciel is mostly for.
+     */
+    refuseIfPvpParked();
+
     const target = snapshot.seats.find((s) => s.id === command.targetSeatId);
     if (!target) throw new Error("Nieznane miejsce.");
     if (target.id === seat.id) throw new Error("Postać nie walczy sama ze sobą.");

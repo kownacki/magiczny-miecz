@@ -284,8 +284,14 @@ back with no other change.
 
 **What is off.** 17.6-10 (resolving a fight between Postacie, the escape into
 it, the spoils, the draw), 18.1b (a Charakterystyka's magical attack on
-another Postać), and 19.1-2's escape *from* a Postać. `attackSeat` is the one
-door and it refuses first, before any more specific refusal can fire.
+another Postać), and 19.1-2's escape *from* a Postać.
+
+**Two doors, not one.** `attackSeat` is the obvious one and refuses first,
+before any more specific refusal can fire. `sendRaider` is the other and was
+missed on the first pass: the POSZUKIWACZ PRZYGÓD is sent „by zaatakował
+Postać **lub** Wroga", so a raid aimed at a seat is a duel by proxy — he goes
+instead of you, but the Życie is another player's all the same. Raiding a Wróg
+is untouched, and is most of what he is for.
 
 **What is untouched**, because 13.3 has two branches and only the first is a
 fight. Meeting a Postać to use an ability on her is unaffected — the Wiedźma's
