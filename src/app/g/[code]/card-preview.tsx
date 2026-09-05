@@ -454,7 +454,9 @@ export function CardPreview({
   // What is printed at the top of the card. Null for a Zaklęcie, a Karta
   // Postaci and anything off the Wyposażenie sheets — none of those is a Karta
   // Zdarzeń and none of them carries one.
-  const numeral = numeralOf(card.cardId);
+  // Not for a Postać: a Karta Postaci prints no class numeral, and asking by
+  // bare id gave the Postać CZARODZIEJ the Nieznajomy's „IV". See `CardFacts`.
+  const numeral = card.character ? null : numeralOf(card.cardId);
   // Only a Postać has one, and `startingKit` answers with an empty kit for
   // anything else — including the "Losowa" card, which is nobody yet.
   const kit = card.character ? startingKit(asCharacterId(card.cardId)) : null;
@@ -571,7 +573,14 @@ export function CardPreview({
             </p>
           )}
 
-          {profile && <CardFacts cardId={card.cardId} profile={profile} nature={nature} />}
+          {profile && (
+            <CardFacts
+              cardId={card.cardId}
+              profile={profile}
+              nature={nature}
+              character={card.character ?? false}
+            />
+          )}
 
           {/**
            * What a Postać owns before anybody rolls (8.1).

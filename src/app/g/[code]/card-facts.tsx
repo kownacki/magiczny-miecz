@@ -89,10 +89,27 @@ export function CardFacts({
   profile,
   /** Who is looking, so a requirement can say whether THEY meet it. */
   nature,
+  /**
+   * Whether this panel is a Karta Postaci.
+   *
+   * Two ids in the box name both a Postać and a Karta — `czarodziej` is a
+   * Postać and a Nieznajomy, `demon` a Postać and a Wróg (`ids.test.ts` pins
+   * the pair). So every card-scoped question asked with a bare id answers
+   * about the wrong object on exactly those two panels, and this one answered
+   * loudly: the Postać CZARODZIEJ was shown „Tylko Postać: dobra", which is
+   * the Nieznajomy's „Każda Dobra Postać, która tu zawita" — a requirement on
+   * a character, whose Natura the same panel prints two rows below.
+   *
+   * A Postać is never held and never served, so 5.3 and a Nieznajomy's gate
+   * cannot apply to one. Everything else here is the character's own and is
+   * drawn as before.
+   */
+  character = false,
 }: {
   cardId: string;
   profile: ItemProfile;
   nature: Nature | null;
+  character?: boolean;
 }) {
 
   /**
@@ -104,7 +121,7 @@ export function CardFacts({
    * one answer, and the same two colours as the Przedmioty.
    */
   const reader = useContext(TheReader);
-  const needs = requirementOf(cardId, reader ?? { nature });
+  const needs = character ? null : requirementOf(cardId, reader ?? { nature });
   /**
    * Green where the line is good news for this reader, which is not the same
    * question as whether they meet it.

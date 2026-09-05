@@ -582,3 +582,28 @@ describe("what one option would do to the numbers", () => {
     expect(previewOf({ op: "ruch-dodatkowy" }, barbarzynca)).toBeNull();
   });
 });
+
+/**
+ * The two ids that name a Postać *and* a Karta.
+ *
+ * `ids.test.ts` pins the pair — `czarodziej` is a Postać and a Nieznajomy,
+ * `demon` a Postać and a Wróg. Everything in this file is card-scoped, so on
+ * those two ids it answers about the Karta, which is correct and is exactly
+ * the trap: a panel drawing a Karta Postaci must not ask. It did, and the
+ * Postać CZARODZIEJ was shown „Tylko Postać: dobra" — the Nieznajomy's own
+ * „Każda Dobra Postać, która tu zawita" — as a requirement on a character
+ * whose Natura the same panel printed two rows below.
+ *
+ * Pinned rather than fixed here, because there is nothing to fix in this
+ * function: `CardFacts` and the tile take a `character` flag and do not ask.
+ */
+describe("the ids that are both a Postać and a Karta", () => {
+  it("answers about the Karta, which is why a Postać panel must not ask", () => {
+    // The Nieznajomy CZARODZIEJ serves a Dobra Postać; the Postać CZARODZIEJ
+    // requires nothing of anybody.
+    const needs = requirementOf("czarodziej", { nature: "good" });
+    expect(needs).not.toBeNull();
+    expect(needs?.value).toContain("dobra");
+  });
+});
+

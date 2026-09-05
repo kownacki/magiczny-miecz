@@ -335,7 +335,7 @@ export function CardTile({
             where it *is* beats what class it belongs to — the mark answers
             „can I take this off", and the numeral only explains an order the
             row it is missing from was not in anyway. */}
-        {numeral && !card.slot && numeralOf(card.cardId) && (
+        {numeral && !card.slot && !card.character && numeralOf(card.cardId) && (
           <Corner at="top-right">
             <span
               aria-hidden
