@@ -1,10 +1,11 @@
 # Where does it go
 
-Ten recipes: to add one of the things this app is made of, which files to touch,
-in which order, and what fails if a step is skipped.
+Twelve recipes: to add — or remove — one of the things this app is made of,
+which files to touch, in which order, and what fails if a step is skipped.
 
 This page exists because every brief written for this repo opened by listing
-those files by hand, and got them slightly different each time. It is a lookup
+those files by hand, and got them slightly different each time. The standing
+rules those briefs also restated are in [BRIEFING.md](BRIEFING.md). It is a lookup
 table, not an argument — the reasoning lives in [CLAUDE.md](../CLAUDE.md) for
 the rules, [CONTEXT.md](../CONTEXT.md) for the vocabulary, and
 [LANDED.md](LANDED.md) for why any of it is shaped this way. Read those when a
@@ -245,6 +246,80 @@ Do not re-guard at each use, and do not add a second boundary beside it.
    cross-checks those.
 
 ---
+
+## 11. Parking a card, a clause, or a whole feature
+
+Content the app cannot run is *parked*, never half-built. The registry is
+`src/lib/engine/disabled.ts` and it is one file on purpose.
+
+1. **A whole Karta** — add it to `PARKED_CARDS`. That is all: `freshDecks`
+   stops shuffling it in, and the four console doors that could conjure one
+   (`placeCard`, `grantCard`, `stackForDraw`, `stageCards`) refuse through
+   `refuseIfParked`. `grantCard` included — it steps round *rules* on purpose,
+   and a parked card is not in the box at all.
+2. **A printed clause of a Karta Postaci** — the list is `LIVE_ABILITIES`, and
+   it names what the app **does** carry. Everything absent is dimmed, so a
+   clause the app learns to run must be *added* to appear live. That direction
+   is deliberate: a card that under-promises can be checked against the paper,
+   one that over-promises is found out mid-fight.
+3. **A whole feature** — a `const true` beside the others (`PVP_PARKED`,
+   `CHARACTER_POWERS_PARKED`), and **find its one door**. A subsystem parks at
+   its door, not at its readers: `abilitiesOfCharacter` returning `[]` switched
+   off all sixteen encoded character abilities without touching any of the
+   seven readers that ask. Duels needed two doors — `attackSeat` and
+   `sendRaider`, the second missed on the first pass, because a raid aimed at a
+   Postać is a duel by proxy.
+4. **Tests** — `it.skip` with a comment naming the boolean, never deleted.
+5. **Docs** — a section in TASKS.md saying what is off, what is untouched, and
+   how to restore it; ⏸ on the affected COVERAGE.md rows, which means *built
+   and unreachable* and is deliberately not ◐.
+
+**What catches a missed step.** `disabled.test.ts` fails if a parked card also
+has a `MANUAL` note — the two lists mean opposite things and a card may only be
+in one — and pins every live clause index by words only that clause contains,
+because an index into transcribed prose rots in silence. Six of nine were wrong
+in the first draft, read off a filtered grep rather than the arrays.
+
+**Not `coverage.ts`'s `MANUAL`.** That means the Karta *is* in the deck, will
+be drawn, and has one clause the table applies itself. Parked means it is not
+in the box. If a card's *trigger* goes dormant but the card still works, it
+takes a `MANUAL` note, not a parking — that is what the DOBRE BÓSTWO needed.
+
+**And parking expires.** Companion mode was parked under this convention and
+deleted the next day. Park a thing to stop it half-working, not to avoid
+deciding about it.
+
+## 12. Deleting a feature for good
+
+Done once, end to end, for companion mode (95 files, ~1,850 lines, two
+columns). The order matters:
+
+1. **Survey the boundary first**, and write it down in three buckets: what is
+   the feature's alone, what is *shared* with the console or with simulation,
+   and what is database. The middle bucket is the whole risk — companion
+   introduced the journal's `manual` flag and it is the console's now, so
+   deleting it would have broken the thing everything else is tested with.
+2. **Check the data before the code.** `select … group by` on the column that
+   marks the feature: every row was `simulation`, so no data was at stake and
+   the columns could go.
+3. **Delete, following `tsc`.** Do not silence an error with a cast or a
+   default — if a call site needs a value only the deleted feature supplied,
+   that call site goes too.
+4. **Then delete what that made dead**, which is the step people skip: eight
+   `turnStore` parameters, `supplied()`, a route with no callers left, and the
+   one-armed ternaries. Leaving them is how live-looking dead code accumulates.
+5. **Tests are deleted, not skipped.** A skipped test for a feature that no
+   longer exists is worse than none. Where a test covered two modes, keep the
+   surviving half.
+6. **Then the prose**, and this is the half that gets forgotten: six documents
+   described companion afterwards, including CLAUDE.md's opening paragraph,
+   which told every fresh session there were two modes. `grep -ri` the feature's
+   name across `docs/` and `CLAUDE.md` until only LANDED.md — which is history
+   and should keep it — still says it.
+7. **The database last**, on its own commit: a dated migration in
+   `db/migrations/`, `db/schema.sql` updated to match, applied only by the main
+   session on Michał's explicit word, then read back from the catalog and
+   confirmed with `npm run schema:check`.
 
 ## Before you commit
 
