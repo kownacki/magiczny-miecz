@@ -1465,3 +1465,31 @@ of it.
 
 `requireCardId` joins `requireFieldId`, added to the generator since `ids.ts`
 is generated. 3205 tests and 31 skips, unchanged.
+
+## Two open sections that were finished work nobody had ticked
+
+2026-09-05, moved here from TASKS.md where they were sitting under **Open**.
+
+**Class II and class III as two separate battles (17.5, 18.2).** The section
+asked whether `fight.ts` sums a pack at all and whether it splits one along the
+class line, and said nobody had checked since the classes became two. Both were
+already there. It sums — `attackAsOne` combines the totals for one roll, and the
+Kamienny Las's bonus goes on once per creature because the Obszar says „każdy
+Wróg". It splits — `attackAsOne` returns null on two `CombatKind`s and
+`beginFight` refuses with „rozpatrzcie osobno", so a mixed Obszar is two fights
+by refusal rather than by flattening. And in 15.2's order, because
+`resolutionOrder` sorts the drawn stack by class and `afterDraw` re-runs it on
+every draw. Pinned already across `fight.test.ts`, `combat.test.ts` and six
+files touching `resolutionOrder`.
+
+**The table screen's two seams**, both done and both ticked in place rather than
+filed: the sheet and its five questions are `sheet/`, nine files whose one door
+from outside is `overlays.tsx` importing `DrawModal` — `card-facts`,
+`crossing-controls` and `die-mark` stayed out because the field side reads them
+too, and the boundary was measured off the import graph rather than guessed. And
+`sheet/drawn-actions.tsx` went 1,050 → 756 lines: its decisions are
+`drawn-decisions.ts`, a pure tested function the way `turn-view.ts` is for the
+screen, with the die table, the Obszar dropdown and the pack tile as leaves. The
+three renders diffed byte-identical apart from the die table becoming a
+component.
+

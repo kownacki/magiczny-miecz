@@ -85,6 +85,14 @@ describe("what COVERAGE.md claims about the deck", () => {
     );
   });
 
+  it("counts the deck the same way in TASKS.md", () => {
+    // The same three numbers live in two documents and drifted apart once
+    // already: TASKS.md still said 128 `pelne` after COVERAGE.md was fixed.
+    expect(claim(TASKS, /(\d+) of the (?:\d+) distinct event cards/, "TASKS's pelne count")).toBe(
+      tally.pelne,
+    );
+  });
+
   it("counts the Obszary", () => {
     expect(claim(COVERAGE, /all (\d+) Obszary/, "the Obszary")).toBe(FIELDS.size);
   });

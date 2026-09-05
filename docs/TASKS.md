@@ -44,102 +44,24 @@ their scans are deliberately untouched.
       up. Nobody's decision — just work nobody has done, and another session was
       measuring it as this was written.
 
-- [ ] **The last 5 cards.** 133 of 138 distinct event cards have a script — 128
-      `pelne` and 5 `czesciowe`, after the sweep of 2026-08-31 took the MANUAL
-      list from twenty-two clauses to seven. The app says on screen which is
-      which — see `coverage.ts`.
+- [ ] **One card left, and it is blocked.** 131 of the 138 distinct event cards
+      are `pelne`, 4 `czesciowe`, 3 `brak` — `coverage.ts` is the truth and
+      `docCounts.test.ts` keeps COVERAGE.md agreeing with it. The Sobowtór, the
+      Kometa and the Wampir were built on 2026-09-04 and the Turniej Rycerski
+      is parked with duels; all four are in LANDED.md.
 
-      The Diament Królów has come off this list. The Mgła was never on it and
-      should have been: it had a script, so it counted as `pelne`, and the
-      script was `{ op: "nic" }` with a two-turn countdown — the app telling a
-      table that the storm which halves everybody's walk does nothing. It is a
-      `move-max` of 1 on every seat now. Its twin the **Układ Planet** is the
-      fifth `czesciowe`: „podwojona zostaje Magia wszystkich Demonów" is the
-      same wall as the Wampir below, so it keeps the clock and names the half
-      it does not do.
+      What is left is the **Tajemna Sakwa**: „W Sakwie możesz umieścić 1
+      Przedmiot" wants the container link the Magiczna Sakwa and the Tragarz
+      also want, and putting a Przedmiot *into* something is a feature rather
+      than a fix. Each `czesciowe` card names the half it misses in `MANUAL`.
 
-      The five with nothing at all, and what each of them actually wants:
 
-      - ~~**Sobowtór**~~ — built 2026-09-04: `sobowtor: STRAZUJE()`.
-      - ~~**Kometa**~~ — built 2026-09-04: `katastrofa` (a class swept off the
-        acting seat's Krąg — every `field_cards` row that matches, and
-        whatever the turn already lifted into its own `drawn` and had not yet
-        resolved — to the used pile through `putOnPile`, chained through
-        `apply`; a `granted` card is only deleted) and a new journal kind,
-        `card-destroyed`, cited to nothing: it is the Karta's own text, the
-        way `lost-card` already is, and reads „giną" rather than „traci"
-        because nothing here was ever held.
-      - ~~**Turniej Rycerski**~~ — **parked 2026-09-05 with the rest of Postać
-        przeciw Postaci**, so the dynamic-choice design it was waiting on is
-        not needed yet. It is out of the deck entirely; see "Postać przeciw
-        Postaci" below. When duels come back, the design problem comes back
-        with them: „wyzwać każdą Postać" is a choice among however many
-        Postacie are at the table now, and `wybor` is a fixed list re-walked
-        by index — `Target` has `inna-postac`, but `seatsTargeted` answers
-        null for it and every op punts it to manual.
-      - ~~**Wampir**~~ — built 2026-09-04 on the card holder: his growth is a
-        `points` status on his own row, read before the dice.
-      - **Tajemna Sakwa** — blocked. "W Sakwie możesz umieścić 1 Przedmiot" is
-        the container link the Magiczna Sakwa and the Tragarz also want.
-
-      So they are three afternoons and two blockers, not five puzzles.
-
-      Three reasons listed here have since gone. A consumable spent at a moment
-      of the holder's choosing is `uses.ts`; a friend that imposes an ongoing
-      restriction rather than a bonus is a `Modifier` (the Południca's one field
-      a turn, the Zły Duch barring new friends until the Pustelnia); and the
-      Zwierciadło Zniszczenia is scripted.
-
-      Eleven have come off the list. Five earlier: the Wędrowiec, Godzina
-      Duchów, the Kryształ Magów, the Przybysz z Krainy Cieni and the Trójgłowy
-      Smok. Six more while playing: Danina, Zaklinacz Czasu, Kuglarz, Mędrzec,
-      Tajemnicza Szkatuła and the Alchemik — each of which needed the effect
-      vocabulary to grow by exactly one thing, and each time because the card is
-      shaped that way rather than to make one card fit. Targeting by Natura and
-      by Krąg, which used to be listed here as a reason a card could not be
-      encoded, is now `Target`.
-
-      The blocker this bullet used to name — **a bonus that lasts one turn**,
-      wanted by the Eliksir Siły, the Najemnik, the Kryształ Losu and both
-      fruits — is built. It went where the note predicted, into one piece of
-      vocabulary rather than five special cases: a `Modifier` with an `Ends`,
-      kept in `seat_effects`. `{ kind: "turns", turns: 1 }` is exactly it.
-- [ ] ~~**17.9's spoils, in the browser.**~~ **Parked 2026-09-05 with duels**
-      (`PVP_PARKED`), because a won *duel* is the only fight that does not
-      settle itself — beating a Wróg settles on its own and always did. The
-      engine and the console still take them; when duels come back this is
-      what is left, and it is small: the press exists (`fight-done`) and the
-      route reads `spoils` / `spoilsHoldingId`, so it is a picker on a button
-      that is already there.
 - [ ] **Nature-dependent cards** — the seat's Nature is known, so these are
       resolvable once Kat's setup choice is handled.
 - [ ] **Two weapons at once**, for a character with the ability in the slotowy
       variant — none has one yet. See **Wariant: ekwipunek slotowy** in
       [COVERAGE.md](COVERAGE.md).
 
-### ~~Class II and class III as two separate battles (17.5, 18.2)~~ — checked 2026-09-05, already carried
-
-This section said the whole of the task was "whether `fight.ts` sums a pack at
-all, and whether it would now split one correctly along the class line", and
-that nobody had read it against 17.5 since the classes became two. Read now,
-and both halves were already there:
-
-- **It sums.** `beginFight` builds `foes` from every named card and
-  `attackAsOne` returns one opponent with the totals combined — „Miecze tych
-  istot są sumowane" — with one roll against the sum. `foeBonusAt` is added
-  once per creature rather than once to the sum, because the Kamienny Las says
-  „każdy Wróg".
-- **It splits.** `attackAsOne` returns null the moment two `CombatKind`s are in
-  the pack, and `beginFight` refuses with „Zwykli i magiczni Wrogowie nie
-  atakują razem — rozpatrzcie osobno (18.1)". So a mixed Obszar is two fights,
-  by refusal rather than by silently flattening or auto-splitting.
-- **In the right order.** `resolutionOrder` sorts the drawn stack by
-  `CARD_CLASS`, and `afterDraw` re-runs it every time a card joins, so class II
-  is resolved before class III without anyone having to remember 15.2.
-
-Pinned already, in three places: `fight.test.ts` for the refusal,
-`combat.test.ts` for `attackAsOne`, and `resolutionOrder` in six test files.
-Nothing to build; the section was open only because nobody had gone and looked.
 
 ### One house rule journals itself, the other does not
 
@@ -154,105 +76,24 @@ would read as noise; on the other hand a table that starts with a Plecak
 nobody expected has nothing to point at. Left as it is because it is the peer's
 command and the asymmetry is cosmetic, not because it is right.
 
-### Card vocabularies — decided 2026-09-04
+### ~~Card vocabularies~~ — done, 2026-09-04/05
 
-Six ways of saying what a card does, surveyed in the architecture pass (see
-LANDED.md). Three are different things and stay apart: an **Effect** is a
-happening, a **FieldScript** is a menu of them, and what a holder is *under*
-is a **Status** (CONTEXT.md). The other three decisions, and the order:
+All three decisions are carried out and the reasoning is in LANDED.md
+("The architecture pass", "The Status fold is finished"). In one paragraph, so
+nobody re-derives it:
 
-- [x] **The prose reader goes.** `cardEffects.ts` (`suggestActions`) and the
-      `RollTable` component it fed are deleted; the Obszar window renders its
-      die table from `fieldScript`'s typed `rzut` `Effect` only, through
-      `OfferList`/`FieldService`. Companion's read-only table survives from
-      that same typed source — `field-services.tsx`'s `ScriptedRoll` already
-      covered both simulation (server rolls) and companion (pick the die face
-      your own die showed) before this landed, so nothing needed re-feeding.
-      `rollTable.ts`'s `parseRollTable` stays, narrowed to a detector for
-      `fieldRollTable.test.ts`'s coverage check — every Obszar whose prose
-      reads as a table now needs a typed `FieldOffer` or a Kamienny Most
-      ordeal, not a live reader of its own.
-- [ ] **One Status vocabulary, two sources.** Staged, one reader at a time,
-      so every step keeps the suite green:
-      1. ~~`Ends` gains `{ kind: "held" }`; `heldStatuses(holdings, eqMode,
-         nature)` projects a held card's abilities into `Status` rows at read
-         time.~~ Built 2026-09-04: `HELD_TWIN` is an exhaustive table over
-         `Ability["kind"]` — two twins (`punkty`→`points` with `tylkoWalka`,
-         `bez-zaklec`→`no-spells`) and a stated reason for every null — and
-         `seatView.standing` is applied plus held. No reader has moved yet.
-      2. Readers move one at a time, each with tests: ~~points~~ (done
-         2026-09-04: `seatView`'s `parametr` and `walka` are
-         `bonusFrom(standing, as)`; the held projection reads `lentBy` per
-         card so a printed corner counts too, and honours the two
-         suspensions; the spell cap stays on the held half alone;
-         `bonusFromHoldings` survives for `fight.ts`'s single-card
-         correction, reading the same map), ~~spell limits~~ (done: `whyNoSpells`
-         reads `standing`; `zaklecia-ponad-limit` stays in `spellAllowance`),
-         ~~osłona~~ (done 2026-09-04: Hełm/Tarcza/Zbroja's `oslona` is a
-         `points`-shaped twin, `shieldUpTo` takes the widest; `shieldSaves`
-         reads `standing`; `bestShield` deleted once nothing called it),
-         ~~carrying~~ (done 2026-09-04: Koń/Muł/Zaprzęg/Magiczna
-         Sakwa/Tragarz's `udzwig` is a standing twin, `carryBonus` sums and
-         goes `Infinity` for the Zaprzęg; `derive.carryLimit` builds
-         `heldStatuses` itself so its four callers stay unchanged, and a
-         Tragarz — which `inPlayAt` alone never puts anywhere in slotowy —
-         now carries there too, matching every other Przyjaciel's bonus;
-         `abilities.ts`'s own `carryLimit` deleted with it), ~~crossings~~
-         (settled 2026-09-04 — **on a wrong fact, corrected 2026-09-05**. The
-         reason given was that `przeprawa-kostki` is printed on Rusałka, a
-         Postać, so nothing held could produce it. Rusałka is a **Przyjaciel**,
-         a `friend` card in `events.json`, and `heldStatuses` walks friends —
-         so the twin would fire and this reader *can* be folded like the
-         others. What survives of the original reasoning is the narrower
-         half: `przeprawa` is a *granted* crossing and `przeprawa-kostki` is
-         how many dice, so there is no second spelling to retire and no bug —
-         only a reader that has not moved. What did move first was
-         `grantedCrossing`, from the stored half to the whole `standing` list.
-         **The reader moved too, 2026-09-05**: `przeprawa-kostki` is a Modifier,
-         a held Rusałka produces it through `HELD_TWIN`, and
-         `crossingDiceFrom` takes the fewest dice on offer the way
-         `movementCap` takes the tightest cap. `crossingDice` is deleted with
-         its two tests, and `bridge.test.ts`'s end-to-end Rusałka crossing
-         passed unchanged through the move, which is the evidence that
-         mattered), ~~`ocalenie`~~ (done
-         2026-09-04, and it was a duplicated projection rather than a
-         reader: `spendLife` mapped `snapshot.effects` by hand into what
-         `storedStatuses` already returns. It stays on the **stored** half
-         on purpose — an Ocalony is spent by deleting its row, and a held
-         status has no row to delete — and the three friends who die in
-         your place stay on `diesForYou`, being scoped to a defeat and
-         costing a Karta rather than being any loss at all), the rest.
-      3. ~~`Ability` kinds whose reader has moved become `Modifier` kinds.~~
-         **Dropped 2026-09-04, after tracing what it costs.** It was the
-         wrong shape and the plan was wrong to name it. `ABILITIES` is one
-         table saying what every card and Charakterystyka prints;
-         `describeAbility` renders it on the seat card; and `BONUS_BY_ID` —
-         the very lookup this step cited as the pattern to copy — is *built
-         from* `ABILITIES` rather than replacing it, so even `punkty`, whose
-         reader moved first, still needs its kind. Retiring the kinds would
-         scatter card data into ad-hoc per-fact tables and lose the printed
-         line the seat card shows, to remove a duplication that was never in
-         the data. The duplication was in the **readers**, and steps one and
-         two are what fixed it.
+Six ways of saying what a card does. Three are different things and stay apart
+— an **Effect** is a happening, a **FieldScript** is a menu of them, and what a
+holder is *under* is a **Status** (CONTEXT.md). The prose reader is deleted
+(`cardEffects.ts`), all 27 Zaklęcia carry a script, and the Status fold moved
+every reader onto one list. Its step three — retiring the `Ability` kinds — was
+**dropped after tracing what it costs**: `ABILITIES` is the printed-card data
+table, `describeAbility` renders it on the seat card, and `BONUS_BY_ID` is
+*built from* it rather than replacing it, so even `punkty` still needs its kind.
+The duplication was always in the readers, and folding those fixed it. An
+`Ability` is what a card prints; a `Status` is what is true of a holder now;
+`HELD_TWIN` is the exhaustive bridge. **Do not reopen.**
 
-         What stands instead, in CONTEXT.md: an `Ability` is what a card
-         *prints*, a `Status` is what is *true of a holder now*, and
-         `HELD_TWIN` is the exhaustive bridge, so a new Ability kind cannot
-         be added without somebody saying whether it stands. Three dead
-         readers were deleted on the way past (`bestShield`,
-         `cannotUseSpells`, `abilities.ts`'s own `carryLimit`), which is all
-         the cleanup this step really had in it.
-
-         This also answers the question crossings deferred: a Postać's
-         printed abilities stay abilities. There was never a second spelling
-         of them to retire.
-- [x] **A Zaklęcie's script is its truth.** Done — verified 2026-09-05 by
-      counting rather than by memory: all 27 entries in `SPELLS` carry a
-      `stosuje`, `applies` or `reactive`, and the regex reader of card prose
-      (`cardEffects.ts`) is deleted. Two are partial and say which half in
-      `MANUAL` — KRĄG PŁOMIENI's dispel and OCALONY's two thirds. This box
-      stayed unticked after the work landed, which is its own small lesson:
-      a checklist item is only as good as somebody closing it.
 
 ### Music
 
@@ -266,137 +107,63 @@ LANDED.md for what is built (`src/lib/music/`, `/music`).
 
 ### The table screen
 
-`page.tsx` is fed from `TheTable` now (LANDED.md). Two seams left, each its own:
+`page.tsx` is fed from `TheTable` (LANDED.md). One seam left:
 
-- [x] The sheet and the five questions asked on it are `sheet/` — nine files
-      whose one door from outside is `overlays.tsx` importing `DrawModal`.
-      `card-facts`, `crossing-controls` and `die-mark` stay out because the
-      field side reads them too; the boundary was measured off the import
-      graph, not guessed.
-- [x] `sheet/drawn-actions.tsx` 1,050 → 756: its decisions are
-      `drawn-decisions.ts`, a pure function with tests, the way `turn-view.ts`
-      is for the screen; the die table, the Obszar dropdown and the pack tile
-      are leaves of their own. The three renders diff byte-identical apart
-      from the die table becoming a component.
 - [ ] `sweep.py`, the end-to-end harness against the real routes, is worth
       rewriting rather than restoring — what it is *for* is asserting against
       the routes, and that is the part worth keeping.
 
+
 ## Parked
 
-### Postacie' own powers — parked 2026-09-05 (`CHARACTER_POWERS_PARKED`)
+### A Postać's own powers — parked 2026-09-05 (`CHARACTER_POWERS_PARKED`)
 
-**Every printed clause on a Karta Postaci except the starting kit.** Same
-shape and same promise as the two parkings below: nothing deleted, one flip
-brings them back. `abilitiesOfCharacter` is the single door a character's
-typed abilities come through, so returning nothing from it switches off all
-sixteen — six field safeties, three escapes, three roll modifiers,
-`bez-oplaty`, `magia-do-miecza`, `zakazane`, `natura-dowolna` — without a
-guard in any of the seven readers that ask.
+**Every printed clause except the starting kit.** `abilitiesOfCharacter` returns
+`[]` while it stands, which switches off all sixteen encoded abilities without a
+guard in any of the seven readers that ask. Nothing is deleted.
 
-**Why all of them rather than only the unbuilt ones.** 89 clauses are printed
-across the 27 Kartas Postaci and the app ran 34 of them: 18 starting kits and
-16 encoded abilities, the latter across only 10 characters. A Karta that keeps
-sixteen of its promises and breaks fifty-five is harder to play with than one
-that keeps none and says so, because a player cannot tell which sixteen. The
-line is drawn where it can be said in a sentence: **the app deals your kit,
-and everything else on the card is yours to apply.**
+**Why all of them:** 89 clauses are printed across the 27 Kartas Postaci and the
+app ran 34 of them — 18 starting kits and 16 encoded abilities, the latter
+across only 10 characters. A Karta that keeps sixteen promises and breaks
+fifty-five is harder to play with than one that keeps none and says so, because
+a player cannot tell which sixteen. The line is sayable in a sentence: **the app
+deals your kit, everything else on the card is yours.**
 
-**What is left, and it is not nothing.** Postacie still differ by their
-printed Miecz and Magia, by their starting gear and spells, by where they
-begin, and by their Natura. That is the character-selection decision mostly
-intact; what goes is the per-Obszar exception, which is also the part nobody
-could keep track of at a table anyway.
+**`LIVE_ABILITIES` names what is carried, not what is parked**, so an unlisted
+clause is dimmed by default and one the app learns to run must be *added* to
+appear. The failure mode is a card that under-promises, which can be checked
+against the paper. `disabled.test.ts` pins every live index by words only that
+clause contains.
 
-**Stated as a live list, not a parked one.** `LIVE_ABILITIES` names the clauses
-the app carries — one per Postać, two for the Książę — and `parkedAbility`
-returns the inverse, so anything nobody has listed is dimmed **by default**.
-That direction is the point: a clause the app learns to run must be *added* to
-show live, so the failure mode is a Karta that under-promises and can be
-checked against the paper, rather than one that over-promises and is
-discovered mid-fight. `disabled.test.ts` pins every live index by words only
-that clause contains, and cross-checks the list against `STARTING_KIT`.
+Postacie still differ by printed Miecz and Magia, starting gear, where they
+begin, and Natura. Known partial: the Książę's gear clause also promises he may
+replace what he loses, and that half is not carried — the clause stays live
+because striking it would deny the kit it does deal.
 
-**Known partial:** the Książę's gear clause also promises he may always replace
-what he loses, and that half is not carried. The clause stays live anyway,
-since striking it through would deny the kit it does deal.
-
-**What it costs to bring one back:** the reader already exists for all sixteen.
-Flipping the boolean restores them all at once; carrying a single clause
-instead means adding its index to `LIVE_ABILITIES` and gating the rest.
 
 ### Postać przeciw Postaci — parked 2026-09-05 (`PVP_PARKED`)
 
-**The feature is coming; it is not built.** `PVP_PARKED` in
-`src/lib/engine/disabled.ts` is a `const true`: nothing is deleted, and
-flipping it to false brings duels back with no other change.
+**Coming, not built.** One `const true` in `src/lib/engine/disabled.ts`;
+flipping it restores everything with no other change. Why each piece went the
+way it did is in LANDED.md.
 
-**What is off.** 17.6-10 (resolving a fight between Postacie, the escape into
-it, the spoils, the draw), 18.1b (a Charakterystyka's magical attack on
-another Postać), and 19.1-2's escape *from* a Postać.
+**Off:** 17.6-10, 18.1b, and 19.1-2's escape *from* a Postać. **Two doors, and
+the second is easy to miss** — `attackSeat`, and `sendRaider` when it is aimed
+at a seat, because the POSZUKIWACZ PRZYGÓD raiding a Postać is a duel by proxy.
 
-**Two doors, not one.** `attackSeat` is the obvious one and refuses first,
-before any more specific refusal can fire. `sendRaider` is the other and was
-missed on the first pass: the POSZUKIWACZ PRZYGÓD is sent „by zaatakował
-Postać **lub** Wroga", so a raid aimed at a seat is a duel by proxy — he goes
-instead of you, but the Życie is another player's all the same. Raiding a Wróg
-is untouched, and is most of what he is for.
+**Untouched:** 13.3's other branch (meeting a Postać to use an ability on her)
+and every Zaklęcie aimed at another player, hostile ones included — POWIEW
+ŚMIERCI says „nie trzeba toczyć walki" outright.
 
-**What is untouched**, because 13.3 has two branches and only the first is a
-fight. Meeting a Postać to use an ability on her is unaffected — the Wiedźma's
-urok, the Spryciarz's shilling, the Awanturnik's and Quark's „zamiast
-atakować", the Błędny Rycerz taking a Krzyżowiec — though "unaffected" is a
-low bar here, since none of those five is wired as a command yet either; they
-are the table's before and after this. So does every Zaklęcie
-spoken at another player, hostile ones included: the Krąg Płomieni, Szaleństwo,
-Władca Czarów, Siedem Wichrów, Powiew Śmierci — which says outright „nie
-trzeba toczyć walki".
+**Went with it:** TURNIEJ RYCERSKI, out of the deck entirely. The DOBRE BÓSTWO
+stayed but can no longer convict, and says so in `MANUAL`: both halves of its
+trigger are unreachable, since nothing sets `how: "zdolnosc"` either.
 
-**What went with it.**
+**When it returns:** the Turniej needs a dynamic choice — „wyzwać każdą Postać"
+is a choice among however many Postacie are at the table, and `wybor` is a fixed
+list re-walked by index. And 17.9's spoils need a browser picker; the press and
+the route already exist.
 
-- One Karta, out of the deck entirely: **TURNIEJ RYCERSKI**, whose whole text
-  is „możesz wyzwać na pojedynek każdą Postać".
-- Nine printed clauses on seven Kartas Postaci, dimmed rather than hidden —
-  Barbarzyńca, Demon, Kat (two), Łotr (two), Olbrzym, Rycerz Ciemności,
-  Zdobywca. All 27 Postacie stay pickable; the Kat and the Łotr lose two of
-  their four and nobody loses everything. The Rycerz Ciemności keeps
-  „atakując możesz wybrać formę walki", which is 18.1b's own permission and is
-  how he attacks a *Wróg* with Magia.
-- The **DOBRE BÓSTWO** stays in the deck but stops being able to convict, and
-  now says so in `MANUAL`. Its trigger has two halves and the app can reach
-  neither: `attackSeat` wrote `how: "atak"` and is parked, and while
-  `how: "zdolnosc"` is modelled and rendered, **no command sets it** — none of
-  the five Charakterystyki that meet a Postać without fighting her is wired as
-  a command yet. Left alone it would have acquitted everybody silently, which
-  is the app deciding a judgement rather than handing it back. Worth knowing
-  before flipping `PVP_PARKED`: that note comes off the moment either half
-  becomes reachable.
-
-**The convention this established**, and the reason it is written down here
-rather than only in the card's own note: a card that the app cannot run is
-*parked*, not half-carried. It is absent from every pile, refused at every
-console door that could conjure it, and shown in the Księga Tolimana dimmed
-and struck through with one red word — „Niedostępne" — and no explanation. The
-reason lives in the code and in this file, never on screen. That is a
-different thing from `coverage.ts`'s `MANUAL`, which is for a card that **is**
-in the deck and will be drawn, with one clause the table applies itself. Two
-lists, two meanings, and neither should grow into the other.
-
-~~**Companion mode.**~~ **Deleted 2026-09-05**, not parked. It was here as the
-last parked thing, and the open note under it — that the shared screen could
-not act, because the turn route refuses a seatless actor before `mayAct` is
-ever consulted — went with it: `tableScreen` no longer exists and `Permission`
-is a plain boolean.
-
-What survives of that work is the part that was never companion's:
-`no_device` is gone, and a chair nobody is driving is simply undriven, which
-`mayChooseFor`, `dealCharacters` and the `away` reading in `envelope.ts` all
-agree about.
-
-  When the boolean flips: the turn route's seatless guard has to ask `mayAct`
-  first and let `tableScreen` through, and every command it then reaches needs a
-  seat named in the body rather than taken from the actor. That is the shape of
-  the work, and it is not small.
 
 ### Handel między Postaciami — parked, and probably not in the game
 
