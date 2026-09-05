@@ -36,6 +36,7 @@ import { asFieldId, FIELDS, fieldByName } from "@/lib/engine/board";
 import { classOf, numeralOf } from "@/lib/engine/cards";
 import { SCRIPTS } from "@/lib/engine/cardScript";
 import { asCharacterId, CHARACTER_ABILITIES, startingKit } from "@/lib/engine/characters";
+import { COMMANDS } from "@/lib/engine/consoleSpec";
 import { coverageOf, manualNote } from "@/lib/engine/coverage";
 import { CHARACTER_POWERS_PARKED, parkedAbility, parkedCard } from "@/lib/engine/disabled";
 import { cardIdNamed } from "@/lib/engine/lookup";
@@ -274,12 +275,12 @@ function askCharacter(query: string): void {
 const ABILITIES_FILE = "src/lib/engine/abilities.ts";
 
 /** Every `.ts`/`.tsx` under `src`, minus the tests — `reachable.test.ts`'s walk. */
-function sources(dir = "src"): string[] {
+function sources(dir = "src", tests = false): string[] {
   const found: string[] = [];
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
     const path = `${dir}/${entry.name}`;
-    if (entry.isDirectory()) found.push(...sources(path));
-    else if (/\.tsx?$/.test(entry.name) && !/\.test\.tsx?$/.test(entry.name)) found.push(path);
+    if (entry.isDirectory()) found.push(...sources(path, tests));
+    else if (/\.tsx?$/.test(entry.name) && (tests || !/\.test\.tsx?$/.test(entry.name))) found.push(path);
   }
   return found;
 }
@@ -348,6 +349,296 @@ function askAbility(query: string): void {
   }
 }
 
+// ── ask where ────────────────────────────────────────────────────────────────
+
+/**
+ * "I have a word — where is it?"
+ *
+ * `WHERE.md` answers the other question, "to add X, touch these files in this
+ * order", and cannot answer this one: a recipe is written per *kind of thing*,
+ * and the thing you have is a noun off a card or out of a conversation. The
+ * fallback was `grep -rn fight src`, which returns two hundred lines in file
+ * order — the fourth mention inside a test ranked exactly like the exported
+ * function that does the work.
+ *
+ * Nothing here is a hand-written map of concept → files, on purpose: an index
+ * maintained by hand is the kind of prose this repo has already had to go back
+ * and fix twice. Everything below is read off the tree at the moment you ask —
+ * `export` lines for the symbols, `SPECS` for the verbs, `WHERE.md`'s own `##`
+ * headings for the recipes — so a file renamed this morning answers correctly
+ * this afternoon and a stale answer is not a thing that can happen.
+ */
+
+const WHERE_DOC = "docs/WHERE.md";
+
+/**
+ * The stem a word is allowed to be recognised by.
+ *
+ * Two characters off the end, never below four, because both languages in this
+ * repo inflect: `parked` has to reach `Parking a card`, and `przeprawa` has to
+ * reach `przeprawy` and `Przeprawę`. Trimming is what makes a Polish noun
+ * findable at all — `fieldNamed` and the console can afford exact names because
+ * a name is printed on a component, and a *concept* never is.
+ */
+function stemOf(needle: string): string {
+  return needle.slice(0, Math.max(4, needle.length - 2));
+}
+
+/**
+ * How well one word answers one needle: 1 exact, 0.8 prefix, 0.5 same stem.
+ *
+ * Three tiers rather than a boolean, so the stem — which is the loose one, and
+ * the one that lets `status` reach `state` — can never outrank a real name.
+ */
+function wordScore(word: string, needle: string): number {
+  const one = fold(word);
+  if (one === needle) return 1;
+  if (one.startsWith(needle)) return 0.8;
+  const stem = stemOf(needle);
+  return one.startsWith(stem) ? 0.5 : 0;
+}
+
+/** An identifier or a sentence as the words in it: camelCase, SNAKE_CASE, kebab and prose alike. */
+function wordsIn(text: string): string[] {
+  return text
+    .split(/[^\p{L}\p{N}]+|(?<=\p{Ll})(?=\p{Lu})|(?<=\p{Lu})(?=\p{Lu}\p{Ll})/u)
+    .filter((one) => one.length > 0);
+}
+
+/** The best any one word of a phrase manages against any one needle. */
+function phraseScore(text: string, needles: string[]): number {
+  const parts = wordsIn(text);
+  const whole = Math.max(0, ...needles.map((needle) => wordScore(text, needle)));
+  const inside = Math.max(0, ...parts.flatMap((word) => needles.map((needle) => wordScore(word, needle))));
+  // A word found *inside* a name is worth a little less than the whole name
+  // being it: `payFerry` answers "ferry", but `ferry` answers it better.
+  return Math.max(whole, inside * 0.85);
+}
+
+/** Comments count, but less — a mention in prose is a lead, a mention in code is a fact. */
+function bodyScore(text: string, needles: string[]): { score: number; mentions: number } {
+  const code = text.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/(^|[^:])\/\/.*$/gm, "$1");
+  const weigh = (source: string, factor: number) => {
+    let score = 0;
+    let mentions = 0;
+    for (const word of wordsIn(source)) {
+      const hit = Math.max(0, ...needles.map((needle) => wordScore(word, needle)));
+      if (hit > 0) {
+        score += hit * factor;
+        mentions += 1;
+      }
+    }
+    return { score, mentions };
+  };
+  const inCode = weigh(code, 1);
+  const all = weigh(text, 1);
+  return { score: inCode.score + (all.score - inCode.score) * 0.3, mentions: all.mentions };
+}
+
+type Area = "engine" | "commands" | "elsewhere" | "tests";
+
+/**
+ * Where a file sits and what a match there is worth.
+ *
+ * The whole ranking, in one place. An exported name in the pure engine is the
+ * best answer the tree can give; the same name in a `page.tsx` is a caller.
+ * Tests are kept and demoted rather than dropped, because "which test would
+ * break" is a real question — just never the first one.
+ */
+function areaOf(path: string): { area: Area; weight: number } {
+  const test = /\.test\.tsx?$/.test(path);
+  const base = path.startsWith("src/lib/engine/")
+    ? 1.3
+    : path.startsWith("src/lib/game/commands/")
+      ? 1.2
+      : path.startsWith("src/lib/game/")
+        ? 1.1
+        : path.startsWith("src/lib/")
+          ? 1
+          : path.startsWith("src/cli/")
+            ? 0.9
+            : path.startsWith("src/app/api/")
+              ? 0.85
+              : 0.7;
+  if (test) return { area: "tests", weight: base * 0.6 };
+  if (path.startsWith("src/lib/engine/")) return { area: "engine", weight: base };
+  if (path.startsWith("src/lib/game/commands/")) return { area: "commands", weight: base };
+  return { area: "elsewhere", weight: base };
+}
+
+const EXPORTED = /^export\s+(?:async\s+)?(?:declare\s+)?(?:function|const|let|var|class|interface|type|enum)\s+([A-Za-z_$][\w$]*)/;
+
+interface FileHit {
+  path: string;
+  area: Area;
+  score: number;
+  symbols: string[];
+  mentions: number;
+}
+
+function filesMatching(needles: string[]): FileHit[] {
+  const hits: FileHit[] = [];
+  for (const path of sources("src", true)) {
+    const text = readFileSync(path, "utf8");
+    const { area, weight } = areaOf(path);
+
+    const symbols: { name: string; line: number; score: number }[] = [];
+    text.split("\n").forEach((line, index) => {
+      const name = EXPORTED.exec(line)?.[1];
+      if (!name) return;
+      const score = phraseScore(name, needles);
+      if (score > 0) symbols.push({ name, line: index + 1, score });
+    });
+    symbols.sort((a, b) => b.score - a.score || a.line - b.line);
+
+    const best = symbols[0]?.score ?? 0;
+    const file = phraseScore(path.split("/").pop()!.replace(/\.(test\.)?tsx?$/, ""), needles);
+    const body = bodyScore(text, needles);
+    const score = (best * 100 + file * 70 + Math.min(body.score, 14) * 2.5) * weight;
+    if (score < 15) continue;
+
+    hits.push({
+      path,
+      area,
+      score,
+      symbols: symbols.slice(0, 3).map((one) => `${one.name}:${one.line}`),
+      mentions: body.mentions,
+    });
+  }
+  return hits.sort((a, b) => b.score - a.score);
+}
+
+/**
+ * The verbs whose name, alias, usage or summary answers.
+ *
+ * The most useful single line the tool can print, because a match here means the
+ * thing can be *driven* — `npm run mm`, one word, no file opened at all. It is
+ * also the only place the two languages meet: `SPECS` writes English names over
+ * Polish summaries, so "przeprawa" finds `ferry` here and nowhere else.
+ */
+function verbsMatching(needles: string[]) {
+  return COMMANDS.map((spec) => {
+    const named = Math.max(phraseScore(spec.name, needles), ...spec.aliases.map((one) => phraseScore(one, needles)));
+    const said = Math.max(phraseScore(spec.usage, needles), phraseScore(spec.summary, needles));
+    return { spec, score: Math.max(named, said * 0.6) };
+  })
+    .filter((one) => one.score >= 0.5)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 3);
+}
+
+function verbLine(spec: (typeof COMMANDS)[number]): string {
+  const called = `${spec.name}${spec.aliases.length > 0 ? ` (${spec.aliases.join(", ")})` : ""}`;
+  return `  ${called.padEnd(20)} ${spec.usage.padEnd(26)} ${spec.summary}`;
+}
+
+/** WHERE.md's own `##` headings, read out of the file rather than copied into one here. */
+function recipesMatching(needles: string[]): string[] {
+  let text: string;
+  try {
+    text = readFileSync(WHERE_DOC, "utf8");
+  } catch {
+    return [];
+  }
+  const lines = text.split("\n");
+  const starts = lines.flatMap((line, index) => (/^## /.test(line) ? [{ heading: line.slice(3).trim(), index }] : []));
+
+  return starts
+    .map((start, nth) => {
+      const body = lines.slice(start.index, starts[nth + 1]?.index ?? lines.length).join("\n");
+      const score = phraseScore(start.heading, needles) + Math.min(bodyScore(body, needles).score, 6) * 0.05;
+      return { start, score };
+    })
+    .filter((one) => one.score >= 0.5)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 2)
+    .map(({ start }) => `  ${WHERE_DOC}:${start.index + 1}  ${start.heading}`);
+}
+
+/** A word that is also a name printed on a component — said in one line, and handed to `ask id`. */
+function boxMatching(needles: string[]): string[] {
+  const named = <T,>(items: readonly T[], idOf: (one: T) => string, nameOf: (one: T) => string) =>
+    items
+      .filter((one) => phraseScore(idOf(one), needles) >= 0.8 || phraseScore(nameOf(one), needles) >= 0.8)
+      .map(idOf)
+      .slice(0, 4);
+
+  const found: string[] = [
+    ...named(PEOPLE, (one) => one.id, (one) => one.name),
+    ...named(EVENTS, (one) => one.id, (one) => one.name),
+    ...named(ITEMS, (one) => one.id, (one) => one.name),
+    ...named(SPELL_CARDS, (one) => one.id, (one) => one.name),
+    ...named([...FIELDS.values()], (one) => one.id, (one) => one.name),
+  ];
+  const ids = [...new Set(found)].slice(0, 5);
+  return ids.length === 0 ? [] : [`  also a name in the box: ${ids.join(", ")} — \`ask id ${ids[0]}\``];
+}
+
+function askWhere(query: string): void {
+  const needles = query
+    .split(/\s+/)
+    .map(fold)
+    .filter((one) => one.length >= 3);
+  if (needles.length === 0) {
+    say(`${query} — too short to look for. Two letters match everything.`);
+    return;
+  }
+
+  const sections: { title: string; lines: string[] }[] = [];
+  const verbs = verbsMatching(needles);
+  if (verbs.length > 0) {
+    sections.push({ title: "console  (you can drive this from `npm run mm`)", lines: verbs.map((one) => verbLine(one.spec)) });
+  }
+
+  /**
+   * The best verb's own name joins the search.
+   *
+   * Half the vocabulary of this repo is Polish on the cards and English in the
+   * code, and a word from one side finds nothing on the other: "przeprawa"
+   * appears three times under `src/lib/game/commands/` and `payFerry` appears
+   * in none of them. `SPECS` is the one table that carries both, so the verb it
+   * matched is used as a second needle — derived, not translated by hand.
+   */
+  const alsoBy = verbs
+    .slice(0, 1)
+    .map((one) => fold(one.spec.name))
+    .filter((one) => !needles.includes(one));
+  const files = filesMatching([...needles, ...alsoBy]);
+
+  const width = Math.min(52, Math.max(24, ...files.slice(0, 20).map((one) => one.path.length + 1)));
+  const section = (area: Area, title: string, cap: number) => {
+    const mine = files.filter((one) => one.area === area);
+    const floor = Math.max(15, (mine[0]?.score ?? 0) * 0.3);
+    const lines = mine
+      .filter((one) => one.score >= floor)
+      .slice(0, cap)
+      .map((one) => `  ${one.path.padEnd(width)}${one.symbols.join("  ") || `${one.mentions} mentions`}`);
+    if (lines.length > 0) sections.push({ title, lines });
+  };
+
+  section("engine", "engine", 4);
+  section("commands", "commands", 4);
+  section("elsewhere", "elsewhere", 3);
+  section("tests", "tests", 3);
+
+  const recipes = recipesMatching(needles);
+  if (recipes.length > 0) sections.push({ title: "recipe", lines: recipes });
+  const box = boxMatching(needles);
+  if (box.length > 0) sections.push({ title: "box", lines: box });
+
+  if (sections.length === 0) {
+    say(`${query} — nothing under src/ is named after it or says it. Not a word this codebase uses.`);
+    return;
+  }
+
+  say(`${query} — where it lives${alsoBy.length > 0 ? `  (and \`${alsoBy.join("`, `")}\`, off the console verb)` : ""}`);
+  for (const one of sections) {
+    say("");
+    say(one.title);
+    say(...one.lines);
+  }
+}
+
 // ── ask what ─────────────────────────────────────────────────────────────────
 
 /** A name typed with no verb: say which verb would answer it, rather than refusing. */
@@ -356,8 +647,12 @@ function askAnything(query: string): void {
   say();
   const asCard = isCardId(query) || "id" in cardIdNamed(query);
   const asPerson = toCharacterId(query) !== null;
+  // `where` is offered unconditionally: it is the one verb that answers for a
+  // word the box has never heard of, which is exactly when the others say no.
   say(
-    `next: ${[asCard && `ask card ${query}`, asPerson && `ask character ${query}`].filter(Boolean).join("  ·  ") || "—"}`,
+    `next: ${[asCard && `ask card ${query}`, asPerson && `ask character ${query}`, `ask where ${query}`]
+      .filter(Boolean)
+      .join("  ·  ")}`,
   );
 }
 
@@ -368,6 +663,7 @@ const USAGE = [
   "  ask card <id|name>       class, printed text, ABILITIES, SCRIPTS/USES/SPELLS, coverage, parked",
   "  ask character <id|name>  parameters, MGR, kit, printed clauses numbered, CHARACTER_ABILITIES",
   "  ask ability <kind>       every card and Postać that prints it, and what reads it",
+  "  ask where <thing>        which files own a concept: console verb, engine, commands, tests, recipe",
   "  ask <string>             id, plus which of the above would answer",
   "",
   "Names are matched the way the console matches them: case- and diacritic-insensitive",
@@ -384,7 +680,8 @@ function main(): void {
   else if (verb === "card" && query) askCard(query);
   else if (verb === "character" && query) askCharacter(query);
   else if (verb === "ability" && query) askAbility(query);
-  else if (["id", "card", "character", "ability"].includes(verb)) {
+  else if (verb === "where" && query) askWhere(query);
+  else if (["id", "card", "character", "ability", "where"].includes(verb)) {
     say(`\`ask ${verb}\` needs something to look up.`, "", ...USAGE);
   } else askAnything([verb, query].filter(Boolean).join(" "));
 

@@ -21,12 +21,18 @@ it**, then spend the brief's words on the part that is actually specific.
   npx vitest run
   ```
 
-- **The test counts are an invariant, not a statistic.** A brief states the
-  count at HEAD — currently **3205 passed / 31 skipped**. For a refactor or a
-  type change both numbers must be unchanged; for a feature the pass count
-  rises and the skip count does not. A moved skip count means a parked test was
-  disturbed, and that is worth stopping for. If a number moves and you cannot
-  say why, that is the finding, not a detail.
+- **The test counts are an invariant, not a statistic.** **Run `npx vitest run`
+  before you touch anything** and write the two numbers down; compare after.
+  For a refactor or a type change both must be unchanged; for a feature the
+  pass count rises and the skip count does not. A moved *skip* count means a
+  parked test was disturbed, and that is worth stopping for. If a number moves
+  and you cannot say why, that is the finding, not a detail.
+
+  Take the baseline yourself rather than trusting one written in a brief or in
+  this file. A number written down here went stale within the hour of being
+  written — a test was added and this sentence was not — which is exactly the
+  rot `docCounts.test.ts` exists for, in the document about avoiding it. An
+  agent caught it, correctly, by measuring instead of believing.
 - **A test that needs a cast or a `skip` to compile is telling you something.**
   Look at what it means before you change it.
 - **To see a change actually work, play the game — do not open a browser.**
