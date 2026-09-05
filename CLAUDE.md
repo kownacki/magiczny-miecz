@@ -195,13 +195,30 @@ companion mode", the answer is that there is no such thing.
   the service-role key grants all of them. Two of those take real payments.
   Schema-qualify every hand-written query.
 
+- **To check mechanics and logic, play the game — `npm run mm`.** It is the
+  whole of Magiczny Miecz at a prompt: offline, no database, no server, and it
+  reads piped input, so seeing a rules change actually happen is one command and
+  about ten seconds:
+
+  ```
+  printf 'table new Ala, Ola\npick MAGOG\nready\npick TROLL\nready\nstart\nlook\nroll\nquit\n' \
+    | npx tsx src/cli/mm.ts
+  ```
+
+  `help` lists the vocabulary, `testmode on` unlocks the commands that overrule
+  the rules, `look`/`me`/`who` say where things stand. This is the default way
+  to answer "does it work" for anything that is not pixels. It is faster than
+  the browser, needs nothing running, and asks a better question — whether the
+  *game* does the right thing rather than whether a screen drew.
+
 - **Do not open a browser to confirm a foregone conclusion.** A number in a
   Tailwind class does what the number says, and driving Chrome to watch it costs
-  minutes to learn nothing. Reach for the browser when the outcome is genuinely
-  in doubt — new layout, drag and drop, hover and focus — and prefer Playwright
-  against a real table over clicking by hand: a measured
-  `getBoundingClientRect` read back out of the DOM is better evidence than a
-  picture, and it can be pasted into a commit message.
+  minutes to learn nothing. The browser is for pixels — new layout, drag and
+  drop, hover and focus — and for nothing else; anything about rules, state or
+  the deck belongs in `mm` above. Prefer Playwright against a real table over
+  clicking by hand: a measured `getBoundingClientRect` read back out of the DOM
+  is better evidence than a picture, and it can be pasted into a commit
+  message.
 
 - **Commit your own work, and do not wait to be asked.** Finished work sitting
   in the working tree is work nobody else can see, build on, or revert — and

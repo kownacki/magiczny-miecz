@@ -11,6 +11,33 @@ the rules, [CONTEXT.md](../CONTEXT.md) for the vocabulary, and
 [LANDED.md](LANDED.md) for why any of it is shaped this way. Read those when a
 recipe surprises you. Read this when you just need to start.
 
+## The order of work
+
+Every piece of this exists; the sequence did not, and was only ever in one
+session's head. For a task of any size:
+
+1. **Find out what is true** before deciding anything. `npm run ask` answers
+   questions about the box — `ask id rusalka` (is that a card or a Postać?),
+   `ask card`, `ask character`, `ask ability`. Grepping the data instead is
+   how „Rusałka is a Postać" got said out loud; she is a Przyjaciel.
+2. **Find out where it goes** — a recipe below, if the task is adding or
+   removing one of the twelve things this app is made of.
+3. **Make the change**, following `tsc`. Every recipe says which of its steps
+   the compiler catches and which nothing catches.
+4. **Play it.** `npm run mm` is the whole game at a prompt and takes piped
+   input — see [BRIEFING.md](BRIEFING.md) for a table you can paste. This is
+   the default way to answer "does it work" for anything that is not pixels,
+   and it beats both the browser and reading the diff again.
+5. **Then the three checks**, below. A green suite says the code does what the
+   tests say; step 4 says it does what the *game* says, and they are different
+   questions.
+6. **Commit by name**, in coherent pieces, with the reasoning in the body.
+   Never `git add -A` — the dirty tree is not yours alone.
+
+If you are briefing an agent rather than doing it yourself, link
+[BRIEFING.md](BRIEFING.md) instead of restating the standing rules, and spend
+the brief's words on what is actually specific to the task.
+
 ## The trick the whole repo plays
 
 Most of what follows is pinned by the compiler rather than by a test, and always
