@@ -1336,3 +1336,37 @@ last of which hid behind sharing a name with `derive.ts`'s live one.
 
 It also settles what crossings deferred: a Postać's printed abilities stay
 abilities. There was never a second spelling of them to retire either.
+
+## Postać przeciw Postaci is parked, and parking is now a thing the repo can do
+
+2026-09-05. Duels are switched off whole rather than left half-working:
+`PVP_PARKED` in `src/lib/engine/disabled.ts`, a `const true` in the shape of
+`COMPANION_PARKED`, with `attackSeat` refusing first as the single door. Off
+with it go 17.6-10, 18.1b and 19.1-2's escape from a Postać. Untouched: 13.3's
+other branch (meeting a Postać to use an ability on her) and every Zaklęcie
+spoken at another player, hostile ones included.
+
+**The convention is the lasting part.** A card the app cannot run is *parked*,
+not half-carried: named in `PARKED_CARDS`, never shuffled in by `freshDecks`,
+refused at all four console doors that could conjure one, and shown in the
+Księga dimmed and struck with one vermilion word — „Niedostępne" — and no
+explanation. `PARKED_ABILITIES` does the same for a single printed clause, so
+all 27 Postacie stay pickable and only the dead sentence is marked. It is the
+opposite of `coverage.ts`'s `MANUAL`, which means the Karta *is* in the deck
+and will be drawn; `disabled.test.ts` fails the build if a card is in both.
+
+Three things checking changed. Six of nine ability indices in the first draft
+were wrong — read off a filtered grep rather than the arrays — and would have
+struck out the wrong sentence on seven Kartas Postaci; each is now pinned by
+words only that clause contains. The Rycerz Ciemności keeps „atakując możesz
+wybrać formę walki", which is 18.1b's own permission and how he attacks a
+*Wróg* with Magia, so parking it would have removed what the character is for.
+And the DOBRE BÓSTWO took a `MANUAL` note instead of being parked: „lub użyłeś
+swoich zdolności na jej niekorzyść" is the live branch, but nothing sets
+`how: "zdolnosc"` yet, so the Karta would otherwise have acquitted everybody in
+silence.
+
+Twelve tests are skipped, never deleted, each naming `PVP_PARKED`; one new test
+pins the refusal. COVERAGE.md gains ⏸, *built and unreachable*, kept apart from
+◐ so "missing" and "switched off" are not one number. Two open tasks closed with
+it: the Turniej's dynamic choice, and 17.9's browser spoils picker.
