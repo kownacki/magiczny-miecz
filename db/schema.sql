@@ -1,4 +1,4 @@
--- Magiczny Miecz — companion/referee schema.
+-- Magiczny Miecz — the referee's schema.
 --
 -- Lives in its own `magiczny_miecz` schema inside the `biggerfish` Supabase
 -- project (ref aqqdamoqwxiquhkzzcix). The free tier allows two projects and
@@ -25,10 +25,6 @@ create table if not exists magiczny_miecz.games (
   id uuid primary key default gen_random_uuid(),
   -- Short human-typed code; players join by reading it off the table's screen.
   join_code text not null unique,
-  -- 'simulation' means the app owns the deck and dice and the game can be
-  -- played with nothing else; 'companion' is the opt-in for a table that has
-  -- the physical board out and wants the app only as a referee.
-  mode text not null default 'simulation' check (mode in ('companion', 'simulation')),
   -- Which equipment variant this table plays. Klasyczny is the rulebook: four
   -- Przedmioty, no distinction between worn and carried (5.4). Slotowy is a
   -- house variant — see "Wariant: ekwipunek slotowy" in docs/COVERAGE.md.
@@ -65,9 +61,6 @@ create table if not exists magiczny_miecz.games (
   -- a held trophy is a card out of circulation — 9.5 reshuffles only the used
   -- pile, so hoarding locks away an eighth of the deck's Karty Zdarzeń.
   trophy_mode text not null default 'points' check (trophy_mode in ('points', 'cards')),
-  -- Where randomness comes from. 'physical' means a human types in what they
-  -- rolled; this is the RandomPort's binding, stored so it survives a reload.
-  die_source text not null default 'app' check (die_source in ('app', 'physical')),
   status text not null default 'lobby' check (status in ('lobby', 'playing', 'finished')),
   -- Whose turn it is, as a seat index. Null in the lobby.
   active_seat integer,
@@ -87,8 +80,10 @@ create table if not exists magiczny_miecz.games (
   -- no migration — Michał ruled the live tables disposable. Move the default
   -- when the tolerant read is retired.
   turn_state jsonb not null default '{"phase": "roll"}'::jsonb,
-  -- The three piles, in simulation: what is left to deal and what has been
-  -- used. Null in companion mode, where the cards are on the table.
+  -- The three piles: what is left to deal and what has been used. Nullable
+  -- because a lobby has none until `startGame` shuffles — it was also null for
+  -- a companion table, whose cards were on the actual table, and that mode is
+  -- gone (2026-09-05).
   deck jsonb,
   -- Bumped on every state change. Clients hold the last value they rendered and
   -- refetch when a Realtime ping carries a higher one.
