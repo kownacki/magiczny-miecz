@@ -22,11 +22,12 @@ import { peekSpells } from "./draw";
 import { FIELD_SCRIPTS } from "@/lib/engine/fieldScript";
 import { putOnPile } from "./piles";
 import {
+  beneath,
   pop,
   push,
+  replaceAt,
   replaceTop,
   requireTop,
-  top,
   topIf,
   type TurnState,
 } from "@/lib/engine/stack";
@@ -35,7 +36,15 @@ import { describeCondition } from "@/lib/engine/effectText";
 import { hasAttacked } from "@/lib/engine/status";
 import { pointsOf } from "./seat";
 import { asFieldId, ringFields } from "@/lib/engine/board";
-import { nothing, owedAt, runOp, type Decisions, type Opens, type Resolution } from "./ops";
+import {
+  liftFromKolejka,
+  nothing,
+  owedAt,
+  runOp,
+  type Decisions,
+  type Opens,
+  type Resolution,
+} from "./ops";
 import type { CardId } from "@/data/ids";
 
 export type { Decisions, Opens, Resolution } from "./ops";
@@ -136,28 +145,26 @@ export async function applyEffect(
  * The frame it belongs to is the `field` one, which is not always the top: a
  * card that suspended mid-walk is sitting above it, and that card's die is
  * exactly the one worth showing. So the stack is walked from the top down for
- * the first `field` frame, the same way a `walka` step finds the Obszar its
- * fight belongs to.
+ * the first `field` frame — `beneath`, the same question a `walka` step asks to
+ * find the Obszar its fight belongs to, and the one `poloz-karte` failed to ask.
  */
 export function markRolled(
   snapshot: Snapshot,
   face: { cardId: string; face: number } | null,
 ): Changeset {
-  const stack = snapshot.game.turn_state.stack;
-  const at = stack.map((frame) => frame.phase).lastIndexOf("field");
-  if (at === -1) return {};
-  const field = stack[at];
-  if (field.phase !== "field") return {};
+  const found = beneath(snapshot.game.turn_state, "field");
+  if (!found) return {};
+  const { at, frame: field } = found;
   // Nothing to say when there was no die and none was standing.
   if (!face && !field.rolled) return {};
   const { rolled: _was, ...rest } = field;
   return {
     game: {
-      turn_state: {
-        stack: stack.map((frame, index) =>
-          index === at ? (face ? { ...rest, rolled: face } : rest) : frame,
-        ),
-      },
+      turn_state: replaceAt(
+        snapshot.game.turn_state,
+        at,
+        face ? { ...rest, rolled: face } : rest,
+      ),
     },
   };
 }
@@ -563,27 +570,17 @@ async function walk(
       (fieldId) => !snapshot.seats.some((one) => !one.eliminated && one.field_id === fieldId),
     );
     if (free.length === 0) {
-      const shelf = top(snapshot.game.turn_state);
-      const off: Changeset =
-        shelf.phase === "field"
-          ? {
-              game: {
-                turn_state: replaceTop(snapshot.game.turn_state, {
-                  ...shelf,
-                  drawn: shelf.drawn.filter((entry) => entry.cardId !== command.cardId),
-                }),
-              },
-            }
-          : {};
       /**
-       * With its mark, because `putOnPile` reads it: a conjured Karta belongs
-       * to no pile and must not join one, or 9.5 deals a copy the deck still
-       * holds. Every other door to the pile passes it (`asReturnable`); this
-       * one named the card and nothing else.
+       * Off the kolejka, and with its mark, because `putOnPile` reads it: a
+       * conjured Karta belongs to no pile and must not join one, or 9.5 deals a
+       * copy the deck still holds. Every other door to the pile passes it
+       * (`asReturnable`); this one named the card and nothing else.
+       *
+       * `liftFromKolejka` rather than `top()`: the Obszar's frame is not always
+       * the one on screen — see the helper, and the Eremita that stayed in the
+       * kolejka after settling.
        */
-      const granted =
-        shelf.phase === "field" &&
-        shelf.drawn.some((entry) => entry.cardId === command.cardId && entry.granted);
+      const { writes: off, granted } = liftFromKolejka(snapshot, command);
       const back = putOnPile(apply(snapshot, off), "events", [
         { cardId: command.cardId, granted },
       ]);
@@ -883,6 +880,8 @@ async function walk(
       fieldCardId: command.fieldCardId,
       toSeatId: command.toSeatId,
       cardId: command.cardId,
+      /* Which copy, for the one op that takes a Karta out of the kolejka. */
+      mark: command.mark,
     },
     effect,
   );

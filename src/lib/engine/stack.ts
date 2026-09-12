@@ -140,6 +140,36 @@ export function topIf<K extends TurnPhase["phase"]>(
 }
 
 /**
+ * The nearest frame of a kind under whatever is on top, and where it stands.
+ *
+ * `topIf` asks about the screen; this asks about the turn. The Obszar's frame
+ * is not always the top one — a Karta suspended over a die or a question has
+ * pushed a `script` frame above it, and a `fight` sits above that — and three
+ * places were already walking the stack backwards by hand to find it, which is
+ * three chances to write `top()` instead and quietly get the wrong frame. That
+ * is exactly how a placed Karta came to stay in the kolejka: `poloz-karte` read
+ * `top()`, which on the way back from „Dalej" is the `script` frame it is
+ * running inside, so the lift found no `drawn` to lift from and did nothing.
+ *
+ * The index comes back with the frame because a caller that found one almost
+ * always wants to write it back, and `replaceTop` is the wrong door for a frame
+ * that is not on top — see `replaceAt`.
+ */
+export function beneath<K extends TurnPhase["phase"]>(
+  state: TurnState,
+  kind: K,
+): { at: number; frame: Extract<TurnPhase, { phase: K }> } | null {
+  const at = state.stack.map((frame) => frame.phase).lastIndexOf(kind);
+  if (at === -1) return null;
+  return { at, frame: state.stack[at] as Extract<TurnPhase, { phase: K }> };
+}
+
+/** One frame advances where it stands, however much is piled on top of it. */
+export function replaceAt(state: TurnState, at: number, frame: TurnPhase): TurnState {
+  return { stack: state.stack.map((standing, index) => (index === at ? frame : standing)) };
+}
+
+/**
  * A one-frame stack.
  *
  * Step 1's workhorse: every write that used to replace the whole `turn_state`

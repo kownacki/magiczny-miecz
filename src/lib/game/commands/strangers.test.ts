@@ -191,6 +191,54 @@ describe("the Eremita, who says one thing to each of two people", () => {
   });
 
   /**
+   * The Karta goes to live somewhere else, so it is not one of this Obszar's
+   * any more (16.8) — and the lift is the half that was broken.
+   *
+   * A die suspends the Karta over the row it landed on and „Dalej" runs that
+   * row, so by then the frame on screen is the `script` frame and the Obszar's
+   * is one below. `poloz-karte` read `top()`, found no `drawn` to lift from, and
+   * did nothing: the Eremita settled on his Obszar *and* stayed in the kolejka,
+   * where the sheet kept holding him up, and where the end of the turn would
+   * have laid a second copy of him back down here.
+   *
+   * `granted` goes the same way and matters as much: read off the wrong frame it
+   * came back `false`, so a Karta the console conjured became one the deck had
+   * given up, and returning it later would deal the table a second Eremita the
+   * pile still holds (9.5).
+   */
+  it("leaves the kolejka when it settles, and stays conjured", async () => {
+    const table = aTable({
+      game: {
+        active_seat: 0,
+        deck: someSpells() as never,
+        turn_state: {
+          phase: "field", fieldId: "wrzosowiska", from: null, draw: 0,
+          drawn: [
+            { cardId: "eremita" as CardId, cardClass: "stranger", nth: 2, granted: true },
+            { cardId: "helm" as CardId, cardClass: "item", nth: 1 },
+          ],
+          resolved: [],
+        } as TurnPhase,
+      },
+      seats: [
+        aSeat({
+          id: "seat-a", seat_index: 0, character_id: asSeatCharacter("czarodziej"),
+          field_id: "wrzosowiska",
+        }),
+      ],
+    });
+    const { after } = await visit(table, "eremita", [], [1]);
+    const state = top(after.game.turn_state);
+
+    expect(after.fieldCards).toMatchObject([
+      { card_id: "eremita", field_id: "bezdroza", granted: true },
+    ]);
+    expect(state.phase === "field" && state.drawn.map((card) => card.cardId)).toEqual(["helm"]);
+    // Struck off as well as lifted: the copy that ran, by its own key.
+    expect(state.phase === "field" && state.resolved).toEqual(["eremita#2"]);
+  });
+
+  /**
    * "Pierwszej Postaci, Eremita ofiaruje do wyboru: Magiczny Miecz lub Tarczę
    * Tolimana (jeśli jeszcze są)." The parenthesis is 21.2's stock, which
    * `takeCard` counts — which is why the note about it could go.

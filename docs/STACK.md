@@ -200,6 +200,15 @@ Three operations, all pure `Snapshot → Changeset`, all under the same CAS on
 card: the server still re-walks what it owns, but from the cursor rather than
 the root.
 
+**And one read that is not `top()`.** A write aimed at the *Obszar* — the die
+on it, the kolejka in it — must find the `field` frame wherever it now stands,
+because a Karta suspended over a question has pushed a `script` frame above it
+and a `walka` another above that. `beneath(state, "field")` is that question and
+`replaceAt` is how the answer is written back. Reaching for `top()` there is a
+silent bug rather than a loud one: the frame is simply the wrong shape, the
+guard says no, and nothing happens. It cost the Eremita, who settled on his
+Obszar and stayed in the kolejka at the same time.
+
 Nothing else moves. Still one JSON column; still one `Changeset` per command;
 still `RandomPort` as the only port; still one journal line per thing that
 happened. The `Effect` tree and its 27 ops are untouched — the tree already is

@@ -34,7 +34,8 @@ import { summonFighter } from "./fight";
 import { nameOfSeat } from "./lobby";
 import { healSeat } from "./life";
 import { asReturnable, putOnPile } from "./piles";
-import { only, replaceTop, requireTop, top } from "@/lib/engine/stack";
+import { beneath, only, replaceAt, replaceTop, requireTop, top } from "@/lib/engine/stack";
+import { keyOf } from "@/lib/engine/state";
 import { keepOnly, storedStatuses, addEffect } from "./turn";
 import { turnToStone } from "./stone";
 import { seatView } from "./seat";
@@ -108,6 +109,59 @@ export interface OpContext {
   fieldCardId?: string;
   toSeatId?: string;
   cardId?: CardId;
+  /**
+   * *Which copy* of `cardId` is being resolved — `keyOf`'s key, or absent.
+   *
+   * The same mark the suspension carries (`ApplyEffect.mark`), passed down
+   * because one op needs it: `poloz-karte` takes the Karta out of the kolejka,
+   * and the deck prints two UPIORY, each of which rolls for its own Obszar
+   * (15.1). Keyed by name, placing one would have lifted both.
+   */
+  mark?: string;
+}
+
+/**
+ * One Karta out of the turn's kolejka, and whether it was conjured.
+ *
+ * Two callers, both of them a Karta that stops being one of this Obszar's
+ * (16.8): `poloz-karte`, where it goes to live somewhere else, and the
+ * Lewiatan's dead end, where every Obszar it could appear on is occupied and
+ * the Karta goes back on the pile instead.
+ *
+ * Both used to read `top()` and check it was the `field` frame, which is true
+ * of a Karta resolved in one commit and false of every Karta that suspended on
+ * the way — the frame on screen is then the `script` frame the walk is resuming
+ * inside. It failed silently in the direction that matters: the Karta was laid
+ * down *and* left in the kolejka, so the sheet kept offering it and the turn
+ * would have left a second copy behind at the end.
+ *
+ * `granted` travels out because it cannot be read again afterwards and
+ * `putOnPile` needs it: a conjured Karta belongs to no pile, and one that joins
+ * one deals the table a second copy the deck still holds (9.5).
+ */
+export function liftFromKolejka(
+  snapshot: Snapshot,
+  card: { cardId?: CardId; mark?: string },
+): { writes: Changeset; granted: boolean } {
+  const found = beneath(snapshot.game.turn_state, "field");
+  if (!found) return { writes: {}, granted: false };
+  const { at, frame } = found;
+  /* The copy, where the suspension named one — see `mark` on the context. */
+  const which = frame.drawn.findIndex((entry) =>
+    card.mark === undefined ? entry.cardId === card.cardId : keyOf(entry) === card.mark,
+  );
+  if (which === -1) return { writes: {}, granted: false };
+  return {
+    writes: {
+      game: {
+        turn_state: replaceAt(snapshot.game.turn_state, at, {
+          ...frame,
+          drawn: frame.drawn.filter((_, index) => index !== which),
+        }),
+      },
+    },
+    granted: frame.drawn[which].granted ?? false,
+  };
 }
 
 /** Nothing left to do: what was done, and no question owed. */
@@ -587,6 +641,11 @@ const OPS: { [K in LeafOp]: OpRun<K> } = {
    * question. It comes off the turn's own stack, because a card that has gone
    * to live somewhere else is not one of the Karty this character still has
    * to deal with (16.8).
+   *
+   * The lift goes through `liftFromKolejka` and not `top()`, which is the whole
+   * of the Eremita bug: a die suspends the Karta over the row it landed on, so
+   * by the time „Dalej" runs this the frame on screen is the `script` frame and
+   * the Obszar's is one below.
    */
   "poloz-karte": (ctx, effect) => {
     const { snapshot, seatId, path } = ctx;
@@ -596,21 +655,7 @@ const OPS: { [K in LeafOp]: OpRun<K> } = {
     if (effect.gdzie.kind !== "pole") return owedAt(effect, path);
     const chosen = effect.gdzie.fieldId;
 
-    const state = top(snapshot.game.turn_state);
-    const lifted: Changeset =
-      state.phase === "field"
-        ? {
-            game: {
-              turn_state: replaceTop(snapshot.game.turn_state, {
-                ...state,
-                drawn: state.drawn.filter((entry) => entry.cardId !== ctx.cardId),
-              }),
-            },
-          }
-        : {};
-    const granted =
-      state.phase === "field" &&
-      (state.drawn.find((entry) => entry.cardId === ctx.cardId)?.granted ?? false);
+    const { writes: lifted, granted } = liftFromKolejka(snapshot, ctx);
 
     return {
       writes: merge(lifted, {
