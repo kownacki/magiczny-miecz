@@ -362,7 +362,10 @@ export function turnViewOf({
             ...fieldCards
               .filter((card) => card.fieldId === active.field_id)
               .map((card) => ({ cardId: card.cardId })),
-            ...onField.drawn.map((card) => ({ cardId: card.cardId })),
+            /* Whole, not rebuilt: `nth` is what says which copy a key in
+               `resolved` names, and an entry stripped down to its id keys as a
+               bare name and stays queued forever — see `whyQueuedHere`. */
+            ...onField.drawn,
           ],
           [...(onField.resolved ?? []), ...(onField.fought ?? []), ...(onField.beaten ?? [])],
           onField.draw,

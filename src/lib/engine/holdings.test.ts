@@ -312,6 +312,31 @@ describe("whyNotCollectHere", () => {
   });
 
   /**
+   * And opens it for a Karta settled under its *copy's* key.
+   *
+   * Every Karta joining a `field` frame carries an `nth`, so `resolved` holds
+   * `labirynt#1` rather than `labirynt` — and this rebuilt the Karty without it
+   * on the way to `nextFrame`, which keys a numberless Karta by its bare name.
+   * Nothing matched, so the Obszar stayed shut on a Karta it had worked through
+   * and 12.1's window never opened. See `keyOf`.
+   */
+  it("opens it for a Karta settled under its copy's key", () => {
+    const lying = [{ cardId: "labirynt" as const, nth: 1 }, ...item];
+    expect(whyNotCollectHere(lying, ["labirynt#1"], 0)).toBeNull();
+  });
+
+  /** Two of one Karta are two Karty: one settled leaves the other in the way. */
+  it("stays shut while the second copy is unresolved", () => {
+    const twice = [
+      { cardId: "labirynt" as const, nth: 1 },
+      { cardId: "labirynt" as const, nth: 2 },
+    ];
+    expect(whyNotCollectHere(twice, ["labirynt#1"], 0)).toBe(
+      "Najpierw LABIRYNT — dopiero potem reszta Obszaru (12.1).",
+    );
+  });
+
+  /**
    * The half that keeps this from being the compulsory/optional line drawn by
    * hand: a Karta that only offers earns no place in the kolejka at all, so
    * reading a TARGOWISKO and declining it blocks nothing. Each card's own verb

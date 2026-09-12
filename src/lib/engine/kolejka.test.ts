@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { isSpent, kolejkaFor, leavesWhenResolved, nextFrame, offeredNotQueued, owesAFrame } from "./kolejka";
+import {
+  cardInFront,
+  isSpent,
+  kolejkaFor,
+  leavesWhenResolved,
+  nextFrame,
+  offeredNotQueued,
+  owesAFrame,
+} from "./kolejka";
 import { resolutionOrder, type TurnCard } from "./state";
 import events from "@/data/events.json";
 import type { EventCard } from "@/data/types";
@@ -172,6 +180,51 @@ describe("nextFrame", () => {
     expect(nextFrame(cards)?.kind).toBe("wrogowie-miecz");
     expect(nextFrame(cards, ["wilk"])?.kind).toBe("miejsce");
     expect(nextFrame(cards, ["wilk", "labirynt"])).toBeNull();
+  });
+});
+
+describe("cardInFront — the one Karta the sheet holds up", () => {
+  /** Numbered the way a real frame numbers them: `afterMove`/`afterDraw` do. */
+  const numbered = (...cardIds: CardId[]): TurnCard[] =>
+    onField(...cardIds).map((card, at) => ({ ...card, nth: at + 1 }));
+
+  it("is whatever stops the turn, not whatever was drawn first", () => {
+    // Both Nieznajomi IV; 16.4 puts the compulsory one first whichever arrived.
+    const cards = onField("cudotworca", "dobre-bostwo");
+    expect(cardInFront(cards)?.cardId).toBe("dobre-bostwo");
+  });
+
+  it("falls back to the first unsettled Karta once nothing is in the way", () => {
+    // Neither earns a frame — a Nieznajomy you visit and a Przedmiot lying
+    // there — so what is left is 15.2's order: IV before V.
+    const cards = onField("helm", "cudotworca");
+    expect(cardInFront(cards)?.cardId).toBe("cudotworca");
+    expect(cardInFront(cards, ["cudotworca"])?.cardId).toBe("helm");
+    expect(cardInFront(cards, ["cudotworca", "helm"])).toBeNull();
+  });
+
+  /**
+   * The Eremita bug, at the layer it actually lived on.
+   *
+   * `resolved` names a *copy* — `eremita#5` — and the sheet was rebuilding the
+   * Karty without their `nth` before asking. Every key then missed, the Karta
+   * that had just settled was still "in front", and the Eremita who had rolled
+   * for his Obszar and moved onto it was held up asking to roll again.
+   */
+  it("lets go of a Karta settled under its copy's own key", () => {
+    const cards = numbered("eremita", "dobre-bostwo");
+    expect(cardInFront(cards)?.cardId).toBe("eremita");
+    expect(cardInFront(cards, ["eremita#1"])?.cardId).toBe("dobre-bostwo");
+    // And a frame written before `nth` existed still answers to a bare name.
+    expect(cardInFront(onField("eremita", "dobre-bostwo"), ["eremita"])?.cardId).toBe(
+      "dobre-bostwo",
+    );
+  });
+
+  /** Two of one Karta are two Karty: settling one must not settle the other. */
+  it("holds the second copy up after the first is settled", () => {
+    const cards = numbered("upior", "upior");
+    expect(cardInFront(cards, ["upior#1"])?.nth).toBe(2);
   });
 });
 

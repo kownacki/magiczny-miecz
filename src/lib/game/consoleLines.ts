@@ -17,6 +17,7 @@ import { nameOfSeat } from "./commands/lobby";
 import { activeStore } from "./gameStore";
 import { compulsoryOffer } from "@/lib/engine/fieldScript";
 import { kolejkaFor, offeredNotQueued } from "@/lib/engine/kolejka";
+import { listed } from "@/lib/engine/state";
 import type { TurnPhase } from "@/lib/engine/turn";
 import { askOnTop } from "@/lib/engine/ask";
 import { overflowOnTop, overflowSaid } from "@/lib/engine/overflow";
@@ -241,9 +242,7 @@ export function waitingOn(frame: TurnPhase): string[] {
    * they are shut, which is what the browser's greyed shop says too.
    */
   const frames = kolejkaFor(state.drawn ?? [], settled).filter((frame) => !frame.done);
-  const offered = offeredNotQueued(state.drawn ?? []).filter(
-    (card) => !settled.includes(card.cardId),
-  );
+  const offered = offeredNotQueued(state.drawn ?? []).filter((card) => !listed(settled, card));
 
   return [
     ...(frames.length

@@ -33,7 +33,7 @@ import type { Nature } from "@/data/types";
 import { CardTile } from "./card-tile";
 import { tileFor } from "./table";
 import { isSpent, kolejkaFor, type KolejkaFrame } from "@/lib/engine/kolejka";
-import type { TurnCard } from "@/lib/engine/state";
+import { keyOf, listed, type TurnCard } from "@/lib/engine/state";
 import { WithRules } from "./rule-ref";
 
 /**
@@ -117,15 +117,19 @@ export function KolejkaStrip({
   nature?: Nature | null;
 }) {
   const frames = kolejkaFor(cards, settled);
+  /* By `keyOf` and not by name, both of them: two of one Karta on a square are
+     two Karty, so one being settled must not strike the other through, and the
+     frame each stands in is its own. `settled` holds whichever form the writer
+     used, which is the question `listed` answers and `includes` does not. */
   const frameOf = new Map<string, KolejkaFrame>();
-  for (const frame of frames) for (const card of frame.cards) frameOf.set(card.cardId, frame);
+  for (const frame of frames) for (const card of frame.cards) frameOf.set(keyOf(card), frame);
 
   const chips: Chip[] = cards.map((card) => {
-    const frame = frameOf.get(card.cardId);
+    const frame = frameOf.get(keyOf(card));
     return {
       card,
       stops: frame !== undefined,
-      done: settled.includes(card.cardId),
+      done: listed(settled, card),
       ...(frame ? { frame } : {}),
     };
   });

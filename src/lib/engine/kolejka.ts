@@ -2,7 +2,7 @@
 
 import { CARD_CLASS, type CardClass } from "@/data/types";
 import { scriptFor } from "./cardScript";
-import { listed, placedFirst, type TurnCard } from "./state";
+import { keyOf, listed, placedFirst, type TurnCard } from "./state";
 import type { CardId } from "@/data/ids";
 
 /**
@@ -256,6 +256,31 @@ export function nextFrame(
   resolved: readonly string[] = [],
 ): KolejkaFrame | null {
   return kolejkaFor(cards, resolved).find((frame) => !frame.done) ?? null;
+}
+
+/**
+ * The one Karta in front of the player — what a sheet holds up.
+ *
+ * Whatever the kolejka stops for, and only when it stops for nothing, the first
+ * Karta nobody has dealt with: 16.4 decides the first half and 12.1's window
+ * the second, where order has stopped mattering. The argument for asking
+ * `nextFrame` rather than taking `cards[0]` is at the sheet that used to.
+ *
+ * Here rather than inside that sheet because it was inside that sheet, written
+ * out, and got `nth` wrong: the Karty were rebuilt on the way in as
+ * `{ cardId, cardClass }`, which drops the number that says *which copy* a key
+ * in `resolved` names — so a settled Karta matched nothing, and the Eremita who
+ * had just rolled for his Obszar and settled on it was held up again, asking to
+ * roll. The Karta in front of the player is a rule, it is asked on two surfaces,
+ * and it is one function now.
+ */
+export function cardInFront<Card extends TurnCard>(
+  cards: readonly Card[],
+  settled: readonly string[] = [],
+): Card | null {
+  const frame = nextFrame(cards, settled);
+  if (frame) return cards.find((card) => keyOf(card) === keyOf(frame.cards[0])) ?? null;
+  return cards.find((card) => !listed(settled, card)) ?? null;
 }
 
 /**

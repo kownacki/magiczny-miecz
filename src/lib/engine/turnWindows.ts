@@ -5,6 +5,7 @@ import type { TurnPhase } from "./turn";
 import { BRIDGE_ORDEAL } from "./bridge";
 import { crossingFrom } from "./rings";
 import { compulsoryOffer } from "./fieldScript";
+import { listed } from "./state";
 
 /**
  * Why this is a list and not a panel.
@@ -101,7 +102,7 @@ export function factsIn(state: TurnPhase, standingOn: FieldId | null): TurnFacts
   return {
     phase: state.phase,
     standingOn,
-    cardsWaiting: onField?.drawn.filter((card) => !settled.includes(card.cardId)).length ?? 0,
+    cardsWaiting: onField?.drawn.filter((card) => !listed(settled, card)).length ?? 0,
     fighting: state.phase === "fight",
     crossing: standingOn !== null && crossingFrom(standingOn) !== undefined,
     // Only while it is still to be done: once the fight is running it is the

@@ -9,7 +9,7 @@ import { isUsable } from "./uses";
 import type { EqMode } from "./slots";
 import { STORAGE, inPlayAt, isWearable, slotsFor, type Slot } from "./slots";
 import { nextFrame } from "./kolejka";
-import { resolutionOrder, type Holding, type TurnCard } from "./state";
+import { listed, resolutionOrder, type Holding, type TurnCard } from "./state";
 import type { FieldId } from "./board";
 import type { Nature } from "@/data/types";
 import type { CardId } from "@/data/ids";
@@ -49,7 +49,7 @@ export type HoldingKind = Holding["kind"];
  */
 export function whyNotCollectHere(
   /** Everything lying on the Obszar, both lists together. */
-  lying: readonly { cardId: CardId }[],
+  lying: readonly { cardId: CardId; nth?: number; unattackable?: true }[],
   /** Karty already settled this turn — fought, fled from, or worked through. */
   settled: readonly string[],
   /** Karty the Obszar still owes (13.4). */
@@ -71,11 +71,11 @@ export function whyNotCollectHere(
  * standing is attacking them (16.2).
  */
 export function whyFoeStandsHere(
-  lying: readonly { cardId: CardId }[],
+  lying: readonly { cardId: CardId; nth?: number }[],
   settled: readonly string[],
 ): string | null {
   const found = lying.find((one) => {
-    if (settled.includes(one.cardId)) return false;
+    if (listed(settled, one)) return false;
     const foe = EVENTS.find((card) => card.id === one.cardId);
     return foe !== undefined && combatValueOf(foe) !== null;
   });
@@ -108,7 +108,7 @@ const nameOf = (cardId: CardId) => EVENTS.find((card) => card.id === cardId)?.na
  * each Karta's own text decides, through `mayWalkPast`.
  */
 export function whyQueuedHere(
-  lying: readonly { cardId: CardId; unattackable?: true }[],
+  lying: readonly { cardId: CardId; nth?: number; unattackable?: true }[],
   settled: readonly string[],
 ): string | null {
   const cards: TurnCard[] = [];
@@ -118,6 +118,11 @@ export function whyQueuedHere(
       cards.push({
         cardId: card.id,
         cardClass: card.cardClass,
+        /* Which copy, carried through: `settled` may name `eremita#5`, and a
+           Karta rebuilt without its number keys as a bare id and matches
+           nothing — so the Obszar stayed queued on a Karta it had settled and
+           12.1's window never opened again. See `keyOf`. */
+        ...(one.nth !== undefined ? { nth: one.nth } : {}),
         ...(one.unattackable ? { unattackable: true as const } : {}),
       });
     }

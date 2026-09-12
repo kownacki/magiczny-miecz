@@ -13,8 +13,8 @@ import { SpellHand, type HeldSpell } from "../spell-hand";
 import type { TileCard } from "../card-tile";
 import type { OnAction } from "../turn-controls";
 import type { Effect } from "@/lib/engine/cardScript";
-import { nextFrame } from "@/lib/engine/kolejka";
-import type { CardClass, EventCard } from "@/data/types";
+import { cardInFront } from "@/lib/engine/kolejka";
+import type { EventCard } from "@/data/types";
 import events from "@/data/events.json";
 import type { SpellTiming } from "@/lib/engine/spells";
 import type { Fight, TurnMoveOption } from "@/lib/engine/turn";
@@ -101,7 +101,7 @@ export function DrawModal({
      *
      * `SheetChrome` is the six fields `chrome` is built from below, and
      * `DrawnActionsProps` is everything the card sheet takes. Minus `card`,
-     * which is the one thing this component works out itself — `nextFrame`
+     * which is the one thing this component works out itself — `cardInFront`
      * picks it out of the stack, and nobody upstream knows which it will be.
      *
      * What is left below is what genuinely belongs to *this* layer: the other
@@ -290,23 +290,17 @@ export function DrawModal({
    * would always refuse: 16.4 makes the Bóstwo go first, `refuseWhileQueuedFor`
    * enforces it, and the player met the rule by pressing a live button.
    *
-   * So it asks the same function the refusal does. `nextFrame` is the kolejka's
-   * own answer to "what is in the way", and the sheet opens on that; only when
-   * nothing is in the way does it fall back to the first unsettled Karta, which
-   * is 12.1's window and where order stops mattering.
+   * So it asks the same function the refusal does — `cardInFront`, which is
+   * the kolejka's own answer to "what is in front of the player" and lives
+   * there rather than here, because it was written out here and got `nth`
+   * wrong. The rest of that story is at the function.
    *
    * `beaten` counts as settled here exactly as it does in `refuseWhileQueued` —
    * 17.4 finishes a Wróg whether he was beaten or fled — or the sheet would
    * keep opening on a creature the turn is done with.
    */
   const done = [...resolved, ...fought, ...(beaten ?? [])];
-  const inTheWay = nextFrame(
-    cards.map((entry) => ({ cardId: entry.cardId, cardClass: entry.cardClass as CardClass })),
-    done,
-  );
-  const card = inTheWay
-    ? cards.find((entry) => entry.cardId === inTheWay.cards[0].cardId)
-    : cards.find((entry) => !done.includes(entry.cardId));
+  const card = cardInFront(cards, done) ?? undefined;
 
   // Nothing drawn to deal with, but the Obszar itself demands something.
   if (!card) {
