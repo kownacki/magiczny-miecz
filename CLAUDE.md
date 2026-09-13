@@ -61,6 +61,10 @@ settled — it is scaffolding, and it costs tokens on every load.
 - **[docs/STACK.md](docs/STACK.md)** — the resolution stack: why one frame of turn
   state is not enough, the five laws, and the plan. Read before touching
   `turn.ts`, `effects.ts` or `fight.ts`
+- **[docs/SYSTEM-KART.md](docs/SYSTEM-KART.md)** — a brief for whoever rethinks
+  how a Karta is written down: what Michał wants in his own words, what the five
+  registries look like today and where they have lied, and what other games do.
+  No direction is set in it on purpose
 - **[docs/RULES.md](docs/RULES.md)** — the rulebook transcribed
 - **[docs/EXPANSIONS.md](docs/EXPANSIONS.md)** — what is in the five boxes that
   are out of scope, and which parts of the model they would break
