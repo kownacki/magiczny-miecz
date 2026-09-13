@@ -44,8 +44,8 @@ their scans are deliberately untouched.
       up. Nobody's decision — just work nobody has done, and another session was
       measuring it as this was written.
 
-- [ ] **One card left, and it is blocked.** 131 of the 138 distinct event cards
-      are `pelne`, 4 `czesciowe`, 3 `brak` — `coverage.ts` is the truth and
+- [ ] **One card left, and it is blocked.** 132 of the 138 distinct event cards
+      are `pelne`, 4 `czesciowe`, 2 `brak` — `coverage.ts` is the truth and
       `docCounts.test.ts` keeps COVERAGE.md agreeing with it. The Sobowtór, the
       Kometa and the Wampir were built on 2026-09-04 and the Turniej Rycerski
       is parked with duels; all four are in LANDED.md.

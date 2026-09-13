@@ -576,11 +576,15 @@ export function describeEffect(effect: Effect): string {
  * "+1 Miecza" whose effect reads "+1 Miecza" is one thing said twice, so the
  * summary trusts the labels and prints "A albo B".
  *
- * Not exhaustive, and that is the known hole: every op without a terse form
- * falls through to "rozpatrzcie sami", which is honest but is the app giving
- * up. Nothing a compulsory field offers reaches it today (16.5 makes that the
- * Karczma and the Strażnik, and both are covered). `effectText.test.ts` walks
- * every op in the union so that the day one more lands here it lands visibly.
+ * **Exhaustive, as of 2026-09-13.** It was not, and the `default` said
+ * „rozpatrzcie sami" — honest, in the sense that it was the app admitting it
+ * had nothing to say, and eight ops sat behind it. None was reachable from a
+ * compulsory field table, which is why nobody met one; a hole nobody has walked
+ * into is still a hole, and „rozpatrzcie sami" is a sentence this app should
+ * not be able to say about its own vocabulary. The `default` is gone, so the
+ * compiler now keeps this complete the way it keeps every other table over a
+ * union in this repo — a new op fails the build here rather than shrugging at a
+ * table.
  */
 export function summariseEffect(effect: Effect): string {
   switch (effect.op) {
@@ -659,7 +663,36 @@ export function summariseEffect(effect: Effect): string {
     case "zabierz":
       return "zabierasz ofierze Kartę";
 
-    default:
-      return "rozpatrzcie sami";
+    /* The eight that used to fall through to „rozpatrzcie sami". None was
+       reachable from a compulsory field table, which is why nobody saw them —
+       but a hole nobody has walked into is still a hole, and this one is the
+       app shrugging at its own vocabulary. Terse, because the shape this is
+       read in is a row beside a die's number. */
+    case "rzut":
+      return "jeszcze jeden rzut kostką";
+    case "poloz-karte":
+      return `Karta osiada: ${where(effect.gdzie)}`;
+    case "strata":
+      return describeLoss(effect);
+    case "otrzymaj":
+      return `otrzymujesz: ${effect.co}`;
+    case "zamien-punkty":
+      return effect.z === "sword" ? "Miecz ← Magia" : "Magia ← Miecz";
+    case "wyciagnij":
+      return `ciągniesz ${effect.count} ${plural(effect.count, "Kartę", "Karty", "Kart")}`;
+    case "jak-pole":
+      return `jak ${fieldName(effect.fieldId)}`;
+    case "sprzedaj":
+      return `sprzedajesz Przedmiot za ${effect.cena} Sz. Z.`;
+    case "zaklecia-do-limitu":
+      return "Zaklęcia do limitu (2.6)";
+    case "katastrofa":
+      return `giną wszyscy: ${effect.klasa === "stranger" ? "Nieznajomi" : CARD_CLASS_LABEL[effect.klasa]}`;
+    case "zgadnij":
+      return `zgadnij i rzuć: ${summariseEffect(effect.nagroda)}`;
+    case "natura":
+      return `Natura: ${NATURE_LABEL[effect.na] ?? effect.na}`;
+    case "kup":
+      return `kupujesz: ${effect.towar.map((item) => item.co).join(", ")}`;
   }
 }

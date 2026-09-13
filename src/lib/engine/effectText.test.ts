@@ -306,44 +306,36 @@ describe("what one row of a field's table says", () => {
   });
 });
 
-describe("the ops the terse register has no short form for", () => {
+describe("the terse register, now that it has no hole", () => {
   /**
-   * The hole, written down.
+   * The hole, closed — and the test that recorded it, turned over.
    *
-   * Thirteen of the ops fall through to "rozpatrzcie sami" — the app handing
-   * the rule back to the table. None of them can be reached by a compulsory
-   * field offer as the box stands, which is why it has never been a bug.
-   * Adding a branch for one of these is meant to fail here, so that the
-   * decision is taken once and out loud.
+   * Thirteen ops used to fall through to „rozpatrzcie sami", the app handing
+   * its own vocabulary back to the table, and this test pinned the number so
+   * that the decision to add one more would be taken out loud. That was the
+   * right instinct about the wrong direction: the list never shrank, because
+   * nothing forced it to. None of the thirteen was reachable from a compulsory
+   * field offer, so nobody ever met one, and a hole nobody walks into is still
+   * a hole.
    *
-   * It was twelve until Kometa was scripted: `katastrofa` sweeps a whole
-   * Krąg rather than reading off one number, and nothing a compulsory field
-   * offers ever will, so it was left beside `strata` and the rest rather than
-   * given a row of its own.
+   * The `default` is gone. Every op has a terse form, and the compiler keeps it
+   * that way — a new op fails the build in `summariseEffect` rather than
+   * shrugging at a table, which is the discipline every other table over a
+   * union in this repo already has.
    */
-  it("hands exactly thirteen of them back to the players", () => {
+  it("has a short form for every op in the vocabulary", () => {
     const givenUp = Object.entries(ONE_OF_EACH)
       .filter(([, effect]) => summariseEffect(effect) === "rozpatrzcie sami")
-      .map(([op]) => op)
-      .sort();
+      .map(([op]) => op);
 
-    expect(givenUp).toEqual(
-      [
-        "jak-pole",
-        "katastrofa",
-        "kup",
-        "natura",
-        "otrzymaj",
-        "poloz-karte",
-        "rzut",
-        "sprzedaj",
-        "strata",
-        "wyciagnij",
-        "zaklecia-do-limitu",
-        "zamien-punkty",
-        "zgadnij",
-      ].sort(),
-    );
+    expect(givenUp).toEqual([]);
+  });
+
+  /** Terse means terse: a row sits beside a die's number, not under a card. */
+  it("keeps a row short enough to be a row", () => {
+    for (const [op, effect] of Object.entries(ONE_OF_EACH)) {
+      expect(summariseEffect(effect).length, op).toBeLessThan(90);
+    }
   });
 
   it("never hands back a row of a table nobody may walk past (16.5)", () => {

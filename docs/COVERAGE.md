@@ -26,8 +26,8 @@ there and one boolean turns it back on. Distinguished from ◐ on purpose, so
 that "what is missing" and "what is switched off" cannot be read as the same
 number.
 
-**Where it stands.** Of the 138 Karty Zdarzeń, 131 are `pelne`, 4 `czesciowe`
-and 3 `brak` — all 17 Nieznajomi are done; all 27 Zaklęcia are carried out, 25
+**Where it stands.** Of the 138 Karty Zdarzeń, 132 are `pelne`, 4 `czesciowe`
+and 2 `brak` — all 17 Nieznajomi are done; all 27 Zaklęcia are carried out, 25
 of them fully; and all 57 Obszary do what is printed on them.
 
 Every number in that paragraph is checked against the code by

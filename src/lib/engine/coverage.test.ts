@@ -5,7 +5,7 @@ import spells from "@/data/spells.json";
 import type { EventCard, Item, Spell } from "@/data/types";
 import { ABILITIES } from "./abilities";
 import { SCRIPTS } from "./cardScript";
-import { coverageOf, manualNote } from "./coverage";
+import { coverageOf, manualNote, IN_COMMANDS } from "./coverage";
 import { SPELLS } from "./spells";
 import { USES } from "./uses";
 import { isCardId } from "@/data/ids";
@@ -23,9 +23,19 @@ const KNOWN = new Set([
   ...(spells as Spell[]).map((s) => s.id),
 ]);
 
-/** Encoded anywhere at all, which is the only sense the player cares about. */
+/**
+ * Encoded anywhere at all, which is the only sense the player cares about.
+ *
+ * Five shelves, not four. The fifth is `IN_COMMANDS` — a Karta whose rule lives
+ * in the command that runs it rather than in a data table — and leaving it out
+ * here is why the WAMPIR went five days disclaiming a rule the app was running:
+ * this test asks the same question `coverageOf` asks, so both were wrong in the
+ * same direction and the suite stayed green. A test that mirrors the
+ * implementation cannot falsify it, which is what the named cases below are
+ * for.
+ */
 const encodedSomewhere = (card: string) =>
-  card in SCRIPTS || card in ABILITIES || card in USES || card in SPELLS;
+  card in SCRIPTS || card in ABILITIES || card in USES || card in SPELLS || card in IN_COMMANDS;
 
 describe("what the app claims about itself", () => {
   it("only annotates cards that exist", () => {
@@ -63,9 +73,21 @@ describe("what the app claims about itself", () => {
   });
 
   it("reports an unencoded card as unhandled rather than staying quiet", () => {
-    // Wampir is one of the cards deliberately left alone; if it ever becomes
-    // encoded this test should be updated rather than deleted.
-    expect(coverageOf("wampir")).toBe("brak");
+    /**
+     * The WAMPIR was the example here, with a note saying „if it ever becomes
+     * encoded this test should be updated rather than deleted". He became
+     * encoded on 2026-09-04 — `spoils.ts` adds the point of Magia when he wins
+     * and clears it when he is beaten, which is his whole printed sentence —
+     * and nothing was updated, because the check above mirrored the same four
+     * registries the implementation read. So he is the named case now, from the
+     * other side.
+     *
+     * The TAJEMNA SAKWA takes his old place: „W Sakwie możesz umieścić 1
+     * Przedmiot" wants a container link nothing in the model has, so she is
+     * genuinely the app's to disclaim.
+     */
+    expect(coverageOf("wampir")).toBe("pelne");
+    expect(coverageOf("tajemna-sakwa")).toBe("brak");
     expect(coverageOf("jednorozec")).toBe("pelne");
     // Excalibur was the example here until its Życie-stealing clause was
     // encoded, and the Czarodziejska Kość until its point in the two Pułapki

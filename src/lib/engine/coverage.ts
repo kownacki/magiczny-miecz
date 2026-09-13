@@ -170,6 +170,31 @@ const MANUAL: Readonly<Partial<Record<CardId, string>>> = {
     "Rzucony na Przyjaciela ratuje go od śmierci — to wciąż wasze. Użyty w walce, by uczynić jej wynik nierozstrzygniętym — też wasze.",
 };
 
+/**
+ * Karty whose rule lives in a command rather than in one of the four registries.
+ *
+ * The fifth shelf, and the third time this fault has been found. `coverageOf`
+ * derives its answer from where a card is *encoded*, and most cards are encoded
+ * in a data table — a script, an ability, a use, a spell. A few are not,
+ * because what they do is not an effect a card applies to its reader but a rule
+ * about what happens around them, and that belongs in the command that runs it.
+ *
+ * The WAMPIR is the whole of the list today, and he was reported as `brak` —
+ * „Tę Kartę rozpatrzcie sami — aplikacja jej nie prowadzi" — over a rule the
+ * app has run since 2026-09-04. His printed sentence is „jeżeli Wampir pokona
+ * Postać, zabiera jej Życie i dodaje je do swoich punktów", and `spoils.ts`
+ * does exactly that: a lost fight against him adds a `points` status to his own
+ * row, and beating him clears it. A table told to keep score by hand for a
+ * referee that is already keeping it is the wasted vigilance CLAUDE.md warns
+ * about, and worse than a MANUAL note, because this one disclaims the card
+ * whole.
+ *
+ * The value says *where*, so the entry can be checked rather than trusted.
+ */
+export const IN_COMMANDS: Readonly<Partial<Record<CardId, string>>> = {
+  wampir: "commands/spoils.ts — `wampirGrown` adds the point of Magia, and beating him clears it",
+};
+
 export function coverageOf(cardId: CardId): Coverage {
   /**
    * All four registries, because a card is encoded in whichever one fits its
@@ -188,7 +213,11 @@ export function coverageOf(cardId: CardId): Coverage {
    * places, is the argument for fixing it here rather than a third time.
    */
   const known =
-    cardId in SCRIPTS || cardId in ABILITIES || cardId in USES || cardId in SPELLS;
+    cardId in SCRIPTS ||
+    cardId in ABILITIES ||
+    cardId in USES ||
+    cardId in SPELLS ||
+    cardId in IN_COMMANDS;
   if (!known) return "brak";
   return cardId in MANUAL ? "czesciowe" : "pelne";
 }
