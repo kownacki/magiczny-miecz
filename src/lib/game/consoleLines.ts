@@ -276,6 +276,10 @@ function scriptLines(
             `${question.reason}: name an Obszar — \`answer [n] to <Obszar>\``,
             `  ${question.fields.map((fieldId) => fieldName(fieldId)).join(", ")}`,
           ];
+    case "cyfra":
+      return [
+        `${question.reason}: nazwij cyfrę — \`answer <${question.faces[0]}-${question.faces[question.faces.length - 1]}>\``,
+      ];
     case "nieobslugiwane":
       return [
         `${question.reason}: waiting on an answer no surface can ask yet (${question.op}).`,

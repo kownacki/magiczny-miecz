@@ -107,3 +107,30 @@ describe("questionOn", () => {
     });
   });
 });
+
+/**
+ * The MĘDRZEC's riddle, which no surface could ask.
+ *
+ * „Wybierz cyfrę od 1 do 6 … a następnie rzuć kostką." The only question in the
+ * box whose answer is a number the player *chooses* rather than an index into a
+ * list — so it is its own shape, because an index would let „6" mean the sixth
+ * option of six and read identically.
+ */
+describe("questionOn, for the riddle", () => {
+  it("asks for a face of the die, not for an option", () => {
+    const asking = {
+      phase: "script",
+      seatId: "seat-a",
+      cardId: "medrzec",
+      reason: "MĘDRZEC",
+      cursor: [],
+      effect: { op: "zgadnij", nagroda: { op: "zaklecie", count: 1 } },
+    } as Extract<TurnPhase, { phase: "script" }>;
+
+    expect(questionOn(asking, { standingOn: null, occupied: [] })).toEqual({
+      kind: "cyfra",
+      reason: "MĘDRZEC",
+      faces: [1, 2, 3, 4, 5, 6],
+    });
+  });
+});

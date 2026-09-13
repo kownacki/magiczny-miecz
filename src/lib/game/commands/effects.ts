@@ -422,6 +422,10 @@ export async function continueTopScript(
   };
 }
 
+/** Whether the walk is retracing a cursor rather than running fresh. */
+const following = (follow: number[] | null): follow is number[] =>
+  follow !== null && follow.length > 0;
+
 async function walk(
   snapshot: Snapshot,
   command: ApplyEffect,
@@ -742,6 +746,44 @@ async function walk(
    * die the same way, because a table that rolled silently is a table nobody
    * can check.
    */
+  /**
+   * The MĘDRZEC's riddle: name a face, then throw, and the app compares.
+   *
+   * „Wybierz cyfrę od 1 do 6 (musisz ją głośno powiedzieć), a następnie rzuć
+   * kostką. Jeżeli wynikiem jest cyfra, którą wybrałeś, otrzymujesz 1
+   * Zaklęcie." Saying it out loud is the table's ritual and stays the table's;
+   * holding the number while the die falls is exactly the bookkeeping this app
+   * is for, and it is the half that cannot be cheated once the app holds it.
+   *
+   * It was `unimplemented` — `isSettled` answered false and the gate handed the
+   * whole card back — while `coverage.ts` called the Karta `pelne`, because the
+   * Karta *has* a script. So the MĘDRZEC was listed as carried and could not be
+   * resolved on either surface: the prompt said „waiting on an answer no
+   * surface can ask yet" and the browser's panel said „odpowiedzcie w konsoli".
+   *
+   * The guess is the face itself, not an index — one to six, the numbers the
+   * card prints. Everything else answered by number here is an index into a
+   * list, so this is the exception and it is written down.
+   */
+  if (effect.op === "zgadnij") {
+    const guess = follow !== null && follow.length > 0 ? follow[0] : decided.choices?.shift();
+    if (guess === undefined || guess < 1 || guess > 6) return owed();
+
+    const face = following(follow) ? follow[1] : await ports.random.rollD6(`${reason}: zagadka`);
+    const said = `zgadujesz ${guess}, wypada ${face}`;
+    if (face !== guess) {
+      return { writes: {}, result: { did: [`${said} — nie zgadłeś`], pending: null } };
+    }
+    const won = await walk(snapshot, command, effect.nagroda, `${reason} (${guess})`, ports, [
+      ...path,
+      guess,
+    ], null);
+    return {
+      writes: won.writes,
+      result: { did: [`${said} — zgadłeś!`, ...won.result.did], pending: won.result.pending },
+    };
+  }
+
   if (effect.op === "rzut") {
     // On a resume the face is read off the cursor, not rolled again: the die
     // was thrown and journalled in the commit that suspended, and a table that

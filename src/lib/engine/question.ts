@@ -47,6 +47,14 @@ export type TurnQuestion =
   | { kind: "wybor"; reason: string; options: readonly string[] }
   /** An Obszar to point at, and the only ones the Karta allows. */
   | { kind: "gdzie"; reason: string; fields: readonly FieldId[] }
+  /**
+   * A face of the die, named before it is thrown — the MĘDRZEC's riddle.
+   *
+   * The only question in the box whose answer is a number the player *chooses*
+   * rather than an index into a list, which is why it is its own shape: an
+   * index would let „6" mean the sixth option of six and read the same.
+   */
+  | { kind: "cyfra"; reason: string; faces: readonly number[] }
   /** A question no surface can ask yet, said the same way by all of them. */
   | { kind: "nieobslugiwane"; reason: string; op: Effect["op"] };
 
@@ -110,6 +118,9 @@ export function questionOn(
   }
   if (asking.op === "przenies" && asking.to.kind !== "pole" && asking.to.kind !== "poczatek-ruchu") {
     return { kind: "gdzie", reason: frame.reason, fields: destinationsFor(asking.to, at) };
+  }
+  if (asking.op === "zgadnij") {
+    return { kind: "cyfra", reason: frame.reason, faces: [1, 2, 3, 4, 5, 6] };
   }
   if (asking.op === "poloz-karte" && asking.gdzie.kind === "jedno-z") {
     return { kind: "gdzie", reason: frame.reason, fields: destinationsFor(asking.gdzie, at) };

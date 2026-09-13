@@ -100,6 +100,22 @@ export function ScriptFramePanel({
           </p>
         )}
 
+        {question?.kind === "cyfra" && (
+          <div className="mt-3 flex flex-wrap gap-1">
+            {question.faces.map((face) => (
+              <ActionButton
+                key={face}
+                weight="quiet"
+                size="lg"
+                disabled={busy || !canAct}
+                onClick={() => onAnswer({ choices: [face] })}
+              >
+                {face}
+              </ActionButton>
+            ))}
+          </div>
+        )}
+
         {question?.kind === "nieobslugiwane" && (
           // A question no surface can ask yet — named honestly rather than
           // guessed at, and named the same way at the prompt, which is where

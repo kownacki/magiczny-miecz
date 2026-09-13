@@ -299,7 +299,18 @@ function targeted(
  * decision-gated shapes it settles before the gate, and the three that
  * `isSettled` owes back to the table unconditionally.
  */
-type WalkedOp = "wybor" | "po-kolei" | "rzut" | "gdy" | "jak-pole" | "przenies-karte";
+type WalkedOp =
+  | "wybor"
+  | "po-kolei"
+  | "rzut"
+  | "gdy"
+  | "jak-pole"
+  | "przenies-karte"
+  /* The MĘDRZEC's riddle: a number the player names, then a throw to compare it
+     with, then the prize — three steps and a branch, which is a walk and not a
+     leaf. It sat in this table as `unimplemented` instead, and the card was
+     reported `pelne` the whole time. */
+  | "zgadnij";
 
 export type LeafOp = Exclude<Effect["op"], WalkedOp>;
 
@@ -1394,7 +1405,7 @@ const OPS: { [K in LeafOp]: OpRun<K> } = {
       },
     };
   },
-  zgadnij: unimplemented,
+
 };
 
 export type LeafEffect = Extract<Effect, { op: LeafOp }>;
