@@ -478,7 +478,24 @@ async function walk(
     // effect reports "+1 Magii" would otherwise be written down twice.
     const said =
       done.result.did[0] === option.label ? done.result.did : [option.label, ...done.result.did];
-    return { writes: done.writes, result: { did: said, pending: done.result.pending } };
+    /**
+     * A suspension inside the chosen option is the option's to report, and
+     * this dropped it: the branch returned `pending` and nothing else, so a
+     * die thrown under a choice (GODZINA DUCHÓW's „Wezwij duchy"), an Obszar
+     * asked for under one (the JEDNOROŻEC's ride) or a Przedmiot to give up
+     * under one (the Bagna) never put a `script` frame on the stack. Every
+     * surface happened to send its answers all at once, which is the only
+     * reason it never showed; the one-answer-at-a-time harness in
+     * `examples.ts` found it on its first card.
+     */
+    return {
+      writes: done.writes,
+      result: {
+        did: said,
+        pending: done.result.pending,
+        ...(done.result.suspended ? { suspended: done.result.suspended } : {}),
+      },
+    };
   }
 
   /**
