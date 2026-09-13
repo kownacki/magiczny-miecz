@@ -36,6 +36,18 @@ export const PARKED_CARDS: Readonly<Partial<Record<CardId, Parked>>> = {
   // „Możesz wyzwać na pojedynek każdą Postać" — the whole card is a duel, so
   // there is nothing left of it once duels are out.
   "turniej-rycerski": "pvp",
+  /**
+   * „Jeśli podczas tej rozgrywki zaatakowałeś inną Postać lub użyłeś swoich
+   * zdolności na jej niekorzyść…" — both triggers need duels, and with duels
+   * out the Bóstwo acquits everybody, every time.
+   *
+   * It stayed in the deck for a while with a MANUAL note asking the table to
+   * judge for itself, which is a Karta that looks like a rule and is a
+   * ceremony: the app draws it, prints „Nie spełniasz warunków", and the turn
+   * moves on. Michał's call, 2026-09-13: park it with the Turniej. A card that
+   * cannot do the only thing it says is not in the box this game.
+   */
+  "dobre-bostwo": "pvp",
 };
 
 /**

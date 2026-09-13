@@ -26,8 +26,6 @@ import { top } from "@/lib/engine/stack";
 import { panelFor } from "@/lib/view/frames";
 import { momentsIn } from "@/lib/engine/spells";
 import { factsIn, windowsFor } from "@/lib/engine/turnWindows";
-import { nodeAt } from "@/lib/engine/resolve";
-import { reachableBy } from "@/lib/engine/losses";
 import { whyNotCollectHere } from "@/lib/engine/holdings";
 import { compulsoryOffer } from "@/lib/engine/fieldScript";
 import { characterName } from "@/lib/engine/polish";
@@ -38,6 +36,7 @@ import { asNature, type Seat } from "./table";
 import { boardCards as allBoardCards, otherSeats } from "./table-view";
 import type { FieldCard, Game, Person } from "./use-table";
 import { settledOn } from "@/lib/engine/kolejka";
+import { questionOn } from "@/lib/engine/question";
 
 /** The table as the server said it, and what this device holds over it. */
 export interface TurnViewInput {
@@ -181,18 +180,32 @@ export function turnViewOf({
    * - **Nothing of that kind to lose**, which the server settles by itself.
    */
   const losing = (() => {
-    /* Not while the frame is *held*: the cursor then points at a row the die
-       chose and nothing has run yet, so the question it will ask is not being
-       asked. „Dalej" is what turns one into the other — see `held`. */
-    if (turnState.phase !== "script" || turnState.held || !turnState.cardId) return null;
-    const asking = nodeAt(turnState.effect, turnState.cursor);
-    if (asking?.op !== "strata" || (asking.count ?? 1) !== 1) return null;
-    const kind = reachableBy(asking.co);
-    if (!kind) return null;
-    const seat = seats.find((one) => one.id === turnState.seatId);
-    if (!seat || (kind === "spell" && seat.hidden_count > 0)) return null;
-    const cards = seat.holdings.filter((held) => held.kind === kind);
-    return cards.length > 0 ? { cardId: turnState.cardId, kind, cards } : null;
+    const seat = turnState.phase === "script"
+      ? seats.find((one) => one.id === turnState.seatId)
+      : undefined;
+    const asked = questionOn(turnState, {
+      standingOn: active?.field_id ?? null,
+      occupied: [],
+      ...(seat
+        ? {
+            hand: {
+              holdings: seat.holdings.map((held) => ({
+                id: held.id,
+                cardId: held.cardId,
+                kind: held.kind,
+              })),
+              hidden: seat.hidden_count,
+            },
+          }
+        : {}),
+    });
+    if (asked?.kind !== "ktora" || turnState.phase !== "script" || !turnState.cardId) return null;
+    /* The sheet still wants the rows themselves — the tiles it draws carry the
+       picture and the slot — so the ids come back off the seat. The *decision*
+       is `questionOn`'s, which is the change: this file used to make it. */
+    const chosen = new Set(asked.among.map((one) => one.id));
+    const cards = seat!.holdings.filter((held) => chosen.has(held.id));
+    return { cardId: turnState.cardId, kind: asked.co, cards };
   })();
 
   /**

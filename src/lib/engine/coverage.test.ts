@@ -5,10 +5,15 @@ import spells from "@/data/spells.json";
 import type { EventCard, Item, Spell } from "@/data/types";
 import { ABILITIES } from "./abilities";
 import { SCRIPTS } from "./cardScript";
-import { coverageOf, manualNote, IN_COMMANDS } from "./coverage";
+import { coverageOf, manualNote, CARRIED_ELSEWHERE } from "./coverage";
 import { SPELLS } from "./spells";
 import { USES } from "./uses";
 import { isCardId } from "@/data/ids";
+import { isSettled } from "./resolve";
+import { questionOn } from "./question";
+import { COMPOSING_OPS, type Effect } from "./cardScript";
+import type { TurnPhase } from "./turn";
+import type { CardId } from "@/data/ids";
 
 /**
  * Every card the app will ever be asked about — the Zaklęcia included.
@@ -26,7 +31,7 @@ const KNOWN = new Set([
 /**
  * Encoded anywhere at all, which is the only sense the player cares about.
  *
- * Five shelves, not four. The fifth is `IN_COMMANDS` — a Karta whose rule lives
+ * Five shelves, not four. The fifth is `CARRIED_ELSEWHERE` — a Karta whose rule lives
  * in the command that runs it rather than in a data table — and leaving it out
  * here is why the WAMPIR went five days disclaiming a rule the app was running:
  * this test asks the same question `coverageOf` asks, so both were wrong in the
@@ -35,7 +40,7 @@ const KNOWN = new Set([
  * for.
  */
 const encodedSomewhere = (card: string) =>
-  card in SCRIPTS || card in ABILITIES || card in USES || card in SPELLS || card in IN_COMMANDS;
+  card in SCRIPTS || card in ABILITIES || card in USES || card in SPELLS || card in CARRIED_ELSEWHERE;
 
 describe("what the app claims about itself", () => {
   it("only annotates cards that exist", () => {
@@ -87,7 +92,14 @@ describe("what the app claims about itself", () => {
      * genuinely the app's to disclaim.
      */
     expect(coverageOf("wampir")).toBe("pelne");
-    expect(coverageOf("tajemna-sakwa")).toBe("brak");
+    /* And the TAJEMNA SAKWA, who was the same fault a fourth time: „W Sakwie
+       możesz umieścić 1 Przedmiot" is a `storage` slot, built for months, and
+       docs/TASKS.md named her as the one card still to do. */
+    expect(coverageOf("tajemna-sakwa")).toBe("pelne");
+    /* What is genuinely disclaimed today is the TURNIEJ RYCERSKI, and it is
+       parked with duels rather than missing — a parked Karta never reaches a
+       table, so its coverage is never read to anybody. */
+    expect(coverageOf("turniej-rycerski")).toBe("brak");
     expect(coverageOf("jednorozec")).toBe("pelne");
     // Excalibur was the example here until its Życie-stealing clause was
     // encoded, and the Czarodziejska Kość until its point in the two Pułapki
@@ -110,5 +122,83 @@ describe("what the app claims about itself", () => {
     for (const card of [...Object.keys(USES), ...Object.keys(SPELLS)].filter(isCardId)) {
       expect(coverageOf(card), card).not.toBe("brak");
     }
+  });
+});
+
+/**
+ * `pelne` has to mean „można w to zagrać", not „zapisana gdzieś, o czym wiem".
+ *
+ * The check above asks where a Karta is *encoded*, and that is the question
+ * `coverageOf` itself asks — so it can only ever agree with it. It agreed about
+ * the MĘDRZEC, who was `pelne` and could not be resolved on either surface for
+ * as long as `zgadnij` sat in the leaf table as `unimplemented`; and about the
+ * MAGICZNA TABLICA, the same shape one card along. Neither was a lie the
+ * registries could have caught.
+ *
+ * So this asks the player's question instead, of the effects themselves: a node
+ * the app cannot carry out **and** cannot ask about is a Karta that stalls —
+ * whatever shelf it is on. Both halves are the engine's own answers, so this
+ * does not mirror `coverageOf` and can disagree with it.
+ */
+describe("what `pelne` promises a player", () => {
+  /** Every node of an effect tree, branches included. */
+  const everyNode = (effect: Effect): Effect[] => [
+    effect,
+    ...(effect.op === "wybor" ? effect.options.flatMap((one) => everyNode(one.effect)) : []),
+    ...(effect.op === "po-kolei" ? effect.steps.flatMap(everyNode) : []),
+    ...(effect.op === "rzut" ? Object.values(effect.faces).flatMap(everyNode) : []),
+    ...(effect.op === "gdy"
+      ? [...everyNode(effect.to), ...(effect.inaczej ? everyNode(effect.inaczej) : [])]
+      : []),
+    ...(effect.op === "zgadnij" ? everyNode(effect.nagroda) : []),
+  ];
+
+  /** What a surface would be able to ask about this node, if anything. */
+  const asked = (effect: Effect) =>
+    questionOn(
+      {
+        phase: "script",
+        seatId: "seat-a",
+        cardId: null,
+        reason: "",
+        cursor: [],
+        effect,
+      } as Extract<TurnPhase, { phase: "script" }>,
+      {
+        standingOn: "osada",
+        occupied: [],
+        /* A holder with one of each, because „tracisz 1 Przedmiot" is askable
+           exactly when there is something to point at — the empty case is the
+           server's to settle, not a stall. */
+        hand: {
+          holdings: [
+            { id: "h-1", cardId: "miecz", kind: "item" },
+            { id: "h-2", cardId: "rycerz", kind: "friend" },
+            { id: "h-3", cardId: "golem", kind: "spell" },
+          ],
+          hidden: 0,
+        },
+      },
+    );
+
+  it("never leaves a fully-handled Karta on a node nobody can run or ask", () => {
+    const stalls: string[] = [];
+    for (const [cardId, script] of Object.entries(SCRIPTS)) {
+      if (coverageOf(cardId as CardId) !== "pelne") continue;
+      const nodes = [
+        ...everyNode(script.effect),
+        ...(script.placed ? everyNode(script.placed) : []),
+      ];
+      for (const node of nodes) {
+        /* A composing op is descended through, never executed or asked — see
+           `COMPOSING_OPS`. `isSettled` calls a `gdy` unsettled while either
+           branch holds a question, which is true of the branch and not of the
+           `gdy`. */
+        if ((COMPOSING_OPS as readonly string[]).includes(node.op)) continue;
+        if (isSettled(node)) continue;
+        if (asked(node)?.kind === "nieobslugiwane") stalls.push(`${cardId}: ${node.op}`);
+      }
+    }
+    expect(stalls).toEqual([]);
   });
 });

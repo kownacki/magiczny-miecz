@@ -3,7 +3,7 @@
 #
 # It did not. `owesAFrame` asked each Karta's own verb — „Każdy, kto tu trafi"
 # against „która tu zawita" — and kept fifteen of them out of the kolejka
-# altogether. A square holding a CUDOTWÓRCA, a CZARODZIEJ and a DOBRE BÓSTWO
+# altogether. A square holding a CUDOTWÓRCA, a CZARODZIEJ and a KOSZMAR
 # opened on the Bóstwo, and the other two were not in the row at all. From a
 # player's chair that reads as the app skipping two cards.
 #
@@ -27,9 +27,9 @@ start
 testmode on
 life =2
 
-deal CUDOTWÓRCA, CZARODZIEJ, DOBRE BÓSTWO, HEŁM
+deal CUDOTWÓRCA, CZARODZIEJ, KOSZMAR, HEŁM
 look
-expect says Kolejka: » CUDOTWÓRCA · CZARODZIEJ · DOBRE BÓSTWO
+expect says Kolejka: » CUDOTWÓRCA · CZARODZIEJ · KOSZMAR
 
 # Walked past in the row's own order (15.2), not the window's: the Bóstwo is the
 # compulsory one and it still waits its turn behind the two offers.
@@ -38,9 +38,9 @@ expect says CUDOTWÓRCA — pominięta (możesz wrócić do końca tury).
 skip
 expect says CZARODZIEJ — pominięta (możesz wrócić do końca tury).
 look
-expect says Kolejka: » DOBRE BÓSTWO
+expect says Kolejka: » KOSZMAR
 
-answer DOBRE BÓSTWO
+answer KOSZMAR
 expect ok
 
 # The row is worked through, so 12.1's window opens on the loot.

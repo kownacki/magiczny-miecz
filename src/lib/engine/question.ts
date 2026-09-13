@@ -2,6 +2,7 @@
 
 import { ringFields, type FieldId } from "./board";
 import type { Destination, Effect } from "./cardScript";
+import type { CardId } from "@/data/ids";
 import { nodeAt } from "./resolve";
 import type { TurnPhase } from "./turn";
 
@@ -55,8 +56,41 @@ export type TurnQuestion =
    * index would let „6" mean the sixth option of six and read the same.
    */
   | { kind: "cyfra"; reason: string; faces: readonly number[] }
+  /**
+   * Which of your own Karty — „tracisz 1 Przedmiot wedle własnego wyboru".
+   *
+   * The generic „pick one out of a list you are holding", and the shape the
+   * box asks for far more often than it asks anything else. It was built once,
+   * for the UROCZA DIABLICA's fourth face, and built *in the browser* — so the
+   * engine had no answer for it, `questionOn` called it `nieobslugiwane`, and
+   * the next card to want the same thing would have grown a second copy.
+   *
+   * `among` is the list both ends count, in one order, because an index is
+   * only an answer if the server and the screen number the same cards the same
+   * way.
+   */
+  | {
+      kind: "ktora";
+      reason: string;
+      co: HeldKind;
+      among: readonly { id: string; cardId: CardId }[];
+    }
   /** A question no surface can ask yet, said the same way by all of them. */
   | { kind: "nieobslugiwane"; reason: string; op: Effect["op"] };
+
+/** What a holder may be asked to give up — `Losable`'s own three. */
+export type HeldKind = "item" | "friend" | "spell";
+
+/**
+ * Which pile a loss reaches into, or null when it is not a card at all.
+ *
+ * `reachableBy` in `losses.ts` is the same question and stays where it is —
+ * this is the narrow half `questionOn` needs, kept here so the question type
+ * does not import the loss vocabulary whole.
+ */
+function heldKindFor(co: Extract<Effect, { op: "strata" }>["co"]): HeldKind | null {
+  return co === "przedmiot" ? "item" : co === "przyjaciel" ? "friend" : co === "zaklecie" ? "spell" : null;
+}
 
 /**
  * Where a Karta may send a Postać — the list, not just the test.
@@ -99,7 +133,21 @@ export function destinationsFor(
  */
 export function questionOn(
   frame: TurnPhase,
-  at: { standingOn: FieldId | null; occupied: readonly FieldId[] },
+  at: {
+    standingOn: FieldId | null;
+    occupied: readonly FieldId[];
+    /**
+     * The frame's own seat's Karty, and whether any of its hand is concealed.
+     *
+     * Only a `strata` needs them, and only to list what may be given up.
+     * Optional so the callers that ask about a destination need not carry a
+     * hand they will not use.
+     */
+    hand?: {
+      holdings: readonly { id: string; cardId: CardId; kind: string }[];
+      hidden: number;
+    };
+  },
 ): TurnQuestion | null {
   if (frame.phase !== "script") return null;
   /* A thrown die is not a question — see `heldAt`. Nothing has run yet, so
@@ -118,6 +166,38 @@ export function questionOn(
   }
   if (asking.op === "przenies" && asking.to.kind !== "pole" && asking.to.kind !== "poczatek-ruchu") {
     return { kind: "gdzie", reason: frame.reason, fields: destinationsFor(asking.to, at) };
+  }
+  /**
+   * „Tracisz 1 Przedmiot" — which one is the holder's, and 5.6 says so.
+   *
+   * Three ways this is *not* a question, and all three are rules rather than
+   * interface limits, which is why they live here now instead of in a browser
+   * file:
+   *
+   * - **More than one at a time.** `chooseLosses` picks against a pool that
+   *   shrinks between picks, so two answers are indices into two different
+   *   lists. No card in the box asks it.
+   * - **A hand somebody cannot see in full** (9.3). Only Zaklęcia are ever
+   *   concealed, and a short list numbers differently from the server's.
+   * - **Nothing of that kind to lose**, which the server settles by itself.
+   */
+  if (asking.op === "strata") {
+    const hand = at.hand;
+    const co = heldKindFor(asking.co);
+    if (!hand || !co || (asking.count ?? 1) !== 1) {
+      return { kind: "nieobslugiwane", reason: frame.reason, op: asking.op };
+    }
+    if (co === "spell" && hand.hidden > 0) {
+      return { kind: "nieobslugiwane", reason: frame.reason, op: asking.op };
+    }
+    const among = hand.holdings.filter((held) => held.kind === co);
+    if (among.length === 0) return null;
+    return {
+      kind: "ktora",
+      reason: frame.reason,
+      co,
+      among: among.map((held) => ({ id: held.id, cardId: held.cardId })),
+    };
   }
   if (asking.op === "zgadnij") {
     return { kind: "cyfra", reason: frame.reason, faces: [1, 2, 3, 4, 5, 6] };

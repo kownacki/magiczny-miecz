@@ -161,6 +161,33 @@ export type Target =
  * "dowolny Obszar w tym Kręgu" is the commonest and is a genuine choice, not a
  * destination, which is why it is a variant rather than a field id.
  */
+/**
+ * The ops the walk **composes** rather than executes.
+ *
+ * A card's vocabulary has two kinds of word. Most name a thing that happens —
+ * a point, a Zaklęcie, a fight — and are carried out in one step. These six
+ * name a *shape*: a choice among others, a sequence of others, a table of
+ * others, a branch, a borrowed Obszar's whole script, a riddle whose prize is
+ * another effect. Nothing executes them; the walk descends through them.
+ *
+ * Here, in the file that owns the vocabulary, rather than in the command that
+ * dispatches it — `commands/ops.ts` derives its leaf table from this, and
+ * `coverage.test.ts` asks it which nodes could ever stall. It was declared in
+ * the command, which made it a fact about one dispatcher instead of a fact
+ * about the language, and left a reader in the engine with nothing to ask.
+ */
+export const COMPOSING_OPS = [
+  "wybor",
+  "po-kolei",
+  "rzut",
+  "gdy",
+  "jak-pole",
+  "przenies-karte",
+  "zgadnij",
+] as const;
+
+export type ComposingOp = (typeof COMPOSING_OPS)[number];
+
 export type Destination =
   | { kind: "pole"; fieldId: FieldId }
   | { kind: "dowolne-w-kregu" }

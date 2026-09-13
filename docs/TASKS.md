@@ -44,16 +44,26 @@ their scans are deliberately untouched.
       up. Nobody's decision — just work nobody has done, and another session was
       measuring it as this was written.
 
-- [ ] **One card left, and it is blocked.** 132 of the 138 distinct event cards
-      are `pelne`, 4 `czesciowe`, 2 `brak` — `coverage.ts` is the truth and
+- [ ] **No card left unencoded.** 134 of the 138 distinct event cards
+      are `pelne`, 3 `czesciowe`, 1 `brak` — `coverage.ts` is the truth and
       `docCounts.test.ts` keeps COVERAGE.md agreeing with it. The Sobowtór, the
       Kometa and the Wampir were built on 2026-09-04 and the Turniej Rycerski
       is parked with duels; all four are in LANDED.md.
 
-      What is left is the **Tajemna Sakwa**: „W Sakwie możesz umieścić 1
-      Przedmiot" wants the container link the Magiczna Sakwa and the Tragarz
-      also want, and putting a Przedmiot *into* something is a feature rather
-      than a fix. Each `czesciowe` card names the half it misses in `MANUAL`.
+      **The Tajemna Sakwa was named here as the one card left and was never
+      missing** (2026-09-13). „W Sakwie możesz umieścić 1 Przedmiot" is a
+      `storage` slot in `slots.ts` and has been for months: what is in it is out
+      of 5.4's count and nothing but Pan Bogactwa can reach it. She read as
+      `brak` because `coverageOf` derives its answer from *where a card is
+      encoded* and knew four registries — the same reason the WAMPIR disclaimed
+      a rule `spoils.ts` was running. Both are on the fifth shelf now
+      (`CARRIED_ELSEWHERE`), and the real lesson is under it: that derivation
+      will keep being wrong, because a card is encoded wherever its rule
+      belongs.
+
+      The one `brak` left is the **Turniej Rycerski**, parked with duels, and a
+      parked Karta never reaches a table. Each `czesciowe` card names the half
+      it misses in `MANUAL`.
 
 
 - [ ] **Nature-dependent cards** — the seat's Nature is known, so these are
@@ -72,7 +82,8 @@ saying nothing would be worse — but the **list is a backlog, not a design**.
 Every entry is a rule this app has not implemented yet, and the aim at this
 stage is to empty it.
 
-Six entries, and they are four problems:
+Three entries left, and they are two problems — all of them blocked on
+something real rather than on nobody having written them:
 
 - **ŁÓDŹ, LATARNIA** — „na Obszarze graniczącym z tym, z którego wyruszyłeś".
   Blocked on the same thing: cross-obstacle adjacency is not on the board,
@@ -82,9 +93,11 @@ Six entries, and they are four problems:
 - **WIERZCHOWIEC** — „twoi Przyjaciele muszą poruszać się w zwykły sposób".
   Needs a Przyjaciel to have a position of its own, which nothing in the model
   gives it: chapter 6 is custody only.
-- **DOBRE BÓSTWO** — cannot convict, because neither half of its trigger is
-  reachable: `attackSeat` is parked and nothing sets `how: "zdolnosc"` yet.
-  Closes when duels come back, or when 13.3's ability branch is built.
+- ~~**DOBRE BÓSTWO**~~ — **parked with duels, 2026-09-13.** Neither half of its
+  trigger was reachable, so it acquitted everybody every time: a Karta that
+  looks like a rule and is a ceremony. Michał's call — park it beside the
+  TURNIEJ RYCERSKI rather than keep a note asking the table to judge for
+  itself. It comes back when `PVP_PARKED` flips.
 - **KRĄG PŁOMIENI, OCALONY** — clauses that reach a Karta rather than a seat:
   lifting a Krąg off a card, an Ocalony saving a Przyjaciel, and „rezultat
   starcia pozostanie nierozstrzygnięty", which wants a card that can rewrite a

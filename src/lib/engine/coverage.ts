@@ -90,24 +90,6 @@ const MANUAL: Readonly<Partial<Record<CardId, string>>> = {
   wierzchowiec:
     "Twoi Przyjaciele poruszają się bez tego dodatku — jeśli zostawiłeś ich w tyle, w następnej turze możesz po nich wrócić zamiast zwykłego ruchu. Aplikacja nie trzyma dla Przyjaciela osobnej pozycji na planszy, więc zróbcie to sami.",
 
-  /**
-   * The DOBRE BÓSTWO, from 2026-09-05, and only while duels are parked.
-   *
-   * „Jeśli podczas tej rozgrywki zaatakowałeś inną Postać lub użyłeś swoich
-   * zdolności na jej niekorzyść" has two triggers and the app can now reach
-   * neither. `attackSeat` wrote `how: "atak"` and is parked (`PVP_PARKED`);
-   * `how: "zdolnosc"` is modelled and read by `abilityText`, but no command
-   * sets it, because none of the five Charakterystyki that meet a Postać
-   * without fighting her (AWANTURNIK, QUARK, WIEDŹMA, SPRYCIARZ, BŁĘDNY
-   * RYCERZ) is wired as a command yet.
-   *
-   * So the Karta stays in the deck and works — it just acquits everybody,
-   * which is the app quietly deciding a judgement rather than passing it back.
-   * This note is what stops that being silent. It goes when either trigger
-   * becomes reachable, and the first one to do so is `PVP_PARKED` flipping.
-   */
-  "dobre-bostwo":
-    "Bóstwo osądza sprawiedliwie tylko wtedy, gdy pamiętacie sami: aplikacja nie wie, czy ktoś zaatakował inną Postać albo użył przeciw niej swoich zdolności — rozstrzygnijcie to przy stole.",
 
   // --- friends --------------------------------------------------------------
   // The ALCHEMIK was here for "zamiana jest nieodwracalna", which is not
@@ -171,28 +153,40 @@ const MANUAL: Readonly<Partial<Record<CardId, string>>> = {
 };
 
 /**
- * Karty whose rule lives in a command rather than in one of the four registries.
+ * Karty carried somewhere other than the four data registries.
  *
- * The fifth shelf, and the third time this fault has been found. `coverageOf`
- * derives its answer from where a card is *encoded*, and most cards are encoded
- * in a data table — a script, an ability, a use, a spell. A few are not,
- * because what they do is not an effect a card applies to its reader but a rule
- * about what happens around them, and that belongs in the command that runs it.
+ * The fifth shelf, and the third and fourth time this fault has been found.
+ * `coverageOf` derives its answer from where a card is *encoded*, and most
+ * cards are encoded in a data table — a script, an ability, a use, a spell. A
+ * few are not, because what they do is not an effect a card applies to its
+ * reader, and it belongs where its rule belongs.
  *
- * The WAMPIR is the whole of the list today, and he was reported as `brak` —
- * „Tę Kartę rozpatrzcie sami — aplikacja jej nie prowadzi" — over a rule the
- * app has run since 2026-09-04. His printed sentence is „jeżeli Wampir pokona
- * Postać, zabiera jej Życie i dodaje je do swoich punktów", and `spoils.ts`
- * does exactly that: a lost fight against him adds a `points` status to his own
- * row, and beating him clears it. A table told to keep score by hand for a
- * referee that is already keeping it is the wasted vigilance CLAUDE.md warns
- * about, and worse than a MANUAL note, because this one disclaims the card
- * whole.
+ * The **WAMPIR** was reported `brak` — „Tę Kartę rozpatrzcie sami — aplikacja
+ * jej nie prowadzi" — over a rule the app has run since 2026-09-04. „Jeżeli
+ * Wampir pokona Postać, zabiera jej Życie i dodaje je do swoich punktów", and
+ * `spoils.ts` does exactly that. A table told to keep score by hand for a
+ * referee already keeping it is the wasted vigilance CLAUDE.md warns about, and
+ * worse than a MANUAL note, because this one disclaims the card whole.
  *
- * The value says *where*, so the entry can be checked rather than trusted.
+ * The **TAJEMNA SAKWA** is the same thing a card later, found the same way — by
+ * somebody playing her and noticing she worked. „W Sakwie możesz umieścić 1
+ * Przedmiot" is a **slot**: `slots.ts` gives her a `storage` place,
+ * `carriedCount` leaves what is in it out of 5.4's four, and nothing but Pan
+ * Bogactwa can reach it. Built for months — and docs/TASKS.md named her as the
+ * one card still to do.
+ *
+ * Which is the lesson rather than the fix. **Coverage derived from where a card
+ * is encoded will keep being wrong**, because a card is encoded wherever its
+ * rule belongs and that is not a closed list. This is the honest patch until
+ * `pelne` means „can be played" rather than „is written down somewhere I know
+ * about" — see `coverage.test.ts`, which asks the first question now too.
+ *
+ * The value says *where*, so an entry can be checked rather than trusted.
  */
-export const IN_COMMANDS: Readonly<Partial<Record<CardId, string>>> = {
+export const CARRIED_ELSEWHERE: Readonly<Partial<Record<CardId, string>>> = {
   wampir: "commands/spoils.ts — `wampirGrown` adds the point of Magia, and beating him clears it",
+  "tajemna-sakwa":
+    "engine/slots.ts — a `storage` place, out of 5.4's count and out of everybody's reach",
 };
 
 export function coverageOf(cardId: CardId): Coverage {
@@ -217,7 +211,7 @@ export function coverageOf(cardId: CardId): Coverage {
     cardId in ABILITIES ||
     cardId in USES ||
     cardId in SPELLS ||
-    cardId in IN_COMMANDS;
+    cardId in CARRIED_ELSEWHERE;
   if (!known) return "brak";
   return cardId in MANUAL ? "czesciowe" : "pelne";
 }

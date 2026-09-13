@@ -80,11 +80,27 @@ export interface KolejkaFrame {
  * turn for is worse than no label at all.
  *
  * `optional` has been on `CardScript` since the cards were transcribed and read
- * by nothing — this is its first caller. It is set from the verb the card
- * itself uses, which is the distinction the box draws and draws consistently:
- * "Każdy, kto tu **trafi**" happens because you landed (the Labirynt, the
- * Spalona Ziemia, the Urocza Diablica), while "która tu **zawita**", "podczas
- * każdych **odwiedzin**", "jeżeli **chcesz**" happen because you visited.
+ * by nothing — this is its first caller. It was described as being set from the
+ * verb the card uses: „Każdy, kto tu **trafi**" happens because you landed (the
+ * Labirynt, the Spalona Ziemia, the Urocza Diablica), while „która tu
+ * **zawita**", „podczas każdych **odwiedzin**", „jeżeli **chcesz**" happen
+ * because you visited.
+ *
+ * **The verb is the tell, not the rule** — checked across all seventeen
+ * Nieznajomi on 2026-09-13 and it does not decide on its own. The KRÓL LASU and
+ * the CZARODZIEJ both print „która **zawita**" and differ, correctly:
+ *
+ * - the **KRÓL LASU** grants his wish to the *first* Postać and then leaves, and
+ *   every one of the six is a gain. Skipping him wastes him for the whole table
+ *   and nobody would choose it, so an offer to skip is a button that exists to
+ *   be misclicked. Compulsory.
+ * - the **CZARODZIEJ** stays to the end of the game, so walking past him costs
+ *   nothing: he is there next turn and the turn after. Optional.
+ *
+ * So what `optional` really means is **whether walking past is a real answer**,
+ * and that turns on what the Karta does afterwards — `disposition` — as much as
+ * on how you met it. A `do-pierwszej` gift is not skippable; a `zostaje`
+ * service is.
  *
  * A Karta with no script at all counts as compulsory. 16.5 and 16.7 both say
  * the instruction must be carried out, and an untranscribed card is one nobody

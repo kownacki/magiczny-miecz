@@ -84,10 +84,19 @@ export function isSettled(effect: Effect): boolean {
     case "uzdrow":
       return !effect.cena;
 
-    // A destination the card names is settled; "dowolny Obszar w tym Kręgu" is
-    // the player pointing at the board.
+    /**
+     * A destination the card names is settled; „dowolny Obszar w tym Kręgu" is
+     * the player pointing at the board.
+     *
+     * `poczatek-ruchu` counts as named. The STRAŻ „zawraca cię na Obszar, z
+     * którego rozpocząłeś wędrówkę" — as exact as any `pole`, only said in
+     * terms of the turn rather than of the board, and the walk reads it off the
+     * frame's `from`. Calling it unsettled made it a question nobody could ask:
+     * `coverage.test.ts` caught it from the player's side, which is what that
+     * test is for.
+     */
     case "przenies":
-      return effect.to.kind === "pole";
+      return effect.to.kind === "pole" || effect.to.kind === "poczatek-ruchu";
 
     /**
      * The same question, about a Karta rather than a Postać.
@@ -163,8 +172,19 @@ export function isSettled(effect: Effect): boolean {
     // that hand out a Magiczny Miecz and a Tarcza Tolimana came back pending
     // and empty — a prayer that appeared to do nothing and left the turn
     // waiting on a question nobody had been asked.
+    /**
+     * The MAGICZNA TABLICA, which used to sit here with the unsettled ones —
+     * the fourth time this file has had this shape, and the comment above
+     * counted three.
+     *
+     * „Natychmiast uzyskujesz taką liczbę Zaklęć, na jaką pozwala ci twoja
+     * Magia" asks nobody anything: the card names a number and 2.6 says what it
+     * is. It was unsettled because it had no implementation, exactly as
+     * `otrzymaj` was, and the Karta was reported `pelne` the whole time while
+     * no surface could resolve it.
+     */
     case "zaklecia-do-limitu":
-      return false;
+      return true;
 
     /**
      * The Kuglarz, which used to sit above with the unsettled ones.
@@ -316,10 +336,13 @@ function owedIn(effect: Effect, queue: number[], natura: Nature | null = null): 
     return option ? owedIn(option.effect, queue, natura) : effect;
   }
 
-  // A destination the card names needs nobody. "dowolny Obszar w tym Kręgu" is
-  // the player pointing at the board, and is a question even when everything
-  // around it is settled.
-  if (effect.op === "przenies") return effect.to.kind === "pole" ? null : effect;
+  // A destination the card names needs nobody — a `pole`, or the STRAŻ's
+  // „Obszar, z którego rozpocząłeś wędrówkę", which is as exact as one and read
+  // off the frame. „Dowolny Obszar w tym Kręgu" is the player pointing at the
+  // board, and is a question even when everything around it is settled.
+  if (effect.op === "przenies") {
+    return effect.to.kind === "pole" || effect.to.kind === "poczatek-ruchu" ? null : effect;
+  }
 
   // The first owed step stops the sequence, as it does on the server: what
   // follows may depend on it, and doing the rest first would resolve the card

@@ -1665,6 +1665,25 @@ export const VERBS: { [K in Command["kind"]]: VerbRun<K> } = {
          destination needs, and the same two facts the browser hands the panel.
          The offer is `destinationsFor`'s either way — see `question.ts`. */
       ...waitingOn(state, {
+        /* The frame's own seat's Karty, for the one question that asks about
+           them — „tracisz 1 Przedmiot", and which one is 5.6's to the holder. */
+        ...(() => {
+          const whose = envelope.seats.find(
+            (one) => state.phase === "script" && one.id === state.seatId,
+          );
+          return whose
+            ? {
+                hand: {
+                  holdings: whose.holdings.map((held) => ({
+                    id: held.id,
+                    cardId: held.cardId,
+                    kind: held.kind,
+                  })),
+                  hidden: whose.hidden_count,
+                },
+              }
+            : {};
+        })(),
         standingOn: asFieldId(active?.field_id ?? null),
         occupied: envelope.seats
           .filter((one) => !one.eliminated)

@@ -24,9 +24,9 @@ testmode on
 
 # Two compulsory Karty and a Przedmiot: 15.1 puts the Eremita first whatever he
 # prints, and the Bóstwo cannot be answered until he is done with.
-deal EREMITA, DOBRE BÓSTWO, HEŁM
+deal EREMITA, KOSZMAR, HEŁM
 look
-expect says Kolejka: » EREMITA · DOBRE BÓSTWO
+expect says Kolejka: » EREMITA · KOSZMAR
 
 # The throw, and then the press that lets the face take effect.
 answer EREMITA
@@ -37,8 +37,8 @@ expect says osiada na
 # He is gone from the row, and the Bóstwo is answerable now rather than refused
 # behind him.
 look
-expect says Kolejka: » DOBRE BÓSTWO
-answer DOBRE BÓSTWO
+expect says Kolejka: » KOSZMAR
+answer KOSZMAR
 expect ok
 
 # And with the kolejka worked through, the Obszar opens (12.1).

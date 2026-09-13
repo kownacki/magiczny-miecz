@@ -16,7 +16,7 @@ import { seatsTargeted, type TargetSeat } from "@/lib/engine/targets";
 import { chooseLosses, goldLost, lossTaken, reachableBy } from "@/lib/engine/losses";
 import { endTurn } from "@/lib/engine/turn";
 import { cardName, fieldName, NATURE_LABEL, plural } from "@/lib/engine/polish";
-import type { Effect } from "@/lib/engine/cardScript";
+import type { ComposingOp, Effect } from "@/lib/engine/cardScript";
 import {
   apply,
   merge,
@@ -299,20 +299,7 @@ function targeted(
  * decision-gated shapes it settles before the gate, and the three that
  * `isSettled` owes back to the table unconditionally.
  */
-type WalkedOp =
-  | "wybor"
-  | "po-kolei"
-  | "rzut"
-  | "gdy"
-  | "jak-pole"
-  | "przenies-karte"
-  /* The MĘDRZEC's riddle: a number the player names, then a throw to compare it
-     with, then the prize — three steps and a branch, which is a walk and not a
-     leaf. It sat in this table as `unimplemented` instead, and the card was
-     reported `pelne` the whole time. */
-  | "zgadnij";
-
-export type LeafOp = Exclude<Effect["op"], WalkedOp>;
+export type LeafOp = Exclude<Effect["op"], ComposingOp>;
 
 type OpRun<K extends LeafOp> = (
   ctx: OpContext,
@@ -320,15 +307,19 @@ type OpRun<K extends LeafOp> = (
 ) => Outcome<Resolution> | Promise<Outcome<Resolution>>;
 
 /**
- * `isSettled` answers false for these three unconditionally, so the gate owes
- * them back as `pending` and the table carries them out by hand — they cannot
- * reach this dispatch. Listed so the compiler counts them; implementing one
- * starts by replacing its throw.
+ * Every leaf op is implemented, as of 2026-09-13.
+ *
+ * There was an `unimplemented` throw here and three ops wearing it, on the
+ * reading that `isSettled` answered false for them so the gate would hand them
+ * back and the table would carry them out. What actually happened is that the
+ * Karta stalled: the MĘDRZEC and the MAGICZNA TABLICA were both reported
+ * `pelne` and could not be resolved on either surface — the prompt said
+ * „waiting on an answer no surface can ask yet" and the browser said
+ * „odpowiedzcie w konsoli".
+ *
+ * `coverage.test.ts` holds the line now: a `pelne` Karta may not reach a node
+ * that can be neither run nor asked.
  */
-const unimplemented = (_ctx: OpContext, effect: Effect): never => {
-  throw new Error(`Nie wiem, jak wykonać: ${effect.op}`);
-};
-
 const OPS: { [K in LeafOp]: OpRun<K> } = {
   /**
    * A Karta that turns out to do nothing, said in the Dziennik.
@@ -1364,7 +1355,42 @@ const OPS: { [K in LeafOp]: OpRun<K> } = {
     return { writes, result: { did: [`wyciągnięto ${effect.count} Kart`], pending: null } };
   },
 
-  "zaklecia-do-limitu": unimplemented,
+  /**
+   * „Natychmiast uzyskujesz taką liczbę Zaklęć, na jaką pozwala ci twoja
+   * Magia" — the MAGICZNA TABLICA, and the last op that was not implemented.
+   *
+   * The Karta was reported `pelne` and could not be resolved on either surface:
+   * `isSettled` answered false for ever, so the gate handed it back and the
+   * prompt said „waiting on an answer no surface can ask yet". The same shape
+   * as the MĘDRZEC's riddle, found the same way, and it is not even a question
+   * — the card names a number and the app can count.
+   *
+   * Drawn one at a time until `drawSpell` says no, because `drawSpell` is where
+   * 2.6's cap already lives and „na jaką pozwala ci twoja Magia" is that cap
+   * said from the other side. An empty pile stops it just as honestly, and the
+   * bound is there so that a refusal nobody anticipated cannot spin.
+   */
+  "zaklecia-do-limitu": (ctx) => {
+    const { snapshot, seatId, shuffle } = ctx;
+    let writes: Changeset = {};
+    const names: string[] = [];
+    /* No hand in the box can hold more; the cap is `spellCapacity`'s table. */
+    for (let guard = 0; guard < 12; guard++) {
+      try {
+        const done = drawSpell(apply(snapshot, writes), { seatId, shuffle, peek: false });
+        writes = merge(writes, done.writes);
+        if (done.result !== null) names.push(done.result);
+      } catch {
+        break;
+      }
+    }
+    return names.length === 0
+      ? cameToNothing(ctx, "Magia nie pozwala na więcej Zaklęć (2.6)")
+      : {
+          writes,
+          result: { did: [`Zaklęcia do limitu: ${names.join(", ")}`], pending: null },
+        };
+  },
   /**
    * The Kuglarz: one parameter takes the other's value, and the other stands.
    *

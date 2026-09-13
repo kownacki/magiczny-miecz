@@ -276,6 +276,14 @@ function scriptLines(
             `${question.reason}: name an Obszar — \`answer [n] to <Obszar>\``,
             `  ${question.fields.map((fieldId) => fieldName(fieldId)).join(", ")}`,
           ];
+    case "ktora": {
+      const what =
+        question.co === "item" ? "Przedmiot" : question.co === "friend" ? "Przyjaciela" : "Zaklęcie";
+      return [
+        `${question.reason}: wskaż ${what} — \`answer <n>\``,
+        ...question.among.map((held, at) => `  ${at} — ${cardName(held.cardId)}`),
+      ];
+    }
     case "cyfra":
       return [
         `${question.reason}: nazwij cyfrę — \`answer <${question.faces[0]}-${question.faces[question.faces.length - 1]}>\``,
