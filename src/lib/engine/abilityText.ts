@@ -26,6 +26,7 @@ import {
   tury,
 } from "./polish";
 import { slotsFor, SLOT_LABEL, isWearable, type EqMode, type Slot } from "./slots";
+import { heal } from "./derive";
 
 function fieldNames(fieldIds: readonly FieldId[]): string {
   // Board order, so a pair of numbered fields reads the way you walk them. The
@@ -579,9 +580,29 @@ export interface OwnPoints {
  * Null for anything that does not move one of the four, which is most of the
  * box — a relocation, a Zaklęcie, a fight.
  */
+/**
+ * Whether an option would leave the table exactly as it found it.
+ *
+ * „Odzyskujesz 2 punkty Życia (najwyżej do 4)" offered to somebody already on
+ * four is a button that does nothing: `healSeat` refuses it (4.7), so pressing
+ * it spends a press and reports „Życie już na poziomie początkowym". The Karta
+ * still prints the offer, so the offer stays on screen — greyed, with the
+ * numbers under it saying why — and „Pomiń" is the live answer.
+ *
+ * Off `previewOf`, so the two cannot disagree about what an option would do:
+ * one arithmetic, read once as a sentence and once as a yes or no.
+ */
+export function changesNothing(effect: Effect, points: OwnPoints): boolean {
+  const said = previewOf(effect, points);
+  return said !== null && said.endsWith(UNCHANGED);
+}
+
+/** The tail `previewOf` writes when the two numbers are the same. */
+const UNCHANGED = " — bez zmian";
+
 export function previewOf(effect: Effect, points: OwnPoints): string | null {
   const shown = (label: string, from: number, to: number) =>
-    from === to ? `${label} ${from} — bez zmian` : `${label} ${from} → ${to}`;
+    from === to ? `${label} ${from}${UNCHANGED}` : `${label} ${from} → ${to}`;
 
   if (effect.op === "punkty") {
     const now = { sword: points.sword, magic: points.magic, life: points.life, gold: points.gold }[
@@ -607,10 +628,22 @@ export function previewOf(effect: Effect, points: OwnPoints): string | null {
   }
 
   if (effect.op === "uzdrow" && effect.upTo !== undefined) {
-    // „tylko do wysokości startowej — 4 punktów", which is 3.1's ceiling and the
-    // same for everybody.
-    const next = Math.min(4, points.life + effect.upTo);
-    return shown("Życie", points.life, next);
+    /**
+     * Asked of `heal`, not worked out again here.
+     *
+     * This was `Math.min(4, life + upTo)` — the ceiling and nothing else — and
+     * `heal` has carried a `Math.max` against the current Życie since it was
+     * written, with the reason spelled out beside it: „healing must never be
+     * able to take life away". 4.6's gains are uncapped while 4.7's healing
+     * stops at the starting level, so a Postać legitimately sits above four and
+     * the CUDOTWÓRCA then offered „Życie 6 → 4". „Odzyskujesz" printed over a
+     * button that takes two points off.
+     *
+     * The server was never going to do it — `healSeat` refuses a heal that
+     * changes nothing — so this was the sheet promising what the rules would
+     * have refused, which is the one thing a preview must not do.
+     */
+    return shown("Życie", points.life, heal({ life: points.life }, effect.upTo).life);
   }
 
   if (effect.op === "zaklecie" && effect.cena) {

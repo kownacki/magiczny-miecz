@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  changesNothing,
   describeAggression,
   previewOf,
   forbiddenNatures,
@@ -611,3 +612,41 @@ describe("the ids that are both a Postać and a Karta", () => {
   });
 });
 
+
+/**
+ * „Odzyskujesz" can never take a point away.
+ *
+ * 4.6's gains are uncapped and 4.7's healing stops at the starting level, so a
+ * Postać legitimately sits above four — and the CUDOTWÓRCA's button then read
+ * „Życie 6 → 4". The preview had its own copy of the arithmetic, `Math.min(4,
+ * life + upTo)`, while `heal` has carried a `Math.max` against the current
+ * Życie since it was written. The server would have refused it; the sheet was
+ * promising it.
+ */
+describe("the heal preview, against a Postać above the ceiling", () => {
+  const at = (life: number) => ({
+    sword: 4,
+    magic: 4,
+    life,
+    gold: 0,
+    swordFloor: 4,
+    magicFloor: 4,
+  });
+  const cudotworca = { op: "uzdrow", upTo: 2 } as const;
+
+  it("recovers what was lost", () => {
+    expect(previewOf(cudotworca, at(2))).toBe("Życie 2 → 4");
+  });
+
+  it("stops at the starting level rather than reaching it from above", () => {
+    expect(previewOf(cudotworca, at(6))).toBe("Życie 6 — bez zmian");
+    expect(previewOf(cudotworca, at(4))).toBe("Życie 4 — bez zmian");
+  });
+
+  /** And what the sheet reads to grey the button out — one arithmetic, two readings. */
+  it("says so as a yes or no, for the button", () => {
+    expect(changesNothing(cudotworca, at(2))).toBe(false);
+    expect(changesNothing(cudotworca, at(4))).toBe(true);
+    expect(changesNothing(cudotworca, at(106))).toBe(true);
+  });
+});

@@ -36,7 +36,7 @@
 import { useContext, useState } from "react";
 import { ActionButton } from "../action-button";
 import { type Intent } from "@/lib/engine/intentText";
-import { itemProfile, previewOf } from "@/lib/engine/abilityText";
+import { itemProfile, previewOf, changesNothing } from "@/lib/engine/abilityText";
 import { sentence } from "@/lib/engine/polish";
 import { TheReader, specialRows } from "../card-facts";
 import { DieMark } from "../die-mark";
@@ -637,7 +637,15 @@ export function DrawnActions({
                   // Karta's first question, so the watching device walks to the
                   // same node with its own empty choices — see `chosen`.
                   says={{ kind: "wybiera", option: index }}
-                  disabled={busy}
+                  /* An offer the rules would refuse is not an offer. „Odzyskujesz
+                     2 punkty Życia" to somebody already on four does nothing —
+                     4.7 stops healing at the starting level — so the button is
+                     dead and the note under it says why. The Karta still prints
+                     it, so it stays on screen; „Pomiń" is the live answer. */
+                  disabled={
+                    busy ||
+                    (reader?.points ? changesNothing(option.effect, reader.points) : false)
+                  }
                   sent={sent?.option === index}
                   onClick={() => void answer({ option: index }, { choices: [index] })}
                   // What it would leave you with. A choice between two rules is
