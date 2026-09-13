@@ -60,7 +60,7 @@ export const EFFECTS: Record<EffectName, { label: string; modifier: Modifier; en
    */
   nolimit: {
     label: "Bez limitu Zaklęć",
-    modifier: { kind: "bez-limitu-zaklec" },
+    modifier: { kind: "no-spell-limit" },
     ends: { kind: "dispelled" },
   },
 };

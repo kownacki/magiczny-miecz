@@ -199,9 +199,9 @@ line, silently. Write the test that asserts your sentence.
    — one entry keyed by `CardId`, in the `CardScript` shape. Those five tables
    are spread into `SCRIPTS` in `cardScript.ts`.
 4. `src/lib/engine/coverage.ts` — nothing, if the script is complete;
-   `coverageOf` reports `pelne` off the tables. A card the script only half
+   `coverageOf` reports `full` off the tables. A card the script only half
    carries gets a `MANUAL` entry saying which clause a table still applies by
-   hand, which downgrades it to `czesciowe`.
+   hand, which downgrades it to `partial`.
 5. `examples` on the script — a few plays written down: the seat before,
    dice, answers, and what must be true after. `commands/examples.test.ts`
    plays every one; `npm run card -- try <id> --dice … --answers …` plays a
@@ -216,7 +216,7 @@ generated JSON directly.
 a real card, a script sending a character to a `FieldId` that does not exist, a
 `roll` table missing a face, or a disposition it cannot describe.
 `coverage.test.ts` fails on a `MANUAL` entry for a card nothing implements, or a
-`czesciowe` card with no note.
+`partial` card with no note.
 
 Example: `30a7f77`, one `SCRIPTS` entry and nothing else.
 
@@ -386,7 +386,7 @@ the compiler:
 **What catches a missed step.** 1, 2, 3 (leaf) and 4 are compile errors.
 `wordsRead.test.ts` fails on a field in `pola` the executor never mentions —
 the PÓŁBÓG's `zeStosu` shape, a word rendered under the card and ignored by
-the walk. `coverage.test.ts` fails on a node of a `pelne` card that is
+the walk. `coverage.test.ts` fails on a node of a `full` card that is
 unsettled and no surface can ask. `ask word <op>` prints the entry back:
 fields, where it runs, where it is said, who speaks it.
 

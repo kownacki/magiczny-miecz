@@ -34,7 +34,7 @@ export interface UseResult {
   face?: number;
   did: string[];
   /** The part the table has to settle itself. */
-  stol: boolean;
+  table: boolean;
 }
 
 /**
@@ -63,7 +63,7 @@ export async function spendHolding(
   if (!use) throw new Error(`${cardName(cardId)} — tej Karty się nie zużywa.`);
 
   const seatId = held.seat_id;
-  const script = use.rozpatruje === "aplikacja" ? scriptFor(cardId) : null;
+  const script = use.resolvedBy === "app" ? scriptFor(cardId) : null;
   const face =
     script?.effect.op === "roll" ? await ports.random.rollD6(`${cardName(cardId)}: tabela`) : undefined;
 
@@ -85,20 +85,20 @@ export async function spendHolding(
 
   // An effect the buff system can hold is applied here and now — the card is
   // gone, and what it bought is a thing the character is under until it runs
-  // out. This is the whole of what "aplikacja" means for a card with no die.
-  if (use.efekt) {
+  // out. This is the whole of what "app" means for a card with no die.
+  if (use.status) {
     const under = addEffect(apply(snapshot, spent), {
       seatId,
-      effect: { source: cardId, ...use.efekt },
+      effect: { source: cardId, ...use.status },
     });
     return {
       writes: merge(spent, under),
-      result: { card: cardName(cardId), did: [use.efekt.label], stol: false },
+      result: { card: cardName(cardId), did: [use.status.label], table: false },
     };
   }
 
   if (!script) {
-    return { writes: spent, result: { card: cardName(cardId), did: [use.co], stol: true } };
+    return { writes: spent, result: { card: cardName(cardId), did: [use.what], table: true } };
   }
 
   const effect =
@@ -125,7 +125,7 @@ export async function spendHolding(
       did: done.result.pending
         ? [...done.result.did, describeEffect(done.result.pending)]
         : done.result.did,
-      stol: done.result.pending !== null,
+      table: done.result.pending !== null,
     },
   };
 }
@@ -284,7 +284,7 @@ export async function resolveFieldOffer(
  * through `applyCardEfekt`'s one-row door the way Krąg Płomieni and Władca
  * Gromu do.
  *
- * `magia-x2` and not another `points` bonus: doubling has to apply to
+ * `magic-x2` and not another `points` bonus: doubling has to apply to
  * whatever a Demon is worth *when the dice are thrown*, WAMPIR's own growth
  * (16.2) included, and a fixed number added now would be the wrong one the
  * moment he grows again — `fight.ts`'s `beginFight` is where the two are read
@@ -320,7 +320,7 @@ function doubleDemons(
         effect: {
           source: "uklad-planet",
           label: "Układ Planet — Magia podwojona",
-          modifier: { kind: "magia-x2" },
+          modifier: { kind: "magic-x2" },
           ends: { kind: "round", round: input.round + 1 },
         },
       }),

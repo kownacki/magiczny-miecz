@@ -978,7 +978,7 @@ describe("the rest of the vocabulary", () => {
   it("grants an extra move as a turn that comes back", async () => {
     const { writes, result } = await run({ op: "extra-move" });
     expect(writes.effects?.insert?.[0]).toMatchObject({
-      modifier: { kind: "znowu" },
+      modifier: { kind: "again" },
       ends: { kind: "turns", turns: 1 },
     });
     expect(result.did).toEqual(["dodatkowy ruch — tura wróci do ciebie"]);
@@ -1031,7 +1031,7 @@ describe("spending a Karta that is used up by using it", () => {
       // points for a whole circuit of the table.
       ends: { kind: "this-turn" },
     });
-    expect(result).toEqual({ card: "ELIKSIR SIŁY", did: ["+2 Miecza"], stol: false });
+    expect(result).toEqual({ card: "ELIKSIR SIŁY", did: ["+2 Miecza"], table: false });
   });
 
   it("puts the spent Karta on the used pile, not out of the game", async () => {
@@ -1053,7 +1053,7 @@ describe("spending a Karta that is used up by using it", () => {
     );
     expect(result.face).toBe(3);
     expect(result.did).toEqual(["+2 Sztuki Złota"]);
-    expect(result.stol).toBe(false);
+    expect(result.table).toBe(false);
   });
 
   /**
@@ -1070,7 +1070,7 @@ describe("spending a Karta that is used up by using it", () => {
       { holdingId: "h1", shuffle: asIs },
       ports({ random: scriptedRandom([1]) }),
     );
-    expect(result.stol).toBe(false);
+    expect(result.table).toBe(false);
     expect(result.did.join(" ")).toMatch(/TARCZA TOLIMANA/);
   });
 });

@@ -55,10 +55,10 @@ Stan na 2026-09-13, pogrupowany według tego, *co* to jest:
 | reguła na nazwie — łupy | `spoils.ts` | Wampir | cecha `wysysa-zycie` |
 | reguła na nazwie — kształt walki | `cards.ts` | Sobowtór, Trójgłowy Smok, Przybysz z Krainy Cieni | cechy `odbija-miecz`, `glowy: 3`, `bez-broni` |
 | reguła na nazwie — po rozpatrzeniu | `resolving.ts` | Układ Planet | Efekt na Karcie kładzie status na Demony; op już istnieje (`status` z `target`) |
-| reguła na nazwie — dobieranie | `draw.ts` | Różdżka Zaklęć | klauzula do `Ability` `zaklecia-ponad-limit` (`natychmiast: true`) |
+| reguła na nazwie — dobieranie | `draw.ts` | Różdżka Zaklęć | klauzula do `Ability` `spells-over-limit` (`natychmiast: true`) |
 | reguła na nazwie — rzucanie | `commands/spells.ts` | Władca Gromu, Władca Zaklęć, Zwierciadło | cechy `paralizuje-istoty`, `rozprasza`, `odbija-zaklecie` — trzy słowa, które model odpowiedzi i tak będzie potrzebował |
-| reguła na nazwie — ucieczka przed Postacią | `fight.ts` | Krąg Płomieni | `Ability` `ucieczka` z `przed: ["postac"]` **już istnieje** — tylko nikt go nie nadał Zaklęciu |
-| czytelnik po nazwie zamiast po słowie | `turnStore.ts` `bridgeRequirements` | Magiczny Miecz, Tarcza | `Ability` `wymagany` **już istnieje** — czytelnik ma pytać o nie |
+| reguła na nazwie — ucieczka przed Postacią | `fight.ts` | Krąg Płomieni | `Ability` `escape` z `from: ["character"]` **już istnieje** — tylko nikt go nie nadał Zaklęciu |
+| czytelnik po nazwie zamiast po słowie | `turnStore.ts` `bridgeRequirements` | Magiczny Miecz, Tarcza | `Ability` `required` **już istnieje** — czytelnik ma pytać o nie |
 | nagroda misji | `friends.ts` | Tarcza Tolimana (Władca) | to jest `receive` — treść Karty Przyjaciela, nie kod |
 
 Cztery z jedenastu wierszy zamykają się słowem, które słownik już ma. To jest
@@ -100,7 +100,7 @@ wszędzie: w Księdze, w `deal`, w testach.
 ### 3. Ile kart nie mieści się w słowniku? — Policzone
 
 - Trzydzieści trzy słowa w `Effect`, **wszystkie trzydzieści trzy używane**
-  w treści (79 skryptów, 23 Zaklęcia ze `stosuje`, 23 Obszary). Nie ma słowa
+  w treści (79 skryptów, 23 Zaklęcia ze `script`, 23 Obszary). Nie ma słowa
   bez karty.
 - Pięć rejestrów pokrywa 225 Kart podstawki (165 Zdarzeń, 30 Wyposażenia,
   30 Zaklęć) z trzema nakładkami (Łódź, Latarnia, Jabłko — w `USES` i
@@ -114,7 +114,7 @@ pula — to **nowe słowo, nie nowy kształt**. Kształty (drzewo zdarzenia, reg
 stała, status z zegarem, warunek, cel) trzymają. Przegląd 677 tekstów pod
 stos (docs/STACK.md) jest tego dowodem od innej strony. Dwie rzeczy dodatki
 naprawdę łamią: **`Ability` bez warunku** (Krypta nadpisuje zdolności Postaci
-„tylko w Krypcie"; dziś warunek ma tylko `bezpieczny.natura` i `tylko-natura`) —
+„tylko w Krypcie"; dziś warunek ma tylko `safe.nature` i `nature-only`) —
 więc `Ability` dostaje opcjonalne `gdy: Condition`, ten sam `Condition` co
 `Effect`; i **id po nazwie** (PRZEWODNIK KRYPTY ×3 na jednym arkuszu), na co
 EXPANSIONS.md ma już odpowiedź. Obie zmiany są tanie teraz i drogie potem, i
@@ -209,7 +209,7 @@ export interface Karta {
 `Cecha` to fakt o *Karcie* (ile ma głów, gdzie się ją nosi, ile jest w
 pudełku), czytany przy jednych drzwiach; `Ability` to, co Karta robi *dla
 posiadacza*. Rozróżnienie jest to samo, które `abilities.ts` już robi między
-`udzwig` a `samaSieNieLiczy`.
+`capacity` a `doesNotCount`.
 
 **Kto wypełnia co:**
 
@@ -375,7 +375,7 @@ zgody na następny.
 | 1 | **`WORDS`** — jedna tabela w silniku, jedenaście przełączników staje się lookupem; `OPS` bez zmian | **zrobione 2026-09-13**: `words.ts`; słowo dotyka unii, `WORDS`, `OPS` i dwóch głosów w `effectText.ts`, wszystkie cztery pilnowane przez kompilator; WHERE.md przepis 13; `ask word` |
 | 2 | **`examples` + runner + `card try`** | **zrobione 2026-09-13**: `Example` na `CardScript`, `commands/examples.ts` gra jedną odpowiedzią na pytanie, `examples.test.ts` puszcza wszystkie; siedemnastu Nieznajomych niesie 28 przykładów; `npm run card -- try` i `-- examples` |
 | 3 | **`Karta` + pliki + generowany indeks**; pięć rejestrów jako widoki | `karty/` istnieje, rejestry są jednolinijkowe, żaden czytelnik się nie ruszył; round-trip przez JSON |
-| 4 | **Zamknięcie ucieczek**, jedna cecha na commit | `FROZEN` w `namedCards.test.ts` pusty; `CARRIED_ELSEWHERE` skasowane; `pelne` wyprowadzone z `Karta` |
+| 4 | **Zamknięcie ucieczek**, jedna cecha na commit | `FROZEN` w `namedCards.test.ts` pusty; `CARRIED_ELSEWHERE` skasowane; `full` wyprowadzone z `Karta` |
 | 5 | **Budowniczy w konsoli** — jeśli Michał go chce | `karta new … zapisz` produkuje plik, który przechodzi 3 i 2 |
 | 6 | **Gotowość na dodatki** — `when` na `Ability`, `zestaw`, id z koordynatu | dopiero gdy pudełko się otwiera |
 
@@ -541,12 +541,86 @@ Rodzaje straty (`lose.what`, `losses.ts`): `przedmiot`→`item`,
 `gdzie`→`where`, `cyfra`→`digit`, `ktora`→`which`, `nieobslugiwane`→
 `unsupported`.
 
-**Fala 2 — reguły stałe i statusy**: rodzaje `Ability` (33), `Modifier`
-(18), `SpellTiming`, `SpellTarget`, pola `Use`, wartości pokrycia
-(`pelne`/`czesciowe`/`brak`). `Modifier.kind` **leży w bazie**
-(`seat_effects.modifier`), więc ta fala niesie migrację w `db/migrations/`,
-którą stosuje wyłącznie sesja główna na słowo Michała (WHERE.md, przepis 10).
-Mapa fali 2 powstanie po wylądowaniu fali 1.
+**Fala 2 — reguły stałe i statusy — zrobione 2026-09-13**: rodzaje `Ability`
+(33), `Modifier` (10 z 18 — reszta była już angielska), `SpellTiming`,
+`SpellTarget`, pola `Use`, wartości pokrycia (`pelne`→`full`, `czesciowe`→
+`partial`, `brak`→`none`). Migracja dla `Modifier.kind` (`seat_effects.modifier`
+leży w bazie) jest napisana w `db/migrations/2026-09-13-english-modifier-kinds.sql`
+i **nie zastosowana** — stosuje ją wyłącznie sesja główna na słowo Michała
+(WHERE.md, przepis 10).
+
+`Ability["kind"]` (`abilities.ts`) — parametry w tej samej fali, dziś → po:
+
+| dziś | po | parametry (dziś → po) |
+|---|---|---|
+| `bez-oplaty` | `no-toll` | `fields` |
+| `bez-zaklec` | `no-spells` | `przeciwnikBez`→`opponentWithout` |
+| `bezpieczny` | `safe` | `fields`, `from` (`rzut`→`roll`, `life`, `utrata`→`loss`), `natura`→`nature` |
+| `cena-przyjecia` | `hiring-price` | `zloto`→`gold`, `zycie`→`life`, `bezZaplaty`→`ifUnpaid` (`zostaje`→`stays`, `odchodzi`→`leaves`) |
+| `ginie-zamiast-ciebie` | `dies-for-you` | `onRollUpTo`, `onlyWhenRaiding` |
+| `magia-do-miecza` | `magic-to-sword` | |
+| `modyfikator-rzutu` | `roll-modifier` | `gdzie`→`where` (`na: "pola"`→`at: "fields"`, `na: "walke"`→`at: "fight"`, `rodzaj`→`kind`), `delta`, `dowolnyZnak`→`eitherSign`, `jednorazowy`→`once` |
+| `natura-dowolna` | `any-nature` | |
+| `niedostepny` | `unavailable` | `region` — wartość `dolny` zostaje: to nazwa krainy z `Region`, nie słowo silnika |
+| `nosi-zaklecie` | `carries-spell` | `cena`→`price`, `znika`→`vanishes`, `mozeszObejrzec`→`mayView` |
+| `oddaj-w` | `returned-at` | `cena`→`price` |
+| `odporny-na-zaklecie` | `immune-to-spell` | `zaklecia`→`spells` |
+| `oslona` | `shield` | `upTo` |
+| `placi-za-przegrana` | `pays-for-loss` | |
+| `podglad-zaklec` | `spell-peek` | |
+| `pokonuje-bez-walki` | `beats-without-fight` | `kogo`→`whom`, `"demony"`→`"demons"` |
+| `przeciw` | `against` | `komu`→`whom`, `miecz`→`sword`, `magia`→`magic` |
+| `przeprawa-kostki` | `crossing-dice` | `obstacle`, `dice` |
+| `przeprawa-wszedzie` | `crosses-anywhere` | |
+| `punkty-na-polach` | `points-on-fields` | `punkty`→`points` |
+| `punkty` | `points` | `miecz`→`sword`, `magia`→`magic`, `tylkoWalka`→`fightOnly` |
+| `ruch-bonus` | `move-bonus` | `min`, `max` |
+| `skup` | `buys` | `cena`→`price` |
+| `sprzedaj-w` | `sells-at` | `cena`→`price` |
+| `tylko-natura` | `nature-only` | `natury`→`natures` |
+| `ucieczka` | `escape` | `fields`, `przed`→`from` (`wrog`→`foe`, `postac`→`character`) |
+| `udzwig` | `capacity` | `items` (`bez-limitu`→`unlimited`), `samaSieNieLiczy`→`doesNotCount`, `giniePrzyUtracie`→`lostWithIt` |
+| `uzdrowienie` | `healing` | |
+| `walczy-za-ciebie` | `fights-for-you` | `miecz`→`sword`, `magia`→`magic`, `tylkoWyprawa`→`raidOnly` |
+| `wymagany` | `required` | `place` (wartości `most`, `zamek-bestii` zostają: to nazwy planszy) |
+| `za-oplata` | `for-a-fee` | `cena`→`price`, `miecz`→`sword`, `magia`→`magic`, `razNaTure`→`onceATurn` |
+| `zabiera-zycie` | `takes-life` | `zycie`→`life` |
+| `zakazane` | `forbidden` | `cardIds` |
+| `zaklecia-ponad-limit` | `spells-over-limit` | `count` |
+
+`EscapeTarget`: `wrog`→`foe`, `postac`→`character`.
+
+`Modifier["kind"]` (`status.ts`), zapisane w `seat_effects.modifier`:
+`bez-limitu-zaklec`→`no-spell-limit`, `magia-as-miecz`→`magic-as-sword`,
+`magia-x2`→`magic-x2`, `ocalenie`→`rescue`, `oslona`→`shield`,
+`przeprawa`→`crossing` (`przez`→`over`), `przeprawa-kostki`→`crossing-dice`,
+`udzwig`→`capacity`, `unieruchomiony`→`immobilised`, `znowu`→`again`. Reszta
+(`points`, `frozen`, `no-spells`, `move-max`, `spoken`, `nature`, `barred`,
+`note`, `mission`, `no-friends`, `move-x2`, `attacker`) była już angielska.
+
+`SpellTiming`: `dowolna-chwila`→`any-time`, `poczatek-tury`→`turn-start`,
+`przed-ruchem`→`before-move`, `zamiast-ruchu`→`instead-of-move`,
+`po-ruchu`→`after-move`, `przed-walka`→`before-fight`, `w-walce`→`in-fight`,
+`spotkanie`→`meeting`, `po-karcie`→`after-card`.
+
+`SpellTarget`: `siebie`→`self`, `postac`→`character`,
+`siebie-lub-postac`→`self-or-character`, `wrog`→`foe`,
+`postac-lub-wrog`→`character-or-foe`, `obszar`→`field`,
+`karta-na-planszy`→`card-on-board`, `zaklecie`→`spell`, `brak`→`none`.
+`SpellScript`: `stosuje`→`script`; `applies` wartości `gasi-zaklecia`→
+`dispels-spells`, `zdejmuje-karte`→`removes-card`.
+
+`Use` (`uses.ts`): `co`→`what`, `kiedy`→`when`, `rozpatruje`→`resolvedBy`
+(`aplikacja`→`app`, `stol`→`table`), `efekt`→`status`.
+
+`Coverage` (`coverage.ts`): `pelne`→`full`, `czesciowe`→`partial`,
+`brak`→`none`.
+
+Fala 2 zabrała też słowa silnika walki poza card-vocabulary: `Opens` w
+`commands/ops.ts` (`kind: "walka"`→`kind: "fight"`, `nazwa`→`name`,
+`miecz`→`sword`, `magia`→`magic`), `summonFighter` i `beginNamedFight` w
+`commands/fight.ts` (te same cztery pola), i `commands/bridge.ts`'s
+`DeathGameOutcome`: `dalej`→`onward`, `znowu`→`again`, `strata`→`loss`.
 
 **Fala 3 — reszta silnika**: to, co TASKS.md nazywa „English sweep" (pola
 `TurnPhase`, `Status`, `Command` konsoli, fixture'y).

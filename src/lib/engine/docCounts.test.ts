@@ -48,7 +48,7 @@ const EVENTS = events as { id: CardId; cardClass?: string }[];
 const DISTINCT = [...new Set(EVENTS.map((card) => card.id))];
 
 describe("what COVERAGE.md claims about the deck", () => {
-  const tally = { pelne: 0, czesciowe: 0, brak: 0 } as Record<string, number>;
+  const tally = { full: 0, partial: 0, none: 0 } as Record<string, number>;
   for (const id of DISTINCT) tally[coverageOf(id)] += 1;
 
   it("counts the Karty Zdarzeń", () => {
@@ -58,13 +58,13 @@ describe("what COVERAGE.md claims about the deck", () => {
   });
 
   it("counts what is carried whole, in part, and not at all", () => {
-    const pattern = /(\d+) are `pelne`, (\d+) `czesciowe` and (\d+) `brak`/;
+    const pattern = /(\d+) are `full`, (\d+) `partial` and (\d+) `none`/;
     const found = COVERAGE.match(pattern);
-    expect(found, "the pelne/czesciowe/brak sentence moved").not.toBeNull();
+    expect(found, "the full/partial/none sentence moved").not.toBeNull();
     expect([found![1], found![2], found![3]].map(Number)).toEqual([
-      tally.pelne,
-      tally.czesciowe,
-      tally.brak,
+      tally.full,
+      tally.partial,
+      tally.none,
     ]);
   });
 
@@ -87,9 +87,9 @@ describe("what COVERAGE.md claims about the deck", () => {
 
   it("counts the deck the same way in TASKS.md", () => {
     // The same three numbers live in two documents and drifted apart once
-    // already: TASKS.md still said 128 `pelne` after COVERAGE.md was fixed.
-    expect(claim(TASKS, /(\d+) of the (?:\d+) distinct event cards/, "TASKS's pelne count")).toBe(
-      tally.pelne,
+    // already: TASKS.md still said 128 `full` after COVERAGE.md was fixed.
+    expect(claim(TASKS, /(\d+) of the (?:\d+) distinct event cards/, "TASKS's full count")).toBe(
+      tally.full,
     );
   });
 

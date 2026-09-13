@@ -360,7 +360,7 @@ export function SlotPanel({
                       type="button"
                       onClick={() => onUse(item.holdingId, item.cardId)}
                       disabled={busy}
-                      title={usageOf(item.cardId)?.co}
+                      title={usageOf(item.cardId)?.what}
                       className="text-[9px] text-ochre underline transition hover:text-ink disabled:opacity-40"
                     >
                       {USE_VERB}

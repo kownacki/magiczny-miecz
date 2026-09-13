@@ -583,7 +583,7 @@ describe("what a lying Wróg is really worth", () => {
           field_card_id: "fc-wampir",
           source: "uklad-planet",
           label: "Układ Planet — Magia podwojona",
-          modifier: { kind: "magia-x2" },
+          modifier: { kind: "magic-x2" },
           ends: { kind: "round", round: 2 },
         },
       ],

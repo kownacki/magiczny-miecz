@@ -55,7 +55,7 @@ export const PRZEDMIOTY: Readonly<Record<string, CardScript>> = {
     effect: {
       op: "status",
       label: "Łódź",
-      modifier: { kind: "przeprawa", przez: "trzesawiska" },
+      modifier: { kind: "crossing", over: "trzesawiska" },
       ends: { kind: "turns", turns: 1 },
     },
     disposition: { kind: "discard" },
@@ -65,7 +65,7 @@ export const PRZEDMIOTY: Readonly<Record<string, CardScript>> = {
     effect: {
       op: "status",
       label: "Latarnia",
-      modifier: { kind: "przeprawa", przez: "lodowy-las" },
+      modifier: { kind: "crossing", over: "lodowy-las" },
       ends: { kind: "turns", turns: 1 },
     },
     disposition: { kind: "discard" },

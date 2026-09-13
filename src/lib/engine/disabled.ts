@@ -57,8 +57,8 @@ export const PARKED_CARDS: Readonly<Partial<Record<CardId, Parked>>> = {
  * one flip brings them back. `abilitiesOfCharacter` is the only
  * door a character's typed abilities come through, so returning nothing from
  * it while this stands switches off all sixteen of them — the six field
- * safeties, the three escapes, the three roll modifiers, `bez-oplaty`,
- * `magia-do-miecza`, `zakazane` and `natura-dowolna` — without touching a
+ * safeties, the three escapes, the three roll modifiers, `no-toll`,
+ * `magic-to-sword`, `forbidden` and `any-nature` — without touching a
  * single reader.
  *
  * Why all of them and not only the unbuilt ones: 89 clauses are printed across

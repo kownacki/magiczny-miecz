@@ -17,11 +17,11 @@ import type { CardId } from "@/data/ids";
  *
  * Three states, and only three:
  *
- * - `pelne` — everything the card says is encoded.
- * - `czesciowe` — the app handles part of it and names the rest.
- * - `brak` — the app is not helping with this card at all; read it and apply it.
+ * - `full` — everything the card says is encoded.
+ * - `partial` — the app handles part of it and names the rest.
+ * - `none` — the app is not helping with this card at all; read it and apply it.
  */
-export type Coverage = "pelne" | "czesciowe" | "brak";
+export type Coverage = "full" | "partial" | "none";
 
 /**
  * What the app does NOT do, for cards it only partly understands.
@@ -49,9 +49,9 @@ const MANUAL: Readonly<Partial<Record<CardId, string>>> = {
   //
   // ARONDIGHT, the TOPÓR and the RELIKWIARZ were here, and all three were
   // stale — the same fault the ALCHEMIK's note had. The two blades' "a w walce
-  // z Wilkołakiem 2 punkty" is `przeciw`, applied through `insteadAgainst` in
+  // z Wilkołakiem 2 punkty" is `against`, applied through `insteadAgainst` in
   // `againstThese`; the Relikwiarz's "pokonuje wszystkie Demony bez walki" is
-  // `pokonuje-bez-walki`, applied in `beginFight`. All three have had tests in
+  // `beats-without-fight`, applied in `beginFight`. All three have had tests in
   // `modifiers.test.ts` the whole time. A note that tells a table to watch
   // something the referee is already watching is the same wasted vigilance as
   // no referee at all.
@@ -73,8 +73,8 @@ const MANUAL: Readonly<Partial<Record<CardId, string>>> = {
   // oznacza jednocześnie utratę wszystkich niesionych w niej Przedmiotów" and
   // the Tragarz's own version of it — and both were stale in the opposite
   // direction from the KOŃ/MUŁ/ZAPRZĘG note above them: those three leave
-  // what they carried on the Obszar, and these two do not. `giniePrzyUtracie`
-  // on their `udzwig` ability is what tells them apart in `overflow.ts`; the
+  // what they carried on the Obszar, and these two do not. `lostWithIt`
+  // on their `capacity` ability is what tells them apart in `overflow.ts`; the
   // frame that opens when either is lost carries `because: container-lost`,
   // `waysUnder` turns `odrzuc` into `zniszcz` for the surplus, and `dropCard`
   // sends it to the used pile through `putOnPile` instead of the Obszar.
@@ -105,8 +105,8 @@ const MANUAL: Readonly<Partial<Record<CardId, string>>> = {
   // has been able to conjure under that Karta's own name since `EFFECTS.fog`
   // was written.
   //
-  // UKŁAD PLANET moved to `pelne` the same way: the number now has somewhere
-  // to live — `magia-x2` on every Demon's `field_cards` row, one round out —
+  // UKŁAD PLANET moved to `full` the same way: the number now has somewhere
+  // to live — `magic-x2` on every Demon's `field_cards` row, one round out —
   // and `fight.ts`'s `beginFight` reads it back before the dice are thrown.
   // `resolveDrawnCard` (`commands/resolving.ts`) applies it bespoke to the one
   // card id, the same choice `landSpell` makes for the Władca Gromu, because
@@ -119,8 +119,8 @@ const MANUAL: Readonly<Partial<Record<CardId, string>>> = {
   // what the model has nowhere to put: a state on a Karta lying on an Obszar,
   // or a distinction the deck does not record.
   //
-  // The Krąg Płomieni and the Władca Gromu both moved to `pelne`: a Wróg lying
-  // on an Obszar now carries `unieruchomiony` the same way a Postać carries
+  // The Krąg Płomieni and the Władca Gromu both moved to `full`: a Wróg lying
+  // on an Obszar now carries `immobilised` the same way a Postać carries
   // `frozen` (`seat_effects.field_card_id`), so `beginFight` and `sendRaider`
   // refuse him, the kolejka lets a turn walk past him rather than holding it
   // open, and `liftFieldCards` leaves his row exactly where it is rather than
@@ -136,7 +136,7 @@ const MANUAL: Readonly<Partial<Record<CardId, string>>> = {
     "Dopóki ktoś nie zdejmie Kręgu, nikt nie zdejmuje go w aplikacji — Władca Zaklęć nie ma jak trafić w Kartę na Obszarze. Rzucić go można na Wroga leżącego na Obszarze albo w trakcie walki; nie na dopiero co dobranego, zanim walka się zacznie.",
   /**
    * Narrowed rather than cleared: rzucony na Wroga leżącego na Obszarze teraz
-   * ratuje go od śmierci — `applyCardEfekt` (od 740c2e8) kładzie `ocalenie` na
+   * ratuje go od śmierci — `applyCardEfekt` (od 740c2e8) kładzie `rescue` na
    * jego rząd, i `resolveFight` (`commands/spoils.ts`) wydaje ten status
    * zamiast jego zgonu, gdy walkę wygrywa Postać: Karta zostaje, trofeum nie
    * ma. To samo ograniczenie co Krąg Płomieni — nie na Wroga dopiero co
@@ -161,7 +161,7 @@ const MANUAL: Readonly<Partial<Record<CardId, string>>> = {
  * few are not, because what they do is not an effect a card applies to its
  * reader, and it belongs where its rule belongs.
  *
- * The **WAMPIR** was reported `brak` — „Tę Kartę rozpatrzcie sami — aplikacja
+ * The **WAMPIR** was reported `none` — „Tę Kartę rozpatrzcie sami — aplikacja
  * jej nie prowadzi" — over a rule the app has run since 2026-09-04. „Jeżeli
  * Wampir pokona Postać, zabiera jej Życie i dodaje je do swoich punktów", and
  * `spoils.ts` does exactly that. A table told to keep score by hand for a
@@ -178,7 +178,7 @@ const MANUAL: Readonly<Partial<Record<CardId, string>>> = {
  * Which is the lesson rather than the fix. **Coverage derived from where a card
  * is encoded will keep being wrong**, because a card is encoded wherever its
  * rule belongs and that is not a closed list. This is the honest patch until
- * `pelne` means „can be played" rather than „is written down somewhere I know
+ * `full` means „can be played" rather than „is written down somewhere I know
  * about" — see `coverage.test.ts`, which asks the first question now too.
  *
  * The value says *where*, so an entry can be checked rather than trusted.
@@ -195,7 +195,7 @@ export function coverageOf(cardId: CardId): Coverage {
    * shape and the player does not care which.
    *
    * This asked only two of them for a long time, and the answer for the other
-   * two was "brak" — printed under the card as "rozpatrzcie sami, aplikacja jej
+   * two was "none" — printed under the card as "rozpatrzcie sami, aplikacja jej
    * nie prowadzi". It was not true of the five Przedmioty that live in `USES`,
    * and it was not true of the twenty-seven Zaklęcia that live in `SPELLS`,
    * which is the *first shelf of the Księga* — so the commonest thing to open
@@ -212,8 +212,8 @@ export function coverageOf(cardId: CardId): Coverage {
     cardId in USES ||
     cardId in SPELLS ||
     cardId in CARRIED_ELSEWHERE;
-  if (!known) return "brak";
-  return cardId in MANUAL ? "czesciowe" : "pelne";
+  if (!known) return "none";
+  return cardId in MANUAL ? "partial" : "full";
 }
 
 /** The clause the players have to apply themselves, if there is one. */

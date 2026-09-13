@@ -129,7 +129,7 @@ describe("zmiana Natury (7.2-7.4)", () => {
    * Magog's own card lets it change freely, and 8.2 puts that above 7.3. But
    * a Postać's own powers are parked whole (`CHARACTER_POWERS_PARKED`,
    * `src/lib/engine/disabled.ts`) — `abilitiesOfCharacter` hands back nothing
-   * while it stands, so Magog's `natura-dowolna` does not fire and 7.3's
+   * while it stands, so Magog's `any-nature` does not fire and 7.3's
    * once-a-turn limit applies to it like everybody else. Runs again with no
    * other change once that flips to false.
    */

@@ -16,7 +16,7 @@ import { WithRules } from "../rule-ref";
  */
 export interface Rolled {
   /**
-   * What it was thrown for: a Karta's id, or `pole:<nazwa>` for an Obszar's own
+   * What it was thrown for: a Karta's id, or `pole:<name>` for an Obszar's own
    * table — the same naming a fight against a square's guardian uses.
    */
   cardId: string;

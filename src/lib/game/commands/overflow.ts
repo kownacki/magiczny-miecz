@@ -91,7 +91,7 @@ export function waysOut(snapshot: Snapshot, seatId: string): WayUnder[] {
  * The container that going over is blamed on, if losing one is what did it.
  *
  * Only the Magiczna Sakwa and the Tragarz say their own load does not
- * survive them — `giniePrzyUtracie` on their `udzwig` ability, checked in
+ * survive them — `lostWithIt` on their `capacity` ability, checked in
  * `abilities.test.ts` against both cards' text — so this is not "any carrier
  * that vanished", it is "the one Karta whose own face says what it carried
  * goes with it".
@@ -109,7 +109,7 @@ function lostContainerFor(
   for (const row of snapshot.holdings) {
     if (row.seat_id !== seatId || !deleted.has(row.id)) continue;
     const perishes = abilitiesOf(row.card_id).some(
-      (ability) => ability.kind === "udzwig" && ability.giniePrzyUtracie === true,
+      (ability) => ability.kind === "capacity" && ability.lostWithIt === true,
     );
     if (perishes) return { kind: "container-lost", cardId: row.card_id };
   }

@@ -65,7 +65,7 @@ export interface Figures {
  * one. The fight figure is the departure, and reads as one.
  *
  * The last line is why nothing here assumes the numbers descend.
- * `walczy-za-ciebie` *replaces* the fight figure with the champion's rather
+ * `fights-for-you` *replaces* the fight figure with the champion's rather
  * than adding to it, so a Barbarzyńca of Miecz 5 fights at the Rycerz's 3.
  */
 export function figuresOf(own: number, parametr: number, walka: number): Figures {

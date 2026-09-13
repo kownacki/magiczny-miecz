@@ -22,64 +22,64 @@ import { isCharacterId, type CardId, type CharacterId } from "@/data/ids";
 export const CHARACTER_ABILITIES: Readonly<Partial<Record<CharacterId, readonly Ability[]>>> = {
   barbarzynca: [
     {
-      kind: "bezpieczny",
+      kind: "safe",
       fields: ["urwisko-1", "urwisko-2", "wilczy-parow"],
-      from: "rzut",
+      from: "roll",
     },
   ],
   elf: [
-    { kind: "bezpieczny", fields: ["urwisko-1", "urwisko-2"], from: "rzut" },
+    { kind: "safe", fields: ["urwisko-1", "urwisko-2"], from: "roll" },
     // "na Równinach" — all three of them.
     {
-      kind: "ucieczka",
+      kind: "escape",
       fields: ["rownina-traw", "rownina-snu", "rownina-samotnych-skal"],
     },
   ],
   goblin: [
-    { kind: "bezpieczny", fields: ["krag-mocy", "wilczy-parow"], from: "rzut" },
+    { kind: "safe", fields: ["krag-mocy", "wilczy-parow"], from: "roll" },
   ],
   hobgoblin: [
-    { kind: "bezpieczny", fields: ["kurhan", "krypta-upiorow"], from: "rzut" },
-    { kind: "ucieczka", fields: ["step-1", "step-2"] },
+    { kind: "safe", fields: ["kurhan", "krypta-upiorow"], from: "roll" },
+    { kind: "escape", fields: ["step-1", "step-2"] },
     // "Określając Miecz Kamiennego Potwora ... możesz odjąć 1 od wyniku rzutu."
     {
-      kind: "modyfikator-rzutu",
-      gdzie: { na: "pola", fields: ["ruiny-twierdzy"] },
+      kind: "roll-modifier",
+      where: { at: "fields", fields: ["ruiny-twierdzy"] },
       delta: -1,
     },
   ],
   hummit: [
     {
-      kind: "bezpieczny",
+      kind: "safe",
       fields: ["krag-mocy", "urwisko-1", "urwisko-2"],
-      from: "rzut",
+      from: "roll",
     },
   ],
-  troll: [{ kind: "bezpieczny", fields: ["krag-mocy", "kurhan"], from: "rzut" }],
+  troll: [{ kind: "safe", fields: ["krag-mocy", "kurhan"], from: "roll" }],
   obbol: [
-    { kind: "ucieczka", fields: ["mokradla-1", "mokradla-2"] },
+    { kind: "escape", fields: ["mokradla-1", "mokradla-2"] },
     // The mirror of the Hobgoblin's, at the other bridge entrance.
     {
-      kind: "modyfikator-rzutu",
-      gdzie: { na: "pola", fields: ["wymarle-miasto"] },
+      kind: "roll-modifier",
+      where: { at: "fields", fields: ["wymarle-miasto"] },
       delta: -1,
     },
   ],
-  karzel: [{ kind: "bez-oplaty", fields: ["straznik-magicznych-wrot"] }],
+  karzel: [{ kind: "no-toll", fields: ["straznik-magicznych-wrot"] }],
   pustelnik: [
-    { kind: "magia-do-miecza" },
-    { kind: "zakazane", cardIds: ["miecz", "sztylet", "helm", "zbroja"] },
+    { kind: "magic-to-sword" },
+    { kind: "forbidden", cardIds: ["miecz", "sztylet", "helm", "zbroja"] },
   ],
   magog: [
     // "Możesz dowolnie zmieniać swoją naturę, jednak musi być ona określona
     // w każdym momencie gry." Carried by the app now rather than remembered:
     // it is the only reason a Natura control belongs on screen in simulation.
-    { kind: "natura-dowolna" },
+    { kind: "any-nature" },
     // "Możesz dodać 1 ... w walkach rozgrywanych na Równinach."
     {
-      kind: "modyfikator-rzutu",
-      gdzie: {
-        na: "pola",
+      kind: "roll-modifier",
+      where: {
+        at: "fields",
         fields: ["rownina-traw", "rownina-snu", "rownina-samotnych-skal"],
       },
       delta: 1,

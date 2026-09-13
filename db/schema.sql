@@ -396,7 +396,7 @@ create table if not exists magiczny_miecz.field_cards (
   -- that shape would be modelling for one table's sake. `seat_effects` gained
   -- `field_card_id` for a different gap, a Karta having a *status* with
   -- nowhere to be written down, which is what kept KRĄG PŁOMIENI and WŁADCA
-  -- GROMU at `czesciowe` in coverage.ts. This column stays the one shape that
+  -- GROMU at `partial` in coverage.ts. This column stays the one shape that
   -- needs only a number.
   pool int,
   created_at timestamptz not null default now()

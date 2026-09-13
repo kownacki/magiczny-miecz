@@ -45,7 +45,7 @@ their scans are deliberately untouched.
       measuring it as this was written.
 
 - [ ] **No card left unencoded.** 134 of the 138 distinct event cards
-      are `pelne`, 3 `czesciowe`, 1 `brak` — `coverage.ts` is the truth and
+      are `full`, 3 `partial`, 1 `none` — `coverage.ts` is the truth and
       `docCounts.test.ts` keeps COVERAGE.md agreeing with it. The Sobowtór, the
       Kometa and the Wampir were built on 2026-09-04 and the Turniej Rycerski
       is parked with duels; all four are in LANDED.md.
@@ -54,15 +54,15 @@ their scans are deliberately untouched.
       missing** (2026-09-13). „W Sakwie możesz umieścić 1 Przedmiot" is a
       `storage` slot in `slots.ts` and has been for months: what is in it is out
       of 5.4's count and nothing but Pan Bogactwa can reach it. She read as
-      `brak` because `coverageOf` derives its answer from *where a card is
+      `none` because `coverageOf` derives its answer from *where a card is
       encoded* and knew four registries — the same reason the WAMPIR disclaimed
       a rule `spoils.ts` was running. Both are on the fifth shelf now
       (`CARRIED_ELSEWHERE`), and the real lesson is under it: that derivation
       will keep being wrong, because a card is encoded wherever its rule
       belongs.
 
-      The one `brak` left is the **Turniej Rycerski**, parked with duels, and a
-      parked Karta never reaches a table. Each `czesciowe` card names the half
+      The one `none` left is the **Turniej Rycerski**, parked with duels, and a
+      parked Karta never reaches a table. Each `partial` card names the half
       it misses in `MANUAL`.
 
 

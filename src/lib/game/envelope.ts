@@ -417,7 +417,7 @@ export function envelopeFor(
         // arrive as `null` anyway, having gone over the wire as a silent
         // `JSON.stringify` quirk instead of a thing this file decided. Null is
         // „no cap", the fold prints „∞" for it the way the Plecak does for a
-        // Zaprzęg, and 2.6 is off for that seat (`bez-limitu-zaklec`).
+        // Zaprzęg, and 2.6 is off for that seat (`no-spell-limit`).
         spell_capacity: Number.isFinite(view.spellCapacity) ? view.spellCapacity : null,
         /**
          * Why the whole rack is shut, when it is — the sentence `castSpell`

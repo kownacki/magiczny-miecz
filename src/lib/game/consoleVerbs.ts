@@ -736,13 +736,13 @@ export const VERBS: { [K in Command["kind"]]: VerbRun<K> } = {
       inFight.fight.cardName.toLowerCase().startsWith(command.who.toLowerCase());
 
     const at =
-      command.who && !atTheFoe && aim !== "obszar" && aim !== "karta-na-planszy"
+      command.who && !atTheFoe && aim !== "field" && aim !== "card-on-board"
         ? seatOf(command.who)
         : null;
     const onField =
-      command.who && aim === "obszar" ? requireFieldId(fieldNamed(command.who)) : null;
+      command.who && aim === "field" ? requireFieldId(fieldNamed(command.who)) : null;
     const onCard =
-      command.who && !atTheFoe && aim === "karta-na-planszy"
+      command.who && !atTheFoe && aim === "card-on-board"
         ? await fieldCardNamed(gameId, command.who)
         : null;
     /**
@@ -1905,7 +1905,7 @@ export const VERBS: { [K in Command["kind"]]: VerbRun<K> } = {
                   `Carried: ${escorted
                     .map((one) => {
                       const by = one.carried_by;
-                      const may = by !== null && (carriesSpell([by])?.mozeszObejrzec ?? false);
+                      const may = by !== null && (carriesSpell([by])?.mayView ?? false);
                       const who = by === null ? "" : cardName(by);
                       return `${who} — ${may ? cardName(one.card_id) : "1 Zaklęcie (face down)"}`;
                     })
@@ -1925,7 +1925,7 @@ export const VERBS: { [K in Command["kind"]]: VerbRun<K> } = {
          * refusal at the next roll is the first anybody hears of it.
          *
          * `∞` and not `Infinity` for no cap at all — the Envelope's own word
-         * for it (2.6 off, `bez-limitu-zaklec`), the way the browser's hand
+         * for it (2.6 off, `no-spell-limit`), the way the browser's hand
          * already prints it, so the two surfaces agree rather than one typing
          * out what JSON does with a number it cannot carry.
          */

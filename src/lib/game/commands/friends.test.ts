@@ -72,7 +72,7 @@ describe("a friend who fights in your place (Rycerz)", () => {
 });
 
 /**
- * Two cards carry `walczy-za-ciebie` and they mean different things by it. The
+ * Two cards carry `fights-for-you` and they mean different things by it. The
  * Rycerz stands in front of you; the Poszukiwacz Przygód only ever fights at
  * the far end of a raid you send him on. Reading them alike dropped a
  * Barbarzyńca from his own Miecz 5 to the 3 his friend raids with, in fights
@@ -92,7 +92,7 @@ describe("a friend who raids is not a friend who stands in (Poszukiwacz Przygód
   });
 });
 
-describe("the Bojowy Rumak's Magia (magia-do-miecza)", () => {
+describe("the Bojowy Rumak's Magia (magic-to-sword)", () => {
   it("adds your Magia to your Miecz in a fight, and only in a fight", () => {
     const mounted = withCards({ id: "bojowy-rumak", kind: "item" });
     expect(pointsOf(mounted, "seat-a", "parametr")).toEqual({ miecz: 2, magia: 1 });
@@ -356,7 +356,7 @@ describe("sending a Przyjaciel out (Poszukiwacz Przygód)", () => {
           field_card_id: "fc-wilk",
           source: "krag-plomieni",
           label: "Krąg Płomieni",
-          modifier: { kind: "unieruchomiony" },
+          modifier: { kind: "immobilised" },
           ends: { kind: "dispelled" },
         },
       ],

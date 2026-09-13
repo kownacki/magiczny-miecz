@@ -157,20 +157,20 @@ describe("stackingOf: the four columns answer for themselves", () => {
     expect(stackingOf(buff(1, { modifier: { kind: "frozen" }, source: "krag-plomieni" }))).toBe(
       "exclusive",
     );
-    expect(stackingOf(buff(1, { modifier: { kind: "ocalenie" }, source: "ocalony" }))).toBe(
+    expect(stackingOf(buff(1, { modifier: { kind: "rescue" }, source: "ocalony" }))).toBe(
       "queues",
     );
-    expect(stackingOf(buff(1, { modifier: { kind: "znowu" }, source: "formula-czasu" }))).toBe(
+    expect(stackingOf(buff(1, { modifier: { kind: "again" }, source: "formula-czasu" }))).toBe(
       "refreshes",
     );
     // A Hełm and a Tarcza together do not roll twice — `shieldUpTo` takes
     // the widest, same as `move-max`'s tightest.
-    expect(stackingOf(buff(1, { modifier: { kind: "oslona", upTo: 1 }, source: "helm" }))).toBe(
+    expect(stackingOf(buff(1, { modifier: { kind: "shield", upTo: 1 }, source: "helm" }))).toBe(
       "exclusive",
     );
     // A Koń and a Muł worn together really do carry twelve — `carryBonus`
     // sums, unlike `oslona`'s widest above.
-    expect(stackingOf(buff(1, { modifier: { kind: "udzwig", items: 8 }, source: "kon" }))).toBe(
+    expect(stackingOf(buff(1, { modifier: { kind: "capacity", items: 8 }, source: "kon" }))).toBe(
       "sums",
     );
   });

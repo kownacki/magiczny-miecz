@@ -129,7 +129,7 @@ export type Modifier =
   /**
    * Added to the total at read time, never written to own points (1.2-1.5).
    *
-   * `tylkoWalka` carries the same distinction the printed `punkty` Ability
+   * `tylkoWalka` carries the same distinction the printed `points` Ability
    * already makes (1.5's Troll: parametr 8, podczas walki 11) — a held weapon
    * counts only in a fight, and `bonusFrom` has to be told which reading it is
    * answering rather than adding a Miecz card's bonus to a character standing
@@ -154,7 +154,7 @@ export type Modifier =
    * the fight's kind before reading this at all, rather than reading it and
    * then discarding what it found.
    */
-  | { kind: "oslona"; upTo: number }
+  | { kind: "shield"; upTo: number }
   /**
    * Raises the four-Przedmiot cap of 5.4 while this is held — a standing fact
    * about the card, the way carrying a Miecz's point is, not something read
@@ -166,17 +166,17 @@ export type Modifier =
    * możliwości", and the Tragarz — a Przyjaciel, not equipment — the same „4
    * Przedmioty" as the Muł. Only the Zaprzęg is actually unbounded: „możesz
    * przewozić dowolną liczbę Przedmiotów", which is why `items` carries the
-   * same `"bez-limitu"` case the printed `Ability` does rather than a very
+   * same `"unlimited"` case the printed `Ability` does rather than a very
    * large number — `carryBonus`, below, is where that turns into `Infinity`.
    *
    * The Ability's other two fields do not cross to here, and stay read only at
-   * the moment they apply: `samaSieNieLiczy` (the Magiczna Sakwa not counting
+   * the moment they apply: `doesNotCount` (the Magiczna Sakwa not counting
    * as one of the places it opens) is `fillsAPlace`'s business at the count
-   * itself, and `giniePrzyUtracie` (the Magiczna Sakwa and the Tragarz taking
+   * itself, and `lostWithIt` (the Magiczna Sakwa and the Tragarz taking
    * their load with them) is `overflow.ts`'s `lostContainerFor`'s at the loss.
    * Neither is a standing fact about the holder the way the cap itself is.
    */
-  | { kind: "udzwig"; items: number | "bez-limitu" }
+  | { kind: "capacity"; items: number | "unlimited" }
   /** A hard cap on how far the holder may move, whatever the die says. Mgła. */
   | { kind: "move-max"; fields: number }
   /**
@@ -206,7 +206,7 @@ export type Modifier =
    * The word is the rulebook's: 19.1 itself calls the Krąg's victim
    * „unieruchomiona w Kręgu Płomieni".
    */
-  | { kind: "unieruchomiony" }
+  | { kind: "immobilised" }
   /**
    * No Zaklęcia may be spoken while this holds — the Wojna Żywiołów.
    *
@@ -246,7 +246,7 @@ export type Modifier =
    * does for a Zaprzęg, and 9.4's guard stands aside because the rule it
    * enforces is the one being switched off.
    */
-  | { kind: "bez-limitu-zaklec" }
+  | { kind: "no-spell-limit" }
   /**
    * A crossing granted, to be taken instead of a move (Pan Trzęsawisk, Władca
    * Lodu).
@@ -261,7 +261,7 @@ export type Modifier =
    * Ends on the crossing itself, which `Ends` has named since it was written
    * and `settleCrossing` already sheds.
    */
-  | { kind: "przeprawa"; przez: "trzesawiska" | "lodowy-las" }
+  | { kind: "crossing"; over: "trzesawiska" | "lodowy-las" }
   /**
    * How many dice this holder throws at a named crossing, instead of the two
    * the board asks for.
@@ -271,7 +271,7 @@ export type Modifier =
    * One die against your Magia rather than two is the difference between a
    * hard crossing and a likely one, so it is asked rather than assumed.
    *
-   * Not `przeprawa` above, which is a crossing *granted* — taken from anywhere,
+   * Not `crossing` above, which is a crossing *granted* — taken from anywhere,
    * simply walked, and 11.3's dice belong to the Uroczysko's own card. This is
    * the dice themselves, at a crossing you were already entitled to make. Two
    * facts, two kinds, which is why folding this reader retires no second
@@ -281,7 +281,7 @@ export type Modifier =
    * `obstacle` is carried because the card names one: a Rusałka does nothing
    * for you at the Lodowy Las.
    */
-  | { kind: "przeprawa-kostki"; obstacle: "trzesawiska"; dice: number }
+  | { kind: "crossing-dice"; obstacle: "trzesawiska"; dice: number }
   /**
    * The turn comes back to this character instead of moving on.
    *
@@ -296,7 +296,7 @@ export type Modifier =
    * never comes cannot act, and being attacked is the one thing that happens on
    * somebody else's turn anyway.
    */
-  | { kind: "znowu" }
+  | { kind: "again" }
   /**
    * The next point of Życie that would be lost, is not (OCALONY).
    *
@@ -305,7 +305,7 @@ export type Modifier =
    * status nothing else lifts: it waits until a loss is about to happen and
    * takes it instead.
    */
-  | { kind: "ocalenie" }
+  | { kind: "rescue" }
   /**
    * A Zaklęcie spoken and not yet in effect, waiting to be answered.
    *
@@ -394,7 +394,7 @@ export type Modifier =
    * "lecz nie w walce magicznej": there is no sense in adding Magia to Magia,
    * and the card says so rather than leaving it to be worked out.
    */
-  | { kind: "magia-as-miecz" }
+  | { kind: "magic-as-sword" }
   /**
    * The movement roll is doubled (Formuła Przestrzeni).
    *
@@ -460,7 +460,7 @@ export type Modifier =
    * `cardStatuses` reads one list and a second `Modifier` type for the board
    * half would be the "ability"/"modifier" split this file already retired.
    */
-  | { kind: "magia-x2" };
+  | { kind: "magic-x2" };
 
 export interface Status {
   /** Unique per holder, so two of the same card can be told apart. */
@@ -554,12 +554,12 @@ export function untouchable(statuses: readonly Status[]): string | null {
  * Władca Gromu).
  *
  * Asked of `cardStatuses`' output rather than a seat's, because a Wróg carries
- * `unieruchomiony` rather than `frozen` — see that kind's own note for why the
+ * `immobilised` rather than `frozen` — see that kind's own note for why the
  * two are not one. A Wróg out of reach this way is also `mayWalkPast`'s
  * business (kolejka.ts): it does nothing, so a turn owes it no frame.
  */
 export function cardUntouchable(statuses: readonly Status[]): string | null {
-  const held = statuses.find((status) => status.modifier.kind === "unieruchomiony");
+  const held = statuses.find((status) => status.modifier.kind === "immobilised");
   return held ? held.label : null;
 }
 
@@ -573,11 +573,11 @@ export function cardUntouchable(statuses: readonly Status[]): string | null {
  */
 export function grantedCrossing(
   statuses: readonly Status[],
-): { przez: "trzesawiska" | "lodowy-las"; label: string } | null {
-  const held = statuses.find((status) => status.modifier.kind === "przeprawa");
+): { over: "trzesawiska" | "lodowy-las"; label: string } | null {
+  const held = statuses.find((status) => status.modifier.kind === "crossing");
   if (!held) return null;
-  const modifier = held.modifier as { kind: "przeprawa"; przez: "trzesawiska" | "lodowy-las" };
-  return { przez: modifier.przez, label: held.label };
+  const modifier = held.modifier as { kind: "crossing"; over: "trzesawiska" | "lodowy-las" };
+  return { over: modifier.over, label: held.label };
 }
 
 /** Whether anything is stopping the holder speaking a Zaklęcie (9.6). */
@@ -665,7 +665,7 @@ export function lastAggression(
 
 /** Whether a status folds Magia into Miecz for a fight (Magia i Miecz). */
 export function magiaCountsAsMiecz(statuses: readonly Status[]): boolean {
-  return statuses.some((status) => status.modifier.kind === "magia-as-miecz");
+  return statuses.some((status) => status.modifier.kind === "magic-as-sword");
 }
 
 /**
@@ -681,7 +681,7 @@ export function magiaCountsAsMiecz(statuses: readonly Status[]): boolean {
 export function shieldUpTo(statuses: readonly Status[]): number {
   let widest = 0;
   for (const status of statuses) {
-    if (status.modifier.kind === "oslona" && status.modifier.upTo > widest) {
+    if (status.modifier.kind === "shield" && status.modifier.upTo > widest) {
       widest = status.modifier.upTo;
     }
   }
@@ -691,8 +691,8 @@ export function shieldUpTo(statuses: readonly Status[]): number {
 /**
  * How much these standing facts raise the four-Przedmiot cap of 5.4 —
  * summed, not the widest: a Koń and a Muł worn together really do carry
- * twelve, unlike `oslona`'s roll against one Życie, which is why
- * `STACKING`'s `udzwig` entry (statusRows.ts) is `"sums"` and not
+ * twelve, unlike `shield`'s roll against one Życie, which is why
+ * `STACKING`'s `capacity` entry (statusRows.ts) is `"sums"` and not
  * `"exclusive"`. `Infinity` once any one of them is the Zaprzęg, since
  * "dowolną liczbę" plus any other number is still "dowolną liczbę".
  *
@@ -703,8 +703,8 @@ export function shieldUpTo(statuses: readonly Status[]): number {
 export function carryBonus(statuses: readonly Status[]): number {
   let bonus = 0;
   for (const status of statuses) {
-    if (status.modifier.kind !== "udzwig") continue;
-    if (status.modifier.items === "bez-limitu") return Infinity;
+    if (status.modifier.kind !== "capacity") continue;
+    if (status.modifier.items === "unlimited") return Infinity;
     bonus += status.modifier.items;
   }
   return bonus;
@@ -730,9 +730,9 @@ export function crossingDiceFrom(
 ): number {
   const offered = statuses
     .filter(
-      (status) => status.modifier.kind === "przeprawa-kostki" && status.modifier.obstacle === obstacle,
+      (status) => status.modifier.kind === "crossing-dice" && status.modifier.obstacle === obstacle,
     )
-    .map((status) => (status.modifier as Extract<Modifier, { kind: "przeprawa-kostki" }>).dice);
+    .map((status) => (status.modifier as Extract<Modifier, { kind: "crossing-dice" }>).dice);
   return offered.length > 0 ? Math.min(...offered) : fallback;
 }
 
@@ -744,7 +744,7 @@ export function crossingDiceFrom(
  * Obszar, a fall off the Most.
  */
 export function savedFromLoss(statuses: readonly Status[]): { id: string; label: string } | null {
-  const held = statuses.find((status) => status.modifier.kind === "ocalenie");
+  const held = statuses.find((status) => status.modifier.kind === "rescue");
   return held ? { id: held.id, label: held.label } : null;
 }
 
@@ -788,7 +788,7 @@ export function spokenSpell(
  * two more, so the Zaklęcie is written as two.
  */
 export function playsAgain(statuses: readonly Status[]): boolean {
-  return statuses.some((status) => status.modifier.kind === "znowu");
+  return statuses.some((status) => status.modifier.kind === "again");
 }
 
 /** How much the movement roll is multiplied by (Formuła Przestrzeni). */
@@ -801,7 +801,7 @@ export function moveMultiplier(statuses: readonly Status[]): number {
  * Karta's own `cardStatuses` the way `moveMultiplier` is asked of a seat's.
  */
 export function magiaDoubled(statuses: readonly Status[]): number {
-  return statuses.some((status) => status.modifier.kind === "magia-x2") ? 2 : 1;
+  return statuses.some((status) => status.modifier.kind === "magic-x2") ? 2 : 1;
 }
 
 /** Whether something is barring this character from gaining Przyjaciele (Zły Duch). */
@@ -1009,68 +1009,68 @@ export type HeldCard = Pick<Holding, "cardId" | "kind" | "slot"> & { id: string 
  * nobody asked for — moving one of these is step 2 or step 3's decision, one
  * reader at a time, not this file's.
  *
- * `punkty` is `null` here too, and for a different reason than the rest: it is
+ * `points` is `null` here too, and for a different reason than the rest: it is
  * real, and it is `heldStatuses`'s own doing rather than a per-ability twin.
  * Reading the *ability* would miss the Relikwiarz, whose points are a printed
- * corner number and never became a `punkty` Ability at all — `bonusFromHoldings`
+ * corner number and never became a `points` Ability at all — `bonusFromHoldings`
  * has always read both through one map (`lentBy`, `holdings.ts`), and a twin
  * keyed off `Ability["kind"]` has no branch for a card with no ability.
  * `heldStatuses` asks `lentBy` once per holding instead, alongside this loop.
  */
 const HELD_TWIN: Record<Ability["kind"], ((ability: Ability) => Modifier | null) | null> = {
-  punkty: null, // read from `lentBy`, per holding — see the note above
+  points: null, // read from `lentBy`, per holding — see the note above
   // Only the "may not cast" half. `no-spells` itself carries nothing about
   // which Zaklęcia the holder resists or denies an opponent — it never has,
   // see that modifier's own note — so the twin loses nothing this ability was
   // actually enforcing here; the immunity half stays on the Karta's own text,
   // same as before.
-  "bez-zaklec": (ability) => (ability.kind === "bez-zaklec" ? { kind: "no-spells" } : null),
+  "no-spells": (ability) => (ability.kind === "no-spells" ? { kind: "no-spells" } : null),
 
-  "zabiera-zycie": null, // a one-off gain when a fight is won (Excalibur), not a standing fact
+  "takes-life": null, // a one-off gain when a fight is won (Excalibur), not a standing fact
   // Hełm, Tarcza and Zbroja are the only cards that print this ability, and
   // wearing one is a standing fact the way carrying a Miecz is — the roll it
   // grants is read only when a fight is lost (`shieldSaves`), but whether the
   // right to roll is held at all does not wait for that moment.
-  oslona: (ability) => (ability.kind === "oslona" ? { kind: "oslona", upTo: ability.upTo } : null),
-  bezpieczny: null, // read only when the named field is stepped on
-  ucieczka: null, // read only when a flight is attempted
+  shield: (ability) => (ability.kind === "shield" ? { kind: "shield", upTo: ability.upTo } : null),
+  safe: null, // read only when the named field is stepped on
+  escape: null, // read only when a flight is attempted
   // Koń, Muł, Zaprzęg, Magiczna Sakwa and Tragarz are the only cards that
   // print this ability, and holding one is a standing fact about the cap it
   // raises the way carrying a Miecz is about the points it lends —
-  // `samaSieNieLiczy` and `giniePrzyUtracie` do not cross with it, and the
+  // `doesNotCount` and `lostWithIt` do not cross with it, and the
   // Modifier's own note says why.
-  udzwig: (ability) => (ability.kind === "udzwig" ? { kind: "udzwig", items: ability.items } : null),
-  "ruch-bonus": null, // read only at the movement roll
-  "magia-do-miecza": null, // its own reading, `addsMagiaToMiecz`
-  "ginie-zamiast-ciebie": null, // read only when a life would be lost
-  wymagany: null, // a key, not a fact about the holder
-  "bez-oplaty": null, // read only at the toll it waives
-  zakazane: null, // a restriction on what the CHARACTER may hold, not the card's own fact
-  "modyfikator-rzutu": null, // read only at the roll it shifts
-  "zaklecia-ponad-limit": null, // folded into `spellAllowance` already
-  "podglad-zaklec": null, // read only when a Zaklęcie is drawn
-  "odporny-na-zaklecie": null, // read only when a named Zaklęcie lands on the holder
-  "punkty-na-polach": null, // read only on the named Obszar
+  capacity: (ability) => (ability.kind === "capacity" ? { kind: "capacity", items: ability.items } : null),
+  "move-bonus": null, // read only at the movement roll
+  "magic-to-sword": null, // its own reading, `addsMagiaToMiecz`
+  "dies-for-you": null, // read only when a life would be lost
+  required: null, // a key, not a fact about the holder
+  "no-toll": null, // read only at the toll it waives
+  forbidden: null, // a restriction on what the CHARACTER may hold, not the card's own fact
+  "roll-modifier": null, // read only at the roll it shifts
+  "spells-over-limit": null, // folded into `spellAllowance` already
+  "spell-peek": null, // read only when a Zaklęcie is drawn
+  "immune-to-spell": null, // read only when a named Zaklęcie lands on the holder
+  "points-on-fields": null, // read only on the named Obszar
   // Rusałka is a Przyjaciel, so a held one produces this like any other card.
-  "przeprawa-kostki": (ability) =>
-    ability.kind === "przeprawa-kostki"
-      ? { kind: "przeprawa-kostki", obstacle: ability.obstacle, dice: ability.dice }
+  "crossing-dice": (ability) =>
+    ability.kind === "crossing-dice"
+      ? { kind: "crossing-dice", obstacle: ability.obstacle, dice: ability.dice }
       : null,
-  skup: null, // a desk's price, not a fact about the holder
-  "sprzedaj-w": null, // a card's own buyer, not a fact about the holder
-  "placi-za-przegrana": null, // read only when a duel is lost
-  "przeprawa-wszedzie": null, // consumed the moment it is used
-  uzdrowienie: null, // a visit's offer, not a fact about the holder
-  "oddaj-w": null, // a one-off offer, not a fact about the holder
-  "cena-przyjecia": null, // settled once, at the taking
-  "walczy-za-ciebie": null, // read only inside a fight (`fightsForYou`)
-  niedostepny: null, // where the card may be picked up, not a fact about holding it
-  "natura-dowolna": null, // a permission on the character, not a Modifier
-  "tylko-natura": null, // already folded into `forbiddenNatures`/`inEffect` (5.3)
-  "pokonuje-bez-walki": null, // read only when the fight would happen
-  przeciw: null, // read only inside a fight, against a named foe
-  "za-oplata": null, // false until paid and false again next turn — its own row when it lands, not a standing twin
-  "nosi-zaklecie": null, // the Zaklęcie itself is a `carried` holding, not a Modifier on this one
+  buys: null, // a desk's price, not a fact about the holder
+  "sells-at": null, // a card's own buyer, not a fact about the holder
+  "pays-for-loss": null, // read only when a duel is lost
+  "crosses-anywhere": null, // consumed the moment it is used
+  healing: null, // a visit's offer, not a fact about the holder
+  "returned-at": null, // a one-off offer, not a fact about the holder
+  "hiring-price": null, // settled once, at the taking
+  "fights-for-you": null, // read only inside a fight (`fightsForYou`)
+  unavailable: null, // where the card may be picked up, not a fact about holding it
+  "any-nature": null, // a permission on the character, not a Modifier
+  "nature-only": null, // already folded into `forbiddenNatures`/`inEffect` (5.3)
+  "beats-without-fight": null, // read only when the fight would happen
+  against: null, // read only inside a fight, against a named foe
+  "for-a-fee": null, // false until paid and false again next turn — its own row when it lands, not a standing twin
+  "carries-spell": null, // the Zaklęcie itself is a `carried` holding, not a Modifier on this one
 };
 
 /**

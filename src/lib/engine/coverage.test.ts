@@ -46,7 +46,7 @@ const encodedSomewhere = (card: string) =>
 describe("what the app claims about itself", () => {
   it("only annotates cards that exist", () => {
     for (const card of KNOWN) {
-      expect(["pelne", "czesciowe", "brak"]).toContain(coverageOf(card));
+      expect(["full", "partial", "none"]).toContain(coverageOf(card));
     }
   });
 
@@ -54,7 +54,7 @@ describe("what the app claims about itself", () => {
     // A note says "the app does this much, and you do the rest". On a card the
     // app does nothing for, that is a lie in the more dangerous direction.
     for (const card of KNOWN) {
-      if (coverageOf(card) === "brak") {
+      if (coverageOf(card) === "none") {
         expect(manualNote(card), card).toBeNull();
       }
     }
@@ -62,7 +62,7 @@ describe("what the app claims about itself", () => {
 
   it("gives every partially-handled card something to act on", () => {
     for (const card of KNOWN) {
-      if (coverageOf(card) !== "czesciowe") continue;
+      if (coverageOf(card) !== "partial") continue;
       expect(manualNote(card)?.length ?? 0, card).toBeGreaterThan(0);
     }
   });
@@ -70,8 +70,8 @@ describe("what the app claims about itself", () => {
   it("calls a card fully handled only when nothing was left to the players", () => {
     for (const card of KNOWN) {
       const encoded = encodedSomewhere(card);
-      expect(coverageOf(card) === "brak", card).toBe(!encoded);
-      if (coverageOf(card) === "pelne") {
+      expect(coverageOf(card) === "none", card).toBe(!encoded);
+      if (coverageOf(card) === "full") {
         expect(encoded, card).toBe(true);
         expect(manualNote(card), card).toBeNull();
       }
@@ -92,46 +92,46 @@ describe("what the app claims about itself", () => {
      * Przedmiot" wants a container link nothing in the model has, so she is
      * genuinely the app's to disclaim.
      */
-    expect(coverageOf("wampir")).toBe("pelne");
+    expect(coverageOf("wampir")).toBe("full");
     /* And the TAJEMNA SAKWA, who was the same fault a fourth time: „W Sakwie
        możesz umieścić 1 Przedmiot" is a `storage` slot, built for months, and
        docs/TASKS.md named her as the one card still to do. */
-    expect(coverageOf("tajemna-sakwa")).toBe("pelne");
+    expect(coverageOf("tajemna-sakwa")).toBe("full");
     /* What is genuinely disclaimed today is the TURNIEJ RYCERSKI, and it is
        parked with duels rather than missing — a parked Karta never reaches a
        table, so its coverage is never read to anybody. */
-    expect(coverageOf("turniej-rycerski")).toBe("brak");
-    expect(coverageOf("jednorozec")).toBe("pelne");
+    expect(coverageOf("turniej-rycerski")).toBe("none");
+    expect(coverageOf("jednorozec")).toBe("full");
     // Excalibur was the example here until its Życie-stealing clause was
     // encoded, and the Czarodziejska Kość until its point in the two Pułapki
     // was. The Łódź is the current one: the turn's delay and the discard are
     // carried, and where the crossing puts you down is still the table's,
     // because cross-ring adjacency is nowhere in this repo.
-    expect(coverageOf("lodz")).toBe("czesciowe");
+    expect(coverageOf("lodz")).toBe("partial");
   });
 
   it("does not disclaim a card it carries in one of the other two registries", () => {
     // The bug this pins down: `coverageOf` asked SCRIPTS and ABILITIES only, so
     // a Przedmiot whose whole rule is one act — Eliksir Siły, spent and
-    // discarded — and every Zaklęcie encoded in SPELLS came back "brak", and
+    // discarded — and every Zaklęcie encoded in SPELLS came back "none", and
     // the card printed "rozpatrzcie sami" under a card the app resolves.
-    expect(coverageOf("eliksir-sily")).not.toBe("brak");
-    expect(coverageOf("krysztal-losu")).not.toBe("brak");
-    expect(coverageOf("krag-plomieni")).not.toBe("brak");
+    expect(coverageOf("eliksir-sily")).not.toBe("none");
+    expect(coverageOf("krysztal-losu")).not.toBe("none");
+    expect(coverageOf("krag-plomieni")).not.toBe("none");
 
     // And the general form, so a fifth registry cannot reopen it quietly.
     for (const card of [...Object.keys(USES), ...Object.keys(SPELLS)].filter(isCardId)) {
-      expect(coverageOf(card), card).not.toBe("brak");
+      expect(coverageOf(card), card).not.toBe("none");
     }
   });
 });
 
 /**
- * `pelne` has to mean „można w to zagrać", not „zapisana gdzieś, o czym wiem".
+ * `full` has to mean „można w to zagrać", not „zapisana gdzieś, o czym wiem".
  *
  * The check above asks where a Karta is *encoded*, and that is the question
  * `coverageOf` itself asks — so it can only ever agree with it. It agreed about
- * the MĘDRZEC, who was `pelne` and could not be resolved on either surface for
+ * the MĘDRZEC, who was `full` and could not be resolved on either surface for
  * as long as `zgadnij` sat in the leaf table as `unimplemented`; and about the
  * MAGICZNA TABLICA, the same shape one card along. Neither was a lie the
  * registries could have caught.
@@ -141,7 +141,7 @@ describe("what the app claims about itself", () => {
  * whatever shelf it is on. Both halves are the engine's own answers, so this
  * does not mirror `coverageOf` and can disagree with it.
  */
-describe("what `pelne` promises a player", () => {
+describe("what `full` promises a player", () => {
   /** What a surface would be able to ask about this node, if anything. */
   const asked = (effect: Effect) =>
     questionOn(
@@ -173,7 +173,7 @@ describe("what `pelne` promises a player", () => {
   it("never leaves a fully-handled Karta on a node nobody can run or ask", () => {
     const stalls: string[] = [];
     for (const [cardId, script] of Object.entries(SCRIPTS)) {
-      if (coverageOf(cardId as CardId) !== "pelne") continue;
+      if (coverageOf(cardId as CardId) !== "full") continue;
       const nodes = [
         ...everyNode(script.effect),
         ...(script.onDraw ? everyNode(script.onDraw) : []),

@@ -29,11 +29,11 @@ describe("what a weapon lends, and when", () => {
   it("flags exactly the cards whose own text says w walce", () => {
     const wrong: string[] = [];
     for (const [id, abilities] of Object.entries(ABILITIES)) {
-      const points = abilities.find((one) => one.kind === "punkty");
-      if (!points || points.kind !== "punkty") continue;
+      const points = abilities.find((one) => one.kind === "points");
+      if (!points || points.kind !== "points") continue;
       const says = /w walce|podczas .*walki|użyt[ay] w walce/i.test(text(id));
-      if (says !== (points.tylkoWalka === true)) {
-        wrong.push(`${id}: text ${says ? "says" : "is silent"}, flag ${points.tylkoWalka === true}`);
+      if (says !== (points.fightOnly === true)) {
+        wrong.push(`${id}: text ${says ? "says" : "is silent"}, flag ${points.fightOnly === true}`);
       }
     }
     expect(wrong).toEqual([]);

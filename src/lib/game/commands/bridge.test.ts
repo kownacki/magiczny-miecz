@@ -143,7 +143,7 @@ describe("przeprawa między Kręgami (11.4, 11.8)", () => {
             field_card_id: null,
             source: "PAN TRZĘSAWISK",
             label: przez === "trzesawiska" ? "Pan Trzęsawisk" : "Władca Lodu",
-            modifier: { kind: "przeprawa", przez },
+            modifier: { kind: "crossing", over: przez },
             ends: { kind: "event", what: "crossing" },
           },
         ],
@@ -634,18 +634,18 @@ describe("Gra ze Śmiercią", () => {
   /** Two for the character, then two for Death — in that order. */
   it("walks on when the character's two beat Death's", async () => {
     const { writes, result } = await resolveBridgeOrdeal(playing(), undefined, dice(6, 6, 1, 1));
-    expect(result).toMatchObject({ outcome: "dalej", dice: [6, 6, 1, 1], lifeLost: 0 });
+    expect(result).toMatchObject({ outcome: "onward", dice: [6, 6, 1, 1], lifeLost: 0 });
     expect(writes.seats).toBeUndefined();
     expect(writes.journal?.[0]).toMatchObject({
       kind: "bridge-death-game",
-      payload: { mine: [6, 6], deaths: [1, 1], outcome: "dalej" },
+      payload: { mine: [6, 6], deaths: [1, 1], outcome: "onward" },
     });
   });
 
   /** A draw is not a loss — the same distinction 17.10 makes about combat. */
   it("costs nothing on a draw", async () => {
     const { writes, result } = await resolveBridgeOrdeal(playing(), undefined, dice(3, 4, 4, 3));
-    expect(result.outcome).toBe("znowu");
+    expect(result.outcome).toBe("again");
     expect(writes.seats).toBeUndefined();
   });
 
@@ -655,7 +655,7 @@ describe("Gra ze Śmiercią", () => {
       undefined,
       dice(1, 1, 6, 6),
     );
-    expect(result).toMatchObject({ outcome: "strata", lifeLost: 1 });
+    expect(result).toMatchObject({ outcome: "loss", lifeLost: 1 });
     expect(writes.seats).toEqual([{ id: "seat-a", patch: { life: 3 } }]);
   });
 

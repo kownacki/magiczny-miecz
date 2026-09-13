@@ -232,9 +232,9 @@ export function useAsks({ game, seats, fieldCards, mySeatIndex, post, leave, ask
     // sentence standing between a player and a hand they cannot get back.
     const applied = spellScript(cardId)?.applies;
     const what =
-      applied === "gasi-zaklecia"
+      applied === "dispels-spells"
         ? "Ofiara traci wszystkie Zaklęcia — ich Karty idą na stos zużytych (9.6). Zrobi to aplikacja."
-        : applied === "zdejmuje-karte"
+        : applied === "removes-card"
           ? "Karta znika z planszy i trafia na stos zużytych. Zrobi to aplikacja."
           : "Skutek rozpatrzcie sami.";
     setAsk({

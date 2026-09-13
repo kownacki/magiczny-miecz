@@ -9,7 +9,7 @@ import { describe, expect, it } from "vitest";
  * ban on an opponent's Odrodzenie, the WIERZCHOWIEC's and ZAPRZĘG's „dodać do
  * wyniku rzutu", and the PUSTELNIK's „nie możesz używać Miecza, Sztyletu,
  * Hełmu ani Zbroi". Each was transcribed, typed, covered by a passing suite,
- * and reported `pelne` by `coverage.ts` — because a card with an `ABILITIES`
+ * and reported `full` by `coverage.ts` — because a card with an `ABILITIES`
  * entry counts as carried whether or not anything asks. Nothing failed. The
  * only signal was a reader nobody called.
  *

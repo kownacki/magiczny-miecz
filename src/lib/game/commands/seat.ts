@@ -164,7 +164,7 @@ function natureOf(row: SeatRow): Nature | null {
  * What the character is worth once a fight has actually started (1.5).
  *
  * Two cards rewrite the sum rather than adding to it, so neither can be a
- * `punkty` bonus and both have to land after the ordinary reckoning:
+ * `points` bonus and both have to land after the ordinary reckoning:
  *
  * - the Rycerz "będzie walczył zamiast ciebie w każdej walce (również
  *   magicznej)" and "nie może używać twoich Zaklęć ani Przedmiotów", so his own
@@ -184,7 +184,7 @@ function inFight(
   statuses: readonly Status[],
 ): { miecz: number; magia: number } {
   const champion = fightsForYou(abilities);
-  if (champion) return champion;
+  if (champion) return { miecz: champion.sword, magia: champion.magic };
   // A held card and a spoken Zaklęcie do the same thing here — the Bojowy Rumak
   // and Magia i Miecz — and a character with both folds its Magia in once.
   return addsMagiaToMiecz(abilities) || magiaCountsAsMiecz(statuses)
@@ -304,7 +304,7 @@ export function seatView(snapshot: Snapshot, seatId: string): SeatView {
     // something is over the cap, and „over infinity" is false everywhere at
     // once — `overflowIn`, `dropCard`'s 9.4 guard, the fold's tally. See the
     // modifier's own note; it is the console's switch and no card's.
-    spellCapacity: statuses.some((one) => one.modifier.kind === "bez-limitu-zaklec")
+    spellCapacity: statuses.some((one) => one.modifier.kind === "no-spell-limit")
       ? Infinity
       : spellAllowance(
           row.magic_own + heldMagia,

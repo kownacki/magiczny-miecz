@@ -71,15 +71,15 @@ export function healFromFriend(
   const here = heldAbilities(
     inEffect(view.holdings, eqModeOf(snapshot.game), view.nature).map((held) => held.cardId),
   ).find(
-    (ability) => ability.kind === "uzdrowienie" && ability.field === (seat.field_id as FieldId),
+    (ability) => ability.kind === "healing" && ability.field === (seat.field_id as FieldId),
   );
-  if (!here || here.kind !== "uzdrowienie") {
+  if (!here || here.kind !== "healing") {
     throw new Error("Żaden twój Przyjaciel nie leczy na tym Obszarze.");
   }
 
   const from = view.holdings.find((held) =>
     heldAbilities([held.cardId]).some(
-      (ability) => ability.kind === "uzdrowienie" && ability.field === seat.field_id,
+      (ability) => ability.kind === "healing" && ability.field === seat.field_id,
     ),
   );
   const name = from ? cardName(from.cardId) : "Przyjaciel";
@@ -121,7 +121,7 @@ export function healFromFriend(
         effect: {
           // The card, so the once-a-turn check above recognises it — the same
           // trick `payFriend` uses, and for the same reason.
-          source: from?.cardId ?? "uzdrowienie",
+          source: from?.cardId ?? "healing",
           label: `pomoc: ${name}`,
           // Nothing to add — the Życie is already written to the seat. This
           // effect is only a mark saying the visit has been used, which is
@@ -160,8 +160,8 @@ export function partWithFriend(
   );
   if (!held) throw new Error("Nie masz tej karty.");
 
-  const offer = heldAbilities([held.card_id]).find((ability) => ability.kind === "oddaj-w");
-  if (!offer || offer.kind !== "oddaj-w") {
+  const offer = heldAbilities([held.card_id]).find((ability) => ability.kind === "returned-at");
+  if (!offer || offer.kind !== "returned-at") {
     throw new Error(`${cardName(held.card_id)} nie jest kartą, którą się gdziekolwiek oddaje.`);
   }
   if (offer.field !== seat.field_id) {
@@ -177,17 +177,17 @@ export function partWithFriend(
 
   return {
     writes: mergeAll(gone, returned, {
-      seats: [{ id: seat.id, patch: { gold: seat.gold + offer.cena } }],
+      seats: [{ id: seat.id, patch: { gold: seat.gold + offer.price } }],
       journal: [
         {
           seatId: seat.id,
           round: snapshot.game.round,
           kind: "sold",
-          payload: { cardId: held.card_id, price: offer.cena },
+          payload: { cardId: held.card_id, price: offer.price },
         },
       ],
     }),
-    result: offer.cena,
+    result: offer.price,
   };
 }
 
@@ -200,16 +200,16 @@ export function payFriend(snapshot: Snapshot, command: { seatId?: string }): Out
   if (!terms) throw new Error("Nie masz Przyjaciela, któremu można zapłacić.");
 
   const name = cardName(terms.cardId);
-  if (terms.razNaTure && view.statuses.some((status) => status.source === terms.cardId)) {
+  if (terms.onceATurn && view.statuses.some((status) => status.source === terms.cardId)) {
     throw new Error(`${name} dostał już zapłatę w tej turze.`);
   }
-  if (seat.gold < terms.cena) {
-    throw new Error(`Za mało złota: ${name} bierze ${terms.cena} Sz. Z.`);
+  if (seat.gold < terms.price) {
+    throw new Error(`Za mało złota: ${name} bierze ${terms.price} Sz. Z.`);
   }
 
   const gained = [
-    terms.miecz ? `+${terms.miecz} Miecza` : null,
-    terms.magia ? `+${terms.magia} Magii` : null,
+    terms.sword ? `+${terms.sword} Miecza` : null,
+    terms.magic ? `+${terms.magic} Magii` : null,
   ]
     .filter(Boolean)
     .join(" i ");
@@ -217,13 +217,13 @@ export function payFriend(snapshot: Snapshot, command: { seatId?: string }): Out
   return {
     writes: merge(
       {
-        seats: [{ id: seat.id, patch: { gold: seat.gold - terms.cena } }],
+        seats: [{ id: seat.id, patch: { gold: seat.gold - terms.price } }],
         journal: [
           {
             seatId: seat.id,
             round: snapshot.game.round,
             kind: "paid-friend",
-            payload: { cardId: terms.cardId, price: terms.cena },
+            payload: { cardId: terms.cardId, price: terms.price },
           },
         ],
       },
@@ -234,7 +234,7 @@ export function payFriend(snapshot: Snapshot, command: { seatId?: string }): Out
           // and the hover can draw the Najemnik beside his own effect.
           source: terms.cardId,
           label: gained,
-          modifier: { kind: "points", miecz: terms.miecz, magia: terms.magia },
+          modifier: { kind: "points", miecz: terms.sword, magia: terms.magic },
           ends: { kind: "turns", turns: 1 },
         },
       }),
@@ -276,8 +276,8 @@ export async function speakCarriedSpell(
   if (!friend || !terms) throw new Error("Żaden twój Przyjaciel nie nosi Zaklęcia.");
 
   const name = cardName(carried.carried_by);
-  if (seat.gold < terms.cena) {
-    throw new Error(`Za mało złota: ${name} chce ${terms.cena} Sz. Z.`);
+  if (seat.gold < terms.price) {
+    throw new Error(`Za mało złota: ${name} chce ${terms.price} Sz. Z.`);
   }
 
   const spoken = await castSpell(
@@ -291,8 +291,8 @@ export async function speakCarriedSpell(
   // is the same thing as far as a purse is concerned, and his Karta joins the
   // used Karty Zdarzeń like any other friend who is gone (6.4).
   const paid =
-    terms.cena > 0 ? { seats: [{ id: seat.id, patch: { gold: seat.gold - terms.cena } }] } : {};
-  if (!terms.znika) return { writes: merge(spoken.writes, paid), result: spoken.result };
+    terms.price > 0 ? { seats: [{ id: seat.id, patch: { gold: seat.gold - terms.price } }] } : {};
+  if (!terms.vanishes) return { writes: merge(spoken.writes, paid), result: spoken.result };
 
   const soFar = mergeAll(spoken.writes, paid, { holdings: { delete: [friend.id] } });
   const back = putOnPile(apply(snapshot, soFar), "events", [asReturnable(friend)]);

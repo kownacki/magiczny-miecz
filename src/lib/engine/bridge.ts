@@ -97,7 +97,7 @@ export function keptAfterFall<T>(
   return { kept, lost };
 }
 
-export type DeathGameOutcome = "dalej" | "znowu" | "strata";
+export type DeathGameOutcome = "onward" | "again" | "loss";
 
 /**
  * GRA ZE ŚMIERCIĄ: two dice each, against Death's two.
@@ -114,9 +114,9 @@ export function deathGameOutcome(
   const sum = (dice: readonly number[]) => dice.reduce((total, die) => total + die, 0);
   const me = sum(mine);
   const death = sum(deaths);
-  if (me > death) return "dalej";
-  if (me === death) return "znowu";
-  return "strata";
+  if (me > death) return "onward";
+  if (me === death) return "again";
+  return "loss";
 }
 
 /**

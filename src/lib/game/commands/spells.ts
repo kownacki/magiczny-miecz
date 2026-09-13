@@ -64,7 +64,7 @@ export interface CastSpell {
      */
     foeInFight?: true;
   };
-  /** Answers a spell's own effect asks for, where it has one (`SpellScript.stosuje`). */
+  /** Answers a spell's own effect asks for, where it has one (`SpellScript.script`). */
   decided?: Decisions;
   /** How a pile is shuffled, for the spells that draw. */
   shuffle?: Shuffle;
@@ -110,7 +110,7 @@ function applySpell(
   applies: NonNullable<SpellScript["applies"]>,
   target: { seatIndex?: number; fieldCardId?: string },
 ): { writes: Changeset; took: string[] } {
-  if (applies === "gasi-zaklecia") {
+  if (applies === "dispels-spells") {
     if (target.seatIndex === undefined) throw new Error("Wskaż Postać (9.6).");
     const victim = snapshot.seats.find((s) => s.seat_index === target.seatIndex);
     if (!victim) throw new Error("Nie ma takiej Postaci.");
@@ -336,11 +336,11 @@ async function answerSpell(
  */
 function applyCardEfekt(
   snapshot: Snapshot,
-  input: { fieldCardId: string; source: string; efekt: Extract<Effect, { op: "status" }> },
+  input: { fieldCardId: string; source: string; effect: Extract<Effect, { op: "status" }> },
 ): { writes: Changeset; did: string[] } | null {
   const lying = snapshot.fieldCards.find((row) => row.id === input.fieldCardId);
   if (!lying) return null;
-  // Already under it. `unieruchomiony` is `exclusive` (`statusRows.ts`), so a
+  // Already under it. `immobilised` is `exclusive` (`statusRows.ts`), so a
   // second Krąg would do nothing but leave the Karta with two rows for one
   // fact — this is where that gets stopped rather than left to the table to
   // notice.
@@ -348,29 +348,29 @@ function applyCardEfekt(
     return { writes: {}, did: [`${cardName(lying.card_id)}: już unieruchomiony.`] };
   }
   /**
-   * `frozen` translated to `unieruchomiony`, the way a card's own `stosuje`
+   * `frozen` translated to `immobilised`, the way a card's own `script`
    * cannot say it.
    *
    * Krąg Płomieni's script writes one `modifier` for a Postać and a Wróg
    * alike — "Ofiara nie może nic robić poza rzuceniem Władcy Zaklęć" reads the
    * same on both — but `frozen` and its `oprocz` are the turn engine's own way
    * of exempting a *seat's* next act, and a Wróg has no act to exempt one from.
-   * `status.ts`'s note on `unieruchomiony` is the one place that argument is
+   * `status.ts`'s note on `immobilised` is the one place that argument is
    * made at length; this is where it is acted on.
    */
   const modifier =
-    input.efekt.modifier.kind === "frozen" ? ({ kind: "unieruchomiony" } as const) : input.efekt.modifier;
+    input.effect.modifier.kind === "frozen" ? ({ kind: "immobilised" } as const) : input.effect.modifier;
   return {
     writes: addCardEffect(snapshot, {
       fieldCardId: input.fieldCardId,
       effect: {
         source: input.source,
-        label: input.efekt.label,
+        label: input.effect.label,
         modifier,
-        ends: input.efekt.ends,
+        ends: input.effect.ends,
       },
     }),
-    did: [`${cardName(lying.card_id)}: ${input.efekt.label}`],
+    did: [`${cardName(lying.card_id)}: ${input.effect.label}`],
   };
 }
 
@@ -380,7 +380,7 @@ function applyCardEfekt(
  * there — `wszyscy-tutaj` is a seat target — so this is bespoke to the one
  * card in the box aimed at a whole Obszar rather than at one thing on it.
  *
- * Marked `unieruchomiony` and not `frozen`: a Wróg here has no turn of its own
+ * Marked `immobilised` and not `frozen`: a Wróg here has no turn of its own
  * to lose, which is exactly why the two are different kinds (`status.ts`).
  * Ends on the round clock — the only one a Karta has — one round out, which is
  * the same scale as what the card gives the Postacie standing there (their own
@@ -405,7 +405,7 @@ function paralyseFoesOn(
         effect: {
           source: "wladca-gromu",
           label: "Władca Gromu",
-          modifier: { kind: "unieruchomiony" },
+          modifier: { kind: "immobilised" },
           ends: { kind: "round", round: input.round + 1 },
         },
       }),
@@ -478,9 +478,9 @@ async function landSpell(
    */
   const aimedAtCard =
     target.fieldCardId !== undefined &&
-    script.stosuje !== undefined &&
-    script.stosuje.op !== "summon" &&
-    script.stosuje.op !== "move-card";
+    script.script !== undefined &&
+    script.script.op !== "summon" &&
+    script.script.op !== "move-card";
 
   /**
    * A victim the Zaklęcie does nothing to (the two Talizmany).
@@ -507,7 +507,7 @@ async function landSpell(
   }
 
   const worked =
-    !aimedAtCard && script.stosuje
+    !aimedAtCard && script.script
       ? await applyEffect(
           apply(snapshot, applied?.writes ?? {}),
           {
@@ -515,7 +515,7 @@ async function landSpell(
             toSeatId: input.toSeatId ?? caster.id,
             ...(target.fieldCardId !== undefined ? { fieldCardId: target.fieldCardId } : {}),
             ...(target.fieldId !== undefined ? { fieldId: target.fieldId } : {}),
-            effect: script.stosuje,
+            effect: script.script,
             reason: spell?.name ?? input.cardId,
             decided: input.decided,
             shuffle: input.shuffle ?? ((items) => [...items]),
@@ -532,12 +532,12 @@ async function landSpell(
   const cardEfekt =
     aimedAtCard &&
     target.fieldCardId !== undefined &&
-    script.stosuje !== undefined &&
-    script.stosuje.op === "status"
+    script.script !== undefined &&
+    script.script.op === "status"
       ? applyCardEfekt(apply(snapshot, applied?.writes ?? {}), {
           fieldCardId: target.fieldCardId,
           source: input.cardId,
-          efekt: script.stosuje,
+          effect: script.script,
         })
       : null;
 
@@ -691,7 +691,7 @@ export async function castSpell(
 
   const onTheBridge = caster.field_id ? ringOf(caster.field_id) === KAMIENNY_MOST : false;
   const aimedAtSomethingThere =
-    script?.target === "wrog" || script?.target === "postac-lub-wrog";
+    script?.target === "foe" || script?.target === "character-or-foe";
   if (onTheBridge && aimedAtSomethingThere) {
     throw new Error("Na Kamiennym Moście Zaklęcia nie działają na tutejsze istoty (9.7).");
   }
@@ -878,7 +878,7 @@ export async function castSpell(
     target.seatIndex !== undefined
       ? snapshot.seats.find((one) => one.seat_index === target.seatIndex)
       : undefined;
-  if (script?.stosuje && !named && script.target === "postac") {
+  if (script?.script && !named && script.target === "character") {
     throw new Error(`${spell?.name ?? held.card_id} — wskaż Postać, na którą rzucasz.`);
   }
   if (target.fieldId !== undefined) {

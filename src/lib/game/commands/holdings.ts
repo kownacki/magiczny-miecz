@@ -580,7 +580,7 @@ export function takeCard(snapshot: Snapshot, command: TakeCard): Outcome<Taken> 
    * Złota, the Chochlik a point of Życie — and taking the card *is* agreeing to
    * it. There is no third state between paying and walking away, and walking
    * away is already what leaving a card on the Obszar means; what each of them
-   * does when you walk away is `cena-przyjecia`'s `bezZaplaty`, read at the end
+   * does when you walk away is `hiring-price`'s `ifUnpaid`, read at the end
    * of the turn by `leaveCardsBehind`.
    *
    * Refused rather than allowed on credit. The Chochlik's point of Życie is
@@ -590,8 +590,8 @@ export function takeCard(snapshot: Snapshot, command: TakeCard): Outcome<Taken> 
   const price = kind === "friend" ? entryPrice(abilitiesOf(cardId)) : null;
   const paid: Changeset = {};
   if (price && taker) {
-    const zloto = price.zloto ?? 0;
-    const zycie = price.zycie ?? 0;
+    const zloto = price.gold ?? 0;
+    const zycie = price.life ?? 0;
     if (taker.gold < zloto) {
       throw new Error(`${cardName(cardId)} bierze ${zloto} Sz. Z. — za mało złota.`);
     }

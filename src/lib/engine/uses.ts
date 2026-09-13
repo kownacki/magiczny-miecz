@@ -22,7 +22,7 @@ import type { Ends, Modifier } from "./status";
  */
 export interface Use {
   /** What using it buys, in one line, for the question before it happens. */
-  co: string;
+  what: string;
   /**
    * The window the card names, or null for "w dowolnym momencie".
    *
@@ -32,16 +32,16 @@ export interface Use {
    * have yet. Naming the window puts it where the decision is made instead,
    * which is what the Zaklęcia panel already does with `TIMING_LABEL`.
    */
-  kiedy: string | null;
+  when: string | null;
   /**
    * Who works out the result.
    *
-   * `aplikacja` means the app throws the die and applies the outcome, the same
-   * as a field's table. `stol` means it cannot yet, and says so rather than
+   * `app` means the app throws the die and applies the outcome, the same
+   * as a field's table. `table` means it cannot yet, and says so rather than
    * pretending: the app still spends the card and tells the table, which is
    * exactly the bargain the Zaklęcia panel makes ("skutek rozpatrzcie sami").
    */
-  rozpatruje: "aplikacja" | "stol";
+  resolvedBy: "app" | "table";
   /**
    * What using it leaves the character under, where that is something the buff
    * system can carry.
@@ -52,7 +52,7 @@ export interface Use {
    * which is a state a character is *in*. When one of those becomes expressible
    * it gains a line here and needs no other change.
    */
-  efekt?: { label: string; modifier: Modifier; ends: Ends };
+  status?: { label: string; modifier: Modifier; ends: Ends };
 }
 
 export const USES: Readonly<Partial<Record<CardId, Use>>> = {
@@ -62,27 +62,27 @@ export const USES: Readonly<Partial<Record<CardId, Use>>> = {
    * następnie odłóż Kartę."
    */
   "tajemnicza-szkatula": {
-    co: "rzut kostką decyduje, co jest w środku",
-    kiedy: null,
-    rozpatruje: "aplikacja",
+    what: "rzut kostką decyduje, co jest w środku",
+    when: null,
+    resolvedBy: "app",
   },
 
   // "Po wypiciu Eliksiru, Postać zyskuje na 1 turę dodatkowe 2 punkty Miecza."
   // Nothing here can hold a bonus for a turn yet — that is `status.ts`, which
   // is written and not yet wired — so the table carries it.
   "eliksir-sily": {
-    co: "+2 Miecza na 1 turę",
-    kiedy: null,
+    what: "+2 Miecza na 1 turę",
+    when: null,
     // The app can carry this one now: two points of Miecz that expire with the
     // turn it was drunk in, which is exactly what `status.ts` was written for.
-    rozpatruje: "aplikacja",
-    efekt: {
+    resolvedBy: "app",
+    status: {
       label: "+2 Miecza",
       modifier: { kind: "points", miecz: 2 },
       /**
        * The turn in progress, not the holder's own next one.
        *
-       * `kiedy: null` — „w dowolnym momencie" — is why. You drink this in a
+       * `when: null` — „w dowolnym momencie" — is why. You drink this in a
        * fight somebody else started, and `turns: 1` counts the *holder's* goes:
        * an Eliksir drunk on a rival's turn kept its two points all the way
        * round the table and through your own next turn as well. A card that
@@ -96,24 +96,24 @@ export const USES: Readonly<Partial<Record<CardId, Use>>> = {
     },
   },
   "jablko-natchnienia": {
-    co: "odejmij albo dodaj 1 do wyniku rzutu — jak wolisz",
-    kiedy: "przed rzutem w Świątyni Bogini Nemed lub Świątyni Tolimana",
-    rozpatruje: "stol",
+    what: "odejmij albo dodaj 1 do wyniku rzutu — jak wolisz",
+    when: "przed rzutem w Świątyni Bogini Nemed lub Świątyni Tolimana",
+    resolvedBy: "table",
   },
   "owoc-jarzebiny-wiedzy": {
-    co: "ciągniesz o 1 Kartę więcej i odrzucasz tę, która ci nie odpowiada",
-    kiedy: "przed ciągnięciem Kart Zdarzeń",
-    rozpatruje: "stol",
+    what: "ciągniesz o 1 Kartę więcej i odrzucasz tę, która ci nie odpowiada",
+    when: "przed ciągnięciem Kart Zdarzeń",
+    resolvedBy: "table",
   },
   "rozdzka-przeznaczenia": {
-    co: "napotkany Wróg staje się Przyjacielem na jedną walkę i dodaje swoje punkty",
-    kiedy: "przy napotkanym Wrogu",
-    rozpatruje: "stol",
+    what: "napotkany Wróg staje się Przyjacielem na jedną walkę i dodaje swoje punkty",
+    when: "przy napotkanym Wrogu",
+    resolvedBy: "table",
   },
   "zwierciadlo-zniszczenia": {
-    co: "innej Postaci −2 Miecza lub Magii, albo −1 i −1 — tylko z jej własnych punktów",
-    kiedy: null,
-    rozpatruje: "stol",
+    what: "innej Postaci −2 Miecza lub Magii, albo −1 i −1 — tylko z jej własnych punktów",
+    when: null,
+    resolvedBy: "table",
   },
   /**
    * A die table the app cannot honestly throw.
@@ -124,22 +124,22 @@ export const USES: Readonly<Partial<Record<CardId, Use>>> = {
    * worse than handing the whole thing to the table.
    */
   "krysztal-losu": {
-    co: "rzut kostką: 1 — tracisz 1 Życie; 2 — Kryształ niszczeje; 3 — nic; 4, 5, 6 — +1, +2, +3 do rzutu w tej walce",
-    kiedy: "w walce",
-    rozpatruje: "stol",
+    what: "rzut kostką: 1 — tracisz 1 Życie; 2 — Kryształ niszczeje; 3 — nic; 4, 5, 6 — +1, +2, +3 do rzutu w tej walce",
+    when: "w walce",
+    resolvedBy: "table",
   },
   // "Bez względu na to, czy użyłeś Łodzi, czy też nie, odłóż tę Kartę."
   // Nothing else in the app discards these, so this is the only way one leaves
   // a pack it is doing nothing in.
   lodz: {
-    co: "przeprawa przez Trzęsawiska na Obszar sąsiadujący z tym, z którego wyruszasz",
-    kiedy: "w turze po znalezieniu",
-    rozpatruje: "stol",
+    what: "przeprawa przez Trzęsawiska na Obszar sąsiadujący z tym, z którego wyruszasz",
+    when: "w turze po znalezieniu",
+    resolvedBy: "table",
   },
   latarnia: {
-    co: "przeprawa przez Lodowy Las na Obszar sąsiadujący z tym, z którego wchodzisz",
-    kiedy: "w turze po znalezieniu",
-    rozpatruje: "stol",
+    what: "przeprawa przez Lodowy Las na Obszar sąsiadujący z tym, z którego wchodzisz",
+    when: "w turze po znalezieniu",
+    resolvedBy: "table",
   },
 };
 
@@ -177,12 +177,12 @@ export function isUsable(cardId: CardId): boolean {
  * are shown, and so a test can read them.
  */
 export function askAbout(name: string, use: Use): string {
-  const when = use.kiedy ? ` Karta mówi: ${use.kiedy}.` : "";
+  const when = use.when ? ` Karta mówi: ${use.when}.` : "";
   const who =
-    use.rozpatruje !== "aplikacja"
+    use.resolvedBy !== "app"
       ? " Skutek rozpatrzcie sami."
-      : use.efekt
+      : use.status
         ? " Aplikacja to zapamięta."
         : " Aplikacja rzuci kostką i zastosuje wynik.";
-  return `${name}: ${use.co}. Karta przepada po użyciu.${when}${who}`;
+  return `${name}: ${use.what}. Karta przepada po użyciu.${when}${who}`;
 }

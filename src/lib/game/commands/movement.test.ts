@@ -281,7 +281,7 @@ describe("rzut na ruch (10.2)", () => {
   /**
    * The Wierzchowiec: „pozwala ci dodać od 1 do 3 punktów do wyniku rzutu
    * kostką w trakcie wykonywania ruchu" — wired here for the first time.
-   * `ABILITIES`'s data (`ruch-bonus`) and `moveBonusRange` already existed;
+   * `ABILITIES`'s data (`move-bonus`) and `moveBonusRange` already existed;
    * nothing in `src` called the latter until this.
    */
   it("widens the destination list by the Wierzchowiec's range, roll still on the record untouched", async () => {
@@ -483,9 +483,9 @@ describe("ruch (10.2, 13.4)", () => {
    * where it was rather than deleting it — see that function's own note. It
    * still joins the turn as an ordinary Karta would, carrying its own row's
    * id along, and it still counts toward 13.4's draw arithmetic: the Obszar
-   * does not print fewer Karty for one of them being unieruchomiony.
+   * does not print fewer Karty for one of them being immobilised.
    */
-  it("leaves an unieruchomiony Wróg's row alone rather than lifting it", () => {
+  it("leaves an immobilised Wróg's row alone rather than lifting it", () => {
     const table = aTable({
       game: {
         active_seat: 0,
@@ -504,7 +504,7 @@ describe("ruch (10.2, 13.4)", () => {
           field_card_id: "fc-wilk",
           source: "krag-plomieni",
           label: "Krąg Płomieni",
-          modifier: { kind: "unieruchomiony" },
+          modifier: { kind: "immobilised" },
           ends: { kind: "dispelled" },
         },
       ],
@@ -526,7 +526,7 @@ describe("ruch (10.2, 13.4)", () => {
 
   /**
    * WAMPIR's own growth (16.2) is the other reason a row survives a lift —
-   * `points`, not `unieruchomiony`, so unlike the Krąg's victim he stays fully
+   * `points`, not `immobilised`, so unlike the Krąg's victim he stays fully
    * attackable: only the row is kept, not the fight refused.
    */
   it("leaves a WAMPIR carrying his own growth lying too, but fully attackable", () => {
@@ -561,7 +561,7 @@ describe("ruch (10.2, 13.4)", () => {
       { cardId: "wampir", cardClass: "demon", fieldCardId: "fc-wampir" },
       { cardId: "helm", cardClass: "item" },
     ]);
-    // Not `unieruchomiony`, so nothing marks him out of reach.
+    // Not `immobilised`, so nothing marks him out of reach.
     expect(
       (state.drawn as { cardId: string; unattackable?: true }[]).find((c) => c.cardId === "wampir")
         ?.unattackable,

@@ -107,7 +107,7 @@ describe("the Sobowtór", () => {
   });
 
   it("is now fully covered", () => {
-    expect(coverageOf("sobowtor")).toBe("pelne");
+    expect(coverageOf("sobowtor")).toBe("full");
   });
 });
 

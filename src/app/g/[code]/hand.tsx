@@ -568,7 +568,7 @@ export function Hand({
                 {onUse && isUsable(held.cardId) && (
                   <button
                     onClick={() => onUse(held.id, held.cardId)}
-                    title={usageOf(held.cardId)?.co}
+                    title={usageOf(held.cardId)?.what}
                     className="text-[9px] text-ochre underline hover:text-ink"
                   >
                     {USE_VERB}

@@ -236,7 +236,7 @@ describe("otwarcie walki (17.4, 17.5)", () => {
           field_card_id: "fc-wilk",
           source: "krag-plomieni",
           label: "Krąg Płomieni",
-          modifier: { kind: "unieruchomiony" },
+          modifier: { kind: "immobilised" },
           ends: { kind: "dispelled" },
         },
       ],
@@ -317,7 +317,7 @@ describe("otwarcie walki (17.4, 17.5)", () => {
           field_card_id: "fc-wampir",
           source: "uklad-planet",
           label: "Układ Planet — Magia podwojona",
-          modifier: { kind: "magia-x2" },
+          modifier: { kind: "magic-x2" },
           ends: { kind: "round", round: 2 },
         },
       ],
@@ -635,13 +635,13 @@ describe("rzucenie Zaklęcia (9.6, 9.7, 17.3)", () => {
       ports(),
     );
     // Not applied to whoever spoke it — the Karta's own row carries it, with
-    // `unieruchomiony` rather than the `frozen` a Postać wears, because a Wróg
+    // `immobilised` rather than the `frozen` a Postać wears, because a Wróg
     // has no act for `oprocz` to exempt.
     expect(writes.effects?.insert?.[0]).toMatchObject({
       seat_id: null,
       field_card_id: "fc1",
       source: "krag-plomieni",
-      modifier: { kind: "unieruchomiony" },
+      modifier: { kind: "immobilised" },
       ends: { kind: "dispelled" },
     });
   });
@@ -768,10 +768,10 @@ describe("rzucenie Zaklęcia (9.6, 9.7, 17.3)", () => {
           seat_id: null,
           field_card_id: "fc-wilk",
           source: "wladca-gromu",
-          modifier: { kind: "unieruchomiony" },
+          modifier: { kind: "immobilised" },
           ends: { kind: "round", round: 6 },
         }),
-        expect.objectContaining({ field_card_id: "fc-demon", modifier: { kind: "unieruchomiony" } }),
+        expect.objectContaining({ field_card_id: "fc-demon", modifier: { kind: "immobilised" } }),
       ]),
     );
     expect(writes.effects?.insert).toHaveLength(3); // seat-b's own, plus the two foes.
@@ -1395,7 +1395,7 @@ describe("kostki w walce (17.3, 17.4)", () => {
             field_card_id: "fc-wilk",
             source: "ocalony",
             label: "Ocalony",
-            modifier: { kind: "ocalenie" },
+            modifier: { kind: "rescue" },
             ends: { kind: "dispelled" },
           },
         ],

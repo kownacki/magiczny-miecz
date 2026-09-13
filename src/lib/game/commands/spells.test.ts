@@ -136,11 +136,11 @@ describe("Zaklęcia that leave something behind", () => {
    * its window is before a fight and this suite stands on an ordinary Obszar.
    */
   it("Magia i Miecz lasts exactly one fight", () => {
-    const script = (SPELLS as Record<string, { stosuje?: { modifier: unknown; ends: unknown } }>)[
+    const script = (SPELLS as Record<string, { script?: { modifier: unknown; ends: unknown } }>)[
       "magia-i-miecz"
     ];
-    expect(script.stosuje?.modifier).toEqual({ kind: "magia-as-miecz" });
-    expect(script.stosuje?.ends).toEqual({ kind: "fight" });
+    expect(script.script?.modifier).toEqual({ kind: "magic-as-sword" });
+    expect(script.script?.ends).toEqual({ kind: "fight" });
   });
 });
 
@@ -152,23 +152,23 @@ describe("every Zaklęcie is carried out, and the halves that are not are named"
    */
   it("answers a spell rather than applying one", () => {
     for (const id of ["zwierciadlo", "wladca-zaklec"] as const) {
-      const script = (SPELLS as Record<string, { stosuje?: unknown; reactive?: boolean }>)[id];
-      expect(script.stosuje, id).toBeUndefined();
+      const script = (SPELLS as Record<string, { script?: unknown; reactive?: boolean }>)[id];
+      expect(script.script, id).toBeUndefined();
       expect(script.reactive, id).toBe(true);
     }
   });
 
   /**
    * Nothing is left entirely to the table any more. What a card does only in
-   * part says so in `MANUAL`, which marks it `czesciowe` and prints the rest
+   * part says so in `MANUAL`, which marks it `partial` and prints the rest
    * where a player reads the card — the danger the Ocalony's old note named,
    * answered by the register that exists for it.
    */
   it("applies every one of them, in whole or in part", () => {
     for (const [id, script] of Object.entries(
-      SPELLS as Record<string, { stosuje?: unknown; applies?: string; reactive?: boolean }>,
+      SPELLS as Record<string, { script?: unknown; applies?: string; reactive?: boolean }>,
     )) {
-      const carried = Boolean(script.stosuje ?? script.applies ?? script.reactive);
+      const carried = Boolean(script.script ?? script.applies ?? script.reactive);
       expect(carried, id).toBe(true);
     }
   });
@@ -306,7 +306,7 @@ describe("Władca Zdarzeń, and the answer it waits for", () => {
  * fighting them.
  */
 describe("the Kryształ Magów", () => {
-  it("is immune to the six named Zaklęcia, read off the victim (odporny-na-zaklecie)", async () => {
+  it("is immune to the six named Zaklęcia, read off the victim (immune-to-spell)", async () => {
     const { after, out } = await cast("krag-plomieni", {
       target: { seatIndex: 1 },
       victim: ["krysztal-magow"],

@@ -157,8 +157,8 @@ export function againstThese(
     if (gone.has(swap.cardId)) continue;
     const one = inPlay.filter((held) => held.cardId === swap.cardId).slice(0, 1);
     const ordinarily = bonusFromHoldings(one, mode, "walka", view.fieldId, view.nature);
-    miecz += swap.miecz - ordinarily.miecz;
-    magia += swap.magia - ordinarily.magia;
+    miecz += swap.sword - ordinarily.miecz;
+    magia += swap.magic - ordinarily.magia;
   }
   return { miecz, magia };
 }
@@ -465,12 +465,12 @@ export function beginFight(snapshot: Snapshot, command: BeginFight): Outcome<voi
  */
 export function beginNamedFight(
   snapshot: Snapshot,
-  command: { name: string; miecz?: number; magia?: number },
+  command: { name: string; sword?: number; magic?: number },
 ): Outcome<void> {
   const seat = activeSeat(snapshot);
   const state = requireTop(snapshot.game.turn_state, "field", "Nie czas na walkę.");
 
-  const { name, miecz, magia } = command;
+  const { name, sword, magic } = command;
   return {
     writes: {
       game: {
@@ -479,7 +479,7 @@ export function beginNamedFight(
           {
             cardId: `pole:${name}`,
             cardName: name,
-            ...(magia !== undefined ? { magia } : { miecz }),
+            ...(magic !== undefined ? { magia: magic } : { miecz: sword }),
             settles: [],
           },
           pointsOf(snapshot, seat.id, "walka"),
@@ -490,7 +490,7 @@ export function beginNamedFight(
           seatId: seat.id,
           round: snapshot.game.round,
           kind: "fight-start",
-          payload: { nazwa: name, enemyTotal: miecz ?? magia },
+          payload: { name, enemyTotal: sword ?? magic },
         },
       ],
     },
@@ -519,7 +519,7 @@ export function summonFighter(
   snapshot: Snapshot,
   command: {
     name: string;
-    miecz: number;
+    sword: number;
     /** The Zaklęcie that conjured it, for the journal and for `raid`. */
     spellId: string;
     targetSeatId?: string;
@@ -557,7 +557,7 @@ export function summonFighter(
   const inRing = (fieldId: FieldId | null): boolean =>
     fieldId !== null && ring.includes(fieldId);
 
-  const mine = { miecz: command.miecz, magia: 0 };
+  const mine = { miecz: command.sword, magia: 0 };
   const raid = { cardId: command.spellId, summoned: true } as const;
 
   if (command.targetSeatId !== undefined) {
@@ -602,7 +602,7 @@ export function summonFighter(
   const card = EVENTS.find((one) => one.id === lying.card_id);
   // What he faces decides the Sobowtór's own strength, and here that is the
   // conjured creature rather than the caster — see `combatValueOf`.
-  const foe = card ? combatValueOf(card, { miecz: command.miecz }) : null;
+  const foe = card ? combatValueOf(card, { miecz: command.sword }) : null;
   if (!foe) throw new Error("Z tą Kartą się nie walczy.");
 
   return {
@@ -678,7 +678,7 @@ export async function fightRoll(
    */
   const shift =
     command.side === "player"
-      ? rollModifier(seatView(snapshot, seat.id).abilities, { walka: state.fight.kind }).delta
+      ? rollModifier(seatView(snapshot, seat.id).abilities, { fight: state.fight.kind }).delta
       : 0;
   const roll = shift === 0 ? thrown : Math.max(1, Math.min(6, thrown + shift));
 
@@ -900,7 +900,7 @@ export function sendRaider(snapshot: Snapshot, command: SendRaider): Outcome<voi
               opponentSeat: target.seat_index,
               raid: { cardId: raider.cardId },
             },
-            { miecz: raider.miecz, magia: raider.magia },
+            { miecz: raider.sword, magia: raider.magic },
           )),
         },
       },
@@ -921,7 +921,7 @@ export function sendRaider(snapshot: Snapshot, command: SendRaider): Outcome<voi
   const card = EVENTS.find((one) => one.id === lying.card_id);
   // The Przyjaciel sent out is who the Sobowtór would be facing, so his is the
   // Miecz it mirrors — see `combatValueOf`.
-  const foe = card ? combatValueOf(card, { miecz: raider.miecz }) : null;
+  const foe = card ? combatValueOf(card, { miecz: raider.sword }) : null;
   if (!foe) throw new Error("Z tą Kartą się nie walczy.");
 
   return {
@@ -936,7 +936,7 @@ export function sendRaider(snapshot: Snapshot, command: SendRaider): Outcome<voi
             granted: lying.granted,
             raid: { cardId: raider.cardId, fieldCardId: lying.id },
           },
-          { miecz: raider.miecz, magia: raider.magia },
+          { miecz: raider.sword, magia: raider.magic },
         )),
       },
     },
@@ -1149,10 +1149,10 @@ export function escape(
 
   // A duel is the only thing in the game that is fled *as a Postać*; everything
   // else on a field or in a hand of drawn cards is a Wróg.
-  const przed: EscapeTarget = duelWith === undefined ? "wrog" : "postac";
+  const przed: EscapeTarget = duelWith === undefined ? "foe" : "character";
 
   const onBridge = fleeing.field_id !== null && ringOf(fleeing.field_id) === KAMIENNY_MOST;
-  if (onBridge && przed === "wrog") {
+  if (onBridge && przed === "foe") {
     throw new Error("Na Kamiennym Moście można wymknąć się tylko innym Postaciom (19.3).");
   }
 
@@ -1229,7 +1229,7 @@ export function escape(
   let left: Changeset = {};
   if (succeeded && before.phase === "fight") {
     const sweep =
-      byAbility && przed === "wrog"
+      byAbility && przed === "foe"
         ? before.fight.drawn
             .filter((entry) => isFoeClass(entry.cardClass))
             .map((entry) => entry.cardId)

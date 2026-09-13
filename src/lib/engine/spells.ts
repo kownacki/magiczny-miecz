@@ -23,37 +23,37 @@ import { frozenBy, spellsHushed, type Status } from "./status";
  */
 export type SpellTiming =
   /** "w dowolnej chwili" — the largest group, and the reason 17.7 exists. */
-  | "dowolna-chwila"
+  | "any-time"
   /** "na początku tury jego posiadacza". */
-  | "poczatek-tury"
+  | "turn-start"
   /** "przed wykonaniem ruchu". */
-  | "przed-ruchem"
+  | "before-move"
   /** Spent *instead of* moving, not merely before it. */
-  | "zamiast-ruchu"
+  | "instead-of-move"
   /** "po zakończeniu ruchu". */
-  | "po-ruchu"
+  | "after-move"
   /** Before the dice of a fight (17.3). */
-  | "przed-walka"
+  | "before-fight"
   /** During a fight, once the dice are known. */
-  | "w-walce"
+  | "in-fight"
   /** On meeting another character or a Wróg. */
-  | "spotkanie"
+  | "meeting"
   /** "natychmiast po wzięciu Karty Zdarzenia". */
-  | "po-karcie";
+  | "after-card";
 
 /** What a spell is aimed at. */
 export type SpellTarget =
-  | "siebie"
-  | "postac"
-  | "siebie-lub-postac"
-  | "wrog"
-  | "postac-lub-wrog"
-  | "obszar"
+  | "self"
+  | "character"
+  | "self-or-character"
+  | "foe"
+  | "character-or-foe"
+  | "field"
   /** A face-up Karta Zdarzenia lying on the board. */
-  | "karta-na-planszy"
+  | "card-on-board"
   /** Another spell — the two that answer spells rather than characters. */
-  | "zaklecie"
-  | "brak";
+  | "spell"
+  | "none";
 
 export interface SpellScript {
   timing: readonly SpellTiming[];
@@ -84,15 +84,15 @@ export interface SpellScript {
    */
   applies?:
     /** Władca Czarów: the victim's whole hand, "należy odłożyć ich Karty". */
-    | "gasi-zaklecia"
+    | "dispels-spells"
     /** Siewca Spustoszenia: one face-up Karta Zdarzeń, off the board. */
-    | "zdejmuje-karte";
+    | "removes-card";
   /**
    * What the spell does, where the effect vocabulary can say it.
    *
    * `effect` above is the sentence a player acts on and every spell has one;
    * this is the same rule written in the terms the engine already carries out
-   * for Karty and Obszary, and only some spells have it. A spell with `stosuje`
+   * for Karty and Obszary, and only some spells have it. A spell with `script`
    * is applied; a spell without is announced, which is what all thirty used to
    * be.
    *
@@ -103,7 +103,7 @@ export interface SpellScript {
    * answers a loss that is about to happen. Those wait for a response model,
    * and saying so in the data is better than half-applying them.
    */
-  stosuje?: Effect;
+  script?: Effect;
 }
 
 /**
@@ -141,12 +141,12 @@ export function appliedByTheApp(script: SpellScript | null): boolean {
 
 export const SPELLS: Readonly<Partial<Record<SpellId, SpellScript>>> = {
   "kamien-filozoficzny": {
-    timing: ["poczatek-tury"],
-    target: "siebie",
+    timing: ["turn-start"],
+    target: "self",
     effect: "Odłóż dowolną liczbę swoich Przedmiotów, biorąc 1 Sz. Z. za każdy.",
     // "Należy odłożyć Karty Przedmiotów biorąc za każdą z nich 1 Sztukę Złota"
     // — the Lichwiarz's own trade, at the Lichwiarz's own rate.
-    stosuje: { op: "sell", price: 1 },
+    script: { op: "sell", price: 1 },
   },
   /**
    * Applied — for a Postać. Half of the card, and the half the app can hold.
@@ -168,11 +168,11 @@ export const SPELLS: Readonly<Partial<Record<SpellId, SpellScript>>> = {
    * on a field card, which is the same gap the Władca Gromu waits on.
    */
   "krag-plomieni": {
-    timing: ["dowolna-chwila"],
-    target: "postac-lub-wrog",
+    timing: ["any-time"],
+    target: "character-or-foe",
     effect:
       "Ofiara nie może nic robić poza rzuceniem Władcy Zaklęć; nie można jej zaatakować.",
-    stosuje: {
+    script: {
       op: "status",
       label: "Krąg Płomieni",
       modifier: { kind: "frozen", oprocz: ["wladca-zaklec"] },
@@ -180,8 +180,8 @@ export const SPELLS: Readonly<Partial<Record<SpellId, SpellScript>>> = {
     },
   },
   "magia-i-miecz": {
-    timing: ["przed-walka"],
-    target: "siebie",
+    timing: ["before-fight"],
+    target: "self",
     effect: "W tej jednej walce (nie magicznej) dodajesz Magię do Miecza.",
     /**
      * "Zaklęciem tym możesz posłużyć się tylko w jednej walce" — so it ends
@@ -189,20 +189,20 @@ export const SPELLS: Readonly<Partial<Record<SpellId, SpellScript>>> = {
      * The Bojowy Rumak does the same thing as a held card; a character with
      * both folds its Magia in once.
      */
-    stosuje: {
+    script: {
       op: "status",
       label: "Magia i Miecz — Magia liczy się do Miecza",
-      modifier: { kind: "magia-as-miecz" },
+      modifier: { kind: "magic-as-sword" },
       ends: { kind: "fight" },
     },
   },
   "magiczna-wedrowka": {
-    timing: ["zamiast-ruchu"],
-    target: "siebie",
+    timing: ["instead-of-move"],
+    target: "self",
     effect: "Przenieś się na dowolny Obszar w tym Kręgu. Nie działa na Kamiennym Moście.",
     // "natychmiastowe przeniesienie się do dowolnego Obszaru w tym samym
     // Kręgu". The bar on using it on the Kamienny Most is `timing`'s, not this.
-    stosuje: { op: "move", to: { kind: "anywhere-in-ring" } },
+    script: { op: "move", to: { kind: "anywhere-in-ring" } },
   },
   /**
    * Applied for a Postać, and said out loud for the rest.
@@ -218,24 +218,24 @@ export const SPELLS: Readonly<Partial<Record<SpellId, SpellScript>>> = {
    *
    * The note here used to argue against building that third, because
    * `coverageOf` reports whether a card has a script and not whether the script
-   * does what the card says — so a third of a card would have read `pelne` with
+   * does what the card says — so a third of a card would have read `full` with
    * two thirds still on the table. That was right about the danger and wrong
    * about the remedy: `MANUAL` exists for exactly this, marks the card
-   * `czesciowe`, and prints the rest where a player reads the card.
+   * `partial`, and prints the rest where a player reads the card.
    *
    * The two thirds it does not do: a Przyjaciel or a Wróg saved from death
    * wants a state on something that is not a seat, and the fight's „remis"
    * wants the settle to change a result the dice have already given.
    */
   ocalony: {
-    timing: ["dowolna-chwila", "w-walce"],
-    target: "postac-lub-wrog",
+    timing: ["any-time", "in-fight"],
+    target: "character-or-foe",
     effect:
       "Postać nie traci punktu Życia; Przyjaciel lub Wróg nie ginie. Użyty w walce — remis.",
-    stosuje: {
+    script: {
       op: "status",
       label: "Ocalony",
-      modifier: { kind: "ocalenie" },
+      modifier: { kind: "rescue" },
       ends: { kind: "dispelled" },
     },
   },
@@ -249,18 +249,18 @@ export const SPELLS: Readonly<Partial<Record<SpellId, SpellScript>>> = {
    * the one the sheet is showing.
    */
   "odmiana-losu": {
-    timing: ["po-karcie"],
-    target: "siebie",
+    timing: ["after-card"],
+    target: "self",
     effect: "Odrzuć jedną z wyciągniętych Kart i wyciągnij w zamian inną.",
-    stosuje: { op: "redraw" },
+    script: { op: "redraw" },
   },
   odrodzenie: {
-    timing: ["dowolna-chwila"],
-    target: "siebie-lub-postac",
+    timing: ["any-time"],
+    target: "self-or-character",
     effect: "Przywraca Życie do 4 punktów z początku gry.",
     // "przywraca punkty Życia z początku rozgrywki (czyli 4 punkty)" — the card
     // states the number the rulebook's 4.7 would have given anyway.
-    stosuje: { op: "heal", upTo: 4 },
+    script: { op: "heal", upTo: 4 },
   },
   /**
    * Applied, and „w tajemnicy" is kept by where the answer goes.
@@ -274,27 +274,27 @@ export const SPELLS: Readonly<Partial<Record<SpellId, SpellScript>>> = {
    * Zaklęcie was spoken, and nothing is written to the game at all.
    */
   olsnienie: {
-    timing: ["przed-ruchem"],
-    target: "siebie",
+    timing: ["before-move"],
+    target: "self",
     effect: "Obejrzyj w tajemnicy 5 pierwszych Kart Zdarzeń ze stosu.",
-    stosuje: { op: "peek", count: 5 },
+    script: { op: "peek", count: 5 },
   },
   "pan-bogactwa": {
-    timing: ["dowolna-chwila"],
-    target: "postac",
+    timing: ["any-time"],
+    target: "character",
     effect: "Zabierz ofierze 1 Przedmiot albo 1 Sztukę Złota.",
     // "Pozwala zabrać wybranej Postaci jeden Przedmiot lub jedną Sztukę Złota."
     // The coin is the fallback: a victim with nothing to carry still has a purse.
-    stosuje: { op: "take", what: "item-or-gold" },
+    script: { op: "take", what: "item-or-gold" },
   },
   "pan-przyjaciol": {
-    timing: ["dowolna-chwila"],
-    target: "postac",
+    timing: ["any-time"],
+    target: "character",
     effect: "Zabierz ofierze 1 Przyjaciela i dołącz go do swoich.",
     // "zabrać wybranej Postaci jednego z Przyjaciół i dołączyć go do swoich" —
     // changing hands rather than being destroyed, which is why this is not a
     // `lose`.
-    stosuje: { op: "take", what: "friend" },
+    script: { op: "take", what: "friend" },
   },
   /**
    * Applied. It was the card half of 11.2's „except by Łódź, or by field and
@@ -315,19 +315,19 @@ export const SPELLS: Readonly<Partial<Record<SpellId, SpellScript>>> = {
    * anything ending that way.
    */
   "pan-trzesawisk": {
-    timing: ["zamiast-ruchu"],
-    target: "siebie-lub-postac",
+    timing: ["instead-of-move"],
+    target: "self-or-character",
     effect: "Przebądź Trzęsawiska w dowolnym miejscu, w obie strony.",
-    stosuje: {
+    script: {
       op: "status",
       label: "Pan Trzęsawisk",
-      modifier: { kind: "przeprawa", przez: "trzesawiska" },
+      modifier: { kind: "crossing", over: "trzesawiska" },
       ends: { kind: "event", what: "crossing" },
     },
   },
   "powiew-smierci": {
-    timing: ["spotkanie"],
-    target: "postac-lub-wrog",
+    timing: ["meeting"],
+    target: "character-or-foe",
     effect:
       "Zabija Wroga (oprócz Demonów) bez walki; Postaci odbiera 2 punkty Życia. Napadnięty może się wymknąć.",
     /**
@@ -338,13 +338,13 @@ export const SPELLS: Readonly<Partial<Record<SpellId, SpellScript>>> = {
      * in `castSpell` refuses an unnamed victim rather than letting two points
      * land on the caster. Killing a Wróg outright is the other half and stays
      * prose — the creature is a Karta in a turn's stack, not a seat, and
-     * `stosuje` reaches seats.
+     * `script` reaches seats.
      */
-    stosuje: { op: "points", stat: "life", delta: -2 },
+    script: { op: "points", stat: "life", delta: -2 },
   },
   "siedem-wichrow": {
-    timing: ["dowolna-chwila"],
-    target: "postac",
+    timing: ["any-time"],
+    target: "character",
     effect: "Rzuć kostką za każdy Przedmiot ofiary: 1 niszczy go. Tylko w tej samej Krainie.",
     /**
      * "Rzuć raz kostką dla każdego Przedmiotu będącego w posiadaniu ofiary.
@@ -352,19 +352,19 @@ export const SPELLS: Readonly<Partial<Record<SpellId, SpellScript>>> = {
      *
      * The same shape as the Urwisko's roll for each Przyjaciel, one number
      * apart, and aimed at the victim rather than the caster — which is what
-     * `target: "postac"` and the seat it names are for.
+     * `target: "character"` and the seat it names are for.
      */
-    stosuje: { op: "roll-for-each", what: "item", lostOn: 1 },
+    script: { op: "roll-for-each", what: "item", lostOn: 1 },
   },
   "siewca-spustoszenia": {
-    timing: ["poczatek-tury", "po-ruchu"],
-    target: "karta-na-planszy",
+    timing: ["turn-start", "after-move"],
+    target: "card-on-board",
     effect: "Zdejmij z planszy jedną odkrytą Kartę Zdarzeń.",
-    applies: "zdejmuje-karte",
+    applies: "removes-card",
   },
   szalenstwo: {
-    timing: ["dowolna-chwila"],
-    target: "postac",
+    timing: ["any-time"],
+    target: "character",
     effect: "Wskaż ofiarę, potem obejrzyj jej Zaklęcia i zabierz jedno.",
     /**
      * "Najpierw należy zdecydować, kto padnie ofiarą Szaleństwa, a dopiero
@@ -374,17 +374,17 @@ export const SPELLS: Readonly<Partial<Record<SpellId, SpellScript>>> = {
      * place in the box where a hand held face down under 9.3 is opened to
      * somebody else.
      */
-    stosuje: { op: "take", what: "spell", chosenBy: "caster" },
+    script: { op: "take", what: "spell", chosenBy: "caster" },
   },
   "wladca-czarow": {
-    timing: ["dowolna-chwila"],
-    target: "postac",
+    timing: ["any-time"],
+    target: "character",
     effect: "Ofiara traci wszystkie swoje Zaklęcia.",
-    applies: "gasi-zaklecia",
+    applies: "dispels-spells",
   },
   "wladca-gromu": {
-    timing: ["dowolna-chwila"],
-    target: "obszar",
+    timing: ["any-time"],
+    target: "field",
     effect:
       "Wszystkie istoty na Obszarze sparaliżowane: nie wolno ich atakować, można się wymknąć. Postacie tracą następną turę.",
     /**
@@ -414,7 +414,7 @@ export const SPELLS: Readonly<Partial<Record<SpellId, SpellScript>>> = {
      * state — the same gap the Krąg Płomieni meets when it is thrown at a Wróg.
      * That half stays in the sentence the table reads.
      */
-    stosuje: {
+    script: {
       op: "sequence",
       steps: [
         { op: "lose-turn", turns: 1, target: "everyone-here" },
@@ -430,13 +430,13 @@ export const SPELLS: Readonly<Partial<Record<SpellId, SpellScript>>> = {
   },
   /** Applied, by exactly what unblocked the Pan Trzęsawisk — 11.6's half of it. */
   "wladca-lodu": {
-    timing: ["zamiast-ruchu"],
-    target: "siebie-lub-postac",
+    timing: ["instead-of-move"],
+    target: "self-or-character",
     effect: "Przebądź Lodowy Las w dowolnym miejscu, w obie strony.",
-    stosuje: {
+    script: {
       op: "status",
       label: "Władca Lodu",
-      modifier: { kind: "przeprawa", przez: "lodowy-las" },
+      modifier: { kind: "crossing", over: "lodowy-las" },
       ends: { kind: "event", what: "crossing" },
     },
   },
@@ -455,19 +455,19 @@ export const SPELLS: Readonly<Partial<Record<SpellId, SpellScript>>> = {
    * end `dispelled`, and this card is the only thing in the box that dispels,
    * so without it the one way out of the Krąg was a status nothing could lift.
    *
-   * No `stosuje`: what it does is not an effect on anybody, it is what happens
+   * No `script`: what it does is not an effect on anybody, it is what happens
    * to another Zaklęcie. That lives in `castSpell` because it is about the
    * casting itself.
    */
   "wladca-zaklec": {
-    timing: ["dowolna-chwila"],
-    target: "zaklecie",
+    timing: ["any-time"],
+    target: "spell",
     reactive: true,
     effect: "Neguje działanie Zaklęcia rzuconego bezpośrednio przed nim — każdego, bez wyjątku.",
   },
   /**
    * Applied. Half of it already existed — the Siewca takes a Karta off the
-   * board through `applies: "zdejmuje-karte"` — and this one takes it off *and
+   * board through `applies: "removes-card"` — and this one takes it off *and
    * puts it down again*, which wanted an Obszar to point at.
    *
    * That is the destination every card offering „dowolny Obszar w tym Kręgu"
@@ -477,11 +477,11 @@ export const SPELLS: Readonly<Partial<Record<SpellId, SpellScript>>> = {
    * never settled.
    */
   "wladca-zdarzen": {
-    timing: ["poczatek-tury", "po-ruchu"],
-    target: "karta-na-planszy",
+    timing: ["turn-start", "after-move"],
+    target: "card-on-board",
     effect:
       "Przenieś odkrytą Kartę Zdarzeń na inny, nie zajęty Obszar w tym samym Kręgu.",
-    stosuje: { op: "move-card" },
+    script: { op: "move-card" },
   },
   /**
    * Applied by half, and the half is the one the app can hold.
@@ -504,8 +504,8 @@ export const SPELLS: Readonly<Partial<Record<SpellId, SpellScript>>> = {
    * the one on the card. That half stays in the sentence the table reads.
    */
   "wojna-zywiolow": {
-    timing: ["przed-ruchem"],
-    target: "brak",
+    timing: ["before-move"],
+    target: "none",
     effect:
       "Nikt, łącznie z tobą, nie używa Zaklęć ani Magicznych Przedmiotów do początku twojej następnej tury.",
     /**
@@ -529,7 +529,7 @@ export const SPELLS: Readonly<Partial<Record<SpellId, SpellScript>>> = {
      * the right length for the table as a whole and a wrong anchor that looks
      * exact is worse than one that is written down.
      */
-    stosuje: {
+    script: {
       op: "status",
       label: "Wojna Żywiołów",
       modifier: { kind: "no-spells" },
@@ -549,14 +549,14 @@ export const SPELLS: Readonly<Partial<Record<SpellId, SpellScript>>> = {
    * spell landing on *you*; a mirror is not a shield for the table.
    */
   zwierciadlo: {
-    timing: ["dowolna-chwila"],
-    target: "zaklecie",
+    timing: ["any-time"],
+    target: "spell",
     reactive: true,
     effect: "Odbija rzucone na ciebie Zaklęcie na tego, kto je rzucił.",
   },
   fatum: {
-    timing: ["dowolna-chwila"],
-    target: "postac",
+    timing: ["any-time"],
+    target: "character",
     effect:
       "Ofiara rzuca kostką: 1 — Kamień; 2 — całe złoto; 3 — 1 Miecza; 4 — 1 Magii; 5 — zyskuje 1 Miecza lub Magii; 6 — zyskuje 1 Życie.",
     /**
@@ -565,7 +565,7 @@ export const SPELLS: Readonly<Partial<Record<SpellId, SpellScript>>> = {
      * count of cards, and `adjustSeat` floors a purse at nothing, so asking for
      * more than anyone could hold is how "all of it" is said.
      */
-    stosuje: {
+    script: {
       op: "roll",
       faces: {
         1: { op: "stone" },
@@ -602,27 +602,27 @@ export const SPELLS: Readonly<Partial<Record<SpellId, SpellScript>>> = {
    * somebody else's turn anyway.
    */
   "formula-czasu": {
-    timing: ["przed-ruchem"],
-    target: "siebie",
+    timing: ["before-move"],
+    target: "self",
     effect:
       "Wykorzystujesz 3 kolejne tury zamiast jednej. Inni mogą tylko walczyć, jeśli ich zaatakujesz.",
-    stosuje: {
+    script: {
       op: "status",
       label: "Formuła Czasu",
-      modifier: { kind: "znowu" },
+      modifier: { kind: "again" },
       ends: { kind: "turns", turns: 2 },
     },
   },
   "formula-przestrzeni": {
-    timing: ["dowolna-chwila"],
-    target: "siebie-lub-postac",
+    timing: ["any-time"],
+    target: "self-or-character",
     effect: "Wynik rzutu na ruch mnożysz przez 2.",
     /**
      * "prędkość Postaci (twoja lub kogokolwiek innego) podwoi się" — cast on
-     * anybody, which is why it is `siebie-lub-postac` and why the doubling is a
+     * anybody, which is why it is `self-or-character` and why the doubling is a
      * status on the seat rather than a fact about the caster.
      */
-    stosuje: {
+    script: {
       op: "status",
       label: "Formuła Przestrzeni — podwójny rzut na ruch",
       modifier: { kind: "move-x2" },
@@ -645,19 +645,19 @@ export const SPELLS: Readonly<Partial<Record<SpellId, SpellScript>>> = {
    * and „a Wróg jest zdejmowany z planszy" is `beatenOffTheBoard`.
    */
   golem: {
-    timing: ["przed-ruchem"],
-    target: "postac-lub-wrog",
+    timing: ["before-move"],
+    target: "character-or-foe",
     effect:
       "Golem (Miecz 3) atakuje cel w tym Kręgu. Przegrana ofiara traci 1 Życie; Wróg znika z planszy.",
-    stosuje: { op: "summon", name: "GOLEM", sword: 3 },
+    script: { op: "summon", name: "GOLEM", sword: 3 },
   },
   /** The Golem with Miecz 5, and it was blocked on the same one thing. */
   homunculus: {
-    timing: ["przed-ruchem"],
-    target: "postac-lub-wrog",
+    timing: ["before-move"],
+    target: "character-or-foe",
     effect:
       "Homunculus (Miecz 5) atakuje cel w tym Kręgu. Przegrana ofiara traci 1 Życie; Wróg znika z planszy.",
-    stosuje: { op: "summon", name: "HOMUNCULUS", sword: 5 },
+    script: { op: "summon", name: "HOMUNCULUS", sword: 5 },
   },
 };
 
@@ -684,8 +684,8 @@ export function spellScript(cardId: CardId): SpellScript | null {
  * Władca Zaklęć that lifts the state means the right thing by the same token.
  */
 export function unattackableAfter(script: SpellScript | null | undefined): boolean {
-  const stosuje = script?.stosuje;
-  return stosuje?.op === "status" && stosuje.modifier.kind === "frozen";
+  const applied = script?.script;
+  return applied?.op === "status" && applied.modifier.kind === "frozen";
 }
 
 /**
@@ -701,7 +701,7 @@ export function castableNow(
   moment: SpellTiming | readonly SpellTiming[],
 ): boolean {
   if (script.reactive) return true;
-  if (script.timing.includes("dowolna-chwila")) return true;
+  if (script.timing.includes("any-time")) return true;
   const open = typeof moment === "string" ? [moment] : moment;
   return script.timing.some((when) => open.includes(when));
 }
@@ -716,7 +716,7 @@ export function castableNow(
  * card just turned over is `pole`, and so is a field with nothing left on it.
  *
  * This existed as `phase + hasMoved` and produced four of the nine windows;
- * `w-walce`, `po-karcie`, `spotkanie` and `zamiast-ruchu` could never happen,
+ * `in-fight`, `after-card`, `meeting` and `instead-of-move` could never happen,
  * so the spells timed to them were never castable at all. A spell that is never
  * castable is a spell that is not implemented.
  */
@@ -753,25 +753,25 @@ export function momentsIn(state: TurnPhase): SpellTiming[] {
 
 /** Every window the turn is in at once — a moment can be more than one. */
 export function momentsOf(at: TurnMoment): SpellTiming[] {
-  const now: SpellTiming[] = ["dowolna-chwila"];
+  const now: SpellTiming[] = ["any-time"];
   switch (at.phase) {
     case "roll":
       // Nothing has happened yet: the start of the turn, and everything that
       // has to come before the move.
-      now.push("poczatek-tury", "przed-ruchem", "zamiast-ruchu");
+      now.push("turn-start", "before-move", "instead-of-move");
       break;
     case "move":
-      now.push("przed-ruchem");
+      now.push("before-move");
       break;
     case "field":
-      now.push("po-ruchu");
-      if (at.cardJustDrawn) now.push("po-karcie");
-      if (at.meeting) now.push("spotkanie", "przed-walka");
+      now.push("after-move");
+      if (at.cardJustDrawn) now.push("after-card");
+      if (at.meeting) now.push("meeting", "before-fight");
       break;
     case "fight":
       // Before the dice both windows are open; once one is thrown, 17.3 has
       // passed and only the spells that act on a roll are left.
-      now.push(at.diceRolled ? "w-walce" : "przed-walka", "spotkanie");
+      now.push(at.diceRolled ? "in-fight" : "before-fight", "meeting");
       break;
   }
   return now;
@@ -780,31 +780,31 @@ export function momentsOf(at: TurnMoment): SpellTiming[] {
 /** The single window that best describes the moment, for labelling it. */
 export function momentOf(at: TurnMoment): SpellTiming {
   const [, first] = momentsOf(at);
-  return first ?? "dowolna-chwila";
+  return first ?? "any-time";
 }
 
 export const TIMING_LABEL: Record<SpellTiming, string> = {
-  "dowolna-chwila": "w dowolnej chwili",
-  "poczatek-tury": "na początku tury",
-  "przed-ruchem": "przed ruchem",
-  "zamiast-ruchu": "zamiast ruchu",
-  "po-ruchu": "po ruchu",
-  "przed-walka": "przed walką",
-  "w-walce": "w walce",
-  spotkanie: "przy spotkaniu",
-  "po-karcie": "po wyciągnięciu Karty",
+  "any-time": "w dowolnej chwili",
+  "turn-start": "na początku tury",
+  "before-move": "przed ruchem",
+  "instead-of-move": "zamiast ruchu",
+  "after-move": "po ruchu",
+  "before-fight": "przed walką",
+  "in-fight": "w walce",
+  meeting: "przy spotkaniu",
+  "after-card": "po wyciągnięciu Karty",
 };
 
 export const TARGET_LABEL: Record<SpellTarget, string> = {
-  siebie: "na siebie",
-  postac: "na Postać",
-  "siebie-lub-postac": "na siebie lub Postać",
-  wrog: "na Wroga",
-  "postac-lub-wrog": "na Postać lub Wroga",
-  obszar: "na Obszar",
-  "karta-na-planszy": "na odkrytą Kartę",
-  zaklecie: "na Zaklęcie",
-  brak: "—",
+  self: "na siebie",
+  character: "na Postać",
+  "self-or-character": "na siebie lub Postać",
+  foe: "na Wroga",
+  "character-or-foe": "na Postać lub Wroga",
+  field: "na Obszar",
+  "card-on-board": "na odkrytą Kartę",
+  spell: "na Zaklęcie",
+  none: "—",
 };
 
 /**
@@ -825,7 +825,7 @@ export function spellFacts(cardId: CardId): { when: string; at: string | null } 
   if (!script) return null;
   return {
     when: script.timing.map((timing) => TIMING_LABEL[timing]).join(" / "),
-    at: script.target === "brak" ? null : TARGET_LABEL[script.target],
+    at: script.target === "none" ? null : TARGET_LABEL[script.target],
   };
 }
 
@@ -857,7 +857,7 @@ export const CAST_VERB = "rzuć";
  * turns and not before.
  *
  * The Kryształ Magów's half of this used to read `abilities` for a bare
- * `bez-zaklec` kind, through a reader of its own. It reads `standing` for a `no-spells`
+ * `no-spells` kind, through a reader of its own. It reads `standing` for a `no-spells`
  * status now — `HELD_TWIN` in `status.ts` already projects that ability's
  * "may not cast" half onto a held card's row, through the same `inEffect` gate
  * every other held status passes (a Kryształ sitting in the pack in slotowy,

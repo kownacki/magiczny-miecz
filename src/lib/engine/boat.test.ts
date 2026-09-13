@@ -18,10 +18,10 @@ describe("the two cards that are a crossing", () => {
   });
 
   it("open the obstacle their own card names", () => {
-    const effect = scriptFor("lodz")?.effect as { modifier?: { przez?: string } };
-    expect(effect.modifier?.przez).toBe("trzesawiska");
-    const lamp = scriptFor("latarnia")?.effect as { modifier?: { przez?: string } };
-    expect(lamp.modifier?.przez).toBe("lodowy-las");
+    const effect = scriptFor("lodz")?.effect as { modifier?: { over?: string } };
+    expect(effect.modifier?.over).toBe("trzesawiska");
+    const lamp = scriptFor("latarnia")?.effect as { modifier?: { over?: string } };
+    expect(lamp.modifier?.over).toBe("lodowy-las");
   });
 
   /**

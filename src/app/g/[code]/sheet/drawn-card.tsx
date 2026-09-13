@@ -225,7 +225,7 @@ export function DrawnCard({
 
       </div>
 
-      {coverageOf(known.id) === "brak" && (
+      {coverageOf(known.id) === "none" && (
         <p className="rounded border border-edge bg-night/50 px-2 py-1 text-[11px] text-muted">
           {NOT_HANDLED}
         </p>

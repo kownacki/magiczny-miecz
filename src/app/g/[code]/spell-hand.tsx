@@ -439,12 +439,12 @@ export function SpellHand({
            * and a Karta — and each of those cast with no aim and was refused by
            * the server for not naming one.
            */
-          const wants = script?.target ?? "brak";
+          const wants = script?.target ?? "none";
           const atSeats =
-            wants === "postac" || wants === "siebie-lub-postac" || wants === "postac-lub-wrog";
+            wants === "character" || wants === "self-or-character" || wants === "character-or-foe";
           const atCards =
-            wants === "karta-na-planszy" || wants === "postac-lub-wrog" || wants === "wrog";
-          const atFields = wants === "obszar";
+            wants === "card-on-board" || wants === "character-or-foe" || wants === "foe";
+          const atFields = wants === "field";
           const aims: {
             key: string;
             label: string;
@@ -458,7 +458,7 @@ export function SpellHand({
             // „Na siebie lub inną Postać" is a choice, and the caster is one of
             // the answers — offered first, because it is the one the picker
             // used to make unreachable.
-            ...(wants === "siebie-lub-postac"
+            ...(wants === "self-or-character"
               ? [{ key: "siebie", label: "na siebie", target: {} }]
               : []),
             ...(atSeats
@@ -508,7 +508,7 @@ export function SpellHand({
            * around the Karta, which the caller works out because it is the one
            * that knows where every Karta and every Postać is standing.
            */
-          const moves = script?.stosuje?.op === "move-card";
+          const moves = script?.script?.op === "move-card";
           const needsAim = atSeats || atCards || atFields;
           const mustAim = needsAim && aims.length > 0;
           /** Aimed at something, with nothing of that kind on the board. */

@@ -89,7 +89,7 @@ export function FightControls({
     <div className="flex flex-col gap-4">
       {/* The name is in the sheet's header now; what is left here is the kind
           of fight it is, which the header cannot say without repeating itself.
-          Phrased as a label rather than "walka z <nazwa>" because Polish would
+          Phrased as a label rather than "walka z <name>" because Polish would
           need the instrumental case there ("z Cyklopem", "z Rusałką"), and the
           card names are stored as printed. Declining them reliably is not
           possible, and getting it wrong is more jarring than not trying. */}

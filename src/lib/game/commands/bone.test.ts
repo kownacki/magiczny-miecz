@@ -13,7 +13,7 @@ import type { CardId } from "@/data/ids";
  * albo Magicznej Pułapce. Może również dodać 1 do każdego wyniku rzutu w
  * pozostałych Obszarach na Kamiennym Moście."
  *
- * The second sentence has always been carried, as a `modyfikator-rzutu` over
+ * The second sentence has always been carried, as a `roll-modifier` over
  * the seven other bridge fields with the two Pułapki deliberately left out of
  * the list. The first was written into `CARD_NOTES` and into `MANUAL` — twice,
  * in two registers — and applied nowhere: the trap read the seat's flat

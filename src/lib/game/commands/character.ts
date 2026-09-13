@@ -146,7 +146,7 @@ export function changeNature(
   // rule. Read off the ability registry rather than matched by id, so the
   // exception lives with the other 27 characters' powers.
   const freely = abilitiesOfCharacter(asCharacterId(seat.character_id)).some(
-    (ability) => ability.kind === "natura-dowolna",
+    (ability) => ability.kind === "any-nature",
   );
   if (
     !freely &&

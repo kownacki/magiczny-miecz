@@ -227,15 +227,15 @@ export type Stacking =
  */
 const STACKING: Record<Modifier["kind"], Stacking> = {
   // Off is off. A second one lifts a cap that is already lifted.
-  "bez-limitu-zaklec": "exclusive",
+  "no-spell-limit": "exclusive",
   // 1.2-1.5's arithmetic: two Eliksiry are two points, and `bonusFrom` sums.
   points: "sums",
   // A Hełm and a Tarcza worn together are not two rolls: `shieldUpTo` takes
   // the widest, and the reason it does is written there.
-  oslona: "exclusive",
+  shield: "exclusive",
   // A Koń and a Muł worn together really do carry twelve: `carryBonus` sums,
-  // unlike `oslona`'s roll against one Życie above.
-  udzwig: "sums",
+  // unlike `shield`'s roll against one Życie above.
+  capacity: "sums",
   // `movementCap` takes the smaller of the caps, so a second one either tightens
   // it or does nothing. Never a further restriction than the tightest.
   "move-max": "exclusive",
@@ -244,18 +244,18 @@ const STACKING: Record<Modifier["kind"], Stacking> = {
   frozen: "exclusive",
   // Burning twice or paralysed twice is still just out of reach: `cardUntouchable`
   // asks only whether there is one.
-  unieruchomiony: "exclusive",
+  immobilised: "exclusive",
   "no-spells": "exclusive",
-  przeprawa: "exclusive",
+  crossing: "exclusive",
   // `crossingDiceFrom` takes the fewest dice on offer, so a second one either
   // improves the crossing or does nothing — never two rolls.
-  "przeprawa-kostki": "exclusive",
+  "crossing-dice": "exclusive",
   // Two Formuły Czasu do not make six turns: `playsAgain` is a question with a
   // yes-or-no answer, and the countdowns run side by side, so what stands is
   // the longer of them.
-  znowu: "refreshes",
+  again: "refreshes",
   // Each held point of Życie is spent separately (`savedFromLoss` takes one).
-  ocalenie: "queues",
+  rescue: "queues",
   // Each spoken Zaklęcie waits on its own window and is answered on its own.
   spoken: "queues",
   // `forcedNature` takes the first it finds, so a second forcing is inert.
@@ -266,13 +266,13 @@ const STACKING: Record<Modifier["kind"], Stacking> = {
   // Two errands are two errands, each finished and collected separately.
   mission: "queues",
   "no-friends": "exclusive",
-  "magia-as-miecz": "exclusive",
+  "magic-as-sword": "exclusive",
   // `moveMultiplier` answers 2 or 1. Never 4.
   "move-x2": "refreshes",
   attacker: "exclusive",
   // `magiaDoubled` answers 2 or 1 the same way — a second UKŁAD PLANET drawn
   // onto a board already doubled changes nothing, not four times the Magia.
-  "magia-x2": "refreshes",
+  "magic-x2": "refreshes",
 };
 
 /**
@@ -337,19 +337,19 @@ export function markOf(status: Status): Mark {
       return { glyph: up ? "\u25B2" : "\u25BC", tone: up ? "dobry" : "zly", title };
     }
     // A right held rather than something that has happened yet, same as
-    // `ocalenie`'s \u271A \u2014 nothing is worse about the character for wearing one.
-    case "oslona":
+    // `rescue`'s \u271A \u2014 nothing is worse about the character for wearing one.
+    case "shield":
       return { glyph: "\u26E8", tone: "dobry", title };
     // A capacity opened rather than a weight carried \u2014 nothing is worse about
     // the character for having somewhere to put a fifth Przedmiot, same
-    // reasoning as `oslona`'s and `ocalenie`'s marks above.
-    case "udzwig":
+    // reasoning as `shield`'s and `rescue`'s marks above.
+    case "capacity":
       return { glyph: "\u25C8", tone: "dobry", title };
     case "frozen":
       return { glyph: "\u25A0", tone: "zly", title };
     // A Wr\u00F3g out of reach rather than a character stopped \u2014 neither good nor
     // bad for whoever is reading the board, only a fact about the Karta.
-    case "unieruchomiony":
+    case "immobilised":
       return { glyph: "\u25A3", tone: "obojetny", title };
     // A door closed on one kind of card, like `barred` on one place: nothing is
     // worse about the character, there is simply something they may not speak.
@@ -359,23 +359,23 @@ export function markOf(status: Status): Mark {
     // game did to anybody. Neutral rather than „dobry": having no cap is not a
     // blessing a Postać earned, it is a rule that has been turned off, and a
     // green triangle beside a name would read as the former.
-    case "bez-limitu-zaklec":
+    case "no-spell-limit":
       return { glyph: "∞", tone: "obojetny", title };
     // A way opened rather than a weight carried: the one mark here that is
     // something a character *may* do.
     // A crossing made likelier, which is nothing having happened *to* the
-    // holder — the same reading as `oslona`'s: a right held, not a weight.
-    case "przeprawa-kostki":
+    // holder — the same reading as `shield`'s: a right held, not a weight.
+    case "crossing-dice":
       return { glyph: "\u2684", tone: "dobry", title };
-    case "przeprawa":
+    case "crossing":
       return { glyph: "⇥", tone: "dobry", title };
     // Turns coming back rather than being taken away, which is the other thing
     // this app's marks have never had to say.
-    case "znowu":
+    case "again":
       return { glyph: "↻", tone: "dobry", title };
     // Nothing has happened yet — that is the whole of what this one says.
     // A point of Życie held back rather than a weight carried.
-    case "ocalenie":
+    case "rescue":
       return { glyph: "✚", tone: "dobry", title };
     case "spoken":
       return { glyph: "…", tone: "obojetny", title };
@@ -400,7 +400,7 @@ export function markOf(status: Status): Mark {
       return { glyph: "\u2298", tone: "zly", title };
     // Both make the character worth more for a moment, so they read as the same
     // upward mark a `points` buff does.
-    case "magia-as-miecz":
+    case "magic-as-sword":
     case "move-x2":
       return { glyph: "\u25B2", tone: "dobry", title };
     // A record rather than an effect: nothing about the character has changed,
@@ -410,7 +410,7 @@ export function markOf(status: Status): Mark {
     // A Karta's own mark, not a character's: a Demon worth more is bad news
     // for whoever reads the board, the opposite of `move-x2`'s upward triangle
     // even though both double a number.
-    case "magia-x2":
+    case "magic-x2":
       return { glyph: "\u00d7", tone: "zly", title };
     case "note":
       return { glyph: NOTE_GLYPH[status.source] ?? "\u25CB", tone: "obojetny", title };

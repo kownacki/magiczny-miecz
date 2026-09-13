@@ -43,10 +43,10 @@ export function FriendOffer({
       held,
       name: CARD_NAMES.get(held.cardId) ?? held.cardId,
       heals: abilitiesOf(held.cardId).find(
-        (ability) => ability.kind === "uzdrowienie" && ability.field === fieldId,
+        (ability) => ability.kind === "healing" && ability.field === fieldId,
       ),
       parts: abilitiesOf(held.cardId).find(
-        (ability) => ability.kind === "oddaj-w" && ability.field === fieldId,
+        (ability) => ability.kind === "returned-at" && ability.field === fieldId,
       ),
     }))
     .filter((one) => one.heals || one.parts);
@@ -64,12 +64,12 @@ export function FriendOffer({
         // offered the trade and not the cure.
         const missing = Math.max(0, HEAL_CEILING - seat.life);
         const canHeal =
-          heals?.kind === "uzdrowienie" ? Math.min(heals.upTo, missing) : 0;
+          heals?.kind === "healing" ? Math.min(heals.upTo, missing) : 0;
 
         return (
           <div key={held.id} className="mt-2 flex flex-col gap-1">
             <p className="text-xs text-ochre/90">{name}</p>
-            {heals?.kind === "uzdrowienie" && (
+            {heals?.kind === "healing" && (
               <ActionButton
                 role="gain"
                 weight="quiet"
@@ -86,7 +86,7 @@ export function FriendOffer({
                 Odzyskaj {canHeal || heals.upTo} Życia — za darmo, raz na wizytę
               </ActionButton>
             )}
-            {parts?.kind === "oddaj-w" && (
+            {parts?.kind === "returned-at" && (
               <ActionButton
                 weight="quiet"
                 size="sm"
@@ -98,7 +98,7 @@ export function FriendOffer({
                 // irreversible half is the ordinary case and this is the one
                 // that pays. The gold in the label is the whole warning.
               >
-                Oddaj Kartę za {parts.cena} Sz. Z. — {name} zostaje tutaj
+                Oddaj Kartę za {parts.price} Sz. Z. — {name} zostaje tutaj
               </ActionButton>
             )}
           </div>

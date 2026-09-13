@@ -705,7 +705,7 @@ export function TableScreen({ library }: { library: React.ReactNode }) {
                 canFightBeast={active.field_id === "zamek-bestii"}
                 mayChooseNature={abilitiesOfCharacter(
                   asCharacterId(active.character_id),
-                ).some((ability) => ability.kind === "natura-dowolna")}
+                ).some((ability) => ability.kind === "any-nature")}
                 onNature={(nature) =>
                   post("holdings", { action: "nature", seatId: active.id, nature })
                 }

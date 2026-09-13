@@ -14,6 +14,7 @@ import type { Ends } from "./status";
 import { describeEnd } from "./statusRows";
 import type { JournalKind } from "./journal";
 import type { SeatCharacter } from "./characters";
+import type { DeathGameOutcome } from "./bridge";
 
 /** One row of `magiczny_miecz.moves`, as the route hands it over. */
 export interface JournalEntry {
@@ -261,6 +262,20 @@ function natura(value: unknown): string | null {
 const life = (n: number) => `${n} ${plural(n, "Życie", "Życia", "Żyć")}`;
 
 /**
+ * GRA ZE ŚMIERCIĄ's own three outcomes, in the words a player reads.
+ *
+ * `deathGameOutcome` (`bridge.ts`) answers in English now, the way every other
+ * keyword in the engine does — this is the one place that word has to become
+ * Polish again, because it lands straight in a journal sentence rather than
+ * behind a label a component chooses.
+ */
+const DEATH_GAME_OUTCOME_LABEL: Record<DeathGameOutcome, string> = {
+  onward: "dalej",
+  again: "znowu",
+  loss: "strata",
+};
+
+/**
  * Renders one entry, or null when the table should not see it.
  *
  * Pure, so the whole vocabulary is testable without a database. `viewerSeatId`
@@ -458,7 +473,9 @@ export function describe(
     case "bridge-trap":
       return line(`${who} wpada w Pułapkę.`);
     case "bridge-death-game":
-      return line(`${who} gra ze Śmiercią — ${String(data.outcome ?? "?")}.`);
+      return line(
+        `${who} gra ze Śmiercią — ${DEATH_GAME_OUTCOME_LABEL[data.outcome as DeathGameOutcome] ?? "?"}.`,
+      );
 
     // — fighting ————————————————————————————————————————————————————
     case "fight-start": {
@@ -469,7 +486,7 @@ export function describe(
       const ids = Array.isArray(data.cardIds) ? data.cardIds : [];
       const foe =
         ids.map((id) => card(id)).join(" i ") ||
-        (typeof data.nazwa === "string" ? data.nazwa : "wroga");
+        (typeof data.name === "string" ? data.name : "wroga");
       return line(`${who} walczy z: ${foe} (${num(data.enemyTotal)}).`);
     }
     case "fight-end": {

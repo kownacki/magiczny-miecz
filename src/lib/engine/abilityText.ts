@@ -85,7 +85,7 @@ export function whenApplies(
 ): AbilityWhen[] {
   // A requirement is not something that happens at a moment; it is true or the
   // card is not yours at all.
-  if (ability.kind === "tylko-natura") return ["warunek"];
+  if (ability.kind === "nature-only") return ["warunek"];
 
   const when: AbilityWhen[] = [];
 
@@ -112,7 +112,7 @@ export function whenApplies(
    * now leads with, and a +1 that quietly does nothing on the Kamienny Most is
    * exactly the surprise this is here to prevent.
    */
-  if (ability.kind === "punkty" && ability.tylkoWalka) when.push("tylko w walce (1.5)");
+  if (ability.kind === "points" && ability.fightOnly) when.push("tylko w walce (1.5)");
 
   return when;
 }
@@ -228,7 +228,7 @@ export interface ItemProfile {
 }
 
 /** Kinds that state a condition on holding the card at all, rather than a benefit. */
-const IS_A_REQUIREMENT = new Set<Ability["kind"]>(["tylko-natura"]);
+const IS_A_REQUIREMENT = new Set<Ability["kind"]>(["nature-only"]);
 
 /**
  * Kinds that say what a card IS rather than what it gives you.
@@ -240,7 +240,7 @@ const IS_A_REQUIREMENT = new Set<Ability["kind"]>(["tylko-natura"]);
  * Needing the card to walk somewhere is NOT one of these. That is exactly what
  * a Magiczny Miecz gives its owner, and the only thing it gives them.
  */
-const IS_SPECIAL = new Set<Ability["kind"]>(["niedostepny"]);
+const IS_SPECIAL = new Set<Ability["kind"]>(["unavailable"]);
 
 export function itemProfile(cardId: CardId, eqMode: EqMode = "classic"): ItemProfile {
   const abilities = ABILITIES[cardId] ?? [];
@@ -338,17 +338,17 @@ export function forbiddenNatures(cardId: CardId): readonly Nature[] | undefined 
   // different question from whom a Nieznajomy serves, and `servedNatures`
   // deliberately answers both for the sheet.
   const abilities = ABILITIES[cardId] ?? [];
-  const only = abilities.find((ability) => ability.kind === "tylko-natura");
-  if (!only || only.kind !== "tylko-natura") return undefined;
+  const only = abilities.find((ability) => ability.kind === "nature-only");
+  if (!only || only.kind !== "nature-only") return undefined;
   return (["good", "evil", "chaotic"] as const).filter(
-    (nature) => !only.natury.includes(nature),
+    (nature) => !only.natures.includes(nature),
   );
 }
 
 /**
  * The Natury a card is for, from either place one can be written.
  *
- * A Przedmiot says it as a `tylko-natura` ability, which is 5.3: you may not
+ * A Przedmiot says it as a `nature-only` ability, which is 5.3: you may not
  * even hold the card. Three Nieznajomi say it as the condition on their own
  * script — „Pierwszej **Dobrej** Postaci, która do niej zawita" — which is not
  * 5.3 at all: the WRÓŻKA is happily met by a Zła Postać, she simply does
@@ -383,14 +383,14 @@ function servedNatures(
   cardId: CardId,
 ): { natures: readonly Nature[]; rule: string | null; valence: Valence | null } | undefined {
   const abilities = ABILITIES[cardId] ?? [];
-  const only = abilities.find((ability) => ability.kind === "tylko-natura");
+  const only = abilities.find((ability) => ability.kind === "nature-only");
   // 5.3 is a rule about *holding* a card, so it is cited on the cards it is
   // about. A Nieznajomy serving one Natura is not 5.3 and cites nothing: no
   // rule in the book says the Wróżka waits for a Dobra Postać — her Karta does.
-  if (only && only.kind === "tylko-natura") {
+  if (only && only.kind === "nature-only") {
     // 5.3 is a rule about *holding* a Karta, so meeting it is by definition in
     // the reader's favour: what it gates is the card being theirs at all.
-    return { natures: only.natury, rule: "(5.3)", valence: "gain" };
+    return { natures: only.natures, rule: "(5.3)", valence: "gain" };
   }
   const gate = wholeCardGate(cardId);
   if (gate && gate.condition.is === "nature") {
@@ -729,39 +729,39 @@ export function characterProfile(characterId: CharacterId | null): ItemProfile {
  */
 export function describeAbility(ability: Ability): string {
   switch (ability.kind) {
-    case "punkty": {
+    case "points": {
       const parts = [];
-      if (ability.miecz) parts.push(`+${ability.miecz} Miecza`);
-      if (ability.magia) parts.push(`+${ability.magia} Magii`);
+      if (ability.sword) parts.push(`+${ability.sword} Miecza`);
+      if (ability.magic) parts.push(`+${ability.magic} Magii`);
       return parts.join(", ");
     }
-    case "oslona":
+    case "shield":
       return `osłona przy przegranej (rzut ≤ ${ability.upTo})`;
-    case "bezpieczny": {
+    case "safe": {
       const where = fieldNames(ability.fields);
       // The condition is half the rule. The Relikwiarz spares a Dobra Postać at
       // the Czarci Młyn and a Zła one at the Studnia Wieczności, and dropping
       // that read as sparing everyone at both.
-      const onlyFor = ability.natura?.length
-        ? ` — jeśli ${ability.natura.map((n: string) => NATURE_LABEL[n] ?? n).join(" lub ")}`
+      const onlyFor = ability.nature?.length
+        ? ` — jeśli ${ability.nature.map((n: string) => NATURE_LABEL[n] ?? n).join(" lub ")}`
         : "";
-      if (ability.from === "rzut") return `bez rzutu: ${where}${onlyFor}`;
+      if (ability.from === "roll") return `bez rzutu: ${where}${onlyFor}`;
       if (ability.from === "life") return `bez straty Życia: ${where}${onlyFor}`;
       return `bez straty Przedmiotu: ${where}${onlyFor}`;
     }
-    case "ucieczka": {
+    case "escape": {
       // Said out loud because it is the whole restriction: an escape printed on
       // a character or a friend is about Wrogowie, and a player who reads it as
       // "you can run away here" will try it on another Postać and be told no.
-      const przed = (ability.przed ?? ["wrog"]).map((what) =>
-        what === "postac" ? "Postacią" : "Wrogiem",
+      const from = (ability.from ?? ["foe"]).map((what) =>
+        what === "character" ? "Postacią" : "Wrogiem",
       );
       // 19.1 is the rule this is an instance of: "Używając specjalnych
       // zdolności opisanych w charakterystyce […] Postać może wymknąć się".
-      return `ucieczka przed ${przed.join(" lub ")} (19.1): ${fieldNames(ability.fields)}`;
+      return `ucieczka przed ${from.join(" lub ")} (19.1): ${fieldNames(ability.fields)}`;
     }
-    case "udzwig": {
-      if (ability.items === "bez-limitu") return "niesiesz bez ograniczeń (5.4)";
+    case "capacity": {
+      if (ability.items === "unlimited") return "niesiesz bez ograniczeń (5.4)";
       // Added to the four of 5.4, not a cap replacing them — which is what
       // carryLimit does, and what the card says: the Koń carries eight of your
       // Przedmioty, and losing it makes you leave whatever you cannot carry
@@ -769,44 +769,44 @@ export function describeAbility(ability: Ability): string {
       const many = ability.items;
       return `+${many} ${plural(many, "Przedmiot", "Przedmioty", "Przedmiotów")} ponad limit (5.4)`;
     }
-    case "ruch-bonus":
+    case "move-bonus":
       return ability.min === ability.max
         ? `+${ability.min} do ruchu`
         : `+${ability.min}–${ability.max} do ruchu`;
-    case "magia-do-miecza":
+    case "magic-to-sword":
       return "do punktów Miecza dodajesz swoje punkty Magii";
-    case "zabiera-zycie":
-      return ability.zycie === 1
+    case "takes-life":
+      return ability.life === 1
         ? "po każdej wygranej walce zabierasz pokonanemu 1 punkt Życia"
-        : `po każdej wygranej walce zabierasz pokonanemu ${ability.zycie} punkty Życia`;
-    case "ginie-zamiast-ciebie":
+        : `po każdej wygranej walce zabierasz pokonanemu ${ability.life} punkty Życia`;
+    case "dies-for-you":
       return ability.onRollUpTo
         ? `ginie zamiast ciebie (rzut ≤ ${ability.onRollUpTo})`
         : "ginie zamiast ciebie";
-    case "wymagany":
+    case "required":
       return ability.place === "most"
         ? "bez tego nie wejdziesz na Kamienny Most (14.2)"
         : "bez tego nie wejdziesz do Zamku Bestii (14.7)";
-    case "bez-oplaty":
+    case "no-toll":
       return `bez opłaty: ${fieldNames(ability.fields)}`;
-    case "zakazane":
+    case "forbidden":
       return "nie wolno ci nosić niektórych Przedmiotów";
-    case "bez-zaklec":
-      return `nie rzucasz ani nie używasz Zaklęć; przeciwnik nie użyje w walce z tobą: ${ability.przeciwnikBez
+    case "no-spells":
+      return `nie rzucasz ani nie używasz Zaklęć; przeciwnik nie użyje w walce z tobą: ${ability.opponentWithout
         .map((id) => cardName(id))
         .join(", ")}`;
-    case "przeprawa-kostki":
+    case "crossing-dice":
       return `przeprawa przez Trzęsawiska: ${ability.dice} kostki`;
-    case "skup":
-      return `zamienia Przedmiot na złoto (${ability.cena} Sz. Z. za sztukę)`;
-    // Colon rather than a preposition, exactly as `bez-oplaty` two cases up:
+    case "buys":
+      return `zamienia Przedmiot na złoto (${ability.price} Sz. Z. za sztukę)`;
+    // Colon rather than a preposition, exactly as `no-toll` two cases up:
     // an Obszar's name is printed on the board and goes in verbatim, so nothing
     // here can decline it and „w Zamek" is what asking would produce.
-    case "placi-za-przegrana":
+    case "pays-for-loss":
       return "przegraną walkę z Postacią płacisz tą Kartą, nie punktem Życia";
-    case "sprzedaj-w":
-      return `sprzedasz za ${ability.cena} Sz. Z.: ${fieldNames(ability.fields)}`;
-    case "przeprawa-wszedzie":
+    case "sells-at":
+      return `sprzedasz za ${ability.price} Sz. Z.: ${fieldNames(ability.fields)}`;
+    case "crosses-anywhere":
       return ability.obstacle === "trzesawiska"
         // Both are the rulebook's own sentences: 11.2 "Trzęsawiska można
         // przebyć w dowolnym miejscu przy pomocy Łodzi", 11.6 "Postać
@@ -814,80 +814,80 @@ export function describeAbility(ability: Ability): string {
         // miejscu". The card restates a rule, so the rule is worth naming.
         ? "przeprawa przez Trzęsawiska w dowolnym miejscu (11.2)"
         : "przeprawa przez Lodowy Las w dowolnym miejscu (11.6)";
-    case "uzdrowienie":
+    case "healing":
       return `do ${ability.upTo} Życia w: ${fieldName(ability.field)}`;
-    case "oddaj-w":
-      return `oddaj Kartę w: ${fieldName(ability.field)} za ${ability.cena} Sz. Z.`;
-    case "cena-przyjecia": {
+    case "returned-at":
+      return `oddaj Kartę w: ${fieldName(ability.field)} za ${ability.price} Sz. Z.`;
+    case "hiring-price": {
       const price = [
-        ability.zloto ? `${ability.zloto} Sz. Z.` : null,
-        ability.zycie ? `${ability.zycie} Życia` : null,
+        ability.gold ? `${ability.gold} Sz. Z.` : null,
+        ability.life ? `${ability.life} Życia` : null,
       ]
         .filter(Boolean)
         .join(" i ");
-      return ability.bezZaplaty === "odchodzi"
+      return ability.ifUnpaid === "leaves"
         ? `przyjęcie kosztuje ${price}; bez zapłaty odchodzi na stos`
         : `przyjęcie kosztuje ${price}; bez zapłaty czeka na Obszarze`;
     }
-    case "walczy-za-ciebie":
-      return `walczy za ciebie (Miecz ${ability.miecz}, Magia ${ability.magia})`;
-    case "niedostepny":
+    case "fights-for-you":
+      return `walczy za ciebie (Miecz ${ability.sword}, Magia ${ability.magic})`;
+    case "unavailable":
       return "nie do zdobycia w Dolnym Kręgu";
-    case "natura-dowolna":
+    case "any-nature":
       return "Naturę zmieniasz dowolnie (raz na turę)";
-    case "modyfikator-rzutu": {
-      const sign = ability.dowolnyZnak
+    case "roll-modifier": {
+      const sign = ability.eitherSign
         ? `±${Math.abs(ability.delta)}`
         : `${ability.delta > 0 ? "+" : "−"}${Math.abs(ability.delta)}`;
       const where =
-        ability.gdzie.na === "walke"
-          ? ability.gdzie.rodzaj === "magical"
+        ability.where.at === "fight"
+          ? ability.where.kind === "magical"
             ? "w walce magicznej"
             : "w walce zwykłej"
-          : `na: ${ability.gdzie.fields.map(fieldName).join(", ")}`;
-      return `${sign} do rzutu ${where}${ability.jednorazowy ? " (raz)" : ""}`;
+          : `na: ${ability.where.fields.map(fieldName).join(", ")}`;
+      return `${sign} do rzutu ${where}${ability.once ? " (raz)" : ""}`;
     }
-    case "tylko-natura": {
-      const natury = ability.natury.map((n: string) => NATURE_LABEL[n] ?? n).join(" lub ");
-      return `tylko Postać: ${natury} (5.3)`;
+    case "nature-only": {
+      const natures = ability.natures.map((n: string) => NATURE_LABEL[n] ?? n).join(" lub ");
+      return `tylko Postać: ${natures} (5.3)`;
     }
-    case "nosi-zaklecie": {
+    case "carries-spell": {
       const price =
-        ability.cena === undefined || ability.cena === 0
+        ability.price === undefined || ability.price === 0
           ? "wypowie je, gdy zechcesz"
-          : `wypowie je za ${sztuki(ability.cena)}`;
-      const after = ability.znika ? ", po czym odchodzi z zapłatą" : "";
-      const look = ability.mozeszObejrzec ? " (wolno ci je obejrzeć)" : "";
+          : `wypowie je za ${sztuki(ability.price)}`;
+      const after = ability.vanishes ? ", po czym odchodzi z zapłatą" : "";
+      const look = ability.mayView ? " (wolno ci je obejrzeć)" : "";
       return `nosi przy sobie 1 Zaklęcie${look} — ${price}${after}`;
     }
-    case "za-oplata": {
+    case "for-a-fee": {
       const gives = [
-        ability.miecz ? `+${ability.miecz} Miecza` : null,
-        ability.magia ? `+${ability.magia} Magii` : null,
+        ability.sword ? `+${ability.sword} Miecza` : null,
+        ability.magic ? `+${ability.magic} Magii` : null,
       ]
         .filter(Boolean)
         .join(" i ");
-      const often = ability.razNaTure ? ", raz na turę" : "";
-      return `za ${sztuki(ability.cena)}: ${gives} na jedną turę${often}`;
+      const often = ability.onceATurn ? ", raz na turę" : "";
+      return `za ${sztuki(ability.price)}: ${gives} na jedną turę${often}`;
     }
-    case "przeciw": {
+    case "against": {
       const gives = [
-        ability.miecz !== undefined && `+${ability.miecz} Miecza`,
-        ability.magia !== undefined && `+${ability.magia} Magii`,
+        ability.sword !== undefined && `+${ability.sword} Miecza`,
+        ability.magic !== undefined && `+${ability.magic} Magii`,
       ]
         .filter(Boolean)
         .join(", ");
-      return `przeciw: ${ability.komu.join(", ")} — ${gives} zamiast zwykłego bonusu`;
+      return `przeciw: ${ability.whom.join(", ")} — ${gives} zamiast zwykłego bonusu`;
     }
-    case "pokonuje-bez-walki":
+    case "beats-without-fight":
       return "pokonujesz wszystkie Demony bez walki";
-    case "zaklecia-ponad-limit":
+    case "spells-over-limit":
       return `+${ability.count} Zaklęcie ponad limit (2.6)`;
-    case "podglad-zaklec":
+    case "spell-peek":
       return `biorąc Zaklęcie, oglądasz ${ability.count} pierwsze Karty i wybierasz jedną`;
-    case "punkty-na-polach":
-      return `+${ability.punkty} Miecza lub Magii: ${fieldNames(ability.fields)}`;
-    case "odporny-na-zaklecie":
-      return `odporność na: ${ability.zaklecia.map((id) => cardName(id)).join(", ")}`;
+    case "points-on-fields":
+      return `+${ability.points} Miecza lub Magii: ${fieldNames(ability.fields)}`;
+    case "immune-to-spell":
+      return `odporność na: ${ability.spells.map((id) => cardName(id)).join(", ")}`;
   }
 }

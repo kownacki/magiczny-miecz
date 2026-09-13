@@ -41,7 +41,7 @@ export function overflowIn(
    * bases that usually agree is the bug the envelope's own note warns about.
    * `seatView.spellCapacity` is the one the refusal, the greying and the tally
    * all rest on, and the console can take it off entirely
-   * (`bez-limitu-zaklec`) — which this end could not see, so a seat with the
+   * (`no-spell-limit`) — which this end could not see, so a seat with the
    * cap lifted went on opening overflow frames against a cap it no longer had.
    */
   spells: {

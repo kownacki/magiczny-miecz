@@ -244,7 +244,7 @@ export async function resolveFight(
           (one) =>
             one.seat_id === loser.id &&
             one.kind === "item" &&
-            abilitiesOf(one.card_id).some((a) => a.kind === "placi-za-przegrana"),
+            abilitiesOf(one.card_id).some((a) => a.kind === "pays-for-loss"),
         )
       : undefined;
 

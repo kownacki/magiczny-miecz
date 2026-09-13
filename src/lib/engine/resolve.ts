@@ -49,7 +49,7 @@ export function everyNode(effect: Effect): Effect[] {
  * when the answers were a switch here: four times a word sat among the
  * unsettled ones only because it had no implementation yet — `receive`,
  * `buy`/`sell`, `spells-to-limit`, `swap-points` — and the symptom
- * was always the same, a Karta reported `pelne` that no surface could
+ * was always the same, a Karta reported `full` that no surface could
  * resolve, or a turn deadlocked on a question nobody had been asked.
  * `coverage.test.ts` now asks that of every card, which is why the fifth time
  * will fail a build instead of a table.

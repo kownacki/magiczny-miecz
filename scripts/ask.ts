@@ -756,7 +756,7 @@ function corpus(): { owner: string; effect: Effect }[] {
     if (script.onLoss) roots.push({ owner: `${id} (onLoss)`, effect: script.onLoss });
   }
   for (const [id, spell] of Object.entries(SPELLS)) {
-    if (spell.stosuje) roots.push({ owner: `${id} (Zaklęcie)`, effect: spell.stosuje });
+    if (spell.script) roots.push({ owner: `${id} (Zaklęcie)`, effect: spell.script });
   }
   for (const [id, field] of Object.entries(FIELD_SCRIPTS)) {
     field?.offers.forEach((offer) =>

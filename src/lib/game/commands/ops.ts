@@ -88,7 +88,7 @@ export interface Resolution {
  * frame is pushed, so that what opens sits above the card it interrupted.
  */
 export type Opens =
-  | { kind: "walka"; nazwa: string; miecz?: number; magia?: number }
+  | { kind: "fight"; name: string; sword?: number; magic?: number }
   | { kind: "ask" };
 
 /**
@@ -268,7 +268,7 @@ function named(snapshot: Snapshot, row: SeatRow): string {
 function sparedHere(
   snapshot: Snapshot,
   seatId: string,
-  from: "life" | "utrata",
+  from: "life" | "loss",
 ): boolean {
   const view = seatView(snapshot, seatId);
   return view.fieldId !== null && isSpared(view.abilities, view.fieldId, from, view.nature);
@@ -314,11 +314,11 @@ type OpRun<K extends LeafOp> = (
  * reading that `isSettled` answered false for them so the gate would hand them
  * back and the table would carry them out. What actually happened is that the
  * Karta stalled: the MĘDRZEC and the MAGICZNA TABLICA were both reported
- * `pelne` and could not be resolved on either surface — the prompt said
+ * `full` and could not be resolved on either surface — the prompt said
  * „waiting on an answer no surface can ask yet" and the browser said
  * „odpowiedzcie w konsoli".
  *
- * `coverage.test.ts` holds the line now: a `pelne` Karta may not reach a node
+ * `coverage.test.ts` holds the line now: a `full` Karta may not reach a node
  * that can be neither run nor asked.
  */
 const OPS: { [K in LeafOp]: OpRun<K> } = {
@@ -865,7 +865,7 @@ const OPS: { [K in LeafOp]: OpRun<K> } = {
        * for the Bagna and for nothing else. A Zaklęcie that strips a hand
        * somewhere else is untouched by it.
        */
-      if (sparedHere(snapshot, row.id, "utrata")) {
+      if (sparedHere(snapshot, row.id, "loss")) {
         said.push(`${named(snapshot, row)}: nic nie traci — Karta chroni na tym Obszarze`);
         continue;
       }
@@ -1190,7 +1190,7 @@ const OPS: { [K in LeafOp]: OpRun<K> } = {
         pending: null,
         suspended: {
           cursor: ctx.path,
-          opens: { kind: "walka", nazwa: effect.name, miecz: effect.sword, magia: effect.magic },
+          opens: { kind: "fight", name: effect.name, sword: effect.sword, magic: effect.magic },
         },
       },
     };
@@ -1287,7 +1287,7 @@ const OPS: { [K in LeafOp]: OpRun<K> } = {
      */
     const summoned = summonFighter(snapshot, {
       name: effect.name,
-      miecz: effect.sword,
+      sword: effect.sword,
       spellId: ctx.reason,
       ...(ctx.fieldCardId !== undefined
         ? { fieldCardId: ctx.fieldCardId }
@@ -1304,7 +1304,7 @@ const OPS: { [K in LeafOp]: OpRun<K> } = {
    *
    * A turn is „a) ruch b) spotkania i badanie Obszaru" (10.1), so a move
    * granted on its own is a turn that comes back: you roll, you go, and you
-   * explore where you land. Which is exactly what `znowu` already means, and it
+   * explore where you land. Which is exactly what `again` already means, and it
    * is already honoured — `passTurn` hands the turn to the same seat while one
    * is held and counts it out afterwards, because the Formuła Czasu needed it
    * first.
@@ -1324,7 +1324,7 @@ const OPS: { [K in LeafOp]: OpRun<K> } = {
         effect: {
           source: ctx.cardId ?? "10.1",
           label: "Dodatkowy ruch",
-          modifier: { kind: "znowu" },
+          modifier: { kind: "again" },
           ends: { kind: "turns", turns: 1 },
         },
       }),
@@ -1360,7 +1360,7 @@ const OPS: { [K in LeafOp]: OpRun<K> } = {
    * „Natychmiast uzyskujesz taką liczbę Zaklęć, na jaką pozwala ci twoja
    * Magia" — the MAGICZNA TABLICA, and the last op that was not implemented.
    *
-   * The Karta was reported `pelne` and could not be resolved on either surface:
+   * The Karta was reported `full` and could not be resolved on either surface:
    * `isSettled` answered false for ever, so the gate handed it back and the
    * prompt said „waiting on an answer no surface can ask yet". The same shape
    * as the MĘDRZEC's riddle, found the same way, and it is not even a question

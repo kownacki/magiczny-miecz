@@ -40,9 +40,9 @@ describe("which cards are spent by using them", () => {
     // "Aplikacja" is a promise, and there are exactly two ways to keep it: a
     // die table the app can throw, or an effect the buff system can hold.
     for (const [id, use] of Object.entries(USES)) {
-      if (use.rozpatruje !== "aplikacja") continue;
+      if (use.resolvedBy !== "app") continue;
       const rolls = /rzuć kostką/i.test(byId.get(id)?.text ?? "");
-      expect(rolls || use.efekt !== undefined, `${id} nie ma czym rozpatrzyć`).toBe(true);
+      expect(rolls || use.status !== undefined, `${id} nie ma czym rozpatrzyć`).toBe(true);
     }
   });
 
@@ -50,7 +50,7 @@ describe("which cards are spent by using them", () => {
     // The Kryształ shifts a fight roll and the Jabłko a Świątynia roll, at a
     // moment nothing can be held across. Claiming those would be a lie.
     for (const id of ["krysztal-losu", "jablko-natchnienia", "rozdzka-przeznaczenia"] as const) {
-      expect(usageOf(id)!.rozpatruje, id).toBe("stol");
+      expect(usageOf(id)!.resolvedBy, id).toBe("table");
     }
   });
 });
@@ -82,7 +82,7 @@ describe("what the player is asked", () => {
 
   it("never leaves a card without the line the question is built from", () => {
     for (const [id, use] of Object.entries(USES)) {
-      expect(use.co.length, id).toBeGreaterThan(0);
+      expect(use.what.length, id).toBeGreaterThan(0);
     }
   });
 

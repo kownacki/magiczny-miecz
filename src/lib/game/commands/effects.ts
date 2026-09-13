@@ -264,7 +264,7 @@ function openOver(
   opens: Opens | undefined,
 ): { state: TurnState; said: Changeset } {
   if (!opens) return { state, said: {} };
-  if (opens.kind === "walka") {
+  if (opens.kind === "fight") {
     const fight = fightOver(state, after, command.seatId, opens);
     return { state: push(state, fight.phase), said: fight.said };
   }
@@ -286,7 +286,7 @@ function fightOver(
   state: TurnState,
   after: Snapshot,
   seatId: string,
-  opens: { nazwa: string; miecz?: number; magia?: number },
+  opens: { name: string; sword?: number; magic?: number },
 ): { phase: TurnPhase; said: Changeset } {
   const field = [...state.stack].reverse().find((one) => one.phase === "field");
   if (!field || field.phase !== "field") throw new Error("Walka poza Obszarem.");
@@ -294,9 +294,9 @@ function fightOver(
     phase: startFight(
       field,
       {
-        cardId: `pole:${opens.nazwa}`,
-        cardName: opens.nazwa,
-        ...(opens.magia !== undefined ? { magia: opens.magia } : { miecz: opens.miecz }),
+        cardId: `pole:${opens.name}`,
+        cardName: opens.name,
+        ...(opens.magic !== undefined ? { magia: opens.magic } : { miecz: opens.sword }),
         settles: [],
       },
       pointsOf(after, seatId, "walka"),
@@ -307,7 +307,7 @@ function fightOver(
           seatId,
           round: after.game.round,
           kind: "fight-start",
-          payload: { nazwa: opens.nazwa, enemyTotal: opens.miecz ?? opens.magia },
+          payload: { name: opens.name, enemyTotal: opens.sword ?? opens.magic },
         },
       ],
     },
@@ -773,7 +773,7 @@ async function walk(
    * is for, and it is the half that cannot be cheated once the app holds it.
    *
    * It was `unimplemented` — `isSettled` answered false and the gate handed the
-   * whole card back — while `coverage.ts` called the Karta `pelne`, because the
+   * whole card back — while `coverage.ts` called the Karta `full`, because the
    * Karta *has* a script. So the MĘDRZEC was listed as carried and could not be
    * resolved on either surface: the prompt said „waiting on an answer no
    * surface can ask yet" and the browser's panel said „odpowiedzcie w konsoli".

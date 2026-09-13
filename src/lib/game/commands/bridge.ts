@@ -504,7 +504,7 @@ export async function crossRing(
    * because that is what „graniczącego" leaves open and what a table does
    * looking at the board.
    */
-  const opposite = granted ? facing(seat.field_id, granted.przez) : [];
+  const opposite = granted ? facing(seat.field_id, granted.over) : [];
   if (granted && opposite.length > 1 && !command.to) {
     throw new Error(
       `${granted.label}: na który Obszar? ${opposite.map((id) => FIELDS.get(id)?.name ?? id).join(", ")}`,
@@ -520,7 +520,7 @@ export async function crossRing(
   const landing = command.to ?? opposite[0];
   const crossing: Crossing | undefined =
     granted && landing
-      ? { from: seat.field_id, to: landing, obstacle: granted.przez }
+      ? { from: seat.field_id, to: landing, obstacle: granted.over }
       : crossingFrom(seat.field_id);
   if (!crossing) {
     throw new Error(
@@ -737,7 +737,7 @@ export async function resolveBridgeOrdeal(
     // merge order still matters, because two writes to `game.turn_state` are
     // "later wins" and not a sum: the pass must come second, as it does here.
     const cost =
-      outcome === "strata" ? spendLife(apply(snapshot, played), seat.id, 1).writes : {};
+      outcome === "loss" ? spendLife(apply(snapshot, played), seat.id, 1).writes : {};
 
     return {
       writes: merge(played, cost),
@@ -746,7 +746,7 @@ export async function resolveBridgeOrdeal(
         kind: "gra-ze-smiercia",
         dice: [...mine, ...deaths],
         outcome,
-        lifeLost: outcome === "strata" ? 1 : 0,
+        lifeLost: outcome === "loss" ? 1 : 0,
       },
     };
   }

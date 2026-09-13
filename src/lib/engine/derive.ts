@@ -146,7 +146,7 @@ export const SLOTTED_PACK_LIMIT = BASE_CARRY_LIMIT;
  * to read that as *unlimited* for any of them. The cards are more careful: the
  * Koń carries eight, the Muł and the Tragarz four apiece, the Magiczna Sakwa
  * five over your own capacity, and only the Zaprzęg says "dowolną liczbę". So
- * the number comes from the card now, read as the standing `udzwig` fact
+ * the number comes from the card now, read as the standing `capacity` fact
  * `heldStatuses` (status.ts) produces for it, through `carryBonus` — the same
  * list `seatView` builds `standing` from, not a second reading of the cards.
  *

@@ -573,10 +573,10 @@ export function CardDetail({ card, onClose }: { card: TileCard; onClose: () => v
   const cardId = cardIdOf(card);
   // Coverage is about Karty Zdarzeń — whether the app can carry out what a card
   // does when it is drawn. A Karta Postaci is not drawn and not resolved; it is
-  // who you are for the whole game. Asking the registry about one got "brak"
+  // who you are for the whole game. Asking the registry about one got "none"
   // by default, so every character opened with "rozpatrzcie sami — aplikacja
   // jej nie prowadzi" printed under it, which is not true of anything.
-  const coverage = cardId === null ? "pelne" : coverageOf(cardId);
+  const coverage = cardId === null ? "full" : coverageOf(cardId);
   const note = cardId === null ? null : manualNote(cardId);
   // Never true for a Postać — `PARKED_CARDS` names cards off the decks, never
   // a character, because losing one ability is not losing the Postać (8.2).
@@ -635,10 +635,10 @@ export function CardDetail({ card, onClose }: { card: TileCard; onClose: () => v
               <p className="whitespace-pre-line text-xs leading-relaxed text-muted">{card.text}</p>
             )
           )}
-          {!parked && coverage !== "pelne" && (
+          {!parked && coverage !== "full" && (
             <p
               className={`mt-3 rounded border-l-2 px-2 py-1 text-[11px] leading-snug ${
-                coverage === "brak"
+                coverage === "none"
                   ? "border-vermilion/50 bg-vermilion/5 text-vermilion/90"
                   : "border-ochre/50 bg-ochre/5 text-ochre/90"
               }`}

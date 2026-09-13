@@ -24,7 +24,7 @@ function corpus(): Effect[] {
     if (script.onDraw) roots.push(script.onDraw);
     if (script.onLoss) roots.push(script.onLoss);
   }
-  for (const spell of Object.values(SPELLS)) if (spell.stosuje) roots.push(spell.stosuje);
+  for (const spell of Object.values(SPELLS)) if (spell.script) roots.push(spell.script);
   for (const field of Object.values(FIELD_SCRIPTS)) {
     field?.offers.forEach((offer) => roots.push(offer.effect));
   }

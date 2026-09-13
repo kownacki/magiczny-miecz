@@ -45,7 +45,7 @@ const drawnAt = () =>
 const asIs = <T,>(items: readonly T[]): T[] => [...items];
 
 describe("UKŁAD PLANET doubles every Demon on the board", () => {
-  it("puts magia-x2 on every Demon's row, wherever it is lying", async () => {
+  it("puts magic-x2 on every Demon's row, wherever it is lying", async () => {
     const { writes } = await resolveDrawnCard(
       drawnAt(),
       { cardId: "uklad-planet", shuffle: asIs },
@@ -55,8 +55,8 @@ describe("UKŁAD PLANET doubles every Demon on the board", () => {
     expect(rows).toHaveLength(2);
     expect(rows).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ field_card_id: "fc-wampir", modifier: { kind: "magia-x2" } }),
-        expect.objectContaining({ field_card_id: "fc-demon", modifier: { kind: "magia-x2" } }),
+        expect.objectContaining({ field_card_id: "fc-wampir", modifier: { kind: "magic-x2" } }),
+        expect.objectContaining({ field_card_id: "fc-demon", modifier: { kind: "magic-x2" } }),
       ]),
     );
     // The Hełm is not a Demon and gets nothing.
@@ -96,7 +96,7 @@ describe("UKŁAD PLANET doubles every Demon on the board", () => {
           field_card_id: "fc-demon",
           source: "uklad-planet",
           label: "Układ Planet — Magia podwojona",
-          modifier: { kind: "magia-x2" as const },
+          modifier: { kind: "magic-x2" as const },
           ends: { kind: "round" as const, round: 5 },
         },
       ],

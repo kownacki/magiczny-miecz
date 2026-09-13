@@ -32,13 +32,13 @@ import type { CardId, SpellId } from "@/data/ids";
  * Every printed ability covers Wrogowie only; a Postać is the Krąg Płomieni's
  * business, and on the Kamienny Most 19.3 allows nothing else.
  */
-export type EscapeTarget = "wrog" | "postac";
+export type EscapeTarget = "foe" | "character";
 
 export type Ability =
   /**
    * Points a held card lends its owner (1.5, 2.5).
    *
-   * `tylkoWalka` is the difference between the two figures the rulebook quotes
+   * `fightOnly` is the difference between the two figures the rulebook quotes
    * for the same character. Its worked example under 1.5 gives the Troll a
    * "parametr Miecza równy 8" and "podczas walki 11 punktom" — the Miecz card
    * and the Krzyżowiec count in a fight and nowhere else, and the printed text
@@ -47,7 +47,7 @@ export type Ability =
    * It matters off the battlefield too: 14.5 has the Pułapka subtract "wartość
    * swojego parametru Miecza", which is the 8.
    */
-  | { kind: "punkty"; miecz?: number; magia?: number; tylkoWalka?: true }
+  | { kind: "points"; sword?: number; magic?: number; fightOnly?: true }
   /**
    * A point of Życie off every opponent you beat (Excalibur).
    *
@@ -60,12 +60,12 @@ export type Ability =
    * A gain and not healing, so 4.7's ceiling of four does not apply — 4.6 caps
    * only what a Uzdrowiciel restores.
    */
-  | { kind: "zabiera-zycie"; zycie: number }
+  | { kind: "takes-life"; life: number }
   /**
    * A save against the point of Życie a lost fight costs: Hełm on a 1, Tarcza on
    * 1-2, Zbroja on 1-3. The fight is still lost either way.
    */
-  | { kind: "oslona"; upTo: number }
+  | { kind: "shield"; upTo: number }
   /**
    * The Kryształ Magów's first and third clauses: its owner "nie może rzucać
    * ani używać Zaklęć", and an opponent fighting them may not use the named
@@ -73,35 +73,35 @@ export type Ability =
    *
    * The middle clause — "całkowicie odporny" to six named ones — used to live
    * here too as `odpornyNa`, read by nothing (`spellWards` had zero callers).
-   * It is `odporny-na-zaklecie` now, the door the two Talizmany already open,
+   * It is `immune-to-spell` now, the door the two Talizmany already open,
    * so immunity is asked the one way the app asks it anywhere: of the victim,
-   * at the one cast door. `przeciwnikBez` is this ability's alone because it
+   * at the one cast door. `opponentWithout` is this ability's alone because it
    * is not immunity — it is a ban on a spell an *opponent* would otherwise be
-   * free to cast on themselves, which `odporny-na-zaklecie` has no shape for.
+   * free to cast on themselves, which `immune-to-spell` has no shape for.
    */
-  | { kind: "bez-zaklec"; przeciwnikBez: readonly SpellId[] }
+  | { kind: "no-spells"; opponentWithout: readonly SpellId[] }
   /**
-   * Passes a named field without what it normally does to you. `rzut` skips a
+   * Passes a named field without what it normally does to you. `roll` skips a
    * field's die roll entirely (Opiekun, Przewodnik); `life` keeps the point it
-   * would cost (Rękawice on Ruchome Skały); `utrata` keeps the Przedmiot or
+   * would cost (Rękawice on Ruchome Skały); `loss` keeps the Przedmiot or
    * Przyjaciel it would take (Kij i Sznur on Bagna).
    */
   | {
-      kind: "bezpieczny";
+      kind: "safe";
       fields: readonly FieldId[];
-      from: "rzut" | "life" | "utrata";
+      from: "roll" | "life" | "loss";
       /**
        * Some protections are conditional on who is holding them: the Relikwiarz
        * spares a Dobra Postać at the Czarci Młyn and a Zła one at the Studnia
        * Wieczności, and nobody at the other. Without this the card would have to
        * be encoded as sparing everyone at both fields, or not at all.
        */
-      natura?: readonly Nature[];
+      nature?: readonly Nature[];
     }
   /**
    * Reliably slips away on named fields (Elf, Hobgoblin, Obbol, Elflin, Rusałka).
    *
-   * `przed` is *what* may be fled, and it defaults to Wrogowie because every
+   * `from` is *what* may be fled, and it defaults to Wrogowie because every
    * card that grants this says so in as many words — "możesz wymykać się
    * **Wrogom** na Równinach". 19.1 and 19.2 both also allow fleeing another
    * Postać, and nothing printed on a character or a friend does it: that is the
@@ -109,7 +109,7 @@ export type Ability =
    * and an Elf standing on a Równina escaped a duel on the strength of an
    * ability about monsters.
    */
-  | { kind: "ucieczka"; fields: readonly FieldId[]; przed?: readonly EscapeTarget[] }
+  | { kind: "escape"; fields: readonly FieldId[]; from?: readonly EscapeTarget[] }
   /**
    * Raises the four-Przedmiot limit of 5.4 by a stated amount — Koń eight, Muł
    * and Tragarz four apiece, Magiczna Sakwa five. Only the Zaprzęg is actually
@@ -117,8 +117,8 @@ export type Ability =
    * that is a separate value rather than a very large number.
    */
   | {
-      kind: "udzwig";
-      items: number | "bez-limitu";
+      kind: "capacity";
+      items: number | "unlimited";
       /**
        * The carrier does not fill one of the places it opens.
        *
@@ -131,7 +131,7 @@ export type Ability =
        * a fact about *this carrier* rather than about a class of card: a Koń
        * takes up room in your hands and says nothing to the contrary.
        */
-      samaSieNieLiczy?: true;
+      doesNotCount?: true;
       /**
        * What it carries goes with it.
        *
@@ -141,14 +141,14 @@ export type Ability =
        * say it. A Koń, a Muł and a Zaprzęg lost the same way leave their load
        * behind on the Obszar (5.5, 5.6); these two take it with them, which is
        * why `overflow.ts` needs to tell the four apart rather than treating
-       * every `udzwig` carrier alike.
+       * every `capacity` carrier alike.
        */
-      giniePrzyUtracie?: true;
+      lostWithIt?: true;
     }
   /** Zaprzęg adds one to the movement roll; Wierzchowiec one to three. */
-  | { kind: "ruch-bonus"; min: number; max: number }
+  | { kind: "move-bonus"; min: number; max: number }
   /** Bojowy Rumak: "do punktów Miecza możesz dodać swoje punkty Magii". */
-  | { kind: "magia-do-miecza" }
+  | { kind: "magic-to-sword" }
   /**
    * Dies in your place rather than you losing the point — the Bojowy Rumak
    * whenever you are beaten, the Giermek on a roll of one.
@@ -158,17 +158,17 @@ export type Ability =
    * the flag the engine would offer his life every time anyone lost anything,
    * which is a good deal more friend than the card describes.
    */
-  | { kind: "ginie-zamiast-ciebie"; onRollUpTo?: number; onlyWhenRaiding?: boolean }
+  | { kind: "dies-for-you"; onRollUpTo?: number; onlyWhenRaiding?: boolean }
   /** A key rather than a bonus: no Magiczny Miecz, no Kamienny Most. */
-  | { kind: "wymagany"; place: "most" | "zamek-bestii" }
+  | { kind: "required"; place: "most" | "zamek-bestii" }
   /**
    * Passes a field's toll without paying it. The Przewoźnik waives the
    * ferryman's Sztuka Złota; the Karzeł walks past the Strażnik Magicznych Wrót
    * without buying his way through. One shape, two tolls.
    */
-  | { kind: "bez-oplaty"; fields: readonly FieldId[] }
+  | { kind: "no-toll"; fields: readonly FieldId[] }
   /** Cards this character may not hold at all — the Pustelnik bears no blade. */
-  | { kind: "zakazane"; cardIds: readonly CardId[] }
+  | { kind: "forbidden"; cardIds: readonly CardId[] }
   /**
    * Shifts a die roll, either at named fields or in a kind of fight.
    *
@@ -179,21 +179,21 @@ export type Ability =
    * choose the sign, and is eaten in the using.
    */
   | {
-      kind: "modyfikator-rzutu";
-      gdzie:
-        | { na: "pola"; fields: readonly FieldId[] }
-        | { na: "walke"; rodzaj: "ordinary" | "magical" };
+      kind: "roll-modifier";
+      where:
+        | { at: "fields"; fields: readonly FieldId[] }
+        | { at: "fight"; kind: "ordinary" | "magical" };
       delta: number;
       /** "odjąć lub dodać 1 ... jeśli taka jest wola gracza" — the holder picks. */
-      dowolnyZnak?: boolean;
+      eitherSign?: boolean;
       /** "Karta Jabłka może być wykorzystana tylko raz". */
-      jednorazowy?: boolean;
+      once?: boolean;
     }
   /**
-   * Raises the spell limit of 2.6 by a stated amount, exactly as `udzwig` raises
-   * the item limit of 5.4. Only the Różdżka Zaklęć does it.
+   * Raises the spell limit of 2.6 by a stated amount, exactly as `capacity`
+   * raises the item limit of 5.4. Only the Różdżka Zaklęć does it.
    */
-  | { kind: "zaklecia-ponad-limit"; count: number }
+  | { kind: "spells-over-limit"; count: number }
   /**
    * Look at the first N Karty of the Zaklęcia and take the one you like.
    *
@@ -203,7 +203,7 @@ export type Ability =
    * how wide the look is, and a second such Przyjaciel would differ in exactly
    * that.
    */
-  | { kind: "podglad-zaklec"; count: number }
+  | { kind: "spell-peek"; count: number }
   /**
    * Named Zaklęcia do nothing to the holder.
    *
@@ -217,7 +217,7 @@ export type Ability =
    * ability at all: it is read off whoever the Zaklęcie was aimed at, never off
    * the caster.
    */
-  | { kind: "odporny-na-zaklecie"; zaklecia: readonly SpellId[] }
+  | { kind: "immune-to-spell"; spells: readonly SpellId[] }
   /**
    * Points at named Obszary, on whichever parameter the Obszar reads.
    *
@@ -227,14 +227,14 @@ export type Ability =
    * Miecz and the Magiczna Pułapka Magia (14.5, `BRIDGE_SIDE`) — so the point
    * goes on the one being read whichever the holder would have named.
    *
-   * Distinct from `modyfikator-rzutu`, which moves the *dice*. Against three
+   * Distinct from `roll-modifier`, which moves the *dice*. Against three
    * dice and a threshold the two are arithmetically the same, and they are not
    * the same rule: this card says "punkt Miecza", and a rule written as a die
    * shift would be wrong the moment anything else read the number.
    */
-  | { kind: "punkty-na-polach"; fields: readonly FieldId[]; punkty: number }
+  | { kind: "points-on-fields"; fields: readonly FieldId[]; points: number }
   /** Rusałka: one die at the Trzęsawiska instead of the usual two. */
-  | { kind: "przeprawa-kostki"; obstacle: "trzesawiska"; dice: number }
+  | { kind: "crossing-dice"; obstacle: "trzesawiska"; dice: number }
   /**
    * A Lichwiarz you carry with you: the Alchemik turns any Przedmiot into gold,
    * one for one, wherever the character happens to be standing.
@@ -243,21 +243,21 @@ export type Ability =
    * nieodwracalny" is exactly what selling a card means, and there is no reason
    * for the app to have two ways of doing it.
    */
-  | { kind: "skup"; cena: number }
+  | { kind: "buys"; price: number }
   /**
    * A Przedmiot with a buyer of its own, named on the card.
    *
-   * Not `skup`, which is a *desk* that takes anything at a flat rate — the
+   * Not `buys`, which is a *desk* that takes anything at a flat rate — the
    * Gród's Lichwiarz, the Alchemik's pouch. This is the other way round: one
    * Karta with one price at one named Obszar, and the DIAMENT KRÓLÓW is the
    * only thing in the box that has it. "Może zostać sprzedany w Zamku za 5
    * Sztuk Złota."
    *
-   * `fields` rather than a single id, the way `bez-oplaty` carries the two
+   * `fields` rather than a single id, the way `no-toll` carries the two
    * Przeprawy: nothing in the base game names two buyers, and a list costs
    * nothing and reads the same.
    */
-  | { kind: "sprzedaj-w"; fields: readonly FieldId[]; cena: number }
+  | { kind: "sells-at"; fields: readonly FieldId[]; price: number }
   /**
    * Paid to the winner of a duel in place of the punkt Życia 17.9 lets her take.
    *
@@ -268,24 +268,24 @@ export type Ability =
    * Read by `spoils.ts` rather than by a hand-written card id, so a second one
    * — an expansion, a house card — needs nothing but this line.
    */
-  | { kind: "placi-za-przegrana" }
+  | { kind: "pays-for-loss" }
   /**
    * Łódź and Latarnia: cross anywhere rather than only at the two legal places
    * (11.2, 11.6). Both are consumed whether or not they are used.
    */
-  | { kind: "przeprawa-wszedzie"; obstacle: "trzesawiska" | "lodowy-las" }
+  | { kind: "crosses-anywhere"; obstacle: "trzesawiska" | "lodowy-las" }
   /** Księżniczka at the Zamek, Władca at the Twierdza: up to two Życia a visit. */
-  | { kind: "uzdrowienie"; field: FieldId; upTo: number }
+  | { kind: "healing"; field: FieldId; upTo: number }
   /**
    * Giving the Karta up where the friend belongs, for gold.
    *
    * "Jeżeli zrezygnujesz tam z jej Karty, otrzymasz 3 Sztuki Złota" — the same
    * offer on the Księżniczka and the Władca, each at their own Obszar. Its own
-   * kind rather than a field on `uzdrowienie`, because they are two different
+   * kind rather than a field on `healing`, because they are two different
    * things a card offers at one place: one you may do on every visit and one
    * you may do once, since it ends with the card on the used pile.
    */
-  | { kind: "oddaj-w"; field: FieldId; cena: number }
+  | { kind: "returned-at"; field: FieldId; price: number }
   /**
    * What it costs to take this friend at all, and what he does if you refuse.
    *
@@ -302,11 +302,11 @@ export type Ability =
    * card on the Obszar means.
    */
   | {
-      kind: "cena-przyjecia";
-      zloto?: number;
-      zycie?: number;
+      kind: "hiring-price";
+      gold?: number;
+      life?: number;
       /** Unpaid: waits where it lies (16.8), or goes to the stos zużytych. */
-      bezZaplaty: "zostaje" | "odchodzi";
+      ifUnpaid: "stays" | "leaves";
     }
   /**
    * Fights with its own points rather than lending you any — and the two cards
@@ -318,14 +318,14 @@ export type Ability =
    * He "posiada 3 punkty Miecza" and spends them on the raid you send him out
    * on, up to three Obszary away, and your own fights are still yours.
    *
-   * `tylkoWyprawa` is the difference, and it has to be stated rather than
+   * `raidOnly` is the difference, and it has to be stated rather than
    * inferred: without it, reading the registry for "who fights for me" found
    * the Poszukiwacz too and quietly dropped a Barbarzyńca from Miecz 5 to the
    * 3 his friend raids with.
    */
-  | { kind: "walczy-za-ciebie"; miecz: number; magia: number; tylkoWyprawa?: true }
+  | { kind: "fights-for-you"; sword: number; magic: number; raidOnly?: true }
   /** The Magiczny Miecz cannot be picked up in the lower ring. */
-  | { kind: "niedostepny"; region: "dolny" }
+  | { kind: "unavailable"; region: "dolny" }
   /**
    * May change Natura at will, rather than only when something changes it.
    *
@@ -337,7 +337,7 @@ export type Ability =
    *
    * Still bounded by 7.3: once per turn.
    */
-  | { kind: "natura-dowolna" }
+  | { kind: "any-nature" }
   /**
    * Only these Natures may possess the card (5.3).
    *
@@ -351,15 +351,15 @@ export type Ability =
    * Stated as who MAY hold it rather than who may not, because that is the
    * shorter list on all three and the one a player wants read out.
    */
-  | { kind: "tylko-natura"; natury: readonly Nature[] }
+  | { kind: "nature-only"; natures: readonly Nature[] }
   /**
    * Beats a whole class of enemy without fighting it at all.
    *
    * "Postać mająca Relikwiarz pokonuje wszystkie Demony, bez konieczności walki
-   * z nimi." Not a combat bonus — no dice are thrown — so `punkty` and
-   * `modyfikator-rzutu` both say the wrong thing about it.
+   * z nimi." Not a combat bonus — no dice are thrown — so `points` and
+   * `roll-modifier` both say the wrong thing about it.
    */
-  | { kind: "pokonuje-bez-walki"; kogo: "demony" }
+  | { kind: "beats-without-fight"; whom: "demons" }
   /**
    * A different bonus against particular enemies.
    *
@@ -367,25 +367,25 @@ export type Ability =
    * Wilkołakiem - 2 punkty" — so this REPLACES the standing bonus against the
    * named foe rather than stacking with it. Two points in total, not three.
    *
-   * `modyfikator-rzutu` cannot say this: its `gdzie` knows fields and the kind
+   * `roll-modifier` cannot say this: its `where` knows fields and the kind
    * of fight, never who is being fought.
    */
-  | { kind: "przeciw"; komu: readonly CardId[]; miecz?: number; magia?: number }
+  | { kind: "against"; whom: readonly CardId[]; sword?: number; magic?: number }
   /**
    * Points bought by the turn rather than lent for nothing (Najemnik).
    *
    * "Najemnik dodaje ci na jedną turę 3 punkty Miecza, ilekroć zapłacisz mu 1
    * Sztukę Złota. Płacić Najemnikowi można tylko raz na turę."
    *
-   * Not `punkty` with a price on it: a `punkty` bonus is simply true while the
+   * Not `points`: a `points` bonus is simply true while the
    * card is held, and this one is false until somebody pays and false again a
    * turn later. It is an effect the friend sells you, which is why it lands in
    * `seat_effects` beside an Eliksir rather than in the held-card totals.
    *
-   * `razNaTure` is the sentence that stops it being a money pump — without it
+   * `onceATurn` is the sentence that stops it being a money pump — without it
    * three Sztuki Złota buy nine points of Miecz in one fight.
    */
-  | { kind: "za-oplata"; cena: number; miecz?: number; magia?: number; razNaTure?: true }
+  | { kind: "for-a-fee"; price: number; sword?: number; magic?: number; onceATurn?: true }
   /**
    * Walks around with a Zaklęcie of its own (Krzyżowiec, Gnom).
    *
@@ -396,10 +396,10 @@ export type Ability =
    *
    * The two differ in the asking. The Krzyżowiec "użyje, gdy sobie tego
    * zażyczysz" and stays; the Gnom wants "1 Sztukę Złota" and then "zniknie
-   * zabierając swoją zapłatę" — so `cena` buys the casting and `znika` says
+   * zabierając swoją zapłatę" — so `price` buys the casting and `vanishes` says
    * whether the friend survives having been asked.
    */
-  | { kind: "nosi-zaklecie"; cena?: number; znika?: true; mozeszObejrzec?: true };
+  | { kind: "carries-spell"; price?: number; vanishes?: true; mayView?: true };
 
 /**
  * Rules the typed vocabulary cannot hold, written out instead.
@@ -414,7 +414,7 @@ export type Ability =
  */
 export const CARD_NOTES: Readonly<Partial<Record<CardId, readonly string[]>>> = {
   "poszukiwacz-przygod": ["atakuje Postać lub Wroga do 3 Obszarów stąd, po twoim ruchu"],
-  // Both clauses are the engine's now — the sale is `sprzedaj-w` and the lost
+  // Both clauses are the engine's now — the sale is `sells-at` and the lost
   // duel is `spoils.ts` — so neither is here. See the note above: a rule stated
   // in CARD_NOTES is one the players apply themselves, and a card that keeps
   // its note after the engine takes the rule claims to be doing less than it
@@ -452,35 +452,35 @@ export const CARD_NOTES: Readonly<Partial<Record<CardId, readonly string[]>>> = 
 export const ABILITIES: Readonly<Partial<Record<CardId, readonly Ability[]>>> = {
   // --- equipment ------------------------------------------------------------
   // "Miecz podczas walki dodaje właścicielowi 1 punkt Miecza."
-  miecz: [{ kind: "punkty", miecz: 1, tylkoWalka: true }],
+  miecz: [{ kind: "points", sword: 1, fightOnly: true }],
   // "Sztylet podczas walki dodaje właścicielowi 1 punkt Miecza."
-  sztylet: [{ kind: "punkty", miecz: 1, tylkoWalka: true }],
-  helm: [{ kind: "oslona", upTo: 1 }],
-  tarcza: [{ kind: "oslona", upTo: 2 }],
-  zbroja: [{ kind: "oslona", upTo: 3 }],
+  sztylet: [{ kind: "points", sword: 1, fightOnly: true }],
+  helm: [{ kind: "shield", upTo: 1 }],
+  tarcza: [{ kind: "shield", upTo: 2 }],
+  zbroja: [{ kind: "shield", upTo: 3 }],
   rekawice: [
-    { kind: "bezpieczny", fields: ["ruchome-skaly-1", "ruchome-skaly-2"], from: "life" },
+    { kind: "safe", fields: ["ruchome-skaly-1", "ruchome-skaly-2"], from: "life" },
   ],
   "kij-i-sznur": [
-    { kind: "bezpieczny", fields: ["bagna-1", "bagna-2"], from: "utrata" },
+    { kind: "safe", fields: ["bagna-1", "bagna-2"], from: "loss" },
   ],
-  kon: [{ kind: "udzwig", items: 8 }],
-  mul: [{ kind: "udzwig", items: 4 }],
+  kon: [{ kind: "capacity", items: 8 }],
+  mul: [{ kind: "capacity", items: 4 }],
   zaprzeg: [
-    { kind: "udzwig", items: "bez-limitu" },
-    { kind: "ruch-bonus", min: 1, max: 1 },
+    { kind: "capacity", items: "unlimited" },
+    { kind: "move-bonus", min: 1, max: 1 },
   ],
-  wierzchowiec: [{ kind: "ruch-bonus", min: 1, max: 3 }],
-  "magiczna-sakwa": [{ kind: "udzwig", items: 5, samaSieNieLiczy: true, giniePrzyUtracie: true }],
+  wierzchowiec: [{ kind: "move-bonus", min: 1, max: 3 }],
+  "magiczna-sakwa": [{ kind: "capacity", items: 5, doesNotCount: true, lostWithIt: true }],
   // "Właściciel Kryształu nie może rzucać ani używać Zaklęć. Jest całkowicie
   // odporny na Zaklęcia: Krąg Płomieni, Fatum, Magia i Miecz, Golem, Pan
   // Bogactwa i Pan Przyjaciół. Przeciwnik właściciela Kryształu nie może
   // walcząc z nim użyć Zaklęcia Odrodzenie."
   "krysztal-magow": [
-    { kind: "bez-zaklec", przeciwnikBez: ["odrodzenie"] },
+    { kind: "no-spells", opponentWithout: ["odrodzenie"] },
     {
-      kind: "odporny-na-zaklecie",
-      zaklecia: [
+      kind: "immune-to-spell",
+      spells: [
         "krag-plomieni",
         "fatum",
         "magia-i-miecz",
@@ -490,14 +490,14 @@ export const ABILITIES: Readonly<Partial<Record<CardId, readonly Ability[]>>> = 
       ],
     },
   ],
-  "bojowy-rumak": [{ kind: "magia-do-miecza" }, { kind: "ginie-zamiast-ciebie" }],
-  lodz: [{ kind: "przeprawa-wszedzie", obstacle: "trzesawiska" }],
-  latarnia: [{ kind: "przeprawa-wszedzie", obstacle: "lodowy-las" }],
+  "bojowy-rumak": [{ kind: "magic-to-sword" }, { kind: "dies-for-you" }],
+  lodz: [{ kind: "crosses-anywhere", obstacle: "trzesawiska" }],
+  latarnia: [{ kind: "crosses-anywhere", obstacle: "lodowy-las" }],
   "magiczny-miecz": [
-    { kind: "wymagany", place: "most" },
-    { kind: "niedostepny", region: "dolny" },
+    { kind: "required", place: "most" },
+    { kind: "unavailable", region: "dolny" },
   ],
-  "tarcza-tolimana": [{ kind: "wymagany", place: "zamek-bestii" }],
+  "tarcza-tolimana": [{ kind: "required", place: "zamek-bestii" }],
 
   // --- magic items ----------------------------------------------------------
   //
@@ -512,15 +512,15 @@ export const ABILITIES: Readonly<Partial<Record<CardId, readonly Ability[]>>> = 
   // the one that applies in every other fight; the exception is left to the
   // text rather than half-encoded.
   arondight: [
-    { kind: "punkty", miecz: 1, tylkoWalka: true },
-    { kind: "przeciw", komu: ["wilkolak"], miecz: 2 },
+    { kind: "points", sword: 1, fightOnly: true },
+    { kind: "against", whom: ["wilkolak"], sword: 2 },
   ],
   // "nie może być w posiadaniu Chaotycznych Postaci" — a 5.3 restriction the
   // prose-reading version never found, because it is phrased differently again.
   "topor-swiatla-i-ciemnosci": [
-    { kind: "tylko-natura", natury: ["good", "evil"] },
-    { kind: "punkty", miecz: 1, tylkoWalka: true },
-    { kind: "przeciw", komu: ["wilkolak"], miecz: 2 },
+    { kind: "nature-only", natures: ["good", "evil"] },
+    { kind: "points", sword: 1, fightOnly: true },
+    { kind: "against", whom: ["wilkolak"], sword: 2 },
   ],
   // "Miecz króla Artura użyty w walce dodaje 1 punkt Miecza. Po każdej
   // zwycięskiej walce Postać zyskuje także 1 punkt Życia (zabierając ten punkt
@@ -528,37 +528,37 @@ export const ABILITIES: Readonly<Partial<Record<CardId, readonly Ability[]>>> = 
   // second — without it the flag alone would have made Excalibur strictly worse
   // than a common Miecz.
   excalibur: [
-    { kind: "punkty", miecz: 1, tylkoWalka: true },
-    { kind: "zabiera-zycie", zycie: 1 },
+    { kind: "points", sword: 1, fightOnly: true },
+    { kind: "takes-life", life: 1 },
   ],
   // "Włóczni nie mogą posiadać Złe Postacie."
   "swieta-wlocznia": [
-    { kind: "tylko-natura", natury: ["good", "chaotic"] },
-    { kind: "punkty", miecz: 1, tylkoWalka: true },
+    { kind: "nature-only", natures: ["good", "chaotic"] },
+    { kind: "points", sword: 1, fightOnly: true },
   ],
   // "Miecza Chaosu nie może posiadać Dobra Postać."
   "miecz-chaosu": [
-    { kind: "tylko-natura", natury: ["evil", "chaotic"] },
-    { kind: "punkty", miecz: 2, tylkoWalka: true },
+    { kind: "nature-only", natures: ["evil", "chaotic"] },
+    { kind: "points", sword: 2, fightOnly: true },
   ],
-  "pierscien-mocy": [{ kind: "punkty", magia: 2 }],
-  "srebrna-strzala": [{ kind: "punkty", miecz: 1, magia: 1 }],
+  "pierscien-mocy": [{ kind: "points", magic: 2 }],
+  "srebrna-strzala": [{ kind: "points", sword: 1, magic: 1 }],
   /** "zyskuje 1 punkt Magii i nie traci 1 Życia przechodząc przez Ruchome Skały" — the second half is the Rękawice's rule. */
   // "Graala nie może posiadać Zła Postać."
   "swiety-graal": [
-    { kind: "tylko-natura", natury: ["good", "chaotic"] },
-    { kind: "punkty", magia: 1 },
-    { kind: "bezpieczny", fields: ["ruchome-skaly-1", "ruchome-skaly-2"], from: "life" },
+    { kind: "nature-only", natures: ["good", "chaotic"] },
+    { kind: "points", magic: 1 },
+    { kind: "safe", fields: ["ruchome-skaly-1", "ruchome-skaly-2"], from: "life" },
   ],
   /** The same key as the Tarcza Tolimana, printed again on the Zdarzenia sheets. */
-  "tarcza-boga-tolimana": [{ kind: "wymagany", place: "zamek-bestii" }],
+  "tarcza-boga-tolimana": [{ kind: "required", place: "zamek-bestii" }],
   "gliniana-tabliczka": [
-    { kind: "modyfikator-rzutu", gdzie: { na: "pola", fields: ["pulapka"] }, delta: -2 },
+    { kind: "roll-modifier", where: { at: "fields", fields: ["pulapka"] }, delta: -2 },
   ],
   "magiczny-manuskrypt": [
     {
-      kind: "modyfikator-rzutu",
-      gdzie: { na: "pola", fields: ["magiczna-pulapka"] },
+      kind: "roll-modifier",
+      where: { at: "fields", fields: ["magiczna-pulapka"] },
       delta: -2,
     },
   ],
@@ -566,11 +566,11 @@ export const ABILITIES: Readonly<Partial<Record<CardId, readonly Ability[]>>> = 
   // Miecza or Magii inside the two Pułapki, and a shift of the die everywhere
   // else on the Most.
   "czarodziejska-kosc": [
-    { kind: "punkty-na-polach", fields: ["pulapka", "magiczna-pulapka"], punkty: 1 },
+    { kind: "points-on-fields", fields: ["pulapka", "magiczna-pulapka"], points: 1 },
     {
-      kind: "modyfikator-rzutu",
-      gdzie: {
-        na: "pola",
+      kind: "roll-modifier",
+      where: {
+        at: "fields",
         fields: [
           "wejscie-na-most-a",
           "gra-ze-smiercia",
@@ -585,95 +585,95 @@ export const ABILITIES: Readonly<Partial<Record<CardId, readonly Ability[]>>> = 
     },
   ],
   "talizman-ognia": [
-    { kind: "modyfikator-rzutu", gdzie: { na: "walke", rodzaj: "ordinary" }, delta: 1 },
+    { kind: "roll-modifier", where: { at: "fight", kind: "ordinary" }, delta: 1 },
     // "daje odporność na Zaklęcie Krąg Płomieni" — carried now that the Krąg is
     // a state the app applies rather than a sentence it reads out.
-    { kind: "odporny-na-zaklecie", zaklecia: ["krag-plomieni"] },
+    { kind: "immune-to-spell", spells: ["krag-plomieni"] },
   ],
   "talizman-powietrza": [
-    { kind: "modyfikator-rzutu", gdzie: { na: "walke", rodzaj: "magical" }, delta: 1 },
-    { kind: "odporny-na-zaklecie", zaklecia: ["siedem-wichrow", "wladca-gromu"] },
+    { kind: "roll-modifier", where: { at: "fight", kind: "magical" }, delta: 1 },
+    { kind: "immune-to-spell", spells: ["siedem-wichrow", "wladca-gromu"] },
   ],
   "jablko-natchnienia": [
     {
-      kind: "modyfikator-rzutu",
-      gdzie: {
-        na: "pola",
+      kind: "roll-modifier",
+      where: {
+        at: "fields",
         fields: ["swiatynia-bogini-nemed", "swiatynia-tolimana"],
       },
       delta: 1,
-      dowolnyZnak: true,
-      jednorazowy: true,
+      eitherSign: true,
+      once: true,
     },
   ],
   // Two protections in one card, each for the opposite Natura. The third
   // clause — beating every Demon without a fight — has no variant and stays on
   // the card.
   relikwiarz: [
-    { kind: "bezpieczny", fields: ["czarci-mlyn"], from: "life", natura: ["good"] },
-    { kind: "bezpieczny", fields: ["studnia-wiecznosci"], from: "life", natura: ["evil"] },
+    { kind: "safe", fields: ["czarci-mlyn"], from: "life", nature: ["good"] },
+    { kind: "safe", fields: ["studnia-wiecznosci"], from: "life", nature: ["evil"] },
     // "pokonuje wszystkie Demony, bez konieczności walki z nimi" — the third of
     // its three rules, and the only one the card was not carrying.
-    { kind: "pokonuje-bez-walki", kogo: "demony" },
+    { kind: "beats-without-fight", whom: "demons" },
   ],
-  "rozdzka-zaklec": [{ kind: "zaklecia-ponad-limit", count: 1 }],
+  "rozdzka-zaklec": [{ kind: "spells-over-limit", count: 1 }],
 
   // --- friends --------------------------------------------------------------
   // "1 Przedmiot zamienia się w 1 Sztukę cennego kruszcu."
-  alchemik: [{ kind: "skup", cena: 1 }],
+  alchemik: [{ kind: "buys", price: 1 }],
   // "może zostać sprzedany w Zamku za 5 Sztuk Złota" — the one Karta in the box
   // with a buyer of its own. The other half of its text, the one about paying
   // for a lost duel with the Diament rather than a Życie, is still CARD_NOTES'.
   "diament-krolow": [
-    { kind: "sprzedaj-w", fields: ["zamek"], cena: 5 },
+    { kind: "sells-at", fields: ["zamek"], price: 5 },
     // "Jeżeli przegrasz walkę z inną Postacią, będzie ci musiała odebrać
     // Diament, dzięki czemu nie utracisz 1 punktu Życia." 17.9's own
     // parenthesis is what it answers — "czemu może zapobiec użycie
     // odpowiednich Przedmiotów lub Zaklęć" — and `spoils.ts` is where it fires.
-    { kind: "placi-za-przegrana" },
+    { kind: "pays-for-loss" },
   ],
-  pasterz: [{ kind: "punkty", miecz: 1, magia: 1 }],
-  strzyga: [{ kind: "punkty", magia: 1 }],
+  pasterz: [{ kind: "points", sword: 1, magic: 1 }],
+  strzyga: [{ kind: "points", magic: 1 }],
   chochlik: [
-    { kind: "cena-przyjecia", zycie: 1, bezZaplaty: "zostaje" },
-    { kind: "punkty", magia: 2 },
+    { kind: "hiring-price", life: 1, ifUnpaid: "stays" },
+    { kind: "points", magic: 2 },
     // "pozwoli ci obejrzeć pierwsze 2 Karty ze stosu i wybrać tę, która
     // najbardziej ci odpowiada" — the third of his three clauses.
-    { kind: "podglad-zaklec", count: 2 },
+    { kind: "spell-peek", count: 2 },
   ],
   giermek: [
     // "będzie dodawał ci 2 punkty Miecza podczas każdej walki".
-    { kind: "punkty", miecz: 2, tylkoWalka: true },
-    { kind: "ginie-zamiast-ciebie", onRollUpTo: 1 },
+    { kind: "points", sword: 2, fightOnly: true },
+    { kind: "dies-for-you", onRollUpTo: 1 },
   ],
   // "będzie dodawał ci 2 punkty Miecza podczas każdej walki" — and the 1.5
   // example counts him only in the fight figure.
   // "Krzyżowiec posiada również 1 Zaklęcie, którego użyje, gdy sobie tego
   // zażyczysz (weź Kartę Zaklęcia i połóż ją z Kartą Krzyżowca)."
   krzyzowiec: [
-    { kind: "punkty", miecz: 2, tylkoWalka: true },
-    { kind: "nosi-zaklecie" },
+    { kind: "points", sword: 2, fightOnly: true },
+    { kind: "carries-spell" },
   ],
   // "dodaje ci na jedną turę 3 punkty Miecza, ilekroć zapłacisz mu 1 Sztukę
   // Złota. Płacić Najemnikowi można tylko raz na turę."
   najemnik: [
-    { kind: "cena-przyjecia", zloto: 1, bezZaplaty: "zostaje" },
-    { kind: "za-oplata", cena: 1, miecz: 3, razNaTure: true },
+    { kind: "hiring-price", gold: 1, ifUnpaid: "stays" },
+    { kind: "for-a-fee", price: 1, sword: 3, onceATurn: true },
   ],
   // "Gnom posiada 1 Zaklęcie (weź Kartę Zaklęcia i połóż ją razem z Kartą
   // Gnoma - wolno ci ją obejrzeć). Gnom wypowie Zaklęcie, gdy ofiarujesz mu 1
   // Sztukę Złota, a następnie zniknie zabierając swoją zapłatę."
-  gnom: [{ kind: "nosi-zaklecie", cena: 1, znika: true, mozeszObejrzec: true }],
+  gnom: [{ kind: "carries-spell", price: 1, vanishes: true, mayView: true }],
   tragarz: [
-    { kind: "cena-przyjecia", zloto: 1, bezZaplaty: "odchodzi" },
-    { kind: "udzwig", items: 4, giniePrzyUtracie: true },
+    { kind: "hiring-price", gold: 1, ifUnpaid: "leaves" },
+    { kind: "capacity", items: 4, lostWithIt: true },
   ],
-  przewoznika: [{ kind: "bez-oplaty", fields: ["przeprawa-1", "przeprawa-2"] }],
-  rycerz: [{ kind: "walczy-za-ciebie", miecz: 3, magia: 3 }],
+  przewoznika: [{ kind: "no-toll", fields: ["przeprawa-1", "przeprawa-2"] }],
+  rycerz: [{ kind: "fights-for-you", sword: 3, magic: 3 }],
   /**
-   * Deliberately no `punkty`: the Poszukiwacz "posiada 3 punkty Miecza" of his
+   * Deliberately no `points`: the Poszukiwacz "posiada 3 punkty Miecza" of his
    * own and spends them on the raid you send him on, unlike the Giermek and the
-   * Krzyżowiec who "dodają ci" theirs. And no `walczy-za-ciebie` either — he
+   * Krzyżowiec who "dodają ci" theirs. And no `fights-for-you` either — he
    * does not stand in for you in your fights, he goes out up to three Obszary
    * and attacks something, which nothing here can say. What is left, and what
    * the printed text is unambiguous about, is that his failure costs him rather
@@ -681,38 +681,38 @@ export const ABILITIES: Readonly<Partial<Record<CardId, readonly Ability[]>>> = 
    */
   "poszukiwacz-przygod": [
     // "posiada 3 punkty Miecza" — the strength it raids with, which nothing said.
-    { kind: "walczy-za-ciebie", miecz: 3, magia: 0, tylkoWyprawa: true },
-    { kind: "ginie-zamiast-ciebie", onlyWhenRaiding: true },
+    { kind: "fights-for-you", sword: 3, magic: 0, raidOnly: true },
+    { kind: "dies-for-you", onlyWhenRaiding: true },
   ],
   opiekun: [
-    { kind: "bezpieczny", fields: ["wieza-przeznaczenia", "urwisko-1", "urwisko-2"], from: "rzut" },
+    { kind: "safe", fields: ["wieza-przeznaczenia", "urwisko-1", "urwisko-2"], from: "roll" },
   ],
   przewodnik: [
     {
-      kind: "bezpieczny",
+      kind: "safe",
       fields: ["krag-mocy", "wilczy-parow", "krypta-upiorow"],
-      from: "rzut",
+      from: "roll",
     },
   ],
   elflin: [
-    { kind: "bezpieczny", fields: ["urwisko-1", "urwisko-2"], from: "rzut" },
+    { kind: "safe", fields: ["urwisko-1", "urwisko-2"], from: "roll" },
     {
-      kind: "ucieczka",
+      kind: "escape",
       fields: ["bezdroza", "wrzosowiska", "rownina-samotnych-skal", "kamienny-las"],
     },
   ],
   rusalka: [
-    { kind: "bezpieczny", fields: ["kurhan"], from: "rzut" },
-    { kind: "ucieczka", fields: ["mokradla-1", "mokradla-2", "las-blednych-ogni"] },
-    { kind: "przeprawa-kostki", obstacle: "trzesawiska", dice: 1 },
+    { kind: "safe", fields: ["kurhan"], from: "roll" },
+    { kind: "escape", fields: ["mokradla-1", "mokradla-2", "las-blednych-ogni"] },
+    { kind: "crossing-dice", obstacle: "trzesawiska", dice: 1 },
   ],
   ksiezniczka: [
-    { kind: "uzdrowienie", field: "zamek", upTo: 2 },
-    { kind: "oddaj-w", field: "zamek", cena: 3 },
+    { kind: "healing", field: "zamek", upTo: 2 },
+    { kind: "returned-at", field: "zamek", price: 3 },
   ],
   wladca: [
-    { kind: "uzdrowienie", field: "twierdza-strzegaca-drog", upTo: 2 },
-    { kind: "oddaj-w", field: "twierdza-strzegaca-drog", cena: 3 },
+    { kind: "healing", field: "twierdza-strzegaca-drog", upTo: 2 },
+    { kind: "returned-at", field: "twierdza-strzegaca-drog", price: 3 },
   ],
 };
 
@@ -746,8 +746,8 @@ export function heldAbilities(cardIds: readonly CardId[]): Ability[] {
 export function skipsRollAt(abilities: readonly Ability[], fieldId: FieldId): boolean {
   return abilities.some(
     (ability) =>
-      ability.kind === "bezpieczny" &&
-      ability.from === "rzut" &&
+      ability.kind === "safe" &&
+      ability.from === "roll" &&
       ability.fields.includes(fieldId),
   );
 }
@@ -756,16 +756,16 @@ export function skipsRollAt(abilities: readonly Ability[], fieldId: FieldId): bo
 export function isSpared(
   abilities: readonly Ability[],
   fieldId: FieldId,
-  from: "life" | "utrata",
+  from: "life" | "loss",
   /** The holder's Natura, for the protections that depend on it. */
   natura?: Nature | null,
 ): boolean {
   return abilities.some(
     (ability) =>
-      ability.kind === "bezpieczny" &&
+      ability.kind === "safe" &&
       ability.from === from &&
       ability.fields.includes(fieldId) &&
-      (!ability.natura || (natura != null && ability.natura.includes(natura))),
+      (!ability.nature || (natura != null && ability.nature.includes(natura))),
   );
 }
 
@@ -812,8 +812,8 @@ export function beatsWithoutFighting(
 ): CardId | null {
   for (const cardId of cardIds) {
     for (const ability of abilitiesOf(cardId)) {
-      if (ability.kind !== "pokonuje-bez-walki") continue;
-      if (ability.kogo === "demony" && DEMONY.has(foeId)) return cardId;
+      if (ability.kind !== "beats-without-fight") continue;
+      if (ability.whom === "demons" && DEMONY.has(foeId)) return cardId;
     }
   }
   return null;
@@ -822,13 +822,13 @@ export function beatsWithoutFighting(
 export function insteadAgainst(
   cardIds: readonly CardId[],
   foeIds: readonly CardId[],
-): { cardId: CardId; miecz: number; magia: number }[] {
-  const swapped: { cardId: CardId; miecz: number; magia: number }[] = [];
+): { cardId: CardId; sword: number; magic: number }[] {
+  const swapped: { cardId: CardId; sword: number; magic: number }[] = [];
   for (const cardId of cardIds) {
     for (const ability of abilitiesOf(cardId)) {
-      if (ability.kind !== "przeciw") continue;
-      if (!foeIds.some((foe) => ability.komu.includes(foe))) continue;
-      swapped.push({ cardId, miecz: ability.miecz ?? 0, magia: ability.magia ?? 0 });
+      if (ability.kind !== "against") continue;
+      if (!foeIds.some((foe) => ability.whom.includes(foe))) continue;
+      swapped.push({ cardId, sword: ability.sword ?? 0, magic: ability.magic ?? 0 });
     }
   }
   return swapped;
@@ -836,35 +836,35 @@ export function insteadAgainst(
 
 export function unavailableIn(cardId: CardId): "dolny" | null {
   for (const ability of abilitiesOf(cardId)) {
-    if (ability.kind === "niedostepny") return ability.region;
+    if (ability.kind === "unavailable") return ability.region;
   }
   return null;
 }
 
 export function rollModifier(
   abilities: readonly Ability[],
-  at: { fieldId?: FieldId; walka?: "ordinary" | "magical" },
-): { delta: number; dowolnyZnak: boolean } {
+  at: { fieldId?: FieldId; fight?: "ordinary" | "magical" },
+): { delta: number; eitherSign: boolean } {
   let delta = 0;
-  let dowolnyZnak = false;
+  let eitherSign = false;
   for (const ability of abilities) {
-    if (ability.kind !== "modyfikator-rzutu") continue;
+    if (ability.kind !== "roll-modifier") continue;
     const applies =
-      ability.gdzie.na === "pola"
-        ? at.fieldId !== undefined && ability.gdzie.fields.includes(at.fieldId)
-        : at.walka !== undefined && ability.gdzie.rodzaj === at.walka;
+      ability.where.at === "fields"
+        ? at.fieldId !== undefined && ability.where.fields.includes(at.fieldId)
+        : at.fight !== undefined && ability.where.kind === at.fight;
     if (!applies) continue;
     delta += ability.delta;
-    if (ability.dowolnyZnak) dowolnyZnak = true;
+    if (ability.eitherSign) eitherSign = true;
   }
-  return { delta, dowolnyZnak };
+  return { delta, eitherSign };
 }
 
 /** Extra Zaklęcia allowed over the limit rule 2.6 sets from Magia. */
 export function spellsOverLimit(abilities: readonly Ability[]): number {
   return abilities.reduce(
     (extra, ability) =>
-      ability.kind === "zaklecia-ponad-limit" ? extra + ability.count : extra,
+      ability.kind === "spells-over-limit" ? extra + ability.count : extra,
     0,
   );
 }
@@ -878,7 +878,7 @@ export function spellsOverLimit(abilities: readonly Ability[]): number {
  */
 export function immuneToSpell(abilities: readonly Ability[], spellId: SpellId): boolean {
   return abilities.some(
-    (ability) => ability.kind === "odporny-na-zaklecie" && ability.zaklecia.includes(spellId),
+    (ability) => ability.kind === "immune-to-spell" && ability.spells.includes(spellId),
   );
 }
 
@@ -901,8 +901,8 @@ export function pointsAt(abilities: readonly Ability[], fieldId: FieldId | null)
   if (fieldId === null) return 0;
   return abilities.reduce(
     (points, ability) =>
-      ability.kind === "punkty-na-polach" && ability.fields.includes(fieldId)
-        ? points + ability.punkty
+      ability.kind === "points-on-fields" && ability.fields.includes(fieldId)
+        ? points + ability.points
         : points,
     0,
   );
@@ -911,7 +911,7 @@ export function pointsAt(abilities: readonly Ability[], fieldId: FieldId | null)
 export function spellsPeeked(abilities: readonly Ability[]): number {
   return abilities.reduce(
     (widest, ability) =>
-      ability.kind === "podglad-zaklec" ? Math.max(widest, ability.count) : widest,
+      ability.kind === "spell-peek" ? Math.max(widest, ability.count) : widest,
     0,
   );
 }
@@ -921,29 +921,29 @@ export function spellsPeeked(abilities: readonly Ability[]): number {
  *
  * Two questions, not one. The field has to be named — every escape in the game
  * is bound to particular ground, and the Obbol who slips Wrogom on the Mokradła
- * fights them everywhere else. And what is being fled has to match: `przed`
+ * fights them everywhere else. And what is being fled has to match: `from`
  * defaults to a Wróg because that is what all of them say.
  */
 export function canEscapeAt(
   abilities: readonly Ability[],
   fieldId: FieldId,
-  przed: EscapeTarget = "wrog",
+  from: EscapeTarget = "foe",
 ): boolean {
   return abilities.some(
     (ability) =>
-      ability.kind === "ucieczka" &&
+      ability.kind === "escape" &&
       ability.fields.includes(fieldId) &&
-      (ability.przed ?? WROGOWIE_ONLY).includes(przed),
+      (ability.from ?? WROGOWIE_ONLY).includes(from),
   );
 }
 
 /** What a printed escape covers when its card does not say otherwise. */
-const WROGOWIE_ONLY: readonly EscapeTarget[] = ["wrog"];
+const WROGOWIE_ONLY: readonly EscapeTarget[] = ["foe"];
 
 /** Whether this character walks past the toll charged on a given field. */
 export function tollIsWaived(abilities: readonly Ability[], fieldId: FieldId): boolean {
   return abilities.some(
-    (ability) => ability.kind === "bez-oplaty" && ability.fields.includes(fieldId),
+    (ability) => ability.kind === "no-toll" && ability.fields.includes(fieldId),
   );
 }
 
@@ -985,19 +985,19 @@ export function buyerFor(
     fieldId === null
       ? undefined
       : abilitiesOf(cardId).find(
-          (ability): ability is Extract<Ability, { kind: "sprzedaj-w" }> =>
-            ability.kind === "sprzedaj-w" && ability.fields.includes(fieldId),
+          (ability): ability is Extract<Ability, { kind: "sells-at" }> =>
+            ability.kind === "sells-at" && ability.fields.includes(fieldId),
         );
-  if (named) return { price: named.cena, from: "karta" };
+  if (named) return { price: named.price, from: "karta" };
   if (desk !== null) return { price: desk, from: "obszar" };
-  const pouch = heldAbilities(carrying).find((ability) => ability.kind === "skup");
-  return pouch?.kind === "skup" ? { price: pouch.cena, from: "sakwa" } : null;
+  const pouch = heldAbilities(carrying).find((ability) => ability.kind === "buys");
+  return pouch?.kind === "buys" ? { price: pouch.price, from: "sakwa" } : null;
 }
 
 /** Cards this character may never hold (its own Charakterystyka, 8.1). */
 export function isForbidden(abilities: readonly Ability[], cardId: CardId): boolean {
   return abilities.some(
-    (ability) => ability.kind === "zakazane" && ability.cardIds.includes(cardId),
+    (ability) => ability.kind === "forbidden" && ability.cardIds.includes(cardId),
   );
 }
 
@@ -1029,7 +1029,7 @@ export function isForbidden(abilities: readonly Ability[], cardId: CardId): bool
  * which had zero callers anywhere in `src`: nothing asked a holder's own
  * abilities whether a spell landing on *someone else* should bounce, because
  * that question belongs to the victim, not this card. Immunity moved to
- * `odporny-na-zaklecie`, read by `immuneToSpell` at the one cast door — the
+ * `immune-to-spell`, read by `immuneToSpell` at the one cast door — the
  * same door the two Talizmany already used. This half stays, because a
  * `deniedToOpponent` opponent is asked here for the first time, at the same
  * door: `castSpell` calls it on the *other* side of a duel to enforce the
@@ -1038,8 +1038,8 @@ export function isForbidden(abilities: readonly Ability[], cardId: CardId): bool
 export function spellWards(abilities: readonly Ability[]): Set<string> {
   const deniedToOpponent = new Set<string>();
   for (const ability of abilities) {
-    if (ability.kind !== "bez-zaklec") continue;
-    for (const id of ability.przeciwnikBez) deniedToOpponent.add(id);
+    if (ability.kind !== "no-spells") continue;
+    for (const id of ability.opponentWithout) deniedToOpponent.add(id);
   }
   return deniedToOpponent;
 }
@@ -1047,7 +1047,7 @@ export function spellWards(abilities: readonly Ability[]): Set<string> {
 /** Whether holding this card costs one of the places it opens (5.4). */
 export function fillsAPlace(cardId: CardId): boolean {
   return !abilitiesOf(cardId).some(
-    (ability) => ability.kind === "udzwig" && ability.samaSieNieLiczy === true,
+    (ability) => ability.kind === "capacity" && ability.doesNotCount === true,
   );
 }
 
@@ -1055,11 +1055,11 @@ export function fillsAPlace(cardId: CardId): boolean {
 export function moveBonusRange(
   abilities: readonly Ability[],
 ): { min: number; max: number } | null {
-  const bonuses = abilities.filter((a) => a.kind === "ruch-bonus");
+  const bonuses = abilities.filter((a) => a.kind === "move-bonus");
   if (bonuses.length === 0) return null;
   return {
-    min: Math.min(...bonuses.map((a) => (a.kind === "ruch-bonus" ? a.min : 0))),
-    max: bonuses.reduce((sum, a) => sum + (a.kind === "ruch-bonus" ? a.max : 0), 0),
+    min: Math.min(...bonuses.map((a) => (a.kind === "move-bonus" ? a.min : 0))),
+    max: bonuses.reduce((sum, a) => sum + (a.kind === "move-bonus" ? a.max : 0), 0),
   };
 }
 
@@ -1067,7 +1067,7 @@ export function opensTheWayTo(
   abilities: readonly Ability[],
   place: "most" | "zamek-bestii",
 ): boolean {
-  return abilities.some((ability) => ability.kind === "wymagany" && ability.place === place);
+  return abilities.some((ability) => ability.kind === "required" && ability.place === place);
 }
 
 /* --------------------------------------------------------------------------
@@ -1099,25 +1099,25 @@ export function opensTheWayTo(
  */
 export function stealsLife(abilities: readonly Ability[]): number {
   return abilities
-    .filter((ability) => ability.kind === "zabiera-zycie")
-    .reduce((sum, ability) => sum + (ability.kind === "zabiera-zycie" ? ability.zycie : 0), 0);
+    .filter((ability) => ability.kind === "takes-life")
+    .reduce((sum, ability) => sum + (ability.kind === "takes-life" ? ability.life : 0), 0);
 }
 
 export function fightsForYou(
   abilities: readonly Ability[],
-): { miecz: number; magia: number } | null {
+): { sword: number; magic: number } | null {
   const stand = abilities.find(
-    (ability) => ability.kind === "walczy-za-ciebie" && !ability.tylkoWyprawa,
+    (ability) => ability.kind === "fights-for-you" && !ability.raidOnly,
   );
-  return stand && stand.kind === "walczy-za-ciebie"
-    ? { miecz: stand.miecz, magia: stand.magia }
+  return stand && stand.kind === "fights-for-you"
+    ? { sword: stand.sword, magic: stand.magic }
     : null;
 }
 
 /**
  * The friend you can send out, and what he is worth when he gets there.
  *
- * The other half of `walczy-za-ciebie`: a raider fights on his own account at
+ * The other half of `fights-for-you`: a raider fights on his own account at
  * arm's length instead of standing in front of you, so he is found by a
  * different question and never answers this one at home.
  */
@@ -1130,10 +1130,10 @@ export function fightsForYou(
  */
 export function entryPrice(
   abilities: readonly Ability[],
-): { zloto?: number; zycie?: number; bezZaplaty: "zostaje" | "odchodzi" } | null {
+): { gold?: number; life?: number; ifUnpaid: "stays" | "leaves" } | null {
   for (const ability of abilities) {
-    if (ability.kind === "cena-przyjecia") {
-      return { zloto: ability.zloto, zycie: ability.zycie, bezZaplaty: ability.bezZaplaty };
+    if (ability.kind === "hiring-price") {
+      return { gold: ability.gold, life: ability.life, ifUnpaid: ability.ifUnpaid };
     }
   }
   return null;
@@ -1141,11 +1141,11 @@ export function entryPrice(
 
 export function raidsForYou(
   cardIds: readonly CardId[],
-): { cardId: CardId; miecz: number; magia: number } | null {
+): { cardId: CardId; sword: number; magic: number } | null {
   for (const cardId of cardIds) {
     for (const ability of abilitiesOf(cardId)) {
-      if (ability.kind === "walczy-za-ciebie" && ability.tylkoWyprawa) {
-        return { cardId, miecz: ability.miecz, magia: ability.magia };
+      if (ability.kind === "fights-for-you" && ability.raidOnly) {
+        return { cardId, sword: ability.sword, magic: ability.magic };
       }
     }
   }
@@ -1159,15 +1159,15 @@ export function raidsForYou(
  */
 export function carriesSpell(
   cardIds: readonly CardId[],
-): { cardId: CardId; cena: number; znika: boolean; mozeszObejrzec: boolean } | null {
+): { cardId: CardId; price: number; vanishes: boolean; mayView: boolean } | null {
   for (const cardId of cardIds) {
     for (const ability of abilitiesOf(cardId)) {
-      if (ability.kind !== "nosi-zaklecie") continue;
+      if (ability.kind !== "carries-spell") continue;
       return {
         cardId,
-        cena: ability.cena ?? 0,
-        znika: ability.znika ?? false,
-        mozeszObejrzec: ability.mozeszObejrzec ?? false,
+        price: ability.price ?? 0,
+        vanishes: ability.vanishes ?? false,
+        mayView: ability.mayView ?? false,
       };
     }
   }
@@ -1176,16 +1176,16 @@ export function carriesSpell(
 
 export function sellsPoints(
   cardIds: readonly CardId[],
-): { cardId: CardId; cena: number; miecz: number; magia: number; razNaTure: boolean } | null {
+): { cardId: CardId; price: number; sword: number; magic: number; onceATurn: boolean } | null {
   for (const cardId of cardIds) {
     for (const ability of abilitiesOf(cardId)) {
-      if (ability.kind !== "za-oplata") continue;
+      if (ability.kind !== "for-a-fee") continue;
       return {
         cardId,
-        cena: ability.cena,
-        miecz: ability.miecz ?? 0,
-        magia: ability.magia ?? 0,
-        razNaTure: ability.razNaTure ?? false,
+        price: ability.price,
+        sword: ability.sword ?? 0,
+        magic: ability.magic ?? 0,
+        onceATurn: ability.onceATurn ?? false,
       };
     }
   }
@@ -1193,7 +1193,7 @@ export function sellsPoints(
 }
 
 export function addsMagiaToMiecz(abilities: readonly Ability[]): boolean {
-  return abilities.some((ability) => ability.kind === "magia-do-miecza");
+  return abilities.some((ability) => ability.kind === "magic-to-sword");
 }
 
 /**
@@ -1221,7 +1221,7 @@ export function diesForYou(
   const offers: { cardId: CardId; onRollUpTo?: number }[] = [];
   for (const cardId of cardIds) {
     for (const ability of abilitiesOf(cardId)) {
-      if (ability.kind !== "ginie-zamiast-ciebie") continue;
+      if (ability.kind !== "dies-for-you") continue;
       // A raider dies only on his own raid, and everyone else only off it.
       if ((ability.onlyWhenRaiding ?? false) !== raiding) continue;
       offers.push({ cardId, onRollUpTo: ability.onRollUpTo });

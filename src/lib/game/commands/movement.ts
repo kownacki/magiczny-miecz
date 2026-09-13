@@ -373,7 +373,7 @@ export async function rollForMove(
   // has to be settled before the destinations are drawn: a Magiczny Miecz is
   // required, and 11.11 bars anyone who failed there on their last turn.
   const mine = snapshot.holdings.filter((h) => h.seat_id === seat.id);
-  // The card says so itself — `{ kind: "wymagany", place: "most" }` is printed
+  // The card says so itself — `{ kind: "required", place: "most" }` is printed
   // on the Magiczny Miecz in the ability registry — rather than the id being
   // named a second time here.
   const hasSword = opensTheWayTo(heldAbilities(mine.map((h) => h.card_id)), "most");
@@ -398,7 +398,7 @@ export async function rollForMove(
    * actually be in use. `seatView(...).abilities` is `inEffect`-filtered, so
    * a Wierzchowiec sitting unworn in a slotowy hand lends no bonus — and it
    * folds in the character's own printed abilities too, though no character
-   * prints `ruch-bonus`. This does not change `hasSword`/`mayEnterCastle`
+   * prints `move-bonus`. This does not change `hasSword`/`mayEnterCastle`
    * themselves: `opensTheWayTo` two lines up keeps asking the wider question,
    * unchanged.
    */

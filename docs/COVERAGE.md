@@ -26,8 +26,8 @@ there and one boolean turns it back on. Distinguished from ◐ on purpose, so
 that "what is missing" and "what is switched off" cannot be read as the same
 number.
 
-**Where it stands.** Of the 138 Karty Zdarzeń, 134 are `pelne`, 3 `czesciowe`
-and 1 `brak` — all 17 Nieznajomi are done; all 27 Zaklęcia are carried out, 25
+**Where it stands.** Of the 138 Karty Zdarzeń, 134 are `full`, 3 `partial`
+and 1 `none` — all 17 Nieznajomi are done; all 27 Zaklęcia are carried out, 25
 of them fully; and all 57 Obszary do what is printed on them.
 
 Every number in that paragraph is checked against the code by
@@ -75,9 +75,9 @@ opposite direction.
 
 One caveat on that first number, learned the hard way on the Eremita, twice:
 `coverageOf` reports whether a card has a *script*, not whether the script can
-resolve, and not whether it resolves for the right person. He was `pelne` for
+resolve, and not whether it resolves for the right person. He was `full` for
 months while his first step, `place-card`, was declared and unimplemented — so
-he rolled for where to settle and settled nowhere — and `pelne` again while both
+he rolled for where to settle and settled nowhere — and `full` again while both
 his sentences ran together, handing his Magiczny Miecz to the one Postać 15.1
 says he cannot touch and moving him on every time somebody called on him. If a
 card matters, play it rather than counting it.
@@ -189,7 +189,7 @@ loss on death are the same either way, so nothing above this line changes.
 
 | | rule | status | where |
 |---|---|---|---|
-| 9.1 | a spell's effect is on its card | ✅ | every spell's timing, target and effect are typed, and **all twenty-seven are carried out** — through `SpellScript.stosuje`, `applies` or `reactive`. **Two** are carried in part and say which part in `MANUAL` (`coverage.ts`), so they read `czesciowe` and print the rest where a player reads the card: KRĄG PŁOMIENI, because the Władca Zaklęć has no way to aim at a Karta lying on an Obszar, and OCALONY, whose Przyjaciel and „remis" thirds are the table's. This said four until 2026-09-04: the WŁADCA GROMU's half landed with the `field_card_id` migration, and the WOJNA ŻYWIOŁÓW's was already carried and nobody had noticed — `magical` is a transcribed field on twenty-three Kartas, `isMagicalItem` reads it, and `seatView` hands it to `heldStatuses` as `noMagical` |
+| 9.1 | a spell's effect is on its card | ✅ | every spell's timing, target and effect are typed, and **all twenty-seven are carried out** — through `SpellScript.script`, `applies` or `reactive`. **Two** are carried in part and say which part in `MANUAL` (`coverage.ts`), so they read `partial` and print the rest where a player reads the card: KRĄG PŁOMIENI, because the Władca Zaklęć has no way to aim at a Karta lying on an Obszar, and OCALONY, whose Przyjaciel and „remis" thirds are the table's. This said four until 2026-09-04: the WŁADCA GROMU's half landed with the `field_card_id` migration, and the WOJNA ŻYWIOŁÓW's was already carried and nobody had noticed — `magical` is a transcribed field on twenty-three Kartas, `isMagicalItem` reads it, and `seatView` hands it to `heldStatuses` as `noMagical` |
 | 9.2 | held only up to the Magia limit | ✅ | |
 | 9.3 | held concealed from the other players | ✅ | enforced server-side — `visibleTo` for a hand, and `asSeenBy` for the two Karty the CHOCHLIK's `ask` frame is holding out, which are the top of a pile no device ever sees |
 | 9.4 | may not be discarded unless over the limit | ✅ | `dropCard` refuses under the limit |

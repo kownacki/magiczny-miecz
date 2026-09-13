@@ -35,13 +35,13 @@ All four of the drawing tasks this page used to list are built:
 The ŁOTR is the one Postać barred from friends outright — `mayHaveFriends`, off
 his own Karta, which 8.2 puts above 6.3.
 
-## The two that are still `czesciowe`
+## The two that are still `partial`
 
-Sixteen of the eighteen are `pelne`. Four were closed by giving two mechanisms
+Sixteen of the eighteen are `full`. Four were closed by giving two mechanisms
 to the cards that share them — **a friend who charges to join** (NAJEMNIK,
-TRAGARZ, CHOCHLIK, `cena-przyjecia`) and **a friend who mends you at one Obszar
-or is given up there for gold** (KSIĘŻNICZKA, WŁADCA, `uzdrowienie` +
-`oddaj-w`) — and a fifth, the ALCHEMIK, was never a gap: his note described what
+TRAGARZ, CHOCHLIK, `hiring-price`) and **a friend who mends you at one Obszar
+or is given up there for gold** (KSIĘŻNICZKA, WŁADCA, `healing` +
+`returned-at`) — and a fifth, the ALCHEMIK, was never a gap: his note described what
 `sellHolding` already does, and the Lichwiarz makes the identical irreversible
 trade with nothing written against his name.
 
@@ -51,7 +51,7 @@ something the app does not have yet:
 | Karta | what is left | what it would take |
 | --- | --- | --- |
 | CHOCHLIK | at a spell draw, look at the top two Zaklęcia and choose one | a pending decision the player answers, which the spell draw has no shape for — `choice` exists but belongs to card scripts, and a Zaklęcie draw is not one |
-| TRAGARZ | losing him loses the Przedmioty he was carrying | knowing *which* Przedmioty are his. `udzwig` raises the limit by four and nothing records who carries what, so there is no honest answer to which cards go with him |
+| TRAGARZ | losing him loses the Przedmioty he was carrying | knowing *which* Przedmioty are his. `capacity` raises the limit by four and nothing records who carries what, so there is no honest answer to which cards go with him |
 
 Both are named on the card in the app, which is what `MANUAL` is for: the table
 applies them and knows it is doing so. Guessing at either would be worse than

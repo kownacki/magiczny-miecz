@@ -194,7 +194,7 @@ blade as their always-on example and had to move.
 3⚔ (5)      a Rycerz standing in for you
 ```
 
-The last line is why nothing assumes the numbers descend: `walczy-za-ciebie`
+The last line is why nothing assumes the numbers descend: `fights-for-you`
 *replaces* the fight figure with the champion's rather than adding to it, so a
 Barbarzyńca of Miecz 5 fights at the Rycerz's 3. The page did not mention this
 and a display that sorted or assumed an order would have been wrong.

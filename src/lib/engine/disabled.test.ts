@@ -131,7 +131,7 @@ describe("what is parked while Postać przeciw Postaci is unbuilt", () => {
    */
   it("reads as something other than a half-carried card", () => {
     for (const cardId of Object.keys(PARKED_CARDS).filter(isCardId)) {
-      expect(coverageOf(cardId), cardId).not.toBe("czesciowe");
+      expect(coverageOf(cardId), cardId).not.toBe("partial");
     }
   });
 });

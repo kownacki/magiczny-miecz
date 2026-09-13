@@ -97,7 +97,7 @@ describe("the ways back under", () => {
       "przedmioty",
       undefined,
       false,
-      [{ kind: "zakazane", cardIds: ["miecz"] }],
+      [{ kind: "forbidden", cardIds: ["miecz"] }],
     );
     expect(ways.filter((one) => one.kind === "zaloz").map((one) => one.cardId)).toEqual(["helm"]);
   });

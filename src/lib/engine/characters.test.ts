@@ -37,12 +37,12 @@ describe("the character registries against the real character cards", () => {
     for (const [id, abilities] of Object.entries(CHARACTER_ABILITIES)) {
       for (const ability of abilities) {
         const named =
-          ability.kind === "bezpieczny" || ability.kind === "ucieczka"
+          ability.kind === "safe" || ability.kind === "escape"
             ? ability.fields
-            : ability.kind === "bez-oplaty"
+            : ability.kind === "no-toll"
               ? ability.fields
-              : ability.kind === "modyfikator-rzutu" && ability.gdzie.na === "pola"
-                ? ability.gdzie.fields
+              : ability.kind === "roll-modifier" && ability.where.at === "fields"
+                ? ability.where.fields
                 : [];
         for (const fieldId of named) {
           expect(FIELDS.get(fieldId), `${id} -> ${fieldId}`).toBeDefined();

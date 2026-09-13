@@ -179,7 +179,7 @@ export const CLASS_NAME: Record<string, string> = {
  *
  * Two sources, and the order between them matters. A card may print its bonus
  * as a number in the corner (Excalibur, Miecz Chaosu) or state it only in its
- * text (Srebrna Strzała, Święty Graal), and the encoded `punkty` ability is the
+ * text (Srebrna Strzała, Święty Graal), and the encoded `points` ability is the
  * one that can express both. So the ability wins where there is one, and the
  * printed number fills in for every card nobody has encoded yet.
  *
@@ -207,7 +207,7 @@ export interface Lent {
   walka: HeldTotals;
   /**
    * Whether `parametr` was suppressed relative to `walka` — the same fact the
-   * printed `punkty` Ability calls `tylkoWalka`, carried alongside rather than
+   * printed `points` Ability calls `fightOnly`, carried alongside rather than
    * left for a reader to reconstruct by comparing the two totals, which gives
    * the wrong answer for a card whose bonus happens to be zero on both anyway.
    * `heldStatuses` (`status.ts`) is the reader that needs it verbatim.
@@ -224,13 +224,13 @@ for (const card of EVENTS) {
   if (printed) BONUS_BY_ID.set(card.id, { parametr: printed, walka: printed });
 }
 for (const [cardId, abilities] of Object.entries(ABILITIES)) {
-  const points = abilities.find((ability) => ability.kind === "punkty");
-  if (points && points.kind === "punkty") {
-    const lent = { miecz: points.miecz ?? 0, magia: points.magia ?? 0 };
+  const points = abilities.find((ability) => ability.kind === "points");
+  if (points && points.kind === "points") {
+    const lent = { miecz: points.sword ?? 0, magia: points.magic ?? 0 };
     BONUS_BY_ID.set(cardId, {
-      parametr: points.tylkoWalka ? { miecz: 0, magia: 0 } : lent,
+      parametr: points.fightOnly ? { miecz: 0, magia: 0 } : lent,
       walka: lent,
-      ...(points.tylkoWalka ? { tylkoWalka: true as const } : {}),
+      ...(points.fightOnly ? { tylkoWalka: true as const } : {}),
     });
   }
 }
@@ -251,7 +251,7 @@ for (const [cardId, abilities] of Object.entries(ABILITIES)) {
  * `fightsForYou` at the moment the fight needs it.
  */
 for (const [cardId, abilities] of Object.entries(ABILITIES)) {
-  if (abilities.some((ability) => ability.kind === "walczy-za-ciebie")) {
+  if (abilities.some((ability) => ability.kind === "fights-for-you")) {
     BONUS_BY_ID.set(cardId, { parametr: NOTHING, walka: NOTHING });
   }
 }

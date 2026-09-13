@@ -19,7 +19,7 @@ describe("what an item gives, and when", () => {
     const miecz = itemProfile("miecz", "slots");
     expect(miecz.slotLabel).toBe("Ręka główna");
     expect(miecz.facts).toEqual([
-      { kind: "punkty", what: "+1 Miecza", when: ["gdy założony", "tylko w walce (1.5)"] },
+      { kind: "points", what: "+1 Miecza", when: ["gdy założony", "tylko w walce (1.5)"] },
     ]);
   });
 
@@ -55,15 +55,15 @@ describe("what an item gives, and when", () => {
     const rumak = itemProfile("bojowy-rumak", "slots");
     expect(rumak.slotLabel).toBe("Wierzchowiec");
     expect(rumak.facts.map((fact) => fact.kind)).toEqual([
-      "magia-do-miecza",
-      "ginie-zamiast-ciebie",
+      "magic-to-sword",
+      "dies-for-you",
     ]);
     expect(rumak.facts[0].what).toContain("Magii");
     // The label says WHERE it has to be and nothing else. That it only matters
     // in a fight is already in the text of both lines, so repeating it added
     // nothing — and it was only ever added to four hand-picked kinds, which
     // made the other seventeen look like they applied at moments they do not.
-    // Neither of the Rumak's two is a `punkty`, so both carry only the place —
+    // Neither of the Rumak's two is a `points`, so both carry only the place —
     // and both already say "in a fight" in their own text.
     for (const fact of rumak.facts) expect(fact.when).toEqual(["gdy założony"]);
   });
@@ -94,21 +94,21 @@ describe("what an item gives, and when", () => {
   });
 
   /**
-   * The fight label is read off `tylkoWalka` rather than guessed from the
+   * The fight label is read off `fightOnly` rather than guessed from the
    * ability's kind, which is what was wrong with the version that was removed:
    * it annotated the Tarcza and not the Sztylet, and the difference it implied
    * between them was not real.
    */
   it("labels a card by its own data, not by the kind of its ability", () => {
-    const shield = { kind: "oslona", upTo: 2 } as const;
+    const shield = { kind: "shield", upTo: 2 } as const;
     expect(whenApplies(shield, "tarcza", "classic")).toEqual([]);
     expect(whenApplies(shield, "tarcza", "slots")).toEqual(["gdy założony"]);
     // Same kind, same card, and the flag is what decides.
-    expect(whenApplies({ kind: "punkty", miecz: 1 }, "sztylet", "slots")).toEqual([
+    expect(whenApplies({ kind: "points", sword: 1 }, "sztylet", "slots")).toEqual([
       "gdy założony",
     ]);
     expect(
-      whenApplies({ kind: "punkty", miecz: 1, tylkoWalka: true }, "sztylet", "slots"),
+      whenApplies({ kind: "points", sword: 1, fightOnly: true }, "sztylet", "slots"),
     ).toEqual(["gdy założony", "tylko w walce (1.5)"]);
   });
 

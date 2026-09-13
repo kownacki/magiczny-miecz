@@ -40,9 +40,9 @@ describe("the ability registry against the real deck", () => {
     for (const [cardId, abilities] of Object.entries(ABILITIES)) {
       for (const ability of abilities) {
         const named =
-          ability.kind === "bezpieczny" || ability.kind === "ucieczka"
+          ability.kind === "safe" || ability.kind === "escape"
             ? ability.fields
-            : ability.kind === "uzdrowienie"
+            : ability.kind === "healing"
               ? [ability.field]
               : [];
         for (const fieldId of named) {
@@ -65,7 +65,7 @@ describe("the ability registry against the real deck", () => {
     ];
     for (const [cardId, abilities] of Object.entries(ABILITIES)) {
       for (const ability of abilities) {
-        if (ability.kind !== "bezpieczny" && ability.kind !== "ucieczka") continue;
+        if (ability.kind !== "safe" && ability.kind !== "escape") continue;
         for (const [a, b] of pairs as [FieldId, FieldId][]) {
           const hasA = ability.fields.includes(a);
           const hasB = ability.fields.includes(b);
@@ -93,7 +93,7 @@ describe("walking past what a field does to you", () => {
   });
 
   it("keeps what the Bagna would take", () => {
-    expect(isSpared(abilitiesOf("kij-i-sznur"), "bagna-2", "utrata")).toBe(true);
+    expect(isSpared(abilitiesOf("kij-i-sznur"), "bagna-2", "loss")).toBe(true);
     expect(isSpared(abilitiesOf("kij-i-sznur"), "bagna-2", "life")).toBe(false);
   });
 
@@ -108,8 +108,8 @@ describe("walking past what a field does to you", () => {
     // Postać too, but only by the Krąg Płomieni — so the Elflin who gets you
     // past a Cyklop in the Kamienny Las does nothing about the player who
     // walked in and attacked you there.
-    expect(canEscapeAt(abilitiesOf("elflin"), "kamienny-las", "wrog")).toBe(true);
-    expect(canEscapeAt(abilitiesOf("elflin"), "kamienny-las", "postac")).toBe(false);
+    expect(canEscapeAt(abilitiesOf("elflin"), "kamienny-las", "foe")).toBe(true);
+    expect(canEscapeAt(abilitiesOf("elflin"), "kamienny-las", "character")).toBe(false);
   });
 
   // The Postać half of the same claim, for the ELF (whose card carries the
@@ -118,8 +118,8 @@ describe("walking past what a field does to you", () => {
   // — `abilitiesOfCharacter` hands back nothing, so there is no escape to be
   // narrow about. Runs again with no other change once that flips to false.
   it.skip("does not let the ELF's own escape from Wrogowie carry over to another Postać", () => {
-    expect(canEscapeAt(abilitiesOfCharacter("elf"), "rownina-traw", "wrog")).toBe(true);
-    expect(canEscapeAt(abilitiesOfCharacter("elf"), "rownina-traw", "postac")).toBe(false);
+    expect(canEscapeAt(abilitiesOfCharacter("elf"), "rownina-traw", "foe")).toBe(true);
+    expect(canEscapeAt(abilitiesOfCharacter("elf"), "rownina-traw", "character")).toBe(false);
   });
 });
 
@@ -177,20 +177,20 @@ describe("the two places a bonus can come from", () => {
     // Where a card has both, they must agree — otherwise whichever source wins
     // is a coin toss nobody reviewed. This fails loudly if one is edited alone.
     for (const [cardId, abilities] of Object.entries(ABILITIES)) {
-      const points = abilities.find((a) => a.kind === "punkty");
-      if (!points || points.kind !== "punkty") continue;
+      const points = abilities.find((a) => a.kind === "points");
+      if (!points || points.kind !== "points") continue;
       const card = (events as EventCard[]).find((c) => c.id === cardId);
       const printed = card ? bonusOf(card) : null;
       if (!printed) continue;
-      expect({ miecz: points.miecz ?? 0, magia: points.magia ?? 0 }, cardId).toEqual(printed);
+      expect({ miecz: points.sword ?? 0, magia: points.magic ?? 0 }, cardId).toEqual(printed);
     }
   });
 });
 
 describe("who dies in your place", () => {
   it("lets the Bojowy Rumak take any defeat", () => {
-    const rumak = abilitiesOf("bojowy-rumak").find((a) => a.kind === "ginie-zamiast-ciebie");
-    expect(rumak).toEqual({ kind: "ginie-zamiast-ciebie" });
+    const rumak = abilitiesOf("bojowy-rumak").find((a) => a.kind === "dies-for-you");
+    expect(rumak).toEqual({ kind: "dies-for-you" });
   });
 
   it("limits the Poszukiwacz to the raid he was sent on", () => {
@@ -200,7 +200,7 @@ describe("who dies in your place", () => {
     // the Poszukiwacz also raids with three points of Miecz, and pinning the
     // whole array made adding that look like a regression.
     expect(abilitiesOf("poszukiwacz-przygod")).toContainEqual({
-      kind: "ginie-zamiast-ciebie",
+      kind: "dies-for-you",
       onlyWhenRaiding: true,
     });
   });
@@ -209,10 +209,10 @@ describe("who dies in your place", () => {
 describe("shifting a die roll", () => {
   it("applies the Talizmany to the kind of fight each names", () => {
     const ognia = abilitiesOf("talizman-ognia");
-    expect(rollModifier(ognia, { walka: "ordinary" }).delta).toBe(1);
+    expect(rollModifier(ognia, { fight: "ordinary" }).delta).toBe(1);
     // "podczas walki (lecz nie magicznej)" — the parenthesis is the whole point.
-    expect(rollModifier(ognia, { walka: "magical" }).delta).toBe(0);
-    expect(rollModifier(abilitiesOf("talizman-powietrza"), { walka: "magical" }).delta).toBe(1);
+    expect(rollModifier(ognia, { fight: "magical" }).delta).toBe(0);
+    expect(rollModifier(abilitiesOf("talizman-powietrza"), { fight: "magical" }).delta).toBe(1);
   });
 
   it("takes two off the Pułapka it names and nothing off the other", () => {
@@ -234,12 +234,12 @@ describe("shifting a die roll", () => {
   it("lets the Jabłko's holder choose the sign", () => {
     const jablko = abilitiesOf("jablko-natchnienia");
     const at = rollModifier(jablko, { fieldId: "swiatynia-tolimana" });
-    expect(at).toEqual({ delta: 1, dowolnyZnak: true });
+    expect(at).toEqual({ delta: 1, eitherSign: true });
   });
 
   it("adds two modifiers that both apply", () => {
     const both = heldAbilities(["talizman-ognia", "czarodziejska-kosc"]);
-    expect(rollModifier(both, { walka: "ordinary", fieldId: "cerber" }).delta).toBe(2);
+    expect(rollModifier(both, { fight: "ordinary", fieldId: "cerber" }).delta).toBe(2);
   });
 });
 

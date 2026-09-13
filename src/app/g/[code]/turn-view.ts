@@ -85,7 +85,7 @@ export function turnViewOf({
    */
   // The same reading the server refuses a cast against (9.1), not a second one
   // that agrees with it most of the time.
-  const now = game ? momentsIn(top(game.turn_state)) : ["dowolna-chwila" as const];
+  const now = game ? momentsIn(top(game.turn_state)) : ["any-time" as const];
 
   const mine = mySeat
     ? {

@@ -91,7 +91,7 @@ export function spendLife(
    * deleted. A held card's status is worked out fresh at every read and has no
    * row to take away, so finding one here would produce a delete of an id that
    * was never in the table — the effect saving a point it cannot pay for, over
-   * and over. Nothing held produces `ocalenie` today; this is what keeps that
+   * and over. Nothing held produces `rescue` today; this is what keeps that
    * from becoming a bug the day something does.
    *
    * The three friends who die in your place are not this and do not belong

@@ -70,9 +70,9 @@ describe("what a character is under", () => {
     // A Hełm, a Tarcza and a Zbroja worn together are one roll against 3,
     // not three rolls against 1, 2 and 3 in turn.
     const under = [
-      status({ modifier: { kind: "oslona", upTo: 1 } }),
-      status({ id: "b", modifier: { kind: "oslona", upTo: 3 } }),
-      status({ id: "c", modifier: { kind: "oslona", upTo: 2 } }),
+      status({ modifier: { kind: "shield", upTo: 1 } }),
+      status({ id: "b", modifier: { kind: "shield", upTo: 3 } }),
+      status({ id: "c", modifier: { kind: "shield", upTo: 2 } }),
     ];
     expect(shieldUpTo(under)).toBe(3);
     expect(shieldUpTo([])).toBe(0);
@@ -81,8 +81,8 @@ describe("what a character is under", () => {
   it("sums udzwig, unlike osłona's widest", () => {
     // A Koń and a Muł worn together really do carry twelve.
     const under = [
-      status({ modifier: { kind: "udzwig", items: 8 } }),
-      status({ id: "b", modifier: { kind: "udzwig", items: 4 } }),
+      status({ modifier: { kind: "capacity", items: 8 } }),
+      status({ id: "b", modifier: { kind: "capacity", items: 4 } }),
     ];
     expect(carryBonus(under)).toBe(12);
     expect(carryBonus([])).toBe(0);
@@ -90,8 +90,8 @@ describe("what a character is under", () => {
 
   it("is unbounded once a Zaprzęg is among them, whatever else is summed in", () => {
     const under = [
-      status({ modifier: { kind: "udzwig", items: 8 } }),
-      status({ id: "b", modifier: { kind: "udzwig", items: "bez-limitu" } }),
+      status({ modifier: { kind: "capacity", items: 8 } }),
+      status({ id: "b", modifier: { kind: "capacity", items: "unlimited" } }),
     ];
     expect(carryBonus(under)).toBe(Infinity);
   });
@@ -312,22 +312,22 @@ describe("the held half: a card's own Abilities as Status rows", () => {
     // She is a Przyjaciel, so `heldStatuses` walks her like any other friend —
     // which is the whole reason this reader could be folded at all.
     const rows = heldStatuses([heldCard({ cardId: "rusalka", kind: "friend" })], "classic", null);
-    const die = rows.find((row) => row.modifier.kind === "przeprawa-kostki");
-    expect(die?.modifier).toEqual({ kind: "przeprawa-kostki", obstacle: "trzesawiska", dice: 1 });
+    const die = rows.find((row) => row.modifier.kind === "crossing-dice");
+    expect(die?.modifier).toEqual({ kind: "crossing-dice", obstacle: "trzesawiska", dice: 1 });
     expect(die?.ends).toEqual({ kind: "held" });
     expect(crossingDiceFrom(rows, "trzesawiska", 2)).toBe(1);
   });
 
   it("puts Hełm, Tarcza and Zbroja on the standing list as `oslona`", () => {
     const [row] = heldStatuses([heldCard({ cardId: "helm" })], "classic", null);
-    expect(row.modifier).toEqual({ kind: "oslona", upTo: 1 });
+    expect(row.modifier).toEqual({ kind: "shield", upTo: 1 });
     expect(row.ends).toEqual({ kind: "held" });
     expect(heldStatuses([heldCard({ cardId: "tarcza" })], "classic", null)[0].modifier).toEqual({
-      kind: "oslona",
+      kind: "shield",
       upTo: 2,
     });
     expect(heldStatuses([heldCard({ cardId: "zbroja" })], "classic", null)[0].modifier).toEqual({
-      kind: "oslona",
+      kind: "shield",
       upTo: 3,
     });
   });
@@ -346,24 +346,24 @@ describe("the held half: a card's own Abilities as Status rows", () => {
    */
   it("puts Koń, Muł, Zaprzęg, Magiczna Sakwa and Tragarz on the standing list as `udzwig`", () => {
     expect(heldStatuses([heldCard({ cardId: "kon" })], "classic", null)[0].modifier).toEqual({
-      kind: "udzwig",
+      kind: "capacity",
       items: 8,
     });
     expect(heldStatuses([heldCard({ cardId: "mul" })], "classic", null)[0].modifier).toEqual({
-      kind: "udzwig",
+      kind: "capacity",
       items: 4,
     });
     expect(heldStatuses([heldCard({ cardId: "zaprzeg" })], "classic", null)[0].modifier).toEqual({
-      kind: "udzwig",
-      items: "bez-limitu",
+      kind: "capacity",
+      items: "unlimited",
     });
     expect(
       heldStatuses([heldCard({ cardId: "magiczna-sakwa" })], "classic", null)[0].modifier,
-    ).toEqual({ kind: "udzwig", items: 5 });
+    ).toEqual({ kind: "capacity", items: 5 });
     expect(
       heldStatuses([heldCard({ cardId: "tragarz", kind: "friend" })], "classic", null)[0]
         .modifier,
-    ).toEqual({ kind: "udzwig", items: 4 });
+    ).toEqual({ kind: "capacity", items: 4 });
   });
 
   it("in slotowy, a packed Koń carries nothing and a worn one does", () => {
@@ -465,8 +465,8 @@ describe("how many dice a crossing takes (11.3)", () => {
     // Everything that speaks here speaks to make a crossing likelier, so two
     // of them are the better of the two rather than two rolls.
     const under = [
-      status({ modifier: { kind: "przeprawa-kostki", obstacle: "trzesawiska", dice: 1 } }),
-      status({ id: "b", modifier: { kind: "przeprawa-kostki", obstacle: "trzesawiska", dice: 2 } }),
+      status({ modifier: { kind: "crossing-dice", obstacle: "trzesawiska", dice: 1 } }),
+      status({ id: "b", modifier: { kind: "crossing-dice", obstacle: "trzesawiska", dice: 2 } }),
     ];
     expect(crossingDiceFrom(under, "trzesawiska", 2)).toBe(1);
   });
@@ -475,7 +475,7 @@ describe("how many dice a crossing takes (11.3)", () => {
     // „gdy będziesz przechodzić z Uroczyska do Lasu Błędnych Ogni" — a Rusałka
     // is no help at all at the Lodowy Las.
     const under = [
-      status({ modifier: { kind: "przeprawa-kostki", obstacle: "trzesawiska", dice: 1 } }),
+      status({ modifier: { kind: "crossing-dice", obstacle: "trzesawiska", dice: 1 } }),
     ];
     expect(crossingDiceFrom(under, "lodowy-las", 2)).toBe(2);
   });

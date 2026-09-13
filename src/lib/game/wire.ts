@@ -191,7 +191,7 @@ export interface EnvelopeFieldCard {
   /**
    * What a lying Wróg is really worth, when that differs from the printed
    * figure — WAMPIR's own growth (`points` on this row) and the Układ
-   * Planet's doubling (`magia-x2`), the same reading `beginFight` does before
+   * Planet's doubling (`magic-x2`), the same reading `beginFight` does before
    * the dice (`fight.ts`). Absent for every other Karta and for a Wróg
    * nothing has grown, so the browser's `combatValueOf` off the static card
    * is the right number far more often than not — this is only sent where it

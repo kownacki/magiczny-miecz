@@ -143,7 +143,7 @@ export function RaidOffer({
         <>
           <p className="mt-2 text-xs text-muted">
             <Rules>
-              {name} walczy swoimi {raider.miecz} punktami Miecza. Przegrana wyprawa nie
+              {name} walczy swoimi {raider.sword} punktami Miecza. Przegrana wyprawa nie
               kosztuje cię punktu Życia — Przyjaciel ginie zamiast ciebie (6.4).
             </Rules>
           </p>

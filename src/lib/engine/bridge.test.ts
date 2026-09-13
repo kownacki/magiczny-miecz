@@ -81,16 +81,16 @@ describe("Pułapka i Magiczna Pułapka (14.5)", () => {
 
 describe("Gra ze Śmiercią", () => {
   it("walks on when you beat Death", () => {
-    expect(deathGameOutcome([6, 5], [3, 2])).toBe("dalej");
+    expect(deathGameOutcome([6, 5], [3, 2])).toBe("onward");
   });
 
   it("treats a draw as neither a win nor a loss", () => {
     // The same distinction 17.10 makes about combat: a draw costs nothing.
-    expect(deathGameOutcome([4, 3], [3, 4])).toBe("znowu");
+    expect(deathGameOutcome([4, 3], [3, 4])).toBe("again");
   });
 
   it("costs a life when Death wins", () => {
-    expect(deathGameOutcome([1, 1], [6, 6])).toBe("strata");
+    expect(deathGameOutcome([1, 1], [6, 6])).toBe("loss");
   });
 });
 

@@ -367,7 +367,7 @@ export function leaveCardsBehind(
    * użytych Kart". So he leaves by the same door as a Karta whose own text
    * says `odłóż`, which is the door this function already has.
    */
-  const walksOff = (card: TurnCard) => entryPrice(abilitiesOf(card.cardId))?.bezZaplaty === "odchodzi";
+  const walksOff = (card: TurnCard) => entryPrice(abilitiesOf(card.cardId))?.ifUnpaid === "leaves";
   /**
    * "Po wykorzystaniu 4 punktów, Drzewo usycha, należy odłożyć jego Kartę."
    *

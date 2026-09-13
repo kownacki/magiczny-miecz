@@ -334,8 +334,8 @@ export const FIELD_SCRIPTS: Readonly<Partial<Record<FieldId, FieldScript>>> = {
    *
    * All five print "MUSISZ RZUCIĆ KOSTKĄ" or the same thing in other words, so
    * all five are `mandatory`. These are what the Opiekun, the Przewodnik, the
-   * Elflin and the Rusałka were written to walk past — `bezpieczny` with
-   * `from: "rzut"` — and until the tables existed there was no roll for any of
+   * Elflin and the Rusałka were written to walk past — `safe` with
+   * `from: "roll"` — and until the tables existed there was no roll for any of
    * them to skip.
    * --------------------------------------------------------------------- */
 
@@ -559,7 +559,7 @@ export const FIELD_SCRIPTS: Readonly<Partial<Record<FieldId, FieldScript>>> = {
    * them onto one die.
    *
    * The Jabłko Natchnienia lets its holder shift this roll by one either way,
-   * and it names both Świątynie — `modyfikator-rzutu` with `dowolnyZnak`.
+   * and it names both Świątynie — `roll-modifier` with `eitherSign`.
    */
   "swiatynia-bogini-nemed": {
     offers: [
@@ -747,7 +747,7 @@ export const FIELD_SCRIPTS: Readonly<Partial<Record<FieldId, FieldScript>>> = {
    * "1 lub 2 oczka" where the second writes "1-2" — and mean the same thing.
    *
    * This is what the Opiekun, the Elflin and the Barbarzyńca walk past: their
-   * `bezpieczny` skips the roll, and skipping the roll skips the friends' rolls
+   * `safe` skips the roll, and skipping the roll skips the friends' rolls
    * with it, which is what "zawsze możesz tamtędy bezpiecznie przejść" says.
    */
   "urwisko-1": {
