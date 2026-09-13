@@ -121,9 +121,9 @@ export function said(did: readonly string[], pending: Effect | null, face?: numb
  */
 function owes(pending: Effect): string {
   const place =
-    (pending.op === "przenies" && pending.to.kind !== "pole") ||
-    (pending.op === "poloz-karte" && pending.gdzie.kind !== "pole") ||
-    pending.op === "przenies-karte";
+    (pending.op === "move" && pending.to.kind !== "field") ||
+    (pending.op === "place-card" && pending.where.kind !== "field") ||
+    pending.op === "move-card";
   return place
     ? "Wskaż Obszar — `answer [n] to <Obszar>`."
     : "Wciąż czeka — odpowiedz jeszcze raz (`look`).";
@@ -262,33 +262,33 @@ function scriptLines(
   const question = questionOn(frame, at);
   if (!question) return [];
   switch (question.kind) {
-    case "dalej":
+    case "continue":
       return [`${question.reason}: kostka padła — \`answer\` puts it into effect.`];
-    case "wybor":
+    case "choice":
       return [
         `${question.reason}: pick one — \`answer <n>\``,
         ...question.options.map((label, at) => `  ${at} — ${label}`),
       ];
-    case "gdzie":
+    case "where":
       return question.fields.length === 0
         ? [`${question.reason}: nowhere this Karta allows is free.`]
         : [
             `${question.reason}: name an Obszar — \`answer [n] to <Obszar>\``,
             `  ${question.fields.map((fieldId) => fieldName(fieldId)).join(", ")}`,
           ];
-    case "ktora": {
+    case "which": {
       const what =
-        question.co === "item" ? "Przedmiot" : question.co === "friend" ? "Przyjaciela" : "Zaklęcie";
+        question.what === "item" ? "Przedmiot" : question.what === "friend" ? "Przyjaciela" : "Zaklęcie";
       return [
         `${question.reason}: wskaż ${what} — \`answer <n>\``,
         ...question.among.map((held, at) => `  ${at} — ${cardName(held.cardId)}`),
       ];
     }
-    case "cyfra":
+    case "digit":
       return [
         `${question.reason}: nazwij cyfrę — \`answer <${question.faces[0]}-${question.faces[question.faces.length - 1]}>\``,
       ];
-    case "nieobslugiwane":
+    case "unsupported":
       return [
         `${question.reason}: waiting on an answer no surface can ask yet (${question.op}).`,
       ];

@@ -85,7 +85,7 @@ export function offersHere(
   fieldCards: readonly { id: string; cardId: CardId; pool?: number; granted?: boolean }[],
 ): Offer[] {
   const script = fieldScriptFor(fieldId);
-  const printed: Offer[] = script?.obowiazkowe
+  const printed: Offer[] = script?.mandatory
     ? []
     : (script?.offers ?? []).map((offer) => ({
         key: offer.name,
@@ -110,7 +110,7 @@ export function offersHere(
      */
     const left = drawsFromPool(cardId) ? (pool ?? startingPool(cardId)) : null;
     const beside =
-      left === null || script.disposition.kind !== "zostaje-z-pula"
+      left === null || script.disposition.kind !== "stays-with-pool"
         ? null
         : `${left} ${plural(left, "punkt", "punkty", "punktów")} ${POOL_OF[script.disposition.stat]}`;
     return [

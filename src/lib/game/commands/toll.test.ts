@@ -58,8 +58,8 @@ async function lose(table: Snapshot, foe: CardId): Promise<Snapshot> {
 describe("the toll a creature's card charges", () => {
   it("is not what turning the card over does", () => {
     const script = scriptFor(ZLOCZYNCA)!;
-    expect(script.effect).toEqual({ op: "nic" });
-    expect(script.przegrana).toBeTruthy();
+    expect(script.effect).toEqual({ op: "nothing" });
+    expect(script.onLoss).toBeTruthy();
     // And so the sheet has nothing free-standing to offer.
     expect(pendingIn(script.effect, [])).toBeNull();
   });

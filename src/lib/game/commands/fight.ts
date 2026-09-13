@@ -169,7 +169,7 @@ export function againstThese(
  * Over a field frame — every ordinary fight since fights became pushes — the
  * pop reveals the field as it was when the fight opened, and `endFight` merges
  * in what the fight settled: the creatures fought this turn (17.4), a meeting
- * spent (13.2). Over anything else — a summon's roll, a `walka` step's script
+ * spent (13.2). Over anything else — a summon's roll, a `fight` step's script
  * frame — the pop alone is the whole of it: nothing beneath needs telling.
  *
  * A one-frame stack is a row written before fights were pushes, still readable

@@ -40,7 +40,7 @@ describe("the two cards that are a crossing", () => {
 
   it("go to the used pile either way", () => {
     for (const id of ["lodz", "latarnia"] as const) {
-      expect(scriptFor(id)?.disposition, id).toEqual({ kind: "odloz" });
+      expect(scriptFor(id)?.disposition, id).toEqual({ kind: "discard" });
     }
   });
 });

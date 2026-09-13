@@ -279,7 +279,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
    * keeps it here and everybody else reads the marked row.
    *
    * Everything goes through here and most of it falls straight through: a
-   * `wybor` answered, a Przedmiot taken, a Karta with no table — none of them
+   * `choice` answered, a Przedmiot taken, a Karta with no table — none of them
    * roll, so none of them have a `face`.
    */
   const showDie = useCallback(

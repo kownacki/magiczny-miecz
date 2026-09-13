@@ -19,11 +19,11 @@ import type { CardId } from "@/data/ids";
 /**
  * Everything the controls under an offer need, gathered into one.
  *
- * `ServiceEffect` walks into itself twice — through a `po-kolei`'s steps and a
+ * `ServiceEffect` walks into itself twice — through a `sequence`'s steps and a
  * die table's six faces — and every prop it needs has to make both journeys.
  * Passed one at a time that was twelve names repeated at four call sites, where
  * the compiler will happily let a new one reach three of them; the Zamek's
- * healer is a `po-kolei` and its second step is a `rzut`, so anything dropped
+ * healer is a `sequence` and its second step is a `roll`, so anything dropped
  * on either hop is dropped exactly where a purchase is being made.
  */
 export interface OfferContext {
@@ -68,7 +68,7 @@ export function FieldService({ offer, ctx }: { offer: Offer; ctx: OfferContext }
        *
        * It used to hang off each control — over the shop's shelf, over the
        * healer's wounds, over a die table — which on the Zamek's Nadworny Medyk
-       * is one `po-kolei` of two steps and so the same sentence twice, in a
+       * is one `sequence` of two steps and so the same sentence twice, in a
        * row, about one refusal. It is a fact about the whole visit: 13.1 shuts
        * the Obszar and 12.1's exceptions shut everything on it. So it belongs
        * under the name of whoever you walked up to, above what they offer,
@@ -98,7 +98,7 @@ function ServiceEffect({
   name: string;
   ctx: OfferContext;
 }) {
-  if (effect.op === "po-kolei") {
+  if (effect.op === "sequence") {
     return (
       <div className="flex flex-col gap-2">
         {effect.steps.map((step, i) => (
@@ -112,11 +112,11 @@ function ServiceEffect({
   // or tap the face that came up on a real die. Local state, because this is a
   // lookup — what the face *does* is still applied through its own control, so
   // the referee never silently decides a player's outcome.
-  if (effect.op === "rzut") {
+  if (effect.op === "roll") {
     return <ScriptedRoll effect={effect} name={name} ctx={ctx} />;
   }
 
-  if (effect.op === "kup") {
+  if (effect.op === "buy") {
     return (
       <Shop
         effect={effect}
@@ -133,7 +133,7 @@ function ServiceEffect({
     );
   }
 
-  if (effect.op === "sprzedaj") {
+  if (effect.op === "sell") {
     if (!ctx.sellable?.length) {
       return <p className="text-[11px] text-muted">Nie masz Przedmiotów na sprzedaż.</p>;
     }
@@ -149,7 +149,7 @@ function ServiceEffect({
                     title: `Sprzedaj: ${cardName(held.cardId)}`,
                     // "proces ten jest nieodwracalny" — the Lichwiarz's own
                     // words, and the reason this is asked at all.
-                    body: `${cardName(held.cardId)} przejdzie na stos za ${effect.cena} Sz. Z. Tego nie da się cofnąć.`,
+                    body: `${cardName(held.cardId)} przejdzie na stos za ${effect.price} Sz. Z. Tego nie da się cofnąć.`,
                     confirmLabel: "Sprzedaj",
                     tone: "grave",
                     onConfirm: () => ctx.onService?.({ action: "sell", holdingId: held.id }),
@@ -157,7 +157,7 @@ function ServiceEffect({
                 }
                 className="rounded border border-zloto/50 px-2 py-0.5 text-[11px] text-ink transition hover:bg-zloto/20 disabled:opacity-40"
               >
-                {cardName(held.cardId)} → <span className="tnum text-zloto">+{effect.cena}</span>
+                {cardName(held.cardId)} → <span className="tnum text-zloto">+{effect.price}</span>
               </button>
             </li>
           ))}
@@ -166,8 +166,8 @@ function ServiceEffect({
     );
   }
 
-  if (effect.op === "uzdrow") {
-    const price = effect.cena ?? 0;
+  if (effect.op === "heal") {
+    const price = effect.price ?? 0;
     const missing = Math.max(0, HEAL_CEILING - ctx.life);
     const affordable = price > 0 ? Math.floor(ctx.gold / price) : missing;
     const most = Math.min(missing, affordable);
@@ -230,7 +230,7 @@ function ScriptedRoll({
   name,
   ctx,
 }: {
-  effect: Extract<Effect, { op: "rzut" }>;
+  effect: Extract<Effect, { op: "roll" }>;
   name: string;
   ctx: OfferContext;
 }) {

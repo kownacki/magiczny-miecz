@@ -21,8 +21,8 @@ function corpus(): Effect[] {
   for (const script of Object.values(SCRIPTS)) {
     if (!script) continue;
     roots.push(script.effect);
-    if (script.placed) roots.push(script.placed);
-    if (script.przegrana) roots.push(script.przegrana);
+    if (script.onDraw) roots.push(script.onDraw);
+    if (script.onLoss) roots.push(script.onLoss);
   }
   for (const spell of Object.values(SPELLS)) if (spell.stosuje) roots.push(spell.stosuje);
   for (const field of Object.values(FIELD_SCRIPTS)) {
@@ -46,7 +46,7 @@ describe("the vocabulary table", () => {
   it("asks a question only of a node that is not settled", () => {
     for (const node of corpus()) {
       const ask = wordOf(node).asks(node);
-      if (ask && ask.kind !== "nieobslugiwane") {
+      if (ask && ask.kind !== "unsupported") {
         expect(isSettled(node), `${node.op} asks ${ask.kind} yet is settled`).toBe(false);
       }
     }
@@ -64,25 +64,25 @@ describe("following a cursor into the shapes the old switch did not know", () =>
   it("reaches the prayer a Kapliczka borrows from its Świątynia", () => {
     const prayer = FIELD_SCRIPTS["swiatynia-bogini-nemed"]?.offers[0].effect;
     expect(prayer).toBeDefined();
-    const borrowed: Effect = { op: "jak-pole", fieldId: "swiatynia-bogini-nemed" };
+    const borrowed: Effect = { op: "as-field", fieldId: "swiatynia-bogini-nemed" };
     // The walk pushes `0` for a borrowed table, then the face it rolled.
     expect(nodeAt(borrowed, [0])).toBe(prayer);
-    if (prayer?.op === "rzut") {
+    if (prayer?.op === "roll") {
       expect(nodeAt(borrowed, [0, 7])).toBe(prayer.faces[7]);
     }
   });
 
   it("reaches the riddle's reward by the face that was guessed", () => {
-    const riddle: Effect = { op: "zgadnij", nagroda: { op: "zaklecie", count: 1 } };
+    const riddle: Effect = { op: "guess", prize: { op: "gain-spell", count: 1 } };
     for (const guess of [1, 2, 3, 4, 5, 6]) {
-      expect(nodeAt(riddle, [guess])).toBe(riddle.nagroda);
+      expect(nodeAt(riddle, [guess])).toBe(riddle.prize);
     }
     expect(nodeAt(riddle, [7])).toBeNull();
   });
 
   it("still answers null off the edge of the tree", () => {
-    const table: Effect = { op: "rzut", faces: { 1: { op: "nic" } } };
+    const table: Effect = { op: "roll", faces: { 1: { op: "nothing" } } };
     expect(nodeAt(table, [2])).toBeNull();
-    expect(nodeAt({ op: "nic" }, [0])).toBeNull();
+    expect(nodeAt({ op: "nothing" }, [0])).toBeNull();
   });
 });

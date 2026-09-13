@@ -610,7 +610,7 @@ export function describe(
      * behind at the end of a turn — the Karta walks off to a named Obszar the
      * moment it is drawn, and does nothing to whoever drew it.
      *
-     * It had no line at all: `poloz-karte` wrote its payload as `cardId` and
+     * It had no line at all: `place-card` wrote its payload as `cardId` and
      * `field` while `left-behind` reads `cardIds` and `fieldId`, so the row was
      * stored, read back, found empty and dropped. The UPIÓR moved to the Osada
      * in silence.

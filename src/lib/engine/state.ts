@@ -185,10 +185,10 @@ export function placedFirst(card: TurnCard): boolean {
  *
  * The other half of 15.1 — "nie mają wpływu na Postać, która je wyciągnęła" —
  * needs nothing *here*, but it did need something: the shape gives half of it,
- * since `poloz-karte` lifts the card out of `drawn` and into `fieldCards` and
+ * since `place-card` lifts the card out of `drawn` and into `fieldCards` and
  * it stops being part of this turn as it resolves. The half the shape does not
  * give is a card that says something else as well — the Eremita's Magiczny
- * Miecz, which used to be handed over on the way past. That is `placed`'s, in
+ * Miecz, which used to be handed over on the way past. That is `onDraw`'s, in
  * `cardScript.ts`, and `lying` is what this file contributes to it.
  *
  * **And a card that re-opens the badanie sits below its own class.** The Skalne

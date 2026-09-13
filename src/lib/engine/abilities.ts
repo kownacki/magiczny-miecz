@@ -958,7 +958,7 @@ export function tollIsWaived(abilities: readonly Ability[], fieldId: FieldId): b
  *    buyer has said what it is worth to him; asked *only where it names*, so at
  *    the Gród the Diament is not the Zamek's business and falls through to the
  *    Lichwiarz's flat 1 — a bad trade the rules plainly allow.
- * 2. **The Obszar's desk.** `sprzedaj`, printed on the board or arrived on a
+ * 2. **The Obszar's desk.** `sell`, printed on the board or arrived on a
  *    Karta that stayed; the caller has already looked, because looking needs a
  *    list of what is lying here and that is not this file's business.
  * 3. **A desk you brought with you.** The ALCHEMIK is a Lichwiarz in your bag

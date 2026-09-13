@@ -140,7 +140,7 @@ export function CardFacts({
   const passes =
     needs === null || needs.met === null || needs.valence === null
       ? "text-muted"
-      : needs.met === (needs.valence === "korzysc")
+      : needs.met === (needs.valence === "gain")
         ? "text-verdigris"
         : "text-vermilion";
 

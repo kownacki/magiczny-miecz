@@ -50,7 +50,7 @@ something the app does not have yet:
 
 | Karta | what is left | what it would take |
 | --- | --- | --- |
-| CHOCHLIK | at a spell draw, look at the top two Zaklęcia and choose one | a pending decision the player answers, which the spell draw has no shape for — `wybor` exists but belongs to card scripts, and a Zaklęcie draw is not one |
+| CHOCHLIK | at a spell draw, look at the top two Zaklęcia and choose one | a pending decision the player answers, which the spell draw has no shape for — `choice` exists but belongs to card scripts, and a Zaklęcie draw is not one |
 | TRAGARZ | losing him loses the Przedmioty he was carrying | knowing *which* Przedmioty are his. `udzwig` raises the limit by four and nothing records who carries what, so there is no honest answer to which cards go with him |
 
 Both are named on the card in the app, which is what `MANUAL` is for: the table

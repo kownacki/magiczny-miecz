@@ -34,20 +34,20 @@ describe("questionOn", () => {
 
   /** A thrown die is not a question: `heldAt` stopped *over* the row it chose. */
   it("calls a held die a press, not a choice", () => {
-    const held = frame({ op: "nic" }, { held: true, reason: "EREMITA (3)" });
-    expect(questionOn(held, nowhere)).toEqual({ kind: "dalej", reason: "EREMITA (3)" });
+    const held = frame({ op: "nothing" }, { held: true, reason: "EREMITA (3)" });
+    expect(questionOn(held, nowhere)).toEqual({ kind: "continue", reason: "EREMITA (3)" });
   });
 
   it("hands over a Karta's own options, in the Karta's own order", () => {
     const asking = frame({
-      op: "wybor",
+      op: "choice",
       options: [
-        { label: "przenosisz się", effect: { op: "nic" } },
-        { label: "Pomiń", effect: { op: "nic" } },
+        { label: "przenosisz się", effect: { op: "nothing" } },
+        { label: "Pomiń", effect: { op: "nothing" } },
       ],
     });
     expect(questionOn(asking, nowhere)).toEqual({
-      kind: "wybor",
+      kind: "choice",
       reason: "JEDNOROŻEC",
       options: ["przenosisz się", "Pomiń"],
     });
@@ -59,21 +59,21 @@ describe("questionOn", () => {
    * function, so a button cannot be drawn for an Obszar the server will refuse.
    */
   it("offers the Krąg, and only the Krąg", () => {
-    const asking = frame({ op: "przenies", to: { kind: "dowolne-w-kregu" } });
+    const asking = frame({ op: "move", to: { kind: "anywhere-in-ring" } });
     const question = questionOn(asking, atOsada);
-    expect(question?.kind).toBe("gdzie");
-    expect(question?.kind === "gdzie" && question.fields).toEqual(ringFields("osada"));
-    expect(question?.kind === "gdzie" && question.fields).not.toContain("zamek-bestii");
+    expect(question?.kind).toBe("where");
+    expect(question?.kind === "where" && question.fields).toEqual(ringFields("osada"));
+    expect(question?.kind === "where" && question.fields).not.toContain("zamek-bestii");
   });
 
   /** „na którymś z tych Obszarów, nie zajętym przez inną Postać" (LEWIATAN). */
   it("strikes an occupied Obszar off a listed set", () => {
     const asking = frame({
-      op: "poloz-karte",
-      gdzie: { kind: "jedno-z", fieldIds: ["bagna-1", "bagna-2"] },
+      op: "place-card",
+      where: { kind: "one-of", fieldIds: ["bagna-1", "bagna-2"] },
     });
     const question = questionOn(asking, { standingOn: "osada", occupied: ["bagna-1"] });
-    expect(question?.kind === "gdzie" && question.fields).toEqual(["bagna-2"]);
+    expect(question?.kind === "where" && question.fields).toEqual(["bagna-2"]);
   });
 
   /**
@@ -83,11 +83,11 @@ describe("questionOn", () => {
    */
   it("answers with an empty list when nothing is free", () => {
     const asking = frame({
-      op: "poloz-karte",
-      gdzie: { kind: "jedno-z", fieldIds: ["bagna-1"] },
+      op: "place-card",
+      where: { kind: "one-of", fieldIds: ["bagna-1"] },
     });
     const question = questionOn(asking, { standingOn: "osada", occupied: ["bagna-1"] });
-    expect(question).toEqual({ kind: "gdzie", reason: "JEDNOROŻEC", fields: [] });
+    expect(question).toEqual({ kind: "where", reason: "JEDNOROŻEC", fields: [] });
   });
 
   /**
@@ -95,15 +95,15 @@ describe("questionOn", () => {
    * to point at — `walk` reads it off the frame's `from` and asks nobody.
    */
   it("offers nothing for a destination the card names itself", () => {
-    expect(destinationsFor({ kind: "poczatek-ruchu" }, atOsada)).toEqual([]);
+    expect(destinationsFor({ kind: "move-start" }, atOsada)).toEqual([]);
   });
 
   /** Named rather than guessed at — and named the same way on both surfaces. */
   it("admits a question nobody can ask yet", () => {
-    const asking = frame({ op: "przenies-karte" } as Effect);
+    const asking = frame({ op: "move-card" } as Effect);
     expect(questionOn(asking, nowhere)).toMatchObject({
-      kind: "nieobslugiwane",
-      op: "przenies-karte",
+      kind: "unsupported",
+      op: "move-card",
     });
   });
 });
@@ -124,11 +124,11 @@ describe("questionOn, for the riddle", () => {
       cardId: "medrzec",
       reason: "MĘDRZEC",
       cursor: [],
-      effect: { op: "zgadnij", nagroda: { op: "zaklecie", count: 1 } },
+      effect: { op: "guess", prize: { op: "gain-spell", count: 1 } },
     } as Extract<TurnPhase, { phase: "script" }>;
 
     expect(questionOn(asking, { standingOn: null, occupied: [] })).toEqual({
-      kind: "cyfra",
+      kind: "digit",
       reason: "MĘDRZEC",
       faces: [1, 2, 3, 4, 5, 6],
     });

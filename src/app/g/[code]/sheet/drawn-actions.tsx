@@ -240,7 +240,7 @@ export function DrawnActions({
    * first: the panel keeps what it is showing, marks the button that was
    * pressed, and waits for the turn state to move it on.
    *
-   * `option` is which of a `wybor`'s buttons it was, for the mark; null for a
+   * `option` is which of a `choice`'s buttons it was, for the mark; null for a
    * decision that is not one of several.
    */
   const [sent, setSent] = useState<{ option: number | null } | null>(null);
@@ -426,7 +426,7 @@ export function DrawnActions({
    *
    * On its own and before everything else, because while the Karta is
    * suspended on this question there is nothing else to do about it: „Walcz"
-   * under a Wróg whose `przegrana` is being paid, or „Rzuć kostką" under a
+   * under a Wróg whose `onLoss` is being paid, or „Rzuć kostką" under a
    * table already rolled, would both be a second act offered mid-sentence.
    *
    * The face stays above it — the same „WYPADŁO 4" the throw put there, minus
@@ -468,7 +468,7 @@ export function DrawnActions({
           disabled={busy || chosen === null}
           /* 9.3: a hand nobody else may see announces nothing. Everything else
              is public (5.2, 6.2), so the index names a card the table is
-             already looking at — the same bargain a `wybor` makes. */
+             already looking at — the same bargain a `choice` makes. */
           says={
             owing.kind === "spell" || giving === null
               ? undefined
@@ -567,7 +567,7 @@ export function DrawnActions({
       )}
 
       {/* A choice the rules give the player: "wedle własnego wyboru". */}
-      {asking?.op === "wybor" && (
+      {asking?.op === "choice" && (
         <div>
           <p className="mb-1 text-[11px] text-muted">Wybierz jedno:</p>
           <div className="flex flex-wrap items-center gap-2">
@@ -585,7 +585,7 @@ export function DrawnActions({
                * The picker stands among the other options instead and its
                * confirm carries both halves at once: which option, and where.
                */
-              option.effect.op === "przenies" && option.effect.to.kind !== "pole" ? (
+              option.effect.op === "move" && option.effect.to.kind !== "field" ? (
                 <span key={option.label} className="flex flex-wrap items-center gap-2">
                   <ObszarPicker among={ring} value={going} disabled={busy} onPick={setGoing} />
                   <ActionButton
@@ -663,7 +663,7 @@ export function DrawnActions({
 
       {/* "przenieś się na dowolny Obszar w tym Kręgu" — the player points at
           the board, so the board is what is offered. */}
-      {asking?.op === "przenies" && asking.to.kind !== "pole" && (
+      {asking?.op === "move" && asking.to.kind !== "field" && (
         <div className="flex flex-wrap items-center gap-2">
           <ObszarPicker among={ring} value={going} disabled={busy} onPick={setGoing} />
           <ActionButton
@@ -681,10 +681,10 @@ export function DrawnActions({
           inną Postać" — the card names the list, and the ones somebody is
           standing on are struck off it here as well as on the server, so a
           player is not offered an answer that will be refused. */}
-      {asking?.op === "poloz-karte" && asking.gdzie.kind === "jedno-z" && (
+      {asking?.op === "place-card" && asking.where.kind === "one-of" && (
         <div className="flex flex-wrap items-center gap-2">
           <ObszarPicker
-            among={asking.gdzie.fieldIds.filter((fieldId) => !occupied.includes(fieldId))}
+            among={asking.where.fieldIds.filter((fieldId) => !occupied.includes(fieldId))}
             value={going}
             disabled={busy}
             onPick={setGoing}

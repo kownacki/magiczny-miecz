@@ -199,13 +199,13 @@ export function turnViewOf({
           }
         : {}),
     });
-    if (asked?.kind !== "ktora" || turnState.phase !== "script" || !turnState.cardId) return null;
+    if (asked?.kind !== "which" || turnState.phase !== "script" || !turnState.cardId) return null;
     /* The sheet still wants the rows themselves — the tiles it draws carry the
        picture and the slot — so the ids come back off the seat. The *decision*
        is `questionOn`'s, which is the change: this file used to make it. */
     const chosen = new Set(asked.among.map((one) => one.id));
     const cards = seat!.holdings.filter((held) => chosen.has(held.id));
-    return { cardId: turnState.cardId, kind: asked.co, cards };
+    return { cardId: turnState.cardId, kind: asked.what, cards };
   })();
 
   /**

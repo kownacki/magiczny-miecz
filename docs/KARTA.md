@@ -54,12 +54,12 @@ Stan na 2026-09-13, pogrupowany według tego, *co* to jest:
 | **reguła na nazwie** — kieszeń, z której nikt nie sięga | `slots.ts` | Tajemna Sakwa | cecha `schowek: 1`, czytana tam, gdzie dziś czytane jest `"tajemna-sakwa"` |
 | reguła na nazwie — łupy | `spoils.ts` | Wampir | cecha `wysysa-zycie` |
 | reguła na nazwie — kształt walki | `cards.ts` | Sobowtór, Trójgłowy Smok, Przybysz z Krainy Cieni | cechy `odbija-miecz`, `glowy: 3`, `bez-broni` |
-| reguła na nazwie — po rozpatrzeniu | `resolving.ts` | Układ Planet | Efekt na Karcie kładzie status na Demony; op już istnieje (`efekt` z `target`) |
+| reguła na nazwie — po rozpatrzeniu | `resolving.ts` | Układ Planet | Efekt na Karcie kładzie status na Demony; op już istnieje (`status` z `target`) |
 | reguła na nazwie — dobieranie | `draw.ts` | Różdżka Zaklęć | klauzula do `Ability` `zaklecia-ponad-limit` (`natychmiast: true`) |
 | reguła na nazwie — rzucanie | `commands/spells.ts` | Władca Gromu, Władca Zaklęć, Zwierciadło | cechy `paralizuje-istoty`, `rozprasza`, `odbija-zaklecie` — trzy słowa, które model odpowiedzi i tak będzie potrzebował |
 | reguła na nazwie — ucieczka przed Postacią | `fight.ts` | Krąg Płomieni | `Ability` `ucieczka` z `przed: ["postac"]` **już istnieje** — tylko nikt go nie nadał Zaklęciu |
 | czytelnik po nazwie zamiast po słowie | `turnStore.ts` `bridgeRequirements` | Magiczny Miecz, Tarcza | `Ability` `wymagany` **już istnieje** — czytelnik ma pytać o nie |
-| nagroda misji | `friends.ts` | Tarcza Tolimana (Władca) | to jest `otrzymaj` — treść Karty Przyjaciela, nie kod |
+| nagroda misji | `friends.ts` | Tarcza Tolimana (Władca) | to jest `receive` — treść Karty Przyjaciela, nie kod |
 
 Cztery z jedenastu wierszy zamykają się słowem, które słownik już ma. To jest
 ważna wiadomość: **słownik prawie wystarcza; nieszczelny jest nie on, tylko
@@ -161,7 +161,7 @@ tabelę. To jest test *tury z tą kartą*. Granularniej, od dołu:
    gdzie Karta pyta „gdzie"; potem sprawdza `expect`. Ten sam runner jest
    **walidatorem kreatora**: `npm run card -- try` to ten sam kod bez `expect`.
    Granie jedną odpowiedzią naraz od razu znalazło błąd, którego żadna
-   powierzchnia nie widziała, bo każda wysyła odpowiedzi hurtem: gałąź `wybor`
+   powierzchnia nie widziała, bo każda wysyła odpowiedzi hurtem: gałąź `choice`
    w `walk` gubiła zawieszenie z wybranej opcji (kostka pod Godziną Duchów,
    „gdzie" pod Jednorożcem, strata na Bagnach nie stawiały ramki).
    Tak testuje się karty w Forge i w każdym silniku, który ma ich tysiąc: karta
@@ -216,7 +216,7 @@ posiadacza*. Rozróżnienie jest to samo, które `abilities.ts` już robi międz
 | klasa | pola |
 |---|---|
 | Spotkanie | `rozpatrzona`, `potem` |
-| Wróg, Demon | `cechy`, `przegrana`, `wyciagnieta` (Lewiatan), `potem` |
+| Wróg, Demon | `cechy`, `onLoss`, `wyciagnieta` (Lewiatan), `potem` |
 | Nieznajomy | `rozpatrzona`, `wyciagnieta` (Eremita), `dobrowolna`, `potem` |
 | Przyjaciel | `trzymana`, `cechy`, `potem: bierzesz` |
 | Przedmiot | `trzymana`, `uzyta`, `cechy`, `zuzywana` |
@@ -308,7 +308,7 @@ wyżej, oba celowe:
   Składanie tekstu do `WORDS` jest możliwe i nic nie daje, dopóki nie pojawi
   się czytelnik, który potrzebuje obu naraz.
 - **Chodzenie po drzewie z pożyczonymi tabelami mieszka w `resolve.ts`.**
-  `jak-pole` pożycza tabelę Obszaru z `FIELD_SCRIPTS`, a ten rejestr importuje
+  `as-field` pożycza tabelę Obszaru z `FIELD_SCRIPTS`, a ten rejestr importuje
   `state.ts`, które importuje słownik; `words.ts` nie może więc sięgnąć po
   tabelę bez cyklu. Słowo mówi *którą* pożycza (`borrows`), a `childrenOf` w
   `resolve.ts` ją dokłada. `nodesOf` w `words.ts` chodzi po karcie „jak
@@ -321,7 +321,7 @@ teraz ma (`words.test.ts`).
 
 **Nazwy: po angielsku.** Identyfikatory silnika są angielskie; polskie są
 tylko nazwy własne gry (Karta, Obszar, Zaklęcie, Miecz) i istniejące słowa
-karty (`op: "punkty"`, `cena`). Pierwsza wersja tej tabeli miała `pola`,
+karty (`op: "points"`, `price`). Pierwsza wersja tej tabeli miała `pola`,
 `dzieci`, `pyta` i Michał ją zawrócił: rejestr języka karty przeniósł się na
 API silnika, a to dwie różne rzeczy. Czy same słowa karty mają kiedyś przejść
 na angielski, jest pytaniem do kroku 3, nie decyzją tego dokumentu; sprzątanie
@@ -377,7 +377,7 @@ zgody na następny.
 | 3 | **`Karta` + pliki + generowany indeks**; pięć rejestrów jako widoki | `karty/` istnieje, rejestry są jednolinijkowe, żaden czytelnik się nie ruszył; round-trip przez JSON |
 | 4 | **Zamknięcie ucieczek**, jedna cecha na commit | `FROZEN` w `namedCards.test.ts` pusty; `CARRIED_ELSEWHERE` skasowane; `pelne` wyprowadzone z `Karta` |
 | 5 | **Budowniczy w konsoli** — jeśli Michał go chce | `karta new … zapisz` produkuje plik, który przechodzi 3 i 2 |
-| 6 | **Gotowość na dodatki** — `gdy` na `Ability`, `zestaw`, id z koordynatu | dopiero gdy pudełko się otwiera |
+| 6 | **Gotowość na dodatki** — `when` na `Ability`, `zestaw`, id z koordynatu | dopiero gdy pudełko się otwiera |
 
 1 przed 3, bo tabela sprawia, że przeprowadzka jest mechaniczna. 2 przed 3, bo
 przykłady na Karcie są tym, co pozwala przenieść kartę z jej testem w jednym
@@ -451,9 +451,102 @@ Więc pytanie nie brzmi „JSON czy TypeScript", tylko **„czy karta jest seria
 ### Co research zmienia w tym dokumencie
 
 - **Potwierdza §1 i §2** (zamknięty słownik; dane w języku gospodarza). Rozmiar naszego słownika — 33 słowa `Effect`, 33 rodzaje `Ability` — mieści się w tym, co riftbound zmierzył jako właściwe (50–90 pierwotnych) i w tym, co ma Fireplace (~30 akcji).
-- **Kształty Argentum jako lista kontrolna dla `WORDS`**: atomowe, sekwencja, warunek, **iteracja po grupie**, pipeline. Cztery mamy (`po-kolei`, `gdy`, liście, `zabierz`/`przenies-karte`); iterację mamy rozproszoną — `target: wszyscy` na trzech słowach i `rzut-za-kazdego` jako osobny op. Warto rozważyć przy kroku 1, czy `dla-kazdego` nie powinno być ósmym słowem składającym; to jest pytanie do zadania, nie decyzja.
+- **Kształty Argentum jako lista kontrolna dla `WORDS`**: atomowe, sekwencja, warunek, **iteracja po grupie**, pipeline. Cztery mamy (`sequence`, `when`, liście, `take`/`move-card`); iterację mamy rozproszoną — `target: everyone` na trzech słowach i `roll-for-each` jako osobny op. Warto rozważyć przy kroku 1, czy `dla-kazdego` nie powinno być ósmym słowem składającym; to jest pytanie do zadania, nie decyzja.
 - **Testy per karta są normą, nie wyjątkiem.** Fireplace, XMage i Argentum robią to samo: minimalny stan, karta, zaskryptowane decyzje, asercje na stanie. Nikt nie testuje tylko słów. `examples` na Karcie z §5 to ten wzorzec przeniesiony *na kartę*; nie znalazłem nikogo, kto trzyma je w pliku karty, najbliżej są pliki `.pzl` Forge (stan plus cel w jednym pliku).
 - **Tekst z kodu ma mieć test przeciw drukowi.** XMage porównuje wygenerowany tekst z bazą MTGJSON; Argentum robi round-trip przez gramatykę. My generujemy (`describeEffect`) i nie sprawdzamy niczego. Tani odpowiednik: *touchstone* — każda liczba i każda nazwa własna z drukowanego tekstu Karty musi wystąpić w wygenerowanym opisie. Nie równość, bo polska proza się różni; obecność. Dopisane do kroku 2.
 - **Pokrycie liczone klauzulami, nie kartami.** riftbound oznacza każdą klauzulę tekstu jako implemented / approximate / unsupported; Argentum szereguje luki po liczbie kart, które blokują. Nasze `LIVE_ABILITIES` już jest per klauzula dla Postaci; `coverage.ts` jest per karta. Przy kroku 4 warto to wyrównać.
 - **Kreator: lekcja z LoR.** Bottleneck nie był w braku formularza, tylko w tym, że każdy nowy klocek wymagał inżyniera; rozwiązaniem był *język* dla projektantów, nie edytor. U nas język to `satisfies Karta`; budowniczy w konsoli (krok 5) jest wart zbudowania, jeśli ma go używać ktoś, kto nie pisze TypeScriptu. Wniosek z §Kreator bez zmian, teraz ze źródłem.
 - **Migracja z przełącznikiem.** Riot: „a good ol' toggle". Krok 3 (rejestry jako widoki nad `KARTY`) jest tym przełącznikiem; to dodatkowy argument, żeby nie robić kroku 3 inaczej.
+
+---
+
+## Słowa silnika po angielsku (decyzja Michała, 2026-09-13)
+
+Michał: „oba po angielsku — to są słowa kluczowe silnika, to powinno być po
+angielsku od początku". Czyli nie tylko klucze, ale i nazwy słów, cele,
+dyspozycje, warunki, rodzaje pytań. Po polsku zostaje wyłącznie to, co jest
+nazwą własną gry (Karta, Obszar, Zaklęcie, Postać, Miecz, Magia, Życie,
+Natura, Krąg), cytaty z druku w komentarzach, etykiety pokazywane graczom
+i nazwy testów. Robi się to **przed krokiem 3**, bo po rozbiciu na pliki to
+250 diffów, i falami, bo część słów leży w bazie.
+
+**Fala 1 — słownik kart** (nic z tego nie jest trwale zapisane; `turn_state`
+niesie drzewo efektu tylko w trakcie karty, więc stół w połowie karty w
+chwili wdrożenia jest do zakończenia ręcznie):
+
+| dziś | po | parametry (dziś → po) |
+|---|---|---|
+| `nic` | `nothing` | |
+| `po-kolei` | `sequence` | `steps` |
+| `wybor` | `choice` | `options` (`label`, `effect`) |
+| `rzut` | `roll` | `faces`, `kostki`→`dice` |
+| `gdy` | `when` | `warunek`→`condition`, `to`→`then`, `inaczej`→`else` |
+| `jak-pole` | `as-field` | `fieldId` |
+| `przenies-karte` | `move-card` | |
+| `zgadnij` | `guess` | `nagroda`→`prize` |
+| `punkty` | `points` | `stat`, `delta`, `target` |
+| `uzdrow` | `heal` | `upTo`, `cena`→`price` |
+| `sprzedaj` | `sell` | `cena`→`price` |
+| `tura-stracona` | `lose-turn` | `turns`, `target`, `oprocz`→`except` |
+| `ruch-dodatkowy` | `extra-move` | |
+| `zaklecie` | `gain-spell` | `count`, `cena`→`price`, `zeStosu`→`fromPile` |
+| `zaklecia-do-limitu` | `spells-to-limit` | |
+| `przenies` | `move` | `to` |
+| `wyciagnij` | `draw-cards` | `count` |
+| `walka` | `fight` | `nazwa`→`name`, `miecz`→`sword`, `magia`→`magic` |
+| `przyzwij` | `summon` | `nazwa`→`name`, `miecz`→`sword` |
+| `podejrzyj` | `peek` | `count` |
+| `katastrofa` | `wipe` | `klasa`→`cardClass`, `zasieg`→`reach` |
+| `wymien-karte` | `redraw` | |
+| `strata` | `lose` | `co`→`what`, `oprocz`→`except`, `count`, `wybor`→`chosenBy` (`ty`→`you`, `losowo`→`random`), `target` |
+| `kamien` | `stone` | |
+| `zamien-punkty` | `swap-points` | `z`→`from` |
+| `natura` | `set-nature` | `na`→`to` |
+| `kup` | `buy` | `towar`→`goods` (`co`→`name`, `cena`→`price`) |
+| `poloz-karte` | `place-card` | `gdzie`→`where` |
+| `otrzymaj` | `receive` | `co`→`what` |
+| `efekt` | `status` | `label`, `modifier`, `ends`, `target` |
+| `rzut-za-kazdego` | `roll-for-each` | `co`→`what` (`przyjaciel`→`friend`, `przedmiot`→`item`), `gubiPrzy`→`lostOn` |
+| `uwolnij` | `release` | `od`→`from` |
+| `zabierz` | `take` | `co`→`what` (`przedmiot-lub-zloto`→`item-or-gold`), `wybiera`→`chosenBy` (`ofiara`→`victim`, `rzucajacy`→`caster`) |
+
+Rodzaje straty (`lose.what`, `losses.ts`): `przedmiot`→`item`,
+`przyjaciel`→`friend`, `zaklecie`→`spell`, `gold`, `wszystkie-przedmioty`→
+`all-items`, `wszystkie-zaklecia`→`all-spells`,
+`wszyscy-przyjaciele-oprocz`→`all-friends-except`.
+
+`Target`: `ty`→`you`, `wszyscy`→`everyone`, `wszyscy-w-kregu`→
+`everyone-in-ring`, `kazdy-kto-tu-trafi`→`whoever-lands-here`,
+`wszyscy-tutaj`→`everyone-here`, `dobrzy`→`good`, `chaotyczni`→`chaotic`,
+`zli`→`evil`, `w-dolnym-kregu`→`in-lower-ring`, `w-srodkowym-kregu`→
+`in-middle-ring`, `w-gornym-kregu`→`in-upper-ring`, `inna-postac`→
+`another-character`.
+
+`Destination.kind`: `pole`→`field`, `dowolne-w-kregu`→`anywhere-in-ring`,
+`poczatek-ruchu`→`move-start`, `jedno-z`→`one-of`.
+
+`Disposition.kind`: `odloz`→`discard`, `zostaje`→`stays`, `zostaje-z-pula`→
+`stays-with-pool`, `do-pierwszej`→`until-first-visitor`, `bierzesz`→`kept`,
+`po-turach`→`after-turns`, `wraca-do-stosu`→`back-to-pile`.
+
+`Condition.is`: `natura`→`nature` (`jedna_z`→`oneOf`), `prog`→`threshold`
+(`ponizej`→`below`), `ma-zloto`→`has-gold`, `attacker`.
+
+`Valence`: `korzysc`→`gain`, `strata`→`loss`.
+
+`CardScript`: `placed`→`onDraw`, `przegrana`→`onLoss`; `FieldScript`:
+`obowiazkowe`→`mandatory`.
+
+`Ask.kind` i `TurnQuestion.kind`: `dalej`→`continue`, `wybor`→`choice`,
+`gdzie`→`where`, `cyfra`→`digit`, `ktora`→`which`, `nieobslugiwane`→
+`unsupported`.
+
+**Fala 2 — reguły stałe i statusy**: rodzaje `Ability` (33), `Modifier`
+(18), `SpellTiming`, `SpellTarget`, pola `Use`, wartości pokrycia
+(`pelne`/`czesciowe`/`brak`). `Modifier.kind` **leży w bazie**
+(`seat_effects.modifier`), więc ta fala niesie migrację w `db/migrations/`,
+którą stosuje wyłącznie sesja główna na słowo Michała (WHERE.md, przepis 10).
+Mapa fali 2 powstanie po wylądowaniu fali 1.
+
+**Fala 3 — reszta silnika**: to, co TASKS.md nazywa „English sweep" (pola
+`TurnPhase`, `Status`, `Command` konsoli, fixture'y).

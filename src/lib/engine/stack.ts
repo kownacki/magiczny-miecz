@@ -147,7 +147,7 @@ export function topIf<K extends TurnPhase["phase"]>(
  * pushed a `script` frame above it, and a `fight` sits above that — and three
  * places were already walking the stack backwards by hand to find it, which is
  * three chances to write `top()` instead and quietly get the wrong frame. That
- * is exactly how a placed Karta came to stay in the kolejka: `poloz-karte` read
+ * is exactly how a placed Karta came to stay in the kolejka: `place-card` read
  * `top()`, which on the way back from „Dalej" is the `script` frame it is
  * running inside, so the lift found no `drawn` to lift from and did nothing.
  *

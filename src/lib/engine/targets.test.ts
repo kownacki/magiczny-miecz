@@ -28,46 +28,46 @@ describe("who an effect hits", () => {
    */
   it("passes over a Postać Zamienioną w Kamień, and only that one (20.1-20.5)", () => {
     const seats = [seat(0), seat(1, { stone: true }), seat(2)];
-    expect(indices(seatsTargeted("wszyscy", seats, seats[0]))).toEqual([0, 2]);
-    expect(indices(seatsTargeted("wszyscy-tutaj", seats, seats[0]))).toEqual([0, 2]);
-    expect(indices(seatsTargeted("dobrzy", seats, seats[0]))).toEqual([0, 2]);
+    expect(indices(seatsTargeted("everyone", seats, seats[0]))).toEqual([0, 2]);
+    expect(indices(seatsTargeted("everyone-here", seats, seats[0]))).toEqual([0, 2]);
+    expect(indices(seatsTargeted("good", seats, seats[0]))).toEqual([0, 2]);
     // Its own turn cannot come round while it is stone, but the answer is the
     // same from every direction rather than special-cased per target.
     expect(indices(seatsTargeted(undefined, seats, seats[1]))).toEqual([]);
     // And it is back in the list the turn it is flesh again.
     const flesh = [seat(0), seat(1), seat(2)];
-    expect(indices(seatsTargeted("wszyscy", flesh, flesh[0]))).toEqual([0, 1, 2]);
+    expect(indices(seatsTargeted("everyone", flesh, flesh[0]))).toEqual([0, 1, 2]);
   });
 
   it("means the drawer when no target is named", () => {
     const seats = [seat(0), seat(1)];
     expect(indices(seatsTargeted(undefined, seats, seats[0]))).toEqual([0]);
-    expect(indices(seatsTargeted("ty", seats, seats[0]))).toEqual([0]);
+    expect(indices(seatsTargeted("you", seats, seats[0]))).toEqual([0]);
   });
 
   it("means the whole table, drawer included", () => {
     // Burza Siedmiu Słońc: "Wszystkie Postacie tracą 1 turę" — the person who
     // drew it is one of them.
     const seats = [seat(0), seat(1), seat(2)];
-    expect(indices(seatsTargeted("wszyscy", seats, seats[1]))).toEqual([0, 1, 2]);
+    expect(indices(seatsTargeted("everyone", seats, seats[1]))).toEqual([0, 1, 2]);
   });
 
   it("spares the characters a card names", () => {
     // Zaklinacz Czasu exempts five characters by name.
     const seats = [seat(0, { characterId: "elf" }), seat(1, { characterId: "goblin" })];
-    expect(indices(seatsTargeted("wszyscy", seats, seats[1], ["elf", "hummit"]))).toEqual([1]);
+    expect(indices(seatsTargeted("everyone", seats, seats[1], ["elf", "hummit"]))).toEqual([1]);
   });
 
   it("ignores exemptions naming characters this box does not have", () => {
     // Two of Zaklinacz Czasu's five are expansion characters. They never match,
     // and that is correct rather than a gap.
     const seats = [seat(0, { characterId: "goblin" })];
-    expect(indices(seatsTargeted("wszyscy", seats, seats[0], ["czarodziejka"]))).toEqual([0]);
+    expect(indices(seatsTargeted("everyone", seats, seats[0], ["czarodziejka"]))).toEqual([0]);
   });
 
   it("leaves the dead out of it", () => {
     const seats = [seat(0), seat(1, { eliminated: true }), seat(2)];
-    expect(indices(seatsTargeted("wszyscy", seats, seats[0]))).toEqual([0, 2]);
+    expect(indices(seatsTargeted("everyone", seats, seats[0]))).toEqual([0, 2]);
   });
 
   it("hits only the drawer's own ring", () => {
@@ -76,16 +76,16 @@ describe("who an effect hits", () => {
       seat(1, { fieldId: "wrzosowiska" }), // srodkowy
       seat(2, { fieldId: "kurhan" }), // dolny
     ];
-    expect(indices(seatsTargeted("wszyscy-w-kregu", seats, seats[0]))).toEqual([0, 2]);
-    expect(indices(seatsTargeted("wszyscy-w-kregu", seats, seats[1]))).toEqual([1]);
+    expect(indices(seatsTargeted("everyone-in-ring", seats, seats[0]))).toEqual([0, 2]);
+    expect(indices(seatsTargeted("everyone-in-ring", seats, seats[1]))).toEqual([1]);
   });
 
   it("does not reach somebody up on the Most", () => {
     // The bridge stands above the valley and belongs to no ring (p3), so a card
     // sweeping a Krąg does not touch anyone on it — in either direction.
     const seats = [seat(0, { fieldId: "karczma" }), seat(1, { fieldId: "cerber" })];
-    expect(indices(seatsTargeted("wszyscy-w-kregu", seats, seats[0]))).toEqual([0]);
-    expect(indices(seatsTargeted("wszyscy-w-kregu", seats, seats[1]))).toEqual([]);
+    expect(indices(seatsTargeted("everyone-in-ring", seats, seats[0]))).toEqual([0]);
+    expect(indices(seatsTargeted("everyone-in-ring", seats, seats[1]))).toEqual([]);
   });
 
   it("picks a named ring regardless of where the drawer is", () => {
@@ -94,9 +94,9 @@ describe("who an effect hits", () => {
       seat(1, { fieldId: "wrzosowiska" }),
       seat(2, { fieldId: "bagna-1" }),
     ];
-    expect(indices(seatsTargeted("w-dolnym-kregu", seats, seats[1]))).toEqual([0]);
-    expect(indices(seatsTargeted("w-srodkowym-kregu", seats, seats[1]))).toEqual([1]);
-    expect(indices(seatsTargeted("w-gornym-kregu", seats, seats[1]))).toEqual([2]);
+    expect(indices(seatsTargeted("in-lower-ring", seats, seats[1]))).toEqual([0]);
+    expect(indices(seatsTargeted("in-middle-ring", seats, seats[1]))).toEqual([1]);
+    expect(indices(seatsTargeted("in-upper-ring", seats, seats[1]))).toEqual([2]);
   });
 
   it("picks a Natura", () => {
@@ -106,25 +106,25 @@ describe("who an effect hits", () => {
       seat(1, { nature: "evil" }),
       seat(2, { nature: "chaotic" }),
     ];
-    expect(indices(seatsTargeted("dobrzy", seats, seats[0]))).toEqual([0]);
-    expect(indices(seatsTargeted("zli", seats, seats[0]))).toEqual([1]);
-    expect(indices(seatsTargeted("chaotyczni", seats, seats[0]))).toEqual([2]);
+    expect(indices(seatsTargeted("good", seats, seats[0]))).toEqual([0]);
+    expect(indices(seatsTargeted("evil", seats, seats[0]))).toEqual([1]);
+    expect(indices(seatsTargeted("chaotic", seats, seats[0]))).toEqual([2]);
   });
 
   it("cannot answer for a card that waits on the board", () => {
     // Labirynt and Spalona Ziemia catch whoever stops there later, so there is
     // nobody to name at the moment they are drawn.
     const seats = [seat(0)];
-    expect(seatsTargeted("kazdy-kto-tu-trafi", seats, seats[0])).toBeNull();
+    expect(seatsTargeted("whoever-lands-here", seats, seats[0])).toBeNull();
   });
 
   it("cannot answer before the holder has chosen", () => {
     const seats = [seat(0), seat(1)];
-    expect(seatsTargeted("inna-postac", seats, seats[0])).toBeNull();
+    expect(seatsTargeted("another-character", seats, seats[0])).toBeNull();
   });
 
   it("hits nobody when the drawer is gone", () => {
-    expect(indices(seatsTargeted("ty", [seat(0)], undefined))).toEqual([]);
-    expect(indices(seatsTargeted("ty", [seat(0)], seat(0, { eliminated: true })))).toEqual([]);
+    expect(indices(seatsTargeted("you", [seat(0)], undefined))).toEqual([]);
+    expect(indices(seatsTargeted("you", [seat(0)], seat(0, { eliminated: true })))).toEqual([]);
   });
 });

@@ -176,7 +176,7 @@ describe("what `pelne` promises a player", () => {
       if (coverageOf(cardId as CardId) !== "pelne") continue;
       const nodes = [
         ...everyNode(script.effect),
-        ...(script.placed ? everyNode(script.placed) : []),
+        ...(script.onDraw ? everyNode(script.onDraw) : []),
       ];
       for (const node of nodes) {
         /* A composing op is descended through, never executed or asked — see
@@ -185,7 +185,7 @@ describe("what `pelne` promises a player", () => {
            `gdy`. */
         if (wordOf(node).composes) continue;
         if (isSettled(node)) continue;
-        if (asked(node)?.kind === "nieobslugiwane") stalls.push(`${cardId}: ${node.op}`);
+        if (asked(node)?.kind === "unsupported") stalls.push(`${cardId}: ${node.op}`);
       }
     }
     expect(stalls).toEqual([]);

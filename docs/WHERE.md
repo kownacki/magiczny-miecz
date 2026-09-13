@@ -214,7 +214,7 @@ generated JSON directly.
 
 **What catches a missed step.** `cardScript.test.ts` fails on a key that is not
 a real card, a script sending a character to a `FieldId` that does not exist, a
-`rzut` table missing a face, or a disposition it cannot describe.
+`roll` table missing a face, or a disposition it cannot describe.
 `coverage.test.ts` fails on a `MANUAL` entry for a card nothing implements, or a
 `czesciowe` card with no note.
 
@@ -393,7 +393,7 @@ fields, where it runs, where it is said, who speaks it.
 Do not add a reader of the vocabulary that switches on `op` by hand. Six of
 them existed before the table — `isSettled`, `nodeAt`, `valenceOf`,
 `fieldsNamedBy`, a `JSON.stringify` search and two test walkers — and the
-newest did not know `jak-pole` had a child. Ask `WORDS`; walk with
+newest did not know `as-field` had a child. Ask `WORDS`; walk with
 `childrenOf`/`everyNode` in `resolve.ts` (borrowed tables entered) or
 `nodesOf` in `words.ts` (the card as written).
 

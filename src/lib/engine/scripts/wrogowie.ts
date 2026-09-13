@@ -11,8 +11,8 @@ import type { CardScript } from "../cardScript";
  */
 function STRAZUJE(): CardScript {
   return {
-    effect: { op: "nic" },
-    disposition: { kind: "zostaje" },
+    effect: { op: "nothing" },
+    disposition: { kind: "stays" },
   };
 }
 
@@ -36,19 +36,19 @@ export const WROGOWIE: Readonly<Record<string, CardScript>> = {
    */
   wedrowiec: {
     effect: {
-      op: "rzut",
+      op: "roll",
       faces: {
-        1: { op: "nic" },
-        2: { op: "nic" },
-        3: { op: "nic" },
-        4: { op: "walka", nazwa: "Wędrowiec", miecz: 3 },
-        5: { op: "walka", nazwa: "Wędrowiec", miecz: 3 },
-        6: { op: "walka", nazwa: "Wędrowiec", miecz: 3 },
+        1: { op: "nothing" },
+        2: { op: "nothing" },
+        3: { op: "nothing" },
+        4: { op: "fight", name: "Wędrowiec", sword: 3 },
+        5: { op: "fight", name: "Wędrowiec", sword: 3 },
+        6: { op: "fight", name: "Wędrowiec", sword: 3 },
       },
     },
     // "Potwór pozostanie tu, aż ktoś go pokona" — including when you slipped
     // past it, which is what makes slipping past worth doing.
-    disposition: { kind: "zostaje" },
+    disposition: { kind: "stays" },
   },
 
   // Both of these are fixtures like the rest — "pozostanie tu, aż ktoś go
@@ -78,7 +78,7 @@ export const WROGOWIE: Readonly<Record<string, CardScript>> = {
   // a Sztuka Złota or a Przedmiot on top of the usual point of Życie.
   zloczynca: {
     // Turning him over does nothing; he is a Wróg and the card is the fight.
-    effect: { op: "nic" },
+    effect: { op: "nothing" },
     /**
      * "Każdej pokonanej Postaci, Złoczyńca zabiera do wyboru: 1 Sztukę Złota
      * lub jeden Przedmiot (należy odłożyć żeton lub Kartę Przedmiotu)."
@@ -92,17 +92,17 @@ export const WROGOWIE: Readonly<Record<string, CardScript>> = {
      * "Do wyboru" is the loser's, which is also how 5.6 reads every other
      * loss: which Przedmiot goes is theirs to pick.
      */
-    przegrana: {
-      op: "wybor",
+    onLoss: {
+      op: "choice",
       options: [
-        { label: "Oddaj 1 Sztukę Złota", effect: { op: "punkty", stat: "gold", delta: -1 } },
+        { label: "Oddaj 1 Sztukę Złota", effect: { op: "points", stat: "gold", delta: -1 } },
         {
           label: "Oddaj jeden Przedmiot",
-          effect: { op: "strata", co: "przedmiot", count: 1, wybor: "ty" },
+          effect: { op: "lose", what: "item", count: 1, chosenBy: "you" },
         },
       ],
     },
-    disposition: { kind: "zostaje" },
+    disposition: { kind: "stays" },
   },
   "duch-ciemnosci": STRAZUJE(),
   "duch-zaglady": STRAZUJE(),
@@ -114,7 +114,7 @@ export const WROGOWIE: Readonly<Record<string, CardScript>> = {
    * The card is rolled onto one of six fields and haunts it — the drawer stays
    * exactly where they are.
    *
-   * All of him is `placed`, and his `effect` is nothing at all: what happens to
+   * All of him is `onDraw`, and his `effect` is nothing at all: what happens to
    * whoever finds him on the Obszar he chose is a fight, and a fight is his
    * *class*'s business (16.2) rather than his text's. Written out rather than
    * left off, because a Karta with no `effect` would be a second shape for
@@ -122,27 +122,27 @@ export const WROGOWIE: Readonly<Record<string, CardScript>> = {
    * "what does this card do to the Postać standing in front of it".
    */
   upior: {
-    placed: {
-      op: "rzut",
+    onDraw: {
+      op: "roll",
       faces: {
-        1: { op: "poloz-karte", gdzie: { kind: "pole", fieldId: "osada" } },
-        2: { op: "poloz-karte", gdzie: { kind: "pole", fieldId: "grod" } },
-        3: { op: "poloz-karte", gdzie: { kind: "pole", fieldId: "dolina-cienia" } },
-        4: { op: "poloz-karte", gdzie: { kind: "pole", fieldId: "mroczna-polana" } },
-        5: { op: "poloz-karte", gdzie: { kind: "pole", fieldId: "krypta-upiorow" } },
-        6: { op: "poloz-karte", gdzie: { kind: "pole", fieldId: "wymarle-miasto" } },
+        1: { op: "place-card", where: { kind: "field", fieldId: "osada" } },
+        2: { op: "place-card", where: { kind: "field", fieldId: "grod" } },
+        3: { op: "place-card", where: { kind: "field", fieldId: "dolina-cienia" } },
+        4: { op: "place-card", where: { kind: "field", fieldId: "mroczna-polana" } },
+        5: { op: "place-card", where: { kind: "field", fieldId: "krypta-upiorow" } },
+        6: { op: "place-card", where: { kind: "field", fieldId: "wymarle-miasto" } },
       },
     },
-    effect: { op: "nic" },
-    disposition: { kind: "zostaje" },
+    effect: { op: "nothing" },
+    disposition: { kind: "stays" },
   },
   // Whichever of the three is free. Both printed copies of each are listed
   // because the card names the places, not one of their two halves.
   lewiatan: {
-    placed: {
-      op: "poloz-karte",
-      gdzie: {
-        kind: "jedno-z",
+    onDraw: {
+      op: "place-card",
+      where: {
+        kind: "one-of",
         fieldIds: [
           "mokradla-1",
           "mokradla-2",
@@ -155,7 +155,7 @@ export const WROGOWIE: Readonly<Record<string, CardScript>> = {
     },
     // Nothing, for the reason the Upiór's says nothing: whoever finds him in
     // the water fights him, and that is 16.2's, not the card's.
-    effect: { op: "nic" },
-    disposition: { kind: "zostaje" },
+    effect: { op: "nothing" },
+    disposition: { kind: "stays" },
   },
 };

@@ -332,7 +332,7 @@ export function placeSeat(
    * for this override is a table that is *stuck*: mid-fight with something on
    * a field the figure is not on any more, or holding a bridge guardian that
    * should never have been met. Leaving that fight running while the figure
-   * stands somewhere else is the desync, not a lesser version of it. `rzut` is
+   * stands somewhere else is the desync, not a lesser version of it. `roll` is
    * left alone because the character has not moved yet this turn.
    */
   const phase = top(snapshot.game.turn_state).phase;

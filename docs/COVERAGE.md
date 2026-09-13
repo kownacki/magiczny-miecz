@@ -76,7 +76,7 @@ opposite direction.
 One caveat on that first number, learned the hard way on the Eremita, twice:
 `coverageOf` reports whether a card has a *script*, not whether the script can
 resolve, and not whether it resolves for the right person. He was `pelne` for
-months while his first step, `poloz-karte`, was declared and unimplemented — so
+months while his first step, `place-card`, was declared and unimplemented — so
 he rolled for where to settle and settled nowhere — and `pelne` again while both
 his sentences ran together, handing his Magiczny Miecz to the one Postać 15.1
 says he cannot touch and moving him on every time somebody called on him. If a
@@ -194,7 +194,7 @@ loss on death are the same either way, so nothing above this line changes.
 | 9.3 | held concealed from the other players | ✅ | enforced server-side — `visibleTo` for a hand, and `asSeenBy` for the two Karty the CHOCHLIK's `ask` frame is holding out, which are the top of a pile no device ever sees |
 | 9.4 | may not be discarded unless over the limit | ✅ | `dropCard` refuses under the limit |
 | 9.5 | drawn from the top; the pile is reshuffled when empty; some characters start holding one | ✅ | `drawSpell`, `STARTING_KIT`; the reshuffle is journalled and both piles are counted in the top bar |
-| 9.2/9.5 | looking at the first two and choosing — the CHOCHLIK | ✅ | the `ask` frame (docs/STACK.md): `peekSpells` lifts the two off the pile so nothing can change what was offered, `answerAsk` takes one and puts the other back on top, and a `zaklecie` step inside a Karta suspends into it and carries on afterwards |
+| 9.2/9.5 | looking at the first two and choosing — the CHOCHLIK | ✅ | the `ask` frame (docs/STACK.md): `peekSpells` lifts the two off the pile so nothing can change what was offered, `answerAsk` takes one and puts the other back on top, and a `gain-spell` step inside a Karta suspends into it and carries on afterwards |
 | 9.6 | casting: only as the card allows, then discarded, reaching anywhere on the board | ✅ | `castSpell` — the window is enforced, the card reaches the used pile and the table is told (12.5). A cast anybody could answer waits as a `spoken` status while they decide, and the two answering Karty turn or negate it; the browser counts the window down and closes it. The one card that asks a second question — WŁADCA ZDARZEŃ, „na inny, nie zajęty Obszar" — is refused rather than spent until it is answered |
 | 9.7 | no spell works on the Most or the Bestia | ✅ | refused in `castSpell` |
 
@@ -230,7 +230,7 @@ loss on death are the same either way, so nothing above this line changes.
 |---|---|---|---|
 | 12.1 | pick up gold, items and friends lying on your field | ✅ | `liftFieldCards` on arrival; `takeFromField` for the Karty, `takeFieldGold` for loose Sztuki Złota out of `field_gold`, both from the field's own modal |
 | 12.1a | …but only after any Wrogowie are dealt with | ✅ | `refuseOverAFoe`, reading the board **and** the turn's frame — it read only one for a while, so the rule fired for a Przedmiot and not for the gold beside it |
-| 12.1b | …and only once the Obszar has drawn what it owes | ✅ | `refuseWhileOwing`, on anything lying here (`lyingHere`) — a bought card, the Władca's Tarcza and an `otrzymaj` grant are not "leżące" and pass |
+| 12.1b | …and only once the Obszar has drawn what it owes | ✅ | `refuseWhileOwing`, on anything lying here (`lyingHere`) — a bought card, the Władca's Tarcza and an `receive` grant are not "leżące" and pass |
 | 12.1 | …and visiting a Nieznajomy is under the same two exceptions | ✅ | one sentence grants visiting and taking together and a) and b) except the whole of it, so buying, selling and healing go through the same `refuseUnlessSettledHere` as taking |
 | 12.1 | …and the window is shut while the kolejka runs, for resolving as well as taking | ✅ | `refuseWhileQueued` had gated `takeCard` since the window was built and nothing gated `resolveDrawnCard`, so a Targowisko could be shopped at with a Wilkołak standing over it — which 16.4 forbids. `refuseWhileQueuedFor` asks it of exactly the Karty that offer rather than stop (`mayWalkPast`), never of one that *is* the kolejka. It is also what keeps the SKALNE WROTA last, and with it the reading that makes its three a fresh badanie |
 
@@ -261,7 +261,7 @@ loss on death are the same either way, so nothing above this line changes.
 
 | | rule | status | where |
 |---|---|---|---|
-| 15.1 | cards that go to a named field resolve first and do not affect the drawer | ✅ | both halves, and the second one cost a field. The ordering sits above 15.2's numerals in `resolutionOrder` — the Upiór is a Demon (III) and the Eremita a Nieznajomy (IV) and neither waits its class — read off `placed`, the script field that *is* that instruction, so a fourth such card transcribed tomorrow is ordered without anybody remembering this rule. Only on the way there: `placedFirst` asks `lying` as well, because a Karta that has landed is an ordinary one of its own class on its new square. The immunity was said here to need no code, on the grounds that `poloz-karte` lifts the card out of `drawn` into `fieldCards` as it resolves — true, and only half the rule. A Karta that says something else as well said it to the drawer: the Eremita's „Pierwszej Postaci… ofiaruje do wyboru" lived in the same `po-kolei` as his die, so the player who turned him over rolled him onto the Bezdroża and pocketed the Magiczny Miecz on the way past. The two sentences are two fields now, and `instructionIn` picks between them off `lying` |
+| 15.1 | cards that go to a named field resolve first and do not affect the drawer | ✅ | both halves, and the second one cost a field. The ordering sits above 15.2's numerals in `resolutionOrder` — the Upiór is a Demon (III) and the Eremita a Nieznajomy (IV) and neither waits its class — read off `onDraw`, the script field that *is* that instruction, so a fourth such card transcribed tomorrow is ordered without anybody remembering this rule. Only on the way there: `placedFirst` asks `lying` as well, because a Karta that has landed is an ordinary one of its own class on its new square. The immunity was said here to need no code, on the grounds that `place-card` lifts the card out of `drawn` into `fieldCards` as it resolves — true, and only half the rule. A Karta that says something else as well said it to the drawer: the Eremita's „Pierwszej Postaci… ofiaruje do wyboru" lived in the same `sequence` as his die, so the player who turned him over rolled him onto the Bezdroża and pocketed the Magiczny Miecz on the way past. The two sentences are two fields now, and `instructionIn` picks between them off `lying` |
 | 15.2 | the rest resolve in printed numeral order | ✅ | `resolutionOrder` |
 
 ## 16. Rodzaje Kart Zdarzeń
@@ -434,7 +434,7 @@ they came from the board rather than from a card.
 | Twierdza Strzegąca Dróg | misja Władcy, potem Tarcza Tolimana | ✅ misja żyje w `seat_effects`; `resolveFight` ją zalicza, `claimMission` wypłaca |
 | Ruchome Skały ×2 | 1 Życie | ✅ |
 | Bagna ×2 | Przedmiot albo Przyjaciel, twój wybór | ✅ |
-| Urwisko ×2 | kostka za ciebie i za każdego Przyjaciela | ✅ `rzut-za-kazdego` |
+| Urwisko ×2 | kostka za ciebie i za każdego Przyjaciela | ✅ `roll-for-each` |
 | Kurhan, Wilczy Parów, Krypta Upiorów, Krąg Mocy, Wieża Przeznaczenia | obowiązkowa kostka | ✅ |
 | Czarci Młyn, Studnia Wieczności | zależnie od Natury | ✅ |
 | Świątynia Bogini Nemed, Świątynia Tolimana | modlitwa na 2 kostkach | ✅ |

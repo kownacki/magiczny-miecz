@@ -810,7 +810,7 @@ export const SPECS: { [K in Command["kind"]]: Spec<K> } = {
        *
        * The same word `cast` uses, for the same reason — „to" is where a thing
        * ends up — and without it the JEDNOROŻEC could not be played here at
-       * all: „przenosisz się na dowolny Obszar w tym Kręgu" is a `przenies`
+       * all: „przenosisz się na dowolny Obszar w tym Kręgu" is a `move`
        * with no destination, so the card came back owed rather than resolved,
        * and `answer 0` re-asked it for ever. Four scripts ask a place, and the
        * browser had buttons for all of them while the console had no word.
@@ -824,7 +824,7 @@ export const SPECS: { [K in Command["kind"]]: Spec<K> } = {
       const numbers = parts.filter((one) => /^\d+$/.test(one)).map(Number);
       const named = parts.filter((one) => !/^\d+$/.test(one)).join(" ");
       // No number is a real answer. A compulsory Obszar comes in two shapes —
-      // one that asks (`wybor`) and one that only rolls (`rzut`, the Karczma)
+      // one that asks (`choice`) and one that only rolls (`roll`, the Karczma)
       // — and the second has nothing to choose. `answer` alone means "get on
       // with it"; `answer 2` means "and I pick the second".
       return {

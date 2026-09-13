@@ -326,7 +326,7 @@ async function answerSpell(
 }
 
 /**
- * `applyEffect`'s `op: "efekt"`, read onto a Karta lying on an Obszar rather
+ * `applyEffect`'s `op: "status"`, read onto a Karta lying on an Obszar rather
  * than a seat — `addCardEffect`'s own door, opened for the first time.
  *
  * Generic on the op rather than on the spell's id: any future Zaklęcie shaped
@@ -336,7 +336,7 @@ async function answerSpell(
  */
 function applyCardEfekt(
   snapshot: Snapshot,
-  input: { fieldCardId: string; source: string; efekt: Extract<Effect, { op: "efekt" }> },
+  input: { fieldCardId: string; source: string; efekt: Extract<Effect, { op: "status" }> },
 ): { writes: Changeset; did: string[] } | null {
   const lying = snapshot.fieldCards.find((row) => row.id === input.fieldCardId);
   if (!lying) return null;
@@ -479,8 +479,8 @@ async function landSpell(
   const aimedAtCard =
     target.fieldCardId !== undefined &&
     script.stosuje !== undefined &&
-    script.stosuje.op !== "przyzwij" &&
-    script.stosuje.op !== "przenies-karte";
+    script.stosuje.op !== "summon" &&
+    script.stosuje.op !== "move-card";
 
   /**
    * A victim the Zaklęcie does nothing to (the two Talizmany).
@@ -533,7 +533,7 @@ async function landSpell(
     aimedAtCard &&
     target.fieldCardId !== undefined &&
     script.stosuje !== undefined &&
-    script.stosuje.op === "efekt"
+    script.stosuje.op === "status"
       ? applyCardEfekt(apply(snapshot, applied?.writes ?? {}), {
           fieldCardId: target.fieldCardId,
           source: input.cardId,

@@ -299,7 +299,7 @@ describe("what a Karta asks of the character in front of it", () => {
       value: "dobra",
       // A wish is a gift, so meeting the condition is the good answer and the
       // panel colours the line green.
-      valence: "korzysc",
+      valence: "gain",
       met: true,
       detail: "Twoja Postać jest dobra",
     });
@@ -381,7 +381,7 @@ describe("a Spotkanie's condition", () => {
     // word in the wrong shape.
     expect(hit?.value).toBe("dobrej lub chaotycznej");
     expect(hit?.met).toBe(true);
-    expect(hit?.valence).toBe("strata");
+    expect(hit?.valence).toBe("loss");
   });
 
   /**
@@ -392,11 +392,11 @@ describe("a Spotkanie's condition", () => {
   it("hands the panel the two answers it needs to colour the line", () => {
     const good = requirementOf("zacmienie-slonc", "good");
     const evil = requirementOf("zacmienie-slonc", "evil");
-    expect([good?.met, good?.valence]).toEqual([true, "strata"]);
-    expect([evil?.met, evil?.valence]).toEqual([false, "strata"]);
+    expect([good?.met, good?.valence]).toEqual([true, "loss"]);
+    expect([evil?.met, evil?.valence]).toEqual([false, "loss"]);
     // A Nieznajomy's gift is the other way round, in the same two fields.
     expect([requirementOf("wrozka", "good")?.met, requirementOf("wrozka", "good")?.valence]) //
-      .toEqual([true, "korzysc"]);
+      .toEqual([true, "gain"]);
   });
 
   /** Two live arms are content, not a gate: neither one is „tylko". */
@@ -450,7 +450,7 @@ describe("a Karta that accuses", () => {
     // as a qualification for something: the judgement costs a coin or a turn.
     expect(guilty?.label).toBe("dotyczy Postaci");
     expect(guilty?.value).toBe("uznanej za agresora");
-    expect(guilty?.valence).toBe("strata");
+    expect(guilty?.valence).toBe("loss");
     expect(guilty?.met).toBe(true);
     expect(guilty?.detail).toBe("Twoja Postać: Runda 3 — atak na Postać WIEDŹMA, Obszar Osada");
   });
@@ -540,7 +540,7 @@ describe("what one option would do to the numbers", () => {
   };
 
   it("says where a point lands", () => {
-    expect(previewOf({ op: "punkty", stat: "sword", delta: 1 }, barbarzynca)).toBe("Miecz 6 → 7");
+    expect(previewOf({ op: "points", stat: "sword", delta: 1 }, barbarzynca)).toBe("Miecz 6 → 7");
   });
 
   /**
@@ -555,36 +555,36 @@ describe("what one option would do to the numbers", () => {
   it("moves the parameter the direction names, and leaves the other", () => {
     // Miecz becomes what the Magia is. A Barbarzyńca on 6 and 12 gains six.
     expect(
-      previewOf({ op: "zamien-punkty", z: "sword" }, { ...barbarzynca, magic: 12 }),
+      previewOf({ op: "swap-points", from: "sword" }, { ...barbarzynca, magic: 12 }),
     ).toBe("Miecz 6 → 12");
     // The other way round, off the same numbers, is a different answer.
     expect(
-      previewOf({ op: "zamien-punkty", z: "magic" }, { ...barbarzynca, magic: 12 }),
+      previewOf({ op: "swap-points", from: "magic" }, { ...barbarzynca, magic: 12 }),
     ).toBe("Magia 12 → 6");
   });
 
   /** 1.3 and 2.3 put a floor under own points, and it holds here too. */
   it("stops at the floor", () => {
-    expect(previewOf({ op: "zamien-punkty", z: "sword" }, barbarzynca)).toBe(
+    expect(previewOf({ op: "swap-points", from: "sword" }, barbarzynca)).toBe(
       "Miecz 6 — bez zmian",
     );
   });
 
   /** „tylko do wysokości startowej — 4 punktów" is the Cudotwórca's ceiling. */
   it("caps the Cudotwórca at four", () => {
-    expect(previewOf({ op: "uzdrow", upTo: 2 }, barbarzynca)).toBe("Życie 3 → 4");
-    expect(previewOf({ op: "uzdrow", upTo: 2 }, { ...barbarzynca, life: 4 })).toBe(
+    expect(previewOf({ op: "heal", upTo: 2 }, barbarzynca)).toBe("Życie 3 → 4");
+    expect(previewOf({ op: "heal", upTo: 2 }, { ...barbarzynca, life: 4 })).toBe(
       "Życie 4 — bez zmian",
     );
   });
 
   it("prices the Sztukmistrz's Zaklęcie", () => {
-    expect(previewOf({ op: "zaklecie", count: 1, cena: 1 }, barbarzynca)).toBe("Złoto 5 → 4");
+    expect(previewOf({ op: "gain-spell", count: 1, price: 1 }, barbarzynca)).toBe("Złoto 5 → 4");
   });
 
   it("says nothing about what it cannot count", () => {
-    expect(previewOf({ op: "nic" }, barbarzynca)).toBeNull();
-    expect(previewOf({ op: "ruch-dodatkowy" }, barbarzynca)).toBeNull();
+    expect(previewOf({ op: "nothing" }, barbarzynca)).toBeNull();
+    expect(previewOf({ op: "extra-move" }, barbarzynca)).toBeNull();
   });
 });
 
@@ -632,7 +632,7 @@ describe("the heal preview, against a Postać above the ceiling", () => {
     swordFloor: 4,
     magicFloor: 4,
   });
-  const cudotworca = { op: "uzdrow", upTo: 2 } as const;
+  const cudotworca = { op: "heal", upTo: 2 } as const;
 
   it("recovers what was lost", () => {
     expect(previewOf(cudotworca, at(2))).toBe("Życie 2 → 4");

@@ -19,9 +19,9 @@ import {
   tury,
 } from "./polish";
 
-/** Anyone but you is worth naming; "ty" is the default and saying it is noise. */
+/** Anyone but you is worth naming; "you" is the default and saying it is noise. */
 function forWhom(target: Target | undefined): string {
-  return !target || target === "ty" ? "" : ` — ${TARGET_SHORT[target]}`;
+  return !target || target === "you" ? "" : ` — ${TARGET_SHORT[target]}`;
 }
 
 /**
@@ -31,26 +31,26 @@ function forWhom(target: Target | undefined): string {
  * one hangs off a summary that has already named itself, and the long one is
  * for a panel telling somebody to go and do a thing with no card in front of
  * them to read it against. Both of them then need the same rule about *when* to
- * say anything at all — never for "ty", never for a target that is absent — and
+ * say anything at all — never for "you", never for a target that is absent — and
  * that rule was written out three times inside one component, once per case
  * that remembered it.
  *
- * The case that did not remember it was `strata`, which is the one that takes
+ * The case that did not remember it was `lose`, which is the one that takes
  * cards away.
  */
 export function andWhom(target: Target | undefined): string {
-  return !target || target === "ty" ? "" : ` — ${TARGET_FULL[target]}`;
+  return !target || target === "you" ? "" : ` — ${TARGET_FULL[target]}`;
 }
 
 function where(destination: Destination): string {
   switch (destination.kind) {
-    case "pole":
+    case "field":
       return fieldName(destination.fieldId);
-    case "dowolne-w-kregu":
+    case "anywhere-in-ring":
       return "dowolny Obszar w Kręgu";
-    case "poczatek-ruchu":
+    case "move-start":
       return "tam, gdzie zaczynasz ruch";
-    case "jedno-z":
+    case "one-of":
       return destination.fieldIds.map(fieldName).join(" lub ");
   }
 }
@@ -62,31 +62,31 @@ function where(destination: Destination): string {
  * copy of it had been living in the turn panel: three arms, the same words, and
  * nothing at all to notice if one of them changed.
  */
-/** The same test, said the other way round — for a `gdy` that has both branches. */
+/** The same test, said the other way round — for a `when` that has both branches. */
 export function describeConditionNot(condition: Condition): string {
   switch (condition.is) {
-    case "natura":
-      return `jeśli nie ${condition.jedna_z.map((n) => NATURE_LABEL[n] ?? n).join(" ani ")}`;
-    case "prog":
-      return `jeśli ${condition.stat === "sword" ? "Miecz" : "Magia"} ≥ ${condition.ponizej}`;
+    case "nature":
+      return `jeśli nie ${condition.oneOf.map((n) => NATURE_LABEL[n] ?? n).join(" ani ")}`;
+    case "threshold":
+      return `jeśli ${condition.stat === "sword" ? "Miecz" : "Magia"} ≥ ${condition.below}`;
     case "attacker":
       return "jeśli nie zaatakowałeś innej Postaci w tej rozgrywce";
-    case "ma-zloto":
+    case "has-gold":
       return "jeśli nie masz złota";
   }
 }
 
 export function describeCondition(condition: Condition): string {
   switch (condition.is) {
-    case "natura":
+    case "nature":
       // `NATURE_LABEL` and not a lone `evil` ternary: this translated one of
               // the three and left "jeśli good" on a Polish table.
-              return `jeśli ${condition.jedna_z.map((n) => NATURE_LABEL[n] ?? n).join(" lub ")}`;
-    case "prog":
-      return `jeśli ${condition.stat === "sword" ? "Miecz" : "Magia"} < ${condition.ponizej}`;
+              return `jeśli ${condition.oneOf.map((n) => NATURE_LABEL[n] ?? n).join(" lub ")}`;
+    case "threshold":
+      return `jeśli ${condition.stat === "sword" ? "Miecz" : "Magia"} < ${condition.below}`;
     case "attacker":
       return "jeśli zaatakowałeś inną Postać w tej rozgrywce";
-    case "ma-zloto":
+    case "has-gold":
       return "jeśli masz złoto";
   }
 }
@@ -148,13 +148,13 @@ function dieTable(faces: Record<number, Effect>): string {
  * does one thing has one row and does not need this.
  */
 export function effectRows(effect: Effect): string[] | null {
-  if (effect.op === "wybor") {
+  if (effect.op === "choice") {
     // Each option capitalised, so a row written as a verb phrase („zyskujesz
     // dodatkowy ruch") and one written as a word („Pomiń") sit in the same
     // column looking like the same kind of thing.
     return ["do wyboru:", ...effect.options.map((option) => `— ${sentence(option.label)}`)];
   }
-  if (effect.op === "rzut") {
+  if (effect.op === "roll") {
     return ["rzuć kostką:", ...dieRows(effect.faces)];
   }
   /**
@@ -162,11 +162,11 @@ export function effectRows(effect: Effect): string[] | null {
    * As one line it was a sentence with three clauses and a colon in the middle
    * of it, which is a paragraph however short.
    */
-  if (effect.op === "zgadnij") {
+  if (effect.op === "guess") {
     return [
       `${sentence(GUESS)}`,
       "rzuć kostką:",
-      `— jeśli wypadnie twoja cyfra: ${describeEffect(effect.nagroda)}`,
+      `— jeśli wypadnie twoja cyfra: ${describeEffect(effect.prize)}`,
     ];
   }
   /**
@@ -178,7 +178,7 @@ export function effectRows(effect: Effect): string[] | null {
    * one line that is eight faces and two gifts in a paragraph. Split, it is the
    * card.
    *
-   * A `po-kolei` of plain steps keeps the sentence: „tracisz 1 Życie, potem
+   * A `sequence` of plain steps keeps the sentence: „tracisz 1 Życie, potem
    * przenosisz się" reads better as prose than as two bullets, and a rule that
    * turned every sequence into a list would make a list of everything.
    */
@@ -187,7 +187,7 @@ export function effectRows(effect: Effect): string[] | null {
    *
    * „Jeśli masz złoto: −1 Złota; w przeciwnym razie: +1 Złota" makes the reader
    * hold the first clause in their head to understand the second. „jeśli nie
-   * masz złota" does not. Only where there are two branches: a `gdy` with one
+   * masz złota" does not. Only where there are two branches: a `when` with one
    * is a sentence and reads like one.
    */
   /**
@@ -198,19 +198,19 @@ export function effectRows(effect: Effect): string[] | null {
    * and goes. Spelling it out costs a line on a panel and tells the reader what
    * they had worked out from the shape of the first one.
    */
-  if (effect.op === "gdy") {
+  if (effect.op === "when") {
     const branch = (said: string, taken: Effect) => {
       const rows = effectRows(taken);
       return rows ? [`${said}:`, ...rows] : [`${said}: ${describeEffect(taken)}`];
     };
-    const taken = branch(describeCondition(effect.warunek), effect.to);
-    if (!effect.inaczej || effect.inaczej.op === "nic") {
+    const taken = branch(describeCondition(effect.condition), effect.then);
+    if (!effect.else || effect.else.op === "nothing") {
       // One branch, and it is only worth rows of its own if the branch has any
       // — otherwise it is a sentence and reads like one.
-      return effectRows(effect.to) ? taken : null;
+      return effectRows(effect.then) ? taken : null;
     }
     /**
-     * A `gdy` whose `inaczej` is another `gdy` is not a branch and its
+     * A `when` whose `else` is another `when` is not a branch and its
      * opposite — it is a table of arms, and saying the first one's negation
      * over the second's own condition tells the reader what the card does
      * *not* test before telling them what it does.
@@ -222,21 +222,21 @@ export function effectRows(effect: Effect): string[] | null {
      * card: nothing happens to her, which is what an unnamed arm has always
      * meant here.
      *
-     * The fallback is the shape a chain always ends in — a lone `gdy` whose
+     * The fallback is the shape a chain always ends in — a lone `when` whose
      * body is one sentence, which `effectRows` answers null for because on its
      * own it reads better as prose than as a bullet. Inside a chain it is a row
      * like its siblings.
      */
-    if (effect.inaczej.op === "gdy") {
-      const rest = effect.inaczej;
+    if (effect.else.op === "when") {
+      const rest = effect.else;
       return [
         ...taken,
-        ...(effectRows(rest) ?? branch(describeCondition(rest.warunek), rest.to)),
+        ...(effectRows(rest) ?? branch(describeCondition(rest.condition), rest.then)),
       ];
     }
-    return [...taken, ...branch(describeConditionNot(effect.warunek), effect.inaczej)];
+    return [...taken, ...branch(describeConditionNot(effect.condition), effect.else)];
   }
-  if (effect.op === "po-kolei") {
+  if (effect.op === "sequence") {
     const steps = effect.steps.map((step) => effectRows(step));
     if (!steps.some((rows) => rows !== null)) return null;
     return effect.steps.flatMap((step, at) => steps[at] ?? [describeEffect(step)]);
@@ -256,27 +256,27 @@ export function effectRows(effect: Effect): string[] | null {
  * which may be somebody else, several turns later. Six placements and two gifts
  * in one undifferentiated list read as eight things happening to the reader.
  *
- * The headings were inferred once, off a `po-kolei` whose step contained a
- * `poloz-karte` — found by searching the step as text, which is what you do
+ * The headings were inferred once, off a `sequence` whose step contained a
+ * `place-card` — found by searching the step as text, which is what you do
  * when the fact you want is not written down anywhere. It is written down now:
- * `placed` is that instruction and `effect` is the other one, so this reads
+ * `onDraw` is that instruction and `effect` is the other one, so this reads
  * them rather than looking for them.
  *
  * `body` is what the caller decided the card's own half is — a gated card's
- * rows are its branch's, not its condition's — and every Karta without a
- * `placed`, which is all but three, comes back exactly as `effectRows` has it.
+ * rows are its branch's, not its condition's — and every Karta without an
+ * `onDraw`, which is all but three, comes back exactly as `effectRows` has it.
  */
 export function cardRows(script: CardScript, body: Effect = script.effect): string[] | null {
-  if (!script.placed) return effectRows(body);
+  if (!script.onDraw) return effectRows(body);
 
-  const placed = effectRows(script.placed) ?? [describeEffect(script.placed)];
+  const placed = effectRows(script.onDraw) ?? [describeEffect(script.onDraw)];
   const rows = [`gdy wyciągnięta — ${placed[0]}`, ...placed.slice(1)];
 
   // The UPIÓR and the LEWIATAN are all placement: what happens to whoever finds
   // them is a fight, which is their class's (16.2) and not their text's. A
   // heading over „nic się nie dzieje" would say the card has a second half and
   // that it is empty.
-  if (body.op === "nic") return rows;
+  if (body.op === "nothing") return rows;
 
   const own = effectRows(body) ?? [describeEffect(body)];
   // A blank row, which the panel draws as a gap: the placement happened to
@@ -304,20 +304,20 @@ function runs(faces: number[]): string {
 }
 
 /**
- * What a `strata` takes off you, without saying who from.
+ * What a `lose` takes off you, without saying who from.
  *
  * Split out because the same phrase is read in two registers: hanging off the
  * end of a card's summary, where `describeEffect` adds the target after it, and
  * alone under the buttons for one card, where the target has already been named
  * by the panel around it.
  */
-export function describeLoss(effect: Extract<Effect, { op: "strata" }>): string {
-  const how = effect.wybor === "losowo" ? " (losowo)" : "";
+export function describeLoss(effect: Extract<Effect, { op: "lose" }>): string {
+  const how = effect.chosenBy === "random" ? " (losowo)" : "";
   const count = effect.count ?? 1;
   const many = count > 1 ? `${count} ` : "";
-  const forms = LOST_COUNTED[effect.co];
+  const forms = LOST_COUNTED[effect.what];
   const what =
-    count > 1 && forms ? plural(count, forms[0], forms[1], forms[2]) : LOST_LABEL[effect.co];
+    count > 1 && forms ? plural(count, forms[0], forms[1], forms[2]) : LOST_LABEL[effect.what];
   return `tracisz ${many}${what}${how}`;
 }
 
@@ -334,10 +334,10 @@ export function describeLoss(effect: Extract<Effect, { op: "strata" }>): string 
  */
 export function describeEffect(effect: Effect): string {
   switch (effect.op) {
-    case "nic":
+    case "nothing":
       return "nic się nie dzieje";
 
-    case "po-kolei":
+    case "sequence":
       return effect.steps.map(describeEffect).join("; ");
 
     /**
@@ -353,40 +353,40 @@ export function describeEffect(effect: Effect): string {
      * Middots and not „albo", which is the box's word for it: six of those in
      * one line is the same run-on by another route, and a list is what this is.
      */
-    case "wybor":
+    case "choice":
       return `do wyboru: ${effect.options.map((option) => option.label).join(" · ")}`;
 
-    case "rzut":
+    case "roll":
       return `rzuć kostką: ${dieTable(effect.faces)}`;
 
-    case "gdy":
+    case "when":
       return (
-        `${describeCondition(effect.warunek)}: ${describeEffect(effect.to)}` +
-        // See `effectRows`: an `inaczej` that does nothing is what a condition
+        `${describeCondition(effect.condition)}: ${describeEffect(effect.then)}` +
+        // See `effectRows`: an `else` that does nothing is what a condition
         // with one branch already says.
-        (effect.inaczej && effect.inaczej.op !== "nic"
-          ? `; ${describeConditionNot(effect.warunek)}: ${describeEffect(effect.inaczej)}`
+        (effect.else && effect.else.op !== "nothing"
+          ? `; ${describeConditionNot(effect.condition)}: ${describeEffect(effect.else)}`
           : "")
       );
 
-    case "punkty": {
+    case "points": {
       const many = Math.abs(effect.delta);
       return `${effect.delta > 0 ? "+" : "−"}${many} ${STAT_LABEL[effect.stat]}${forWhom(effect.target)}`;
     }
 
-    case "uzdrow":
+    case "heal":
       return (
         `leczysz do ${effect.upTo} ${plural(effect.upTo, "Życia", "Życia", "Żyć")} (4.7)` +
-        (effect.cena ? ` za ${effect.cena} Sz. Z.` : "")
+        (effect.price ? ` za ${effect.price} Sz. Z.` : "")
       );
 
-    case "sprzedaj":
-      return `sprzedajesz Przedmiot za ${effect.cena} Sz. Z.`;
+    case "sell":
+      return `sprzedajesz Przedmiot za ${effect.price} Sz. Z.`;
 
-    case "tura-stracona": {
+    case "lose-turn": {
       const turns = tury(effect.turns);
-      const spared = effect.oprocz?.length
-        ? ` (oprócz: ${effect.oprocz.map(characterName).join(", ")})`
+      const spared = effect.except?.length
+        ? ` (oprócz: ${effect.except.map(characterName).join(", ")})`
         : "";
       /**
        * Who loses it, said as the subject rather than tacked on afterwards.
@@ -397,61 +397,61 @@ export function describeEffect(effect: Effect): string {
        * tracą 1 turę" — and neither does the Burza. Anything aimed at one
        * person keeps the direct address, which is right and shorter.
        */
-      if (effect.target && effect.target !== "ty") {
+      if (effect.target && effect.target !== "you") {
         const verb = TARGET_SINGULAR.has(effect.target) ? "traci" : "tracą";
         return `${TARGET_SHORT[effect.target]} ${verb} ${turns}${spared}`;
       }
       return `tracisz ${turns}${spared}`;
     }
 
-    case "ruch-dodatkowy":
+    case "extra-move":
       return "dodatkowy ruch";
 
     // The label is the card's own words for it, so it is trusted rather than
     // rebuilt out of the modifier — "Opętany" says more than "ruch: 0 pól".
-    case "efekt":
+    case "status":
       return effect.label;
 
-    case "rzut-za-kazdego":
+    case "roll-for-each":
       return (
-        `rzut za każdego z ${effect.co === "przyjaciel" ? "Przyjaciół" : "Przedmiotów"} — ` +
-        `${effect.gubiPrzy} lub mniej i przepada`
+        `rzut za każdego z ${effect.what === "friend" ? "Przyjaciół" : "Przedmiotów"} — ` +
+        `${effect.lostOn} lub mniej i przepada`
       );
 
-    case "uwolnij":
-      return `uwalniasz się od: ${cardName(effect.od)}`;
+    case "release":
+      return `uwalniasz się od: ${cardName(effect.from)}`;
 
-    case "zabierz": {
+    case "take": {
       const what =
-        effect.co === "przedmiot-lub-zloto"
+        effect.what === "item-or-gold"
           ? "1 Przedmiot lub 1 Sztukę Złota"
-          : effect.co === "przyjaciel"
+          : effect.what === "friend"
             ? "1 Przyjaciela"
-            : effect.co === "zaklecie"
+            : effect.what === "spell"
               ? "1 Zaklęcie"
               : "1 Przedmiot";
-      const who = effect.wybiera === "rzucajacy" ? " (ty wybierasz)" : "";
+      const who = effect.chosenBy === "caster" ? " (ty wybierasz)" : "";
       return `zabierasz ofierze ${what}${who}`;
     }
 
-    case "zaklecie": {
+    case "gain-spell": {
       const many = `${effect.count} ${plural(effect.count, "Zaklęcie", "Zaklęcia", "Zaklęć")}`;
       // The Sztukmistrz sells; everybody else gives. A price left unsaid is the
       // one thing a player would want to have known first.
-      if (effect.cena) {
-        return `kupujesz ${many} za ${sztuki(effect.cena * effect.count)}`;
+      if (effect.price) {
+        return `kupujesz ${many} za ${sztuki(effect.price * effect.count)}`;
       }
       // „Możesz je wybrać ze stosu" — the Półbóg's, and the reason to meet him.
       // „dowolne", because the point is that no face of the pile is off limits.
-      return effect.zeStosu
+      return effect.fromPile
         ? `wybierasz ${effect.count} dowolne ${plural(effect.count, "Zaklęcie", "Zaklęcia", "Zaklęć")} ze stosu`
         : `zyskujesz ${many}`;
     }
 
-    case "zaklecia-do-limitu":
+    case "spells-to-limit":
       return "dobierasz Zaklęcia do swojego limitu (2.6)";
 
-    case "przenies":
+    case "move":
       /**
        * „Przenieś się na dowolny Obszar w tym Kręgu" — the Jednorożec's own
        * offer, and the same words wherever the same thing is offered: the wish
@@ -460,51 +460,51 @@ export function describeEffect(effect: Effect): string {
        * was a field printed after a colon, which reads as data rather than as
        * something a player may do.
        */
-      return effect.to.kind === "dowolne-w-kregu"
+      return effect.to.kind === "anywhere-in-ring"
         ? "przenieś się na dowolny Obszar w tym Kręgu"
         : `przenieś się na: ${where(effect.to)}`;
 
-    case "wyciagnij":
+    case "draw-cards":
       return `ciągniesz ${effect.count} ${plural(effect.count, "Kartę", "Karty", "Kart")}`;
 
-    case "walka": {
+    case "fight": {
       const strength =
-        effect.miecz !== undefined
-          ? `Miecz ${effect.miecz}`
-          : effect.magia !== undefined
-            ? `Magia ${effect.magia}`
+        effect.sword !== undefined
+          ? `Miecz ${effect.sword}`
+          : effect.magic !== undefined
+            ? `Magia ${effect.magic}`
             : "";
-      return `walka: ${effect.nazwa}${strength ? ` (${strength})` : ""}`;
+      return `walka: ${effect.name}${strength ? ` (${strength})` : ""}`;
     }
 
     // Whom he is sent at is the caster's to name, so the sentence stops at what
     // is being sent — the target is said by the journal line that reports it.
-    case "przyzwij":
-      return `${effect.nazwa} (Miecz ${effect.miecz}) atakuje wskazaną Postać lub Wroga`;
+    case "summon":
+      return `${effect.name} (Miecz ${effect.sword}) atakuje wskazaną Postać lub Wroga`;
 
-    case "podejrzyj":
+    case "peek":
       return `zaglądasz na ${effect.count} pierwszych Kart stosu`;
 
-    case "przenies-karte":
+    case "move-card":
       return "przenosisz odkrytą Kartę na inny Obszar w tym Kręgu";
 
-    case "wymien-karte":
+    case "redraw":
       return "odrzucasz wyciągniętą Kartę i ciągniesz inną";
 
-    case "strata":
+    case "lose":
       return `${describeLoss(effect)}${forWhom(effect.target)}`;
 
-    case "kamien":
+    case "stone":
       return "zamiana w Kamień na 3 tury (20.1)";
 
     /**
      * Kometa alone: „W katastrofie giną wszyscy Nieznajomi — należy odłożyć
      * ich Karty." Written by hand rather than derived from `CARD_CLASS_LABEL`,
-     * which only holds the singular — the same shortcut `rzut-za-kazdego`
+     * which only holds the singular — the same shortcut `roll-for-each`
      * already takes for its own two nouns.
      */
-    case "katastrofa":
-      return `giną wszyscy: ${effect.klasa === "stranger" ? "Nieznajomi" : CARD_CLASS_LABEL[effect.klasa]} w tym Kręgu`;
+    case "wipe":
+      return `giną wszyscy: ${effect.cardClass === "stranger" ? "Nieznajomi" : CARD_CLASS_LABEL[effect.cardClass]} w tym Kręgu`;
 
     /**
      * „bazowe", because that is the only kind there is to swap.
@@ -515,8 +515,8 @@ export function describeEffect(effect: Effect): string {
      * Miecza" beside a rail reading Miecz 8 invites the reading that the 8 is
      * what moves; it is the 6 underneath it.
      */
-    case "zamien-punkty":
-      return effect.z === "sword"
+    case "swap-points":
+      return effect.from === "sword"
         ? "ustawiasz bazowy Miecz na wartość bazową Magii"
         : "ustawiasz bazową Magię na wartość bazową Miecza";
 
@@ -530,8 +530,8 @@ export function describeEffect(effect: Effect): string {
      * and that saying it aloud is the card's own condition — the whole of the
      * riddle is that the table hears the guess first.
      */
-    case "zgadnij":
-      return `${GUESS}, potem rzuć kostką — jeśli wypadnie twoja: ${describeEffect(effect.nagroda)}`;
+    case "guess":
+      return `${GUESS}, potem rzuć kostką — jeśli wypadnie twoja: ${describeEffect(effect.prize)}`;
 
     /**
      * The same fault `describeCondition` carries a comment about, twenty lines
@@ -541,22 +541,22 @@ export function describeEffect(effect: Effect): string {
      * two cards that force a Natura force `evil` and `good` and only one of
      * them was ever looked at.
      */
-    case "natura":
-      return `Natura: ${NATURE_LABEL[effect.na] ?? effect.na}`;
+    case "set-nature":
+      return `Natura: ${NATURE_LABEL[effect.to] ?? effect.to}`;
 
-    case "kup":
-      return `kupujesz — ${effect.towar
-        .map((item) => `${item.co} za ${item.cena} Sz. Z.`)
+    case "buy":
+      return `kupujesz — ${effect.goods
+        .map((item) => `${item.name} za ${item.price} Sz. Z.`)
         .join(", ")}`;
 
-    case "jak-pole":
+    case "as-field":
       return `dzieje się to, co na Obszarze: ${fieldName(effect.fieldId)}`;
 
-    case "poloz-karte":
-      return `kładziesz Kartę: ${where(effect.gdzie)}`;
+    case "place-card":
+      return `kładziesz Kartę: ${where(effect.where)}`;
 
-    case "otrzymaj":
-      return `otrzymujesz: ${effect.co}`;
+    case "receive":
+      return `otrzymujesz: ${effect.what}`;
   }
 }
 
@@ -572,7 +572,7 @@ export function describeEffect(effect: Effect): string {
  * What earns the second voice is the shape it is read in: a field's own table,
  * six faces down the side of a sheet, where the die's number is already the
  * left-hand column. `describeEffect` writes the card out; this writes the row.
- * The `wybor` case is where the difference is plainest — an option labelled
+ * The `choice` case is where the difference is plainest — an option labelled
  * "+1 Miecza" whose effect reads "+1 Miecza" is one thing said twice, so the
  * summary trusts the labels and prints "A albo B".
  *
@@ -588,62 +588,62 @@ export function describeEffect(effect: Effect): string {
  */
 export function summariseEffect(effect: Effect): string {
   switch (effect.op) {
-    case "nic":
+    case "nothing":
       return "nic się nie dzieje";
 
-    case "punkty":
+    case "points":
       return `${effect.delta > 0 ? "+" : "−"}${Math.abs(effect.delta)} ${STAT_LABEL[effect.stat]}`;
 
-    case "tura-stracona":
+    case "lose-turn":
       return `tracisz ${tury(effect.turns)}`;
 
-    case "walka":
-      return `walka: ${effect.nazwa} (${
-        effect.magia !== undefined ? `Magia ${effect.magia}` : `Miecz ${effect.miecz}`
+    case "fight":
+      return `walka: ${effect.name} (${
+        effect.magic !== undefined ? `Magia ${effect.magic}` : `Miecz ${effect.sword}`
       })`;
 
-    case "przyzwij":
-      return `${effect.nazwa} (Miecz ${effect.miecz}) atakuje`;
+    case "summon":
+      return `${effect.name} (Miecz ${effect.sword}) atakuje`;
 
-    case "podejrzyj":
+    case "peek":
       return `zaglądasz na ${effect.count} Kart`;
 
-    case "przenies-karte":
+    case "move-card":
       return "przenosisz Kartę na inny Obszar";
 
-    case "wymien-karte":
+    case "redraw":
       return "wymiana wyciągniętej Karty";
 
-    case "przenies":
-      return effect.to.kind === "pole"
+    case "move":
+      return effect.to.kind === "field"
         ? `przenieś się na: ${fieldName(effect.to.fieldId)}`
         : "przenieś się na dowolny Obszar w tym Kręgu";
 
-    case "zaklecie":
-      return effect.zeStosu
+    case "gain-spell":
+      return effect.fromPile
         ? `${effect.count} dowolne Zaklęcie ze stosu`
         : `+${effect.count} Zaklęcie`;
 
-    case "kamien":
+    case "stone":
       return "Zamiana w Kamień (20.1)";
 
-    case "uzdrow":
-      return effect.cena ? `leczenie za ${effect.cena} Sz. Z. za punkt` : "uzdrowienie";
+    case "heal":
+      return effect.price ? `leczenie za ${effect.price} Sz. Z. za punkt` : "uzdrowienie";
 
-    case "wybor":
+    case "choice":
       return effect.options.map((option) => option.label).join(" albo ");
 
-    case "po-kolei":
+    case "sequence":
       return effect.steps.map(summariseEffect).join(", potem ");
 
-    case "gdy":
+    case "when":
       // The condition said out loud. It used to be dropped, which left a row
       // reading "+1 Zaklęcie, inaczej nic się nie dzieje" with no way to tell
       // which half applied — a rule the table is told wrong, not a rule said
       // briefly.
       return (
-        `${describeCondition(effect.warunek)}: ${summariseEffect(effect.to)}` +
-        (effect.inaczej ? `, inaczej ${summariseEffect(effect.inaczej)}` : "")
+        `${describeCondition(effect.condition)}: ${summariseEffect(effect.then)}` +
+        (effect.else ? `, inaczej ${summariseEffect(effect.else)}` : "")
       );
 
     /**
@@ -652,15 +652,15 @@ export function summariseEffect(effect: Effect): string {
      * happened rather than hand the row back. This is the hole the comment
      * above predicted, found by the test that was written to find it.
      */
-    case "ruch-dodatkowy":
+    case "extra-move":
       return "dodatkowy ruch";
-    case "efekt":
+    case "status":
       return effect.label;
-    case "rzut-za-kazdego":
-      return effect.co === "przyjaciel" ? "rzut za każdego Przyjaciela" : "rzut za każdy Przedmiot";
-    case "uwolnij":
-      return `uwolnienie od: ${cardName(effect.od)}`;
-    case "zabierz":
+    case "roll-for-each":
+      return effect.what === "friend" ? "rzut za każdego Przyjaciela" : "rzut za każdy Przedmiot";
+    case "release":
+      return `uwolnienie od: ${cardName(effect.from)}`;
+    case "take":
       return "zabierasz ofierze Kartę";
 
     /* The eight that used to fall through to „rozpatrzcie sami". None was
@@ -668,31 +668,31 @@ export function summariseEffect(effect: Effect): string {
        but a hole nobody has walked into is still a hole, and this one is the
        app shrugging at its own vocabulary. Terse, because the shape this is
        read in is a row beside a die's number. */
-    case "rzut":
+    case "roll":
       return "jeszcze jeden rzut kostką";
-    case "poloz-karte":
-      return `Karta osiada: ${where(effect.gdzie)}`;
-    case "strata":
+    case "place-card":
+      return `Karta osiada: ${where(effect.where)}`;
+    case "lose":
       return describeLoss(effect);
-    case "otrzymaj":
-      return `otrzymujesz: ${effect.co}`;
-    case "zamien-punkty":
-      return effect.z === "sword" ? "Miecz ← Magia" : "Magia ← Miecz";
-    case "wyciagnij":
+    case "receive":
+      return `otrzymujesz: ${effect.what}`;
+    case "swap-points":
+      return effect.from === "sword" ? "Miecz ← Magia" : "Magia ← Miecz";
+    case "draw-cards":
       return `ciągniesz ${effect.count} ${plural(effect.count, "Kartę", "Karty", "Kart")}`;
-    case "jak-pole":
+    case "as-field":
       return `jak ${fieldName(effect.fieldId)}`;
-    case "sprzedaj":
-      return `sprzedajesz Przedmiot za ${effect.cena} Sz. Z.`;
-    case "zaklecia-do-limitu":
+    case "sell":
+      return `sprzedajesz Przedmiot za ${effect.price} Sz. Z.`;
+    case "spells-to-limit":
       return "Zaklęcia do limitu (2.6)";
-    case "katastrofa":
-      return `giną wszyscy: ${effect.klasa === "stranger" ? "Nieznajomi" : CARD_CLASS_LABEL[effect.klasa]}`;
-    case "zgadnij":
-      return `zgadnij i rzuć: ${summariseEffect(effect.nagroda)}`;
-    case "natura":
-      return `Natura: ${NATURE_LABEL[effect.na] ?? effect.na}`;
-    case "kup":
-      return `kupujesz: ${effect.towar.map((item) => item.co).join(", ")}`;
+    case "wipe":
+      return `giną wszyscy: ${effect.cardClass === "stranger" ? "Nieznajomi" : CARD_CLASS_LABEL[effect.cardClass]}`;
+    case "guess":
+      return `zgadnij i rzuć: ${summariseEffect(effect.prize)}`;
+    case "set-nature":
+      return `Natura: ${NATURE_LABEL[effect.to] ?? effect.to}`;
+    case "buy":
+      return `kupujesz: ${effect.goods.map((item) => item.name).join(", ")}`;
   }
 }

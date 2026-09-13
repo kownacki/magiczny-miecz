@@ -59,7 +59,7 @@ export function ScriptFramePanel({
           Karta w trakcie rozpatrywania — {canAct ? "twoja odpowiedź" : `odpowiada ${who}`}.
         </p>
 
-        {question?.kind === "wybor" && (
+        {question?.kind === "choice" && (
           <div className="mt-3 flex flex-col gap-2">
             {question.options.map((label, index) => (
               <ActionButton
@@ -76,7 +76,7 @@ export function ScriptFramePanel({
           </div>
         )}
 
-        {question?.kind === "gdzie" && (
+        {question?.kind === "where" && (
           <div className="mt-3 flex flex-wrap gap-1">
             {question.fields.map((fieldId) => (
               <ActionButton
@@ -94,13 +94,13 @@ export function ScriptFramePanel({
 
         {/* „jeśli nie ma takiego Obszaru, odłóż Kartę" — the Lewiatan's own
             sentence, and the one state a row of buttons cannot show. */}
-        {question?.kind === "gdzie" && question.fields.length === 0 && (
+        {question?.kind === "where" && question.fields.length === 0 && (
           <p className="mt-3 text-sm text-muted">
             Żaden Obszar tej Karty nie jest wolny.
           </p>
         )}
 
-        {question?.kind === "cyfra" && (
+        {question?.kind === "digit" && (
           <div className="mt-3 flex flex-wrap gap-1">
             {question.faces.map((face) => (
               <ActionButton
@@ -116,7 +116,7 @@ export function ScriptFramePanel({
           </div>
         )}
 
-        {question?.kind === "nieobslugiwane" && (
+        {question?.kind === "unsupported" && (
           // A question no surface can ask yet — named honestly rather than
           // guessed at, and named the same way at the prompt, which is where
           // this used to send the table to read a blank line.

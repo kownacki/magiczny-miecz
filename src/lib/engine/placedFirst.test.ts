@@ -77,8 +77,8 @@ describe("a card that sends itself to a named Obszar", () => {
    */
   it("reads its placement when drawn and its own text where it lies", () => {
     const eremita = scriptFor("eremita")!;
-    expect(instructionIn(eremita, undefined).op).toBe("rzut");
-    expect(instructionIn(eremita, true).op).toBe("wybor");
+    expect(instructionIn(eremita, undefined).op).toBe("roll");
+    expect(instructionIn(eremita, true).op).toBe("choice");
 
     // A Karta with one sentence says it to everybody, drawn or found.
     const krol = scriptFor("krol-lasu")!;

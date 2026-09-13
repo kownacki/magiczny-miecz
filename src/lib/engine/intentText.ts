@@ -12,7 +12,7 @@
  * result. Decision first, consequence after, which is the order a table tells
  * a story in.
  *
- * **The option travels as a number.** A `wybor` announces which line of its own
+ * **The option travels as a number.** A `choice` announces which line of its own
  * list won, and the watching browser renders that line from the copy it is
  * already drawing — the same discipline as `Decisions`, where a human choice is
  * a list of numbers the server re-walks the card against so a card cannot be

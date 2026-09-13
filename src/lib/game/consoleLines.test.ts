@@ -14,8 +14,8 @@ import { asTurnState } from "@/lib/engine/stack";
  * stos Kart już zużytych (9.6) — 12.1 lists złoto, Przedmioty and Przyjaciół
  * and no Zaklęcia, so one left on a field would be a card nobody could take.
  */
-function table(holdings: ReturnType<typeof aHolding>[], magia: number, what: "przedmioty" | "zaklecia") {
-  const seat = aSeat({ id: "seat-a", seat_index: 0, magic_own: magia, sword_own: 2 });
+function table(holdings: ReturnType<typeof aHolding>[], magic: number, what: "przedmioty" | "zaklecia") {
+  const seat = aSeat({ id: "seat-a", seat_index: 0, magic_own: magic, sword_own: 2 });
   const base = aTable({
     seats: [seat],
     users: [aUser({ seat_index: 0, name: "Ania" })],
@@ -103,10 +103,10 @@ describe("waitingOn, for a Karta the turn is suspended on", () => {
       reason: "CUDOTWÓRCA",
       cursor: [],
       effect: {
-        op: "wybor",
+        op: "choice",
         options: [
-          { label: "odzyskujesz 2 punkty Życia", effect: { op: "nic" } },
-          { label: "Pomiń", effect: { op: "nic" } },
+          { label: "odzyskujesz 2 punkty Życia", effect: { op: "nothing" } },
+          { label: "Pomiń", effect: { op: "nothing" } },
         ],
       },
       ...over,
@@ -137,7 +137,7 @@ describe("waitingOn, for a Karta the turn is suspended on", () => {
    */
   it("names the Obszary the Karta allows, and the word that settles it", () => {
     const owed = frame({
-      effect: { op: "poloz-karte", gdzie: { kind: "jedno-z", fieldIds: ["bagna-1", "bagna-2"] } },
+      effect: { op: "place-card", where: { kind: "one-of", fieldIds: ["bagna-1", "bagna-2"] } },
       reason: "LEWIATAN",
     });
     expect(waitingOn(owed, { standingOn: "osada", occupied: ["bagna-1"] })).toEqual([
@@ -148,8 +148,8 @@ describe("waitingOn, for a Karta the turn is suspended on", () => {
 
   /** Named rather than guessed at, and named the same way in the browser. */
   it("admits a question nobody can ask rather than printing nothing", () => {
-    const owed = frame({ effect: { op: "przenies-karte" } as never });
-    expect(waitingOn(owed)[0]).toContain("no surface can ask yet (przenies-karte)");
+    const owed = frame({ effect: { op: "move-card" } as never });
+    expect(waitingOn(owed)[0]).toContain("no surface can ask yet (move-card)");
   });
 });
 
@@ -160,7 +160,7 @@ describe("said", () => {
    * as a die that had just chosen his Obszar.
    */
   it("names the face, even when nothing has happened yet", () => {
-    expect(said([], { op: "wybor", options: [] }, 3)).toBe(
+    expect(said([], { op: "choice", options: [] }, 3)).toBe(
       "Wypadło 3.\nWciąż czeka — odpowiedz jeszcze raz (`look`).",
     );
   });
@@ -175,7 +175,7 @@ describe("said", () => {
    * `look` has nothing to show and every `answer 0` re-asks the same question.
    */
   it("names the word for a question whose answer is a place", () => {
-    const owed = { op: "przenies", to: { kind: "dowolne-w-kregu" } } as const;
+    const owed = { op: "move", to: { kind: "anywhere-in-ring" } } as const;
     expect(said(["przenosisz się"], owed)).toBe(
       "przenosisz się\nWskaż Obszar — `answer [n] to <Obszar>`.",
     );

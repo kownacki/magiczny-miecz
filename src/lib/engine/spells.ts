@@ -133,7 +133,7 @@ export const CAST_IS_ANNOUNCED = true;
  * read that and do it, but the app is the only one here holding the pile, so
  * announcing and stepping back means the cards leave the game rather than the
  * deck. The Przesilenie says the same of every hand at once and is an event
- * card, so it goes through `strata` with the rest of them.
+ * card, so it goes through `lose` with the rest of them.
  */
 export function appliedByTheApp(script: SpellScript | null): boolean {
   return script?.applies !== undefined;
@@ -146,7 +146,7 @@ export const SPELLS: Readonly<Partial<Record<SpellId, SpellScript>>> = {
     effect: "Odłóż dowolną liczbę swoich Przedmiotów, biorąc 1 Sz. Z. za każdy.",
     // "Należy odłożyć Karty Przedmiotów biorąc za każdą z nich 1 Sztukę Złota"
     // — the Lichwiarz's own trade, at the Lichwiarz's own rate.
-    stosuje: { op: "sprzedaj", cena: 1 },
+    stosuje: { op: "sell", price: 1 },
   },
   /**
    * Applied — for a Postać. Half of the card, and the half the app can hold.
@@ -173,7 +173,7 @@ export const SPELLS: Readonly<Partial<Record<SpellId, SpellScript>>> = {
     effect:
       "Ofiara nie może nic robić poza rzuceniem Władcy Zaklęć; nie można jej zaatakować.",
     stosuje: {
-      op: "efekt",
+      op: "status",
       label: "Krąg Płomieni",
       modifier: { kind: "frozen", oprocz: ["wladca-zaklec"] },
       ends: { kind: "dispelled" },
@@ -190,7 +190,7 @@ export const SPELLS: Readonly<Partial<Record<SpellId, SpellScript>>> = {
      * both folds its Magia in once.
      */
     stosuje: {
-      op: "efekt",
+      op: "status",
       label: "Magia i Miecz — Magia liczy się do Miecza",
       modifier: { kind: "magia-as-miecz" },
       ends: { kind: "fight" },
@@ -202,7 +202,7 @@ export const SPELLS: Readonly<Partial<Record<SpellId, SpellScript>>> = {
     effect: "Przenieś się na dowolny Obszar w tym Kręgu. Nie działa na Kamiennym Moście.",
     // "natychmiastowe przeniesienie się do dowolnego Obszaru w tym samym
     // Kręgu". The bar on using it on the Kamienny Most is `timing`'s, not this.
-    stosuje: { op: "przenies", to: { kind: "dowolne-w-kregu" } },
+    stosuje: { op: "move", to: { kind: "anywhere-in-ring" } },
   },
   /**
    * Applied for a Postać, and said out loud for the rest.
@@ -233,7 +233,7 @@ export const SPELLS: Readonly<Partial<Record<SpellId, SpellScript>>> = {
     effect:
       "Postać nie traci punktu Życia; Przyjaciel lub Wróg nie ginie. Użyty w walce — remis.",
     stosuje: {
-      op: "efekt",
+      op: "status",
       label: "Ocalony",
       modifier: { kind: "ocalenie" },
       ends: { kind: "dispelled" },
@@ -241,7 +241,7 @@ export const SPELLS: Readonly<Partial<Record<SpellId, SpellScript>>> = {
   },
   /**
    * Applied. It needed an op that reaches back into the turn's own stack, and
-   * `wymien-karte` is it: every other effect acts on a seat, a field or a pile.
+   * `redraw` is it: every other effect acts on a seat, a field or a pile.
    *
    * „Jednej z wyciągniętych" needs no picker, because 15.2 already put the
    * drawn cards in an order and this may only be spoken „natychmiast po wzięciu
@@ -252,7 +252,7 @@ export const SPELLS: Readonly<Partial<Record<SpellId, SpellScript>>> = {
     timing: ["po-karcie"],
     target: "siebie",
     effect: "Odrzuć jedną z wyciągniętych Kart i wyciągnij w zamian inną.",
-    stosuje: { op: "wymien-karte" },
+    stosuje: { op: "redraw" },
   },
   odrodzenie: {
     timing: ["dowolna-chwila"],
@@ -260,7 +260,7 @@ export const SPELLS: Readonly<Partial<Record<SpellId, SpellScript>>> = {
     effect: "Przywraca Życie do 4 punktów z początku gry.",
     // "przywraca punkty Życia z początku rozgrywki (czyli 4 punkty)" — the card
     // states the number the rulebook's 4.7 would have given anyway.
-    stosuje: { op: "uzdrow", upTo: 4 },
+    stosuje: { op: "heal", upTo: 4 },
   },
   /**
    * Applied, and „w tajemnicy" is kept by where the answer goes.
@@ -277,7 +277,7 @@ export const SPELLS: Readonly<Partial<Record<SpellId, SpellScript>>> = {
     timing: ["przed-ruchem"],
     target: "siebie",
     effect: "Obejrzyj w tajemnicy 5 pierwszych Kart Zdarzeń ze stosu.",
-    stosuje: { op: "podejrzyj", count: 5 },
+    stosuje: { op: "peek", count: 5 },
   },
   "pan-bogactwa": {
     timing: ["dowolna-chwila"],
@@ -285,7 +285,7 @@ export const SPELLS: Readonly<Partial<Record<SpellId, SpellScript>>> = {
     effect: "Zabierz ofierze 1 Przedmiot albo 1 Sztukę Złota.",
     // "Pozwala zabrać wybranej Postaci jeden Przedmiot lub jedną Sztukę Złota."
     // The coin is the fallback: a victim with nothing to carry still has a purse.
-    stosuje: { op: "zabierz", co: "przedmiot-lub-zloto" },
+    stosuje: { op: "take", what: "item-or-gold" },
   },
   "pan-przyjaciol": {
     timing: ["dowolna-chwila"],
@@ -293,8 +293,8 @@ export const SPELLS: Readonly<Partial<Record<SpellId, SpellScript>>> = {
     effect: "Zabierz ofierze 1 Przyjaciela i dołącz go do swoich.",
     // "zabrać wybranej Postaci jednego z Przyjaciół i dołączyć go do swoich" —
     // changing hands rather than being destroyed, which is why this is not a
-    // `strata`.
-    stosuje: { op: "zabierz", co: "przyjaciel" },
+    // `lose`.
+    stosuje: { op: "take", what: "friend" },
   },
   /**
    * Applied. It was the card half of 11.2's „except by Łódź, or by field and
@@ -319,7 +319,7 @@ export const SPELLS: Readonly<Partial<Record<SpellId, SpellScript>>> = {
     target: "siebie-lub-postac",
     effect: "Przebądź Trzęsawiska w dowolnym miejscu, w obie strony.",
     stosuje: {
-      op: "efekt",
+      op: "status",
       label: "Pan Trzęsawisk",
       modifier: { kind: "przeprawa", przez: "trzesawiska" },
       ends: { kind: "event", what: "crossing" },
@@ -340,7 +340,7 @@ export const SPELLS: Readonly<Partial<Record<SpellId, SpellScript>>> = {
      * prose — the creature is a Karta in a turn's stack, not a seat, and
      * `stosuje` reaches seats.
      */
-    stosuje: { op: "punkty", stat: "life", delta: -2 },
+    stosuje: { op: "points", stat: "life", delta: -2 },
   },
   "siedem-wichrow": {
     timing: ["dowolna-chwila"],
@@ -354,7 +354,7 @@ export const SPELLS: Readonly<Partial<Record<SpellId, SpellScript>>> = {
      * apart, and aimed at the victim rather than the caster — which is what
      * `target: "postac"` and the seat it names are for.
      */
-    stosuje: { op: "rzut-za-kazdego", co: "przedmiot", gubiPrzy: 1 },
+    stosuje: { op: "roll-for-each", what: "item", lostOn: 1 },
   },
   "siewca-spustoszenia": {
     timing: ["poczatek-tury", "po-ruchu"],
@@ -374,7 +374,7 @@ export const SPELLS: Readonly<Partial<Record<SpellId, SpellScript>>> = {
      * place in the box where a hand held face down under 9.3 is opened to
      * somebody else.
      */
-    stosuje: { op: "zabierz", co: "zaklecie", wybiera: "rzucajacy" },
+    stosuje: { op: "take", what: "spell", chosenBy: "caster" },
   },
   "wladca-czarow": {
     timing: ["dowolna-chwila"],
@@ -415,15 +415,15 @@ export const SPELLS: Readonly<Partial<Record<SpellId, SpellScript>>> = {
      * That half stays in the sentence the table reads.
      */
     stosuje: {
-      op: "po-kolei",
+      op: "sequence",
       steps: [
-        { op: "tura-stracona", turns: 1, target: "wszyscy-tutaj" },
+        { op: "lose-turn", turns: 1, target: "everyone-here" },
         {
-          op: "efekt",
+          op: "status",
           label: "Władca Gromu",
           modifier: { kind: "frozen" },
           ends: { kind: "turns", turns: 1 },
-          target: "wszyscy-tutaj",
+          target: "everyone-here",
         },
       ],
     },
@@ -434,7 +434,7 @@ export const SPELLS: Readonly<Partial<Record<SpellId, SpellScript>>> = {
     target: "siebie-lub-postac",
     effect: "Przebądź Lodowy Las w dowolnym miejscu, w obie strony.",
     stosuje: {
-      op: "efekt",
+      op: "status",
       label: "Władca Lodu",
       modifier: { kind: "przeprawa", przez: "lodowy-las" },
       ends: { kind: "event", what: "crossing" },
@@ -473,7 +473,7 @@ export const SPELLS: Readonly<Partial<Record<SpellId, SpellScript>>> = {
    * That is the destination every card offering „dowolny Obszar w tym Kręgu"
    * already asks for: the effect comes back owed, the interface asks, and the
    * answer arrives as `Decisions.destination`. Both ends of it are the
-   * player's — which Karta, and which Obszar — which is why `przenies-karte` is
+   * player's — which Karta, and which Obszar — which is why `move-card` is
    * never settled.
    */
   "wladca-zdarzen": {
@@ -481,7 +481,7 @@ export const SPELLS: Readonly<Partial<Record<SpellId, SpellScript>>> = {
     target: "karta-na-planszy",
     effect:
       "Przenieś odkrytą Kartę Zdarzeń na inny, nie zajęty Obszar w tym samym Kręgu.",
-    stosuje: { op: "przenies-karte" },
+    stosuje: { op: "move-card" },
   },
   /**
    * Applied by half, and the half is the one the app can hold.
@@ -530,11 +530,11 @@ export const SPELLS: Readonly<Partial<Record<SpellId, SpellScript>>> = {
      * exact is worse than one that is written down.
      */
     stosuje: {
-      op: "efekt",
+      op: "status",
       label: "Wojna Żywiołów",
       modifier: { kind: "no-spells" },
       ends: { kind: "turns", turns: 1 },
-      target: "wszyscy",
+      target: "everyone",
     },
   },
   /**
@@ -566,20 +566,20 @@ export const SPELLS: Readonly<Partial<Record<SpellId, SpellScript>>> = {
      * more than anyone could hold is how "all of it" is said.
      */
     stosuje: {
-      op: "rzut",
+      op: "roll",
       faces: {
-        1: { op: "kamien" },
-        2: { op: "punkty", stat: "gold", delta: -99 },
-        3: { op: "punkty", stat: "sword", delta: -1 },
-        4: { op: "punkty", stat: "magic", delta: -1 },
+        1: { op: "stone" },
+        2: { op: "points", stat: "gold", delta: -99 },
+        3: { op: "points", stat: "sword", delta: -1 },
+        4: { op: "points", stat: "magic", delta: -1 },
         5: {
-          op: "wybor",
+          op: "choice",
           options: [
-            { label: "+1 Miecza", effect: { op: "punkty", stat: "sword", delta: 1 } },
-            { label: "+1 Magii", effect: { op: "punkty", stat: "magic", delta: 1 } },
+            { label: "+1 Miecza", effect: { op: "points", stat: "sword", delta: 1 } },
+            { label: "+1 Magii", effect: { op: "points", stat: "magic", delta: 1 } },
           ],
         },
-        6: { op: "punkty", stat: "life", delta: 1 },
+        6: { op: "points", stat: "life", delta: 1 },
       },
     },
   },
@@ -607,7 +607,7 @@ export const SPELLS: Readonly<Partial<Record<SpellId, SpellScript>>> = {
     effect:
       "Wykorzystujesz 3 kolejne tury zamiast jednej. Inni mogą tylko walczyć, jeśli ich zaatakujesz.",
     stosuje: {
-      op: "efekt",
+      op: "status",
       label: "Formuła Czasu",
       modifier: { kind: "znowu" },
       ends: { kind: "turns", turns: 2 },
@@ -623,7 +623,7 @@ export const SPELLS: Readonly<Partial<Record<SpellId, SpellScript>>> = {
      * status on the seat rather than a fact about the caster.
      */
     stosuje: {
-      op: "efekt",
+      op: "status",
       label: "Formuła Przestrzeni — podwójny rzut na ruch",
       modifier: { kind: "move-x2" },
       ends: { kind: "turns", turns: 1 },
@@ -638,7 +638,7 @@ export const SPELLS: Readonly<Partial<Record<SpellId, SpellScript>>> = {
    * what the Poszukiwacz Przygód's raid already is (`raidsForYou`, `sendRaider`
    * and `fight.raid`). What differed is that the attacker is conjured rather
    * than held, and that a beaten Wróg is removed rather than kept (1.4); both
-   * are now `przyzwij` and `Fight.raid.summoned`.
+   * are now `summon` and `Fight.raid.summoned`.
    *
    * The rest of the card needs no encoding, because it is what a lost fight
    * already costs: „Gdy przegra, Postać traci jedno Życie" is 17.4's own point,
@@ -649,7 +649,7 @@ export const SPELLS: Readonly<Partial<Record<SpellId, SpellScript>>> = {
     target: "postac-lub-wrog",
     effect:
       "Golem (Miecz 3) atakuje cel w tym Kręgu. Przegrana ofiara traci 1 Życie; Wróg znika z planszy.",
-    stosuje: { op: "przyzwij", nazwa: "GOLEM", miecz: 3 },
+    stosuje: { op: "summon", name: "GOLEM", sword: 3 },
   },
   /** The Golem with Miecz 5, and it was blocked on the same one thing. */
   homunculus: {
@@ -657,7 +657,7 @@ export const SPELLS: Readonly<Partial<Record<SpellId, SpellScript>>> = {
     target: "postac-lub-wrog",
     effect:
       "Homunculus (Miecz 5) atakuje cel w tym Kręgu. Przegrana ofiara traci 1 Życie; Wróg znika z planszy.",
-    stosuje: { op: "przyzwij", nazwa: "HOMUNCULUS", miecz: 5 },
+    stosuje: { op: "summon", name: "HOMUNCULUS", sword: 5 },
   },
 };
 
@@ -685,7 +685,7 @@ export function spellScript(cardId: CardId): SpellScript | null {
  */
 export function unattackableAfter(script: SpellScript | null | undefined): boolean {
   const stosuje = script?.stosuje;
-  return stosuje?.op === "efekt" && stosuje.modifier.kind === "frozen";
+  return stosuje?.op === "status" && stosuje.modifier.kind === "frozen";
 }
 
 /**
@@ -711,7 +711,7 @@ export function castableNow(
  *
  * More than the phase, because the phase alone cannot tell four of these
  * windows apart. A fight before the dice and a fight after the first die are
- * both `walka` and are not the same moment — 17.3 puts the spells before the
+ * both `fight` and are not the same moment — 17.3 puts the spells before the
  * roll, and a spell that changes a roll has to come after it. A field with a
  * card just turned over is `pole`, and so is a field with nothing left on it.
  *

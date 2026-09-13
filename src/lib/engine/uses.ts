@@ -120,7 +120,7 @@ export const USES: Readonly<Partial<Record<CardId, Use>>> = {
    *
    * Three of its six faces are "dodaj N do wyniku rzutu w tej walce", and
    * nothing can carry a number into a fight roll yet. Encoding those faces as
-   * `nic` so the app could roll would make it lie about half the card, which is
+   * `nothing` so the app could roll would make it lie about half the card, which is
    * worse than handing the whole thing to the table.
    */
   "krysztal-losu": {

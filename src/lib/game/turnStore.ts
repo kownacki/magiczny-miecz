@@ -494,7 +494,7 @@ export async function abandonFight(gameId: string): Promise<void> {
       // creatures already in `fought` — startFight settles them the moment it
       // opens — so the field resumes with nothing outstanding rather than
       // offering the same creature again the moment the modal closes. A
-      // *pushed* fight — a `walka` step's, a summon's — pops instead, and the
+      // *pushed* fight — a `fight` step's, a summon's — pops instead, and the
       // frame beneath takes it from there; and a round of a looping fight
       // leaves the loop on top when it pops, which `closeFight` settles.
       const state = requireTop(snapshot.game.turn_state, "fight");
@@ -543,7 +543,7 @@ export async function answerScript(gameId: string, decided: Decisions): Promise<
  * Answers the `ask` frame on top of the stack (docs/STACK.md).
  *
  * The other door, for a question printed on a Charakterystyka rather than on a
- * card being resolved. Chained the same way a fight's close is: a `zaklecie`
+ * card being resolved. Chained the same way a fight's close is: a `gain-spell`
  * step that suspended into this is a card mid-sentence, and answering puts the
  * Zaklęcie in the hand and lets the card carry on in the same commit.
  */
@@ -1423,7 +1423,7 @@ export async function placeSeat(
  * half: the app rolls, and then it does what the roll says.
  *
  * `isSettled` draws the line. Everything that has one outcome happens here;
- * everything the rules leave to the player — a `wybor`, which Przedmiot to
+ * everything the rules leave to the player — a `choice`, which Przedmiot to
  * lose, where in the Krąg to move to — is handed back so the interface can ask
  * exactly that and nothing else.
  * ------------------------------------------------------------------------ */

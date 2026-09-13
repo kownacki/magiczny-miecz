@@ -15,7 +15,7 @@ import type { CardId } from "@/data/ids";
  *
  * Written in `Effect`, the same vocabulary the card scripts use, so a field's
  * offer renders through the same controls as a card's and a shop is one thing
- * in this codebase rather than two. `kup` was already in that vocabulary for
+ * in this codebase rather than two. `buy` was already in that vocabulary for
  * the Targowisko card; the Osada's Płatnerz is the same shop nailed to the
  * board.
  *
@@ -33,7 +33,7 @@ export interface FieldScript {
    * Set where the field gives no choice: the Karczma's "MUSISZ RZUCIĆ KOSTKĄ"
    * and the Strażnik's toll happen whether or not anybody wanted them.
    */
-  obowiazkowe?: boolean;
+  mandatory?: boolean;
 }
 
 export interface FieldOffer {
@@ -68,32 +68,32 @@ export interface FieldOffer {
  * one in this file.
  */
 const CZAROWNICA: Effect = {
-  op: "rzut",
+  op: "roll",
   faces: {
-    1: { op: "punkty", stat: "sword", delta: -1 },
+    1: { op: "points", stat: "sword", delta: -1 },
     2: {
-      op: "wybor",
+      op: "choice",
       options: [
-        { label: "+1 Miecza", effect: { op: "punkty", stat: "sword", delta: 1 } },
-        { label: "+1 Magii", effect: { op: "punkty", stat: "magic", delta: 1 } },
+        { label: "+1 Miecza", effect: { op: "points", stat: "sword", delta: 1 } },
+        { label: "+1 Magii", effect: { op: "points", stat: "magic", delta: 1 } },
       ],
     },
     3: {
-      op: "wybor",
+      op: "choice",
       options: [
-        { label: "+1 Magii", effect: { op: "punkty", stat: "magic", delta: 1 } },
-        { label: "+1 Miecza", effect: { op: "punkty", stat: "sword", delta: 1 } },
+        { label: "+1 Magii", effect: { op: "points", stat: "magic", delta: 1 } },
+        { label: "+1 Miecza", effect: { op: "points", stat: "sword", delta: 1 } },
       ],
     },
     4: {
-      op: "wybor",
+      op: "choice",
       options: [
-        { label: "+1 Magii", effect: { op: "punkty", stat: "magic", delta: 1 } },
-        { label: "+1 Miecza", effect: { op: "punkty", stat: "sword", delta: 1 } },
+        { label: "+1 Magii", effect: { op: "points", stat: "magic", delta: 1 } },
+        { label: "+1 Miecza", effect: { op: "points", stat: "sword", delta: 1 } },
       ],
     },
-    5: { op: "zaklecie", count: 1 },
-    6: { op: "nic" },
+    5: { op: "gain-spell", count: 1 },
+    6: { op: "nothing" },
   },
 };
 
@@ -101,20 +101,20 @@ const CZAROWNICA: Effect = {
  * The Bagna, which both Obszary print identically.
  *
  * "wedle własnego wyboru" is the holder's choice of *kind* first, and then of
- * card — 5.6 makes which one goes theirs to decide, so neither `strata` rolls
+ * card — 5.6 makes which one goes theirs to decide, so neither `lose` rolls
  * for it. A character with nothing of the kind they picked loses nothing, which
  * is what the rule says and not a bug to be worked around.
  */
 const BAGNA: Effect = {
-  op: "wybor",
+  op: "choice",
   options: [
     {
       label: "Tracisz Przedmiot",
-      effect: { op: "strata", co: "przedmiot", count: 1, wybor: "ty" },
+      effect: { op: "lose", what: "item", count: 1, chosenBy: "you" },
     },
     {
       label: "Tracisz Przyjaciela",
-      effect: { op: "strata", co: "przyjaciel", count: 1, wybor: "ty" },
+      effect: { op: "lose", what: "friend", count: 1, chosenBy: "you" },
     },
   ],
 };
@@ -131,11 +131,11 @@ export const FIELD_SCRIPTS: Readonly<Partial<Record<FieldId, FieldScript>>> = {
         name: "Płatnerz",
         text: "Płatnerza: możesz u niego kupić: za 2 Sz. Z. miecz; sztylet za 3 Sz. Z.; hełm - 1 Sz. Z.",
         effect: {
-          op: "kup",
-          towar: [
-            { co: "Miecz", cena: 2 },
-            { co: "Sztylet", cena: 3 },
-            { co: "Hełm", cena: 1 },
+          op: "buy",
+          goods: [
+            { name: "Miecz", price: 2 },
+            { name: "Sztylet", price: 3 },
+            { name: "Hełm", price: 1 },
           ],
         },
       },
@@ -145,7 +145,7 @@ export const FIELD_SCRIPTS: Readonly<Partial<Record<FieldId, FieldScript>>> = {
       {
         name: "Medyk",
         text: "Medyka: za każdą Sztukę Złota przywróci ci 1 punkt Życia.",
-        effect: { op: "uzdrow", upTo: 4, cena: 1 },
+        effect: { op: "heal", upTo: 4, price: 1 },
       },
     ],
   },
@@ -156,53 +156,53 @@ export const FIELD_SCRIPTS: Readonly<Partial<Record<FieldId, FieldScript>>> = {
         name: "Wróżbita",
         text: "Wróżbitę: rzuć kostką 1 - zyskujesz 1 Zaklęcie; 2 - zostajesz Zaklęty w Kamień; 3 - jeżeli jesteś Zły stajesz się Dobry. Jeżeli jesteś Chaotyczny stajesz się Zły; 4-6 zostałeś zignorowany.",
         effect: {
-          op: "rzut",
+          op: "roll",
           faces: {
-            1: { op: "zaklecie", count: 1 },
-            2: { op: "kamien" },
+            1: { op: "gain-spell", count: 1 },
+            2: { op: "stone" },
             // "jeżeli jesteś Zły stajesz się Dobry. Jeżeli jesteś Chaotyczny
             // stajesz się Zły" — two conditions, and a character already Dobry
             // is untouched.
             3: {
-              op: "gdy",
-              warunek: { is: "natura", jedna_z: ["evil"] },
-              to: { op: "natura", na: "good" },
-              inaczej: {
-                op: "gdy",
-                warunek: { is: "natura", jedna_z: ["chaotic"] },
-                to: { op: "natura", na: "evil" },
-                inaczej: { op: "nic" },
+              op: "when",
+              condition: { is: "nature", oneOf: ["evil"] },
+              then: { op: "set-nature", to: "good" },
+              else: {
+                op: "when",
+                condition: { is: "nature", oneOf: ["chaotic"] },
+                then: { op: "set-nature", to: "evil" },
+                else: { op: "nothing" },
               },
             },
-            4: { op: "nic" },
-            5: { op: "nic" },
-            6: { op: "nic" },
+            4: { op: "nothing" },
+            5: { op: "nothing" },
+            6: { op: "nothing" },
           },
         },
       },
       {
         name: "Lichwiarz",
         text: "Lichwiarza - możesz wymienić dowolne Przedmioty na złoto (odłóż ich Karty i weź po 1 Sz.Z. za każdy).",
-        effect: { op: "sprzedaj", cena: 1 },
+        effect: { op: "sell", price: 1 },
       },
     ],
   },
 
   // "MUSISZ RZUCIĆ KOSTKĄ" — the one establishment nobody walks past.
   karczma: {
-    obowiazkowe: true,
+    mandatory: true,
     offers: [
       {
         name: "Karczma",
         effect: {
-          op: "rzut",
+          op: "roll",
           faces: {
-            1: { op: "punkty", stat: "gold", delta: -1 },
-            2: { op: "punkty", stat: "gold", delta: 1 },
-            3: { op: "tura-stracona", turns: 1 },
-            4: { op: "walka", nazwa: "Miejscowy osiłek", miecz: 4 },
-            5: { op: "przenies", to: { kind: "dowolne-w-kregu" } },
-            6: { op: "przenies", to: { kind: "pole", fieldId: "swiatynia-bogini-nemed" } },
+            1: { op: "points", stat: "gold", delta: -1 },
+            2: { op: "points", stat: "gold", delta: 1 },
+            3: { op: "lose-turn", turns: 1 },
+            4: { op: "fight", name: "Miejscowy osiłek", sword: 4 },
+            5: { op: "move", to: { kind: "anywhere-in-ring" } },
+            6: { op: "move", to: { kind: "field", fieldId: "swiatynia-bogini-nemed" } },
           },
         },
       },
@@ -216,18 +216,18 @@ export const FIELD_SCRIPTS: Readonly<Partial<Record<FieldId, FieldScript>>> = {
       {
         name: "Nadworny Medyk",
         effect: {
-          op: "po-kolei",
+          op: "sequence",
           steps: [
-            { op: "uzdrow", upTo: 4, cena: 1 },
+            { op: "heal", upTo: 4, price: 1 },
             {
-              op: "rzut",
+              op: "roll",
               faces: {
-                1: { op: "nic" },
-                2: { op: "nic" },
-                3: { op: "nic" },
-                4: { op: "nic" },
-                5: { op: "nic" },
-                6: { op: "punkty", stat: "life", delta: -1 },
+                1: { op: "nothing" },
+                2: { op: "nothing" },
+                3: { op: "nothing" },
+                4: { op: "nothing" },
+                5: { op: "nothing" },
+                6: { op: "points", stat: "life", delta: -1 },
               },
             },
           ],
@@ -244,7 +244,7 @@ export const FIELD_SCRIPTS: Readonly<Partial<Record<FieldId, FieldScript>>> = {
       {
         name: "Pustelnik",
         text: "Pustelnik może z pomocą ziół przywrócić ci punkty Życia z początku wędrówki pod warunkiem, że wyrzekniesz się bogactwa. Musisz odrzucić 1 Sz. Z. za każdą wyleczoną ranę.",
-        effect: { op: "uzdrow", upTo: 4, cena: 1 },
+        effect: { op: "heal", upTo: 4, price: 1 },
       },
       /**
        * "Nie możesz zdobywać nowych Przyjaciół, dopóki nie uwolnisz się od
@@ -254,7 +254,7 @@ export const FIELD_SCRIPTS: Readonly<Partial<Record<FieldId, FieldScript>>> = {
        * Zły Duch anywhere on the board. Free — the renunciation is the price of
        * the healing, and the card asks nothing for this.
        */
-      { name: "Egzorcyzm", effect: { op: "uwolnij", od: "zly-duch" } },
+      { name: "Egzorcyzm", effect: { op: "release", from: "zly-duch" } },
     ],
   },
 
@@ -263,12 +263,12 @@ export const FIELD_SCRIPTS: Readonly<Partial<Record<FieldId, FieldScript>>> = {
       {
         name: "Życzenie",
         effect: {
-          op: "wybor",
+          op: "choice",
           options: [
-            { label: "+1 Miecza", effect: { op: "punkty", stat: "sword", delta: 1 } },
-            { label: "+1 Magii", effect: { op: "punkty", stat: "magic", delta: 1 } },
-            { label: "+1 Zaklęcie", effect: { op: "zaklecie", count: 1 } },
-            { label: "+1 Sztuka Złota", effect: { op: "punkty", stat: "gold", delta: 1 } },
+            { label: "+1 Miecza", effect: { op: "points", stat: "sword", delta: 1 } },
+            { label: "+1 Magii", effect: { op: "points", stat: "magic", delta: 1 } },
+            { label: "+1 Zaklęcie", effect: { op: "gain-spell", count: 1 } },
+            { label: "+1 Sztuka Złota", effect: { op: "points", stat: "gold", delta: 1 } },
           ],
         },
       },
@@ -276,15 +276,15 @@ export const FIELD_SCRIPTS: Readonly<Partial<Record<FieldId, FieldScript>>> = {
   },
 
   "straznik-magicznych-wrot": {
-    obowiazkowe: true,
+    mandatory: true,
     offers: [
       {
         name: "Strażnik",
         effect: {
-          op: "wybor",
+          op: "choice",
           options: [
-            { label: "Zapłać 1 Sz. Z.", effect: { op: "punkty", stat: "gold", delta: -1 } },
-            { label: "Tracisz 1 Życia", effect: { op: "punkty", stat: "life", delta: -1 } },
+            { label: "Zapłać 1 Sz. Z.", effect: { op: "points", stat: "gold", delta: -1 } },
+            { label: "Tracisz 1 Życia", effect: { op: "points", stat: "life", delta: -1 } },
           ],
         },
       },
@@ -294,7 +294,7 @@ export const FIELD_SCRIPTS: Readonly<Partial<Record<FieldId, FieldScript>>> = {
   /* ------------------------------------------------------------------------
    * Obszary that simply do something to whoever stops there.
    *
-   * `obowiazkowe` on all of them: the board states these flat, with no "MOŻESZ"
+   * `mandatory` on all of them: the board states these flat, with no "MOŻESZ"
    * anywhere, so they are not a service anybody chooses to visit. Until these
    * existed the Ruchome Skały cost nothing and the Bagna took nothing — the
    * printed text was shown and the players applied it themselves — which also
@@ -304,12 +304,12 @@ export const FIELD_SCRIPTS: Readonly<Partial<Record<FieldId, FieldScript>>> = {
 
   // "Tracisz 1 Życie." The Rękawice and the Święty Graal both keep it.
   "ruchome-skaly-1": {
-    obowiazkowe: true,
-    offers: [{ name: "Ruchome Skały", effect: { op: "punkty", stat: "life", delta: -1 } }],
+    mandatory: true,
+    offers: [{ name: "Ruchome Skały", effect: { op: "points", stat: "life", delta: -1 } }],
   },
   "ruchome-skaly-2": {
-    obowiazkowe: true,
-    offers: [{ name: "Ruchome Skały", effect: { op: "punkty", stat: "life", delta: -1 } }],
+    mandatory: true,
+    offers: [{ name: "Ruchome Skały", effect: { op: "points", stat: "life", delta: -1 } }],
   },
 
   /**
@@ -317,15 +317,15 @@ export const FIELD_SCRIPTS: Readonly<Partial<Record<FieldId, FieldScript>>> = {
    * własnego wyboru."
    *
    * The choice is the holder's twice over — which kind, and then which card —
-   * so it is a `wybor` between two `strata`, each picked `ty`. The Kij i Sznur
+   * so it is a `choice` between two `lose`, each picked `you`. The Kij i Sznur
    * takes the whole thing away.
    */
   "bagna-1": {
-    obowiazkowe: true,
+    mandatory: true,
     offers: [{ name: "Bagna", effect: BAGNA }],
   },
   "bagna-2": {
-    obowiazkowe: true,
+    mandatory: true,
     offers: [{ name: "Bagna", effect: BAGNA }],
   },
 
@@ -333,7 +333,7 @@ export const FIELD_SCRIPTS: Readonly<Partial<Record<FieldId, FieldScript>>> = {
    * Obszary that make you roll.
    *
    * All five print "MUSISZ RZUCIĆ KOSTKĄ" or the same thing in other words, so
-   * all five are `obowiazkowe`. These are what the Opiekun, the Przewodnik, the
+   * all five are `mandatory`. These are what the Opiekun, the Przewodnik, the
    * Elflin and the Rusałka were written to walk past — `bezpieczny` with
    * `from: "rzut"` — and until the tables existed there was no roll for any of
    * them to skip.
@@ -342,19 +342,19 @@ export const FIELD_SCRIPTS: Readonly<Partial<Record<FieldId, FieldScript>>> = {
   // "1 - zyskujesz 1 punkt Miecza; 2-3 nic się nie dzieje; 4-5 zostałeś opętany
   // przez duchy, tracisz 1 turę; 6 - zostałeś zaatakowany przez Ducha (Magia 4)."
   kurhan: {
-    obowiazkowe: true,
+    mandatory: true,
     offers: [
       {
         name: "Kurhan",
         effect: {
-          op: "rzut",
+          op: "roll",
           faces: {
-            1: { op: "punkty", stat: "sword", delta: 1 },
-            2: { op: "nic" },
-            3: { op: "nic" },
-            4: { op: "tura-stracona", turns: 1 },
-            5: { op: "tura-stracona", turns: 1 },
-            6: { op: "walka", nazwa: "Duch", magia: 4 },
+            1: { op: "points", stat: "sword", delta: 1 },
+            2: { op: "nothing" },
+            3: { op: "nothing" },
+            4: { op: "lose-turn", turns: 1 },
+            5: { op: "lose-turn", turns: 1 },
+            6: { op: "fight", name: "Duch", magic: 4 },
           },
         },
       },
@@ -370,19 +370,19 @@ export const FIELD_SCRIPTS: Readonly<Partial<Record<FieldId, FieldScript>>> = {
    * know it by name and are worth their other figure against it.
    */
   "wilczy-parow": {
-    obowiazkowe: true,
+    mandatory: true,
     offers: [
       {
         name: "Wilczy Parów",
         effect: {
-          op: "rzut",
+          op: "roll",
           faces: {
-            1: { op: "nic" },
-            2: { op: "nic" },
-            3: { op: "nic" },
-            4: { op: "walka", nazwa: "Wilkołak", miecz: 4 },
-            5: { op: "walka", nazwa: "Wilkołak", miecz: 5 },
-            6: { op: "walka", nazwa: "Wilkołak", miecz: 6 },
+            1: { op: "nothing" },
+            2: { op: "nothing" },
+            3: { op: "nothing" },
+            4: { op: "fight", name: "Wilkołak", sword: 4 },
+            5: { op: "fight", name: "Wilkołak", sword: 5 },
+            6: { op: "fight", name: "Wilkołak", sword: 6 },
           },
         },
       },
@@ -391,19 +391,19 @@ export const FIELD_SCRIPTS: Readonly<Partial<Record<FieldId, FieldScript>>> = {
 
   // The same shape as the Wilczy Parów, in Magia rather than Miecz.
   "krypta-upiorow": {
-    obowiazkowe: true,
+    mandatory: true,
     offers: [
       {
         name: "Krypta Upiorów",
         effect: {
-          op: "rzut",
+          op: "roll",
           faces: {
-            1: { op: "nic" },
-            2: { op: "nic" },
-            3: { op: "nic" },
-            4: { op: "walka", nazwa: "Upiór", magia: 4 },
-            5: { op: "walka", nazwa: "Upiór", magia: 5 },
-            6: { op: "walka", nazwa: "Upiór", magia: 6 },
+            1: { op: "nothing" },
+            2: { op: "nothing" },
+            3: { op: "nothing" },
+            4: { op: "fight", name: "Upiór", magic: 4 },
+            5: { op: "fight", name: "Upiór", magic: 5 },
+            6: { op: "fight", name: "Upiór", magic: 6 },
           },
         },
       },
@@ -413,19 +413,19 @@ export const FIELD_SCRIPTS: Readonly<Partial<Record<FieldId, FieldScript>>> = {
   // "1 - Strażnik Kręgu (Miecz 5); 2, 3 - tracisz 1 turę; 4, 5 - nic się nie
   // dzieje; 6 - zyskujesz 1 punkt Magii."
   "krag-mocy": {
-    obowiazkowe: true,
+    mandatory: true,
     offers: [
       {
         name: "Krąg Mocy",
         effect: {
-          op: "rzut",
+          op: "roll",
           faces: {
-            1: { op: "walka", nazwa: "Strażnik Kręgu", miecz: 5 },
-            2: { op: "tura-stracona", turns: 1 },
-            3: { op: "tura-stracona", turns: 1 },
-            4: { op: "nic" },
-            5: { op: "nic" },
-            6: { op: "punkty", stat: "magic", delta: 1 },
+            1: { op: "fight", name: "Strażnik Kręgu", sword: 5 },
+            2: { op: "lose-turn", turns: 1 },
+            3: { op: "lose-turn", turns: 1 },
+            4: { op: "nothing" },
+            5: { op: "nothing" },
+            6: { op: "points", stat: "magic", delta: 1 },
           },
         },
       },
@@ -437,14 +437,14 @@ export const FIELD_SCRIPTS: Readonly<Partial<Record<FieldId, FieldScript>>> = {
    * zyskujesz 1 Życie; 4, 5, 6 - tracisz 1 Życie; Zły - możesz wezwać Siły
    * Ciemności: ..."
    *
-   * Three Natury and three different things, which is why it is a `gdy` chain
+   * Three Natury and three different things, which is why it is a `when` chain
    * rather than a table: the die is only thrown for two of them, and for the
    * Dobra Postać there is nothing to throw. Checked against the board scan
    * rather than trusted from the transcription, because a mis-split here would
    * cost the wrong Natura a point of Życie.
    *
    * The Zły branch is the only optional one — "możesz wezwać" — so it is a
-   * `wybor` inside the compulsory whole. Declining is a real answer: two of the
+   * `choice` inside the compulsory whole. Declining is a real answer: two of the
    * six faces are bad, and calling on the Siły Ciemności is a gamble the board
    * offers rather than imposes.
    *
@@ -452,46 +452,46 @@ export const FIELD_SCRIPTS: Readonly<Partial<Record<FieldId, FieldScript>>> = {
    * because the Dobry branch is an ordinary loss of Życie.
    */
   "czarci-mlyn": {
-    obowiazkowe: true,
+    mandatory: true,
     offers: [
       {
         name: "Czarci Młyn",
         effect: {
-          op: "gdy",
-          warunek: { is: "natura", jedna_z: ["good"] },
-          to: { op: "punkty", stat: "life", delta: -1 },
-          inaczej: {
-            op: "gdy",
-            warunek: { is: "natura", jedna_z: ["chaotic"] },
-            to: {
-              op: "rzut",
+          op: "when",
+          condition: { is: "nature", oneOf: ["good"] },
+          then: { op: "points", stat: "life", delta: -1 },
+          else: {
+            op: "when",
+            condition: { is: "nature", oneOf: ["chaotic"] },
+            then: {
+              op: "roll",
               faces: {
-                1: { op: "punkty", stat: "life", delta: 1 },
-                2: { op: "punkty", stat: "life", delta: 1 },
-                3: { op: "punkty", stat: "life", delta: 1 },
-                4: { op: "punkty", stat: "life", delta: -1 },
-                5: { op: "punkty", stat: "life", delta: -1 },
-                6: { op: "punkty", stat: "life", delta: -1 },
+                1: { op: "points", stat: "life", delta: 1 },
+                2: { op: "points", stat: "life", delta: 1 },
+                3: { op: "points", stat: "life", delta: 1 },
+                4: { op: "points", stat: "life", delta: -1 },
+                5: { op: "points", stat: "life", delta: -1 },
+                6: { op: "points", stat: "life", delta: -1 },
               },
             },
-            inaczej: {
-              op: "wybor",
+            else: {
+              op: "choice",
               options: [
                 {
                   label: "Wezwij Siły Ciemności",
                   effect: {
-                    op: "rzut",
+                    op: "roll",
                     faces: {
-                      1: { op: "punkty", stat: "sword", delta: 1 },
-                      2: { op: "punkty", stat: "magic", delta: 1 },
-                      3: { op: "zaklecie", count: 1 },
-                      4: { op: "ruch-dodatkowy" },
-                      5: { op: "tura-stracona", turns: 1 },
-                      6: { op: "punkty", stat: "life", delta: -1 },
+                      1: { op: "points", stat: "sword", delta: 1 },
+                      2: { op: "points", stat: "magic", delta: 1 },
+                      3: { op: "gain-spell", count: 1 },
+                      4: { op: "extra-move" },
+                      5: { op: "lose-turn", turns: 1 },
+                      6: { op: "points", stat: "life", delta: -1 },
                     },
                   },
                 },
-                { label: "Nie wzywaj", effect: { op: "nic" } },
+                { label: "Nie wzywaj", effect: { op: "nothing" } },
               ],
             },
           },
@@ -508,7 +508,7 @@ export const FIELD_SCRIPTS: Readonly<Partial<Record<FieldId, FieldScript>>> = {
    * The whole sentence hangs off "Jeżeli jesteś Dobry", so a Postać of any
    * other Natura is offered nothing at all — and it is "możesz", so even a
    * Dobra one may walk on. That is why this is an offer rather than
-   * `obowiazkowe`: nothing here happens to anybody against their will.
+   * `mandatory`: nothing here happens to anybody against their will.
    *
    * Read off the board scan, twice, because the Relikwiarz says a Zła Postać
    * "nie traci punktu Życia przy Studni Wieczności" and the Obszar has no such
@@ -520,31 +520,31 @@ export const FIELD_SCRIPTS: Readonly<Partial<Record<FieldId, FieldScript>>> = {
       {
         name: "Studnia Wieczności",
         effect: {
-          op: "gdy",
-          warunek: { is: "natura", jedna_z: ["good"] },
-          to: {
-            op: "wybor",
+          op: "when",
+          condition: { is: "nature", oneOf: ["good"] },
+          then: {
+            op: "choice",
             options: [
               // 4.7 caps a restoration at what the character started with, which
               // is exactly "punkty Życia z początku gry".
-              { label: "Odzyskaj Życie z początku gry", effect: { op: "uzdrow", upTo: 4 } },
+              { label: "Odzyskaj Życie z początku gry", effect: { op: "heal", upTo: 4 } },
               {
                 label: "Rzuć kostką",
                 effect: {
-                  op: "rzut",
+                  op: "roll",
                   faces: {
-                    1: { op: "nic" },
-                    2: { op: "nic" },
-                    3: { op: "nic" },
-                    4: { op: "punkty", stat: "life", delta: 1 },
-                    5: { op: "zaklecie", count: 1 },
-                    6: { op: "ruch-dodatkowy" },
+                    1: { op: "nothing" },
+                    2: { op: "nothing" },
+                    3: { op: "nothing" },
+                    4: { op: "points", stat: "life", delta: 1 },
+                    5: { op: "gain-spell", count: 1 },
+                    6: { op: "extra-move" },
                   },
                 },
               },
             ],
           },
-          inaczej: { op: "nic" },
+          else: { op: "nothing" },
         },
       },
     ],
@@ -566,45 +566,45 @@ export const FIELD_SCRIPTS: Readonly<Partial<Record<FieldId, FieldScript>>> = {
       {
         name: "Modlitwa",
         effect: {
-          op: "rzut",
-          kostki: 2,
+          op: "roll",
+          dice: 2,
           faces: {
-            2: { op: "punkty", stat: "life", delta: 2 },
-            3: { op: "punkty", stat: "life", delta: -1 },
+            2: { op: "points", stat: "life", delta: 2 },
+            3: { op: "points", stat: "life", delta: -1 },
             // "tracisz do wyboru: 1 punkt Życia lub 1 z Przyjaciół" — the
             // choice is stated on the board, so it is the holder's twice: which
             // kind, and then which Przyjaciel.
             4: {
-              op: "wybor",
+              op: "choice",
               options: [
-                { label: "Tracisz 1 Życie", effect: { op: "punkty", stat: "life", delta: -1 } },
+                { label: "Tracisz 1 Życie", effect: { op: "points", stat: "life", delta: -1 } },
                 {
                   label: "Tracisz Przyjaciela",
-                  effect: { op: "strata", co: "przyjaciel", count: 1, wybor: "ty" },
+                  effect: { op: "lose", what: "friend", count: 1, chosenBy: "you" },
                 },
               ],
             },
-            5: { op: "punkty", stat: "sword", delta: 1 },
-            6: { op: "punkty", stat: "magic", delta: 1 },
-            7: { op: "zaklecie", count: 1 },
-            8: { op: "punkty", stat: "life", delta: 1 },
+            5: { op: "points", stat: "sword", delta: 1 },
+            6: { op: "points", stat: "magic", delta: 1 },
+            7: { op: "gain-spell", count: 1 },
+            8: { op: "points", stat: "life", delta: 1 },
             9: {
-              op: "efekt",
+              op: "status",
               label: "Opętany — nie ruszysz się stąd, póki nie wyrzucisz 1, 2 lub 3",
               modifier: { kind: "move-max", fields: 0 },
               ends: { kind: "roll", upTo: 3 },
             },
             10: {
-              op: "wybor",
+              op: "choice",
               options: [
-                { label: "Tracisz 1 Magii", effect: { op: "punkty", stat: "magic", delta: -1 } },
-                { label: "Tracisz 1 Miecza", effect: { op: "punkty", stat: "sword", delta: -1 } },
+                { label: "Tracisz 1 Magii", effect: { op: "points", stat: "magic", delta: -1 } },
+                { label: "Tracisz 1 Miecza", effect: { op: "points", stat: "sword", delta: -1 } },
               ],
             },
-            // "(jeżeli jeszcze jakieś są)" is 21.2's stock rule, and `otrzymaj`
+            // "(jeżeli jeszcze jakieś są)" is 21.2's stock rule, and `receive`
             // leaves it to `takeCard`, which already refuses an empty pile.
-            11: { op: "otrzymaj", co: "MAGICZNY MIECZ" },
-            12: { op: "punkty", stat: "life", delta: -2 },
+            11: { op: "receive", what: "MAGICZNY MIECZ" },
+            12: { op: "points", stat: "life", delta: -2 },
           },
         },
       },
@@ -620,43 +620,43 @@ export const FIELD_SCRIPTS: Readonly<Partial<Record<FieldId, FieldScript>>> = {
       {
         name: "Modlitwa",
         effect: {
-          op: "rzut",
-          kostki: 2,
+          op: "roll",
+          dice: 2,
           faces: {
-            2: { op: "punkty", stat: "life", delta: -1 },
+            2: { op: "points", stat: "life", delta: -1 },
             // "tracisz po 1 punkcie Magii i Miecza" — both, not a choice.
             3: {
-              op: "po-kolei",
+              op: "sequence",
               steps: [
-                { op: "punkty", stat: "magic", delta: -1 },
-                { op: "punkty", stat: "sword", delta: -1 },
+                { op: "points", stat: "magic", delta: -1 },
+                { op: "points", stat: "sword", delta: -1 },
               ],
             },
-            4: { op: "strata", co: "zaklecie", count: 1, wybor: "ty" },
-            5: { op: "strata", co: "przyjaciel", count: 1, wybor: "ty" },
-            6: { op: "zaklecie", count: 1 },
+            4: { op: "lose", what: "spell", count: 1, chosenBy: "you" },
+            5: { op: "lose", what: "friend", count: 1, chosenBy: "you" },
+            6: { op: "gain-spell", count: 1 },
             7: {
-              op: "wybor",
+              op: "choice",
               options: [
-                { label: "+1 Magii", effect: { op: "punkty", stat: "magic", delta: 1 } },
-                { label: "+1 Miecza", effect: { op: "punkty", stat: "sword", delta: 1 } },
+                { label: "+1 Magii", effect: { op: "points", stat: "magic", delta: 1 } },
+                { label: "+1 Miecza", effect: { op: "points", stat: "sword", delta: 1 } },
               ],
             },
-            8: { op: "ruch-dodatkowy" },
+            8: { op: "extra-move" },
             9: {
-              op: "efekt",
+              op: "status",
               label: "Opętany — nie ruszysz się stąd, póki nie wyrzucisz 1, 2 lub 3",
               modifier: { kind: "move-max", fields: 0 },
               ends: { kind: "roll", upTo: 3 },
             },
-            10: { op: "otrzymaj", co: "TARCZA TOLIMANA" },
-            11: { op: "punkty", stat: "life", delta: 1 },
+            10: { op: "receive", what: "TARCZA TOLIMANA" },
+            11: { op: "points", stat: "life", delta: 1 },
             12: {
-              op: "po-kolei",
+              op: "sequence",
               steps: [
-                { op: "punkty", stat: "life", delta: -1 },
-                { op: "punkty", stat: "magic", delta: -1 },
-                { op: "punkty", stat: "sword", delta: -1 },
+                { op: "points", stat: "life", delta: -1 },
+                { op: "points", stat: "magic", delta: -1 },
+                { op: "points", stat: "sword", delta: -1 },
               ],
             },
           },
@@ -693,40 +693,40 @@ export const FIELD_SCRIPTS: Readonly<Partial<Record<FieldId, FieldScript>>> = {
       {
         name: "Misja",
         effect: {
-          op: "rzut",
+          op: "roll",
           faces: {
             1: {
-              op: "efekt",
+              op: "status",
               label: "Misja: pokonaj Wroga",
               modifier: { kind: "mission", what: "foe" },
               ends: { kind: "dispelled" },
             },
             2: {
-              op: "efekt",
+              op: "status",
               label: "Misja: pokonaj inną Postać",
               modifier: { kind: "mission", what: "character" },
               ends: { kind: "dispelled" },
             },
             3: {
-              op: "efekt",
+              op: "status",
               label: "Misja: pokonaj inną Postać",
               modifier: { kind: "mission", what: "character" },
               ends: { kind: "dispelled" },
             },
             4: {
-              op: "efekt",
+              op: "status",
               label: "Misja: przynieś 3 Sztuki Złota",
               modifier: { kind: "mission", what: "gold", count: 3 },
               ends: { kind: "dispelled" },
             },
             5: {
-              op: "efekt",
+              op: "status",
               label: "Misja: przynieś 3 Sztuki Złota",
               modifier: { kind: "mission", what: "gold", count: 3 },
               ends: { kind: "dispelled" },
             },
             6: {
-              op: "efekt",
+              op: "status",
               label: "Misja: przynieś 2 Sztuki Złota",
               modifier: { kind: "mission", what: "gold", count: 2 },
               ends: { kind: "dispelled" },
@@ -751,42 +751,42 @@ export const FIELD_SCRIPTS: Readonly<Partial<Record<FieldId, FieldScript>>> = {
    * with it, which is what "zawsze możesz tamtędy bezpiecznie przejść" says.
    */
   "urwisko-1": {
-    obowiazkowe: true,
+    mandatory: true,
     offers: [{ name: "Urwisko", effect: {
-          op: "po-kolei",
+          op: "sequence",
           steps: [
             {
-              op: "rzut",
+              op: "roll",
               faces: {
-                1: { op: "punkty", stat: "life", delta: -1 },
-                2: { op: "punkty", stat: "life", delta: -1 },
-                3: { op: "nic" },
-                4: { op: "nic" },
-                5: { op: "nic" },
-                6: { op: "nic" },
+                1: { op: "points", stat: "life", delta: -1 },
+                2: { op: "points", stat: "life", delta: -1 },
+                3: { op: "nothing" },
+                4: { op: "nothing" },
+                5: { op: "nothing" },
+                6: { op: "nothing" },
               },
             },
-            { op: "rzut-za-kazdego", co: "przyjaciel", gubiPrzy: 2 },
+            { op: "roll-for-each", what: "friend", lostOn: 2 },
           ],
         } }],
   },
   "urwisko-2": {
-    obowiazkowe: true,
+    mandatory: true,
     offers: [{ name: "Urwisko", effect: {
-          op: "po-kolei",
+          op: "sequence",
           steps: [
             {
-              op: "rzut",
+              op: "roll",
               faces: {
-                1: { op: "punkty", stat: "life", delta: -1 },
-                2: { op: "punkty", stat: "life", delta: -1 },
-                3: { op: "nic" },
-                4: { op: "nic" },
-                5: { op: "nic" },
-                6: { op: "nic" },
+                1: { op: "points", stat: "life", delta: -1 },
+                2: { op: "points", stat: "life", delta: -1 },
+                3: { op: "nothing" },
+                4: { op: "nothing" },
+                5: { op: "nothing" },
+                6: { op: "nothing" },
               },
             },
-            { op: "rzut-za-kazdego", co: "przyjaciel", gubiPrzy: 2 },
+            { op: "roll-for-each", what: "friend", lostOn: 2 },
           ],
         } }],
   },
@@ -794,19 +794,19 @@ export const FIELD_SCRIPTS: Readonly<Partial<Record<FieldId, FieldScript>>> = {
   // "1 - tracisz 1 turę; 2-3 zostajesz Zamieniony w Kamień; 4-5 zyskujesz
   // dodatkowy ruch; 6 - zostałeś zignorowany."
   "wieza-przeznaczenia": {
-    obowiazkowe: true,
+    mandatory: true,
     offers: [
       {
         name: "Wieża Przeznaczenia",
         effect: {
-          op: "rzut",
+          op: "roll",
           faces: {
-            1: { op: "tura-stracona", turns: 1 },
-            2: { op: "kamien" },
-            3: { op: "kamien" },
-            4: { op: "ruch-dodatkowy" },
-            5: { op: "ruch-dodatkowy" },
-            6: { op: "nic" },
+            1: { op: "lose-turn", turns: 1 },
+            2: { op: "stone" },
+            3: { op: "stone" },
+            4: { op: "extra-move" },
+            5: { op: "extra-move" },
+            6: { op: "nothing" },
           },
         },
       },
@@ -851,7 +851,7 @@ export function compulsoryOffer(
 ): { name: string; effect: Effect } | null {
   if (!fieldId) return null;
   const script = fieldScriptFor(fieldId);
-  if (!script?.obowiazkowe) return null;
+  if (!script?.mandatory) return null;
   const owed = script.offers.find((offer) => !resolved.includes(offerKey(offer.name)));
   return owed ? { name: owed.name, effect: owed.effect } : null;
 }
@@ -884,7 +884,7 @@ export function offerNamed(
  * the same list.
  *
  * Deliberately shallower than `fieldsNamedBy`, which walks the whole tree. A
- * `uzdrow` buried in a die table inside a condition — the Wezwanie Duchów's
+ * `heal` buried in a die table inside a condition — the Wezwanie Duchów's
  * "3, 4 — leczysz do 1 Życia" — is an outcome you might roll, not a healer you
  * can visit, and hoisting it into "Możesz tu odwiedzić" would offer a service
  * nobody at this Obszar can actually buy.
@@ -934,7 +934,7 @@ export function residesOn(cardId: CardId): boolean {
   const script = scriptFor(cardId);
   if (!script) return false;
   const stays =
-    script.disposition.kind === "zostaje" || script.disposition.kind === "zostaje-z-pula";
+    script.disposition.kind === "stays" || script.disposition.kind === "stays-with-pool";
   return stays && script.optional === true;
 }
 
@@ -954,23 +954,23 @@ export function residesOn(cardId: CardId): boolean {
  */
 export function touchesGold(effect: Effect): boolean {
   switch (effect.op) {
-    case "kup":
-    case "sprzedaj":
+    case "buy":
+    case "sell":
       return true;
-    case "uzdrow":
-      return (effect.cena ?? 0) > 0;
-    case "zaklecie":
-      return (effect.cena ?? 0) > 0;
-    case "punkty":
+    case "heal":
+      return (effect.price ?? 0) > 0;
+    case "gain-spell":
+      return (effect.price ?? 0) > 0;
+    case "points":
       return effect.stat === "gold";
-    case "po-kolei":
+    case "sequence":
       return effect.steps.some(touchesGold);
-    case "wybor":
+    case "choice":
       return effect.options.some((one) => touchesGold(one.effect));
-    case "rzut":
+    case "roll":
       return Object.values(effect.faces).some(touchesGold);
-    case "gdy":
-      return touchesGold(effect.to) || (effect.inaczej ? touchesGold(effect.inaczej) : false);
+    case "when":
+      return touchesGold(effect.then) || (effect.else ? touchesGold(effect.else) : false);
     default:
       return false;
   }
@@ -984,7 +984,7 @@ export function touchesGold(effect: Effect): boolean {
  * decides whether an open offer shows you yours; the Magiczne Wrota's wish can
  * hand you a Sztuka Złota and the number is worth seeing. This one asks "is
  * there a merchant on this square", which is what a mark on the *map* claims —
- * and a wish is not a merchant. So a price is required: `kup` and `sprzedaj`
+ * and a wish is not a merchant. So a price is required: `buy` and `sell`
  * are trades by definition, and healing or a Zaklęcie only where one is
  * charged, which is what separates the Osada's Medyk from the CUDOTWÓRCA who
  * asks nothing.
@@ -993,24 +993,24 @@ export function touchesGold(effect: Effect): boolean {
  * coin off you and the Twierdza's Misja can bring you three, but neither is a
  * counter you walk up to — they are things that happen when the die lands, and
  * a satchel on the map would send somebody to a Karczma expecting to shop.
- * (The Karczma is `obowiazkowe` and never reaches here anyway; the Misja is
+ * (The Karczma is `mandatory` and never reaches here anyway; the Misja is
  * not, and would.)
  */
 export function tradesForGold(effect: Effect): boolean {
   switch (effect.op) {
-    case "kup":
-    case "sprzedaj":
+    case "buy":
+    case "sell":
       return true;
-    case "uzdrow":
-    case "zaklecie":
-      return (effect.cena ?? 0) > 0;
-    case "po-kolei":
+    case "heal":
+    case "gain-spell":
+      return (effect.price ?? 0) > 0;
+    case "sequence":
       return effect.steps.some(tradesForGold);
-    case "wybor":
+    case "choice":
       return effect.options.some((one) => tradesForGold(one.effect));
-    case "gdy":
+    case "when":
       return (
-        tradesForGold(effect.to) || (effect.inaczej ? tradesForGold(effect.inaczej) : false)
+        tradesForGold(effect.then) || (effect.else ? tradesForGold(effect.else) : false)
       );
     default:
       return false;
@@ -1025,20 +1025,20 @@ export function tradesForGold(effect: Effect): boolean {
  * rather than an exclusion. So the caller asks this of the field's script
  * directly rather than through `offersHere`, which drops the compulsory ones.
  *
- * Walked all the way down: a die inside a `wybor` or behind a `gdy` is still a
+ * Walked all the way down: a die inside a `choice` or behind a `when` is still a
  * die, and the Studnia Wieczności hides one behind „Jeżeli jesteś Dobry".
  */
 export function rollsHere(effect: Effect): boolean {
   switch (effect.op) {
-    case "rzut":
-    case "rzut-za-kazdego":
+    case "roll":
+    case "roll-for-each":
       return true;
-    case "po-kolei":
+    case "sequence":
       return effect.steps.some(rollsHere);
-    case "wybor":
+    case "choice":
       return effect.options.some((one) => rollsHere(one.effect));
-    case "gdy":
-      return rollsHere(effect.to) || (effect.inaczej ? rollsHere(effect.inaczej) : false);
+    case "when":
+      return rollsHere(effect.then) || (effect.else ? rollsHere(effect.else) : false);
     default:
       return false;
   }
@@ -1055,16 +1055,16 @@ export function rollsHere(effect: Effect): boolean {
  */
 export function movesYou(effect: Effect): boolean {
   switch (effect.op) {
-    case "przenies":
+    case "move":
       return true;
-    case "po-kolei":
+    case "sequence":
       return effect.steps.some(movesYou);
-    case "wybor":
+    case "choice":
       return effect.options.some((one) => movesYou(one.effect));
-    case "rzut":
+    case "roll":
       return Object.values(effect.faces).some(movesYou);
-    case "gdy":
-      return movesYou(effect.to) || (effect.inaczej ? movesYou(effect.inaczej) : false);
+    case "when":
+      return movesYou(effect.then) || (effect.else ? movesYou(effect.else) : false);
     default:
       return false;
   }
@@ -1085,30 +1085,30 @@ export function movesYou(effect: Effect): boolean {
  */
 export function changesYou(effect: Effect): boolean {
   switch (effect.op) {
-    case "punkty":
-    case "zamien-punkty":
-    case "natura":
-    case "ruch-dodatkowy":
-    case "uwolnij":
+    case "points":
+    case "swap-points":
+    case "set-nature":
+    case "extra-move":
+    case "release":
       return true;
-    case "uzdrow":
-    case "zaklecie":
-      return (effect.cena ?? 0) === 0;
-    case "po-kolei":
+    case "heal":
+    case "gain-spell":
+      return (effect.price ?? 0) === 0;
+    case "sequence":
       return effect.steps.some(changesYou);
-    case "wybor":
+    case "choice":
       return effect.options.some((one) => changesYou(one.effect));
-    case "gdy":
-      return changesYou(effect.to) || (effect.inaczej ? changesYou(effect.inaczej) : false);
+    case "when":
+      return changesYou(effect.then) || (effect.else ? changesYou(effect.else) : false);
     default:
       return false;
   }
 }
 
 export function trades(effect: Effect): boolean {
-  if (effect.op === "kup" || effect.op === "sprzedaj" || effect.op === "uzdrow") return true;
-  if (effect.op === "po-kolei") return effect.steps.some(trades);
-  if (effect.op === "wybor") return effect.options.some((option) => trades(option.effect));
+  if (effect.op === "buy" || effect.op === "sell" || effect.op === "heal") return true;
+  if (effect.op === "sequence") return effect.steps.some(trades);
+  if (effect.op === "choice") return effect.options.some((option) => trades(option.effect));
   return false;
 }
 
@@ -1117,7 +1117,7 @@ export function trades(effect: Effect): boolean {
  *
  * A shop can be printed on the board or can have walked in as a Karta and
  * stayed (16.8), and 21.1 makes no distinction between them — so both are
- * walked, and a `po-kolei` or a `wybor` is walked into.
+ * walked, and a `sequence` or a `choice` is walked into.
  *
  * Takes the Karty as a plain list rather than reading them, because the two
  * callers hold them in different shapes and neither shape belongs in the
@@ -1140,8 +1140,8 @@ export function offerAmong<K extends Effect["op"]>(
   const found: { from: string; effect: Effect }[] = [];
   const walk = (from: string, effect: Effect) => {
     if (effect.op === op) found.push({ from, effect });
-    if (effect.op === "po-kolei") effect.steps.forEach((step) => walk(from, step));
-    if (effect.op === "wybor") effect.options.forEach((one) => walk(from, one.effect));
+    if (effect.op === "sequence") effect.steps.forEach((step) => walk(from, step));
+    if (effect.op === "choice") effect.options.forEach((one) => walk(from, one.effect));
   };
 
   for (const offer of fieldScriptFor(fieldId)?.offers ?? []) walk(offer.name, offer.effect);

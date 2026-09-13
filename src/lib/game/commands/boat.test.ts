@@ -27,7 +27,7 @@ describe("taking the Łódź", () => {
   it("hands back the crossing it opens", () => {
     const { result } = takeCard(standing(), { seatId: "seat-a", cardId: "lodz" });
     expect(result.resolve?.effect).toMatchObject({
-      op: "efekt",
+      op: "status",
       modifier: { kind: "przeprawa", przez: "trzesawiska" },
       ends: { kind: "turns", turns: 1 },
     });

@@ -530,7 +530,7 @@ describe("handing the turn on anyway (the test console's `force`)", () => {
           seatId: "seat-a",
           cardId: "targowisko",
           reason: "TARGOWISKO",
-          effect: { op: "kup", towar: [{ co: "helm", cena: 1 }] },
+          effect: { op: "buy", goods: [{ name: "helm", price: 1 }] },
           cursor: [],
         }),
       },
@@ -615,7 +615,7 @@ describe("starting this turn over (the test console's `turn reset`)", () => {
         turn_state: {
           stack: [
             field({ drawn: [{ cardId: "cyklop", cardClass: "foe" }] }),
-            { phase: "script", seatId: "seat-a", cardId: "grota", reason: "GROTA", effect: { op: "kup", towar: [] }, cursor: [] },
+            { phase: "script", seatId: "seat-a", cardId: "grota", reason: "GROTA", effect: { op: "buy", goods: [] }, cursor: [] },
           ],
         },
       },

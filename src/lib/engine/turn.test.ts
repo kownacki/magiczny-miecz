@@ -626,7 +626,7 @@ describe("dealing a Karta into a turn", () => {
       seatId: "seat-a",
       cardId: "targowisko",
       reason: "TARGOWISKO",
-      effect: { op: "nic" },
+      effect: { op: "nothing" },
       cursor: [],
     };
     expect(dealtInto({ stack: [field(), suspended] }, card, HERE)).toBeNull();

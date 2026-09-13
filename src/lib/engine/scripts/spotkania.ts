@@ -20,130 +20,130 @@ export const SPOTKANIA: Readonly<Record<string, CardScript>> = {
    */
   "godzina-duchow": {
     effect: {
-      op: "gdy",
-      warunek: { is: "natura", jedna_z: ["evil"] },
-      to: {
-        op: "wybor",
+      op: "when",
+      condition: { is: "nature", oneOf: ["evil"] },
+      then: {
+        op: "choice",
         options: [
           {
             label: "Wezwij duchy",
             effect: {
-              op: "rzut",
+              op: "roll",
               faces: {
-                1: { op: "zaklecie", count: 1 },
-                2: { op: "zaklecie", count: 1 },
-                3: { op: "uzdrow", upTo: 1 },
-                4: { op: "uzdrow", upTo: 1 },
-                5: { op: "tura-stracona", turns: 1 },
-                6: { op: "tura-stracona", turns: 1 },
+                1: { op: "gain-spell", count: 1 },
+                2: { op: "gain-spell", count: 1 },
+                3: { op: "heal", upTo: 1 },
+                4: { op: "heal", upTo: 1 },
+                5: { op: "lose-turn", turns: 1 },
+                6: { op: "lose-turn", turns: 1 },
               },
             },
           },
-          { label: "Nie wzywaj", effect: { op: "nic" } },
+          { label: "Nie wzywaj", effect: { op: "nothing" } },
         ],
       },
-      inaczej: { op: "nic" },
+      else: { op: "nothing" },
     },
-    disposition: { kind: "odloz" },
+    disposition: { kind: "discard" },
   },
 
   "zakleta-sciezka": {
     effect: {
-      op: "rzut",
+      op: "roll",
       faces: {
-        1: { op: "przenies", to: { kind: "pole", fieldId: "rownina-snu" } },
-        2: { op: "przenies", to: { kind: "pole", fieldId: "rownina-traw" } },
-        3: { op: "przenies", to: { kind: "pole", fieldId: "dolina-cienia" } },
-        4: { op: "przenies", to: { kind: "pole", fieldId: "mroczna-polana" } },
-        5: { op: "przenies", to: { kind: "pole", fieldId: "osada" } },
-        6: { op: "przenies", to: { kind: "pole", fieldId: "karczma" } },
+        1: { op: "move", to: { kind: "field", fieldId: "rownina-snu" } },
+        2: { op: "move", to: { kind: "field", fieldId: "rownina-traw" } },
+        3: { op: "move", to: { kind: "field", fieldId: "dolina-cienia" } },
+        4: { op: "move", to: { kind: "field", fieldId: "mroczna-polana" } },
+        5: { op: "move", to: { kind: "field", fieldId: "osada" } },
+        6: { op: "move", to: { kind: "field", fieldId: "karczma" } },
       },
     },
-    disposition: { kind: "odloz" },
+    disposition: { kind: "discard" },
   },
   straz: {
-    effect: { op: "przenies", to: { kind: "poczatek-ruchu" } },
-    disposition: { kind: "odloz" },
+    effect: { op: "move", to: { kind: "move-start" } },
+    disposition: { kind: "discard" },
   },
   zaraza: {
-    effect: { op: "punkty", stat: "life", delta: -1, target: "wszyscy-w-kregu" },
-    disposition: { kind: "odloz" },
+    effect: { op: "points", stat: "life", delta: -1, target: "everyone-in-ring" },
+    disposition: { kind: "discard" },
   },
   "burza-siedmiu-slonc": {
-    effect: { op: "tura-stracona", turns: 1, target: "wszyscy" },
-    disposition: { kind: "odloz" },
+    effect: { op: "lose-turn", turns: 1, target: "everyone" },
+    disposition: { kind: "discard" },
   },
   "zacmienie-slonc": {
     effect: {
-      op: "gdy",
-      warunek: { is: "natura", jedna_z: ["good", "chaotic"] },
-      to: { op: "tura-stracona", turns: 1, target: "wszyscy" },
+      op: "when",
+      condition: { is: "nature", oneOf: ["good", "chaotic"] },
+      then: { op: "lose-turn", turns: 1, target: "everyone" },
     },
-    disposition: { kind: "odloz" },
+    disposition: { kind: "discard" },
   },
   // „Na Krainę, po której wędrujesz spada apokaliptyczna Gwiazda. W
   // katastrofie giną wszyscy Nieznajomi - należy odłożyć ich Karty."
   kometa: {
-    effect: { op: "katastrofa", klasa: "stranger", zasieg: "krag" },
-    disposition: { kind: "odloz" },
+    effect: { op: "wipe", cardClass: "stranger", reach: "krag" },
+    disposition: { kind: "discard" },
   },
   "magiczna-tablica": {
-    effect: { op: "zaklecia-do-limitu" },
-    disposition: { kind: "odloz" },
+    effect: { op: "spells-to-limit" },
+    disposition: { kind: "discard" },
   },
   "zatrute-ziola": {
     effect: {
-      op: "gdy",
-      warunek: { is: "natura", jedna_z: ["evil"] },
-      to: { op: "punkty", stat: "life", delta: 1 },
-      inaczej: {
-        op: "gdy",
-        warunek: { is: "natura", jedna_z: ["good"] },
-        to: { op: "punkty", stat: "life", delta: -1 },
+      op: "when",
+      condition: { is: "nature", oneOf: ["evil"] },
+      then: { op: "points", stat: "life", delta: 1 },
+      else: {
+        op: "when",
+        condition: { is: "nature", oneOf: ["good"] },
+        then: { op: "points", stat: "life", delta: -1 },
       },
     },
-    disposition: { kind: "odloz" },
+    disposition: { kind: "discard" },
   },
   "poslancy-bogow": {
     effect: {
-      op: "gdy",
-      warunek: { is: "natura", jedna_z: ["good"] },
-      to: { op: "punkty", stat: "life", delta: 1 },
-      inaczej: {
-        op: "gdy",
-        warunek: { is: "natura", jedna_z: ["evil"] },
-        to: { op: "punkty", stat: "life", delta: -1 },
+      op: "when",
+      condition: { is: "nature", oneOf: ["good"] },
+      then: { op: "points", stat: "life", delta: 1 },
+      else: {
+        op: "when",
+        condition: { is: "nature", oneOf: ["evil"] },
+        then: { op: "points", stat: "life", delta: -1 },
       },
     },
-    disposition: { kind: "odloz" },
+    disposition: { kind: "discard" },
   },
   "sabat-czarownic": {
     effect: {
-      op: "gdy",
-      warunek: { is: "natura", jedna_z: ["evil"] },
-      to: { op: "punkty", stat: "magic", delta: 1 },
-      inaczej: { op: "natura", na: "evil" },
+      op: "when",
+      condition: { is: "nature", oneOf: ["evil"] },
+      then: { op: "points", stat: "magic", delta: 1 },
+      else: { op: "set-nature", to: "evil" },
     },
-    disposition: { kind: "odloz" },
+    disposition: { kind: "discard" },
   },
   "slup-ognia": {
     effect: {
-      op: "gdy",
-      warunek: { is: "natura", jedna_z: ["good"] },
-      to: { op: "punkty", stat: "magic", delta: 1 },
-      inaczej: { op: "natura", na: "good" },
+      op: "when",
+      condition: { is: "nature", oneOf: ["good"] },
+      then: { op: "points", stat: "magic", delta: 1 },
+      else: { op: "set-nature", to: "good" },
     },
-    disposition: { kind: "odloz" },
+    disposition: { kind: "discard" },
   },
   zasadzka: {
     effect: {
-      op: "po-kolei",
+      op: "sequence",
       steps: [
-        { op: "strata", co: "gold" },
-        { op: "strata", co: "wszystkie-przedmioty" },
+        { op: "lose", what: "gold" },
+        { op: "lose", what: "all-items" },
       ],
     },
-    disposition: { kind: "odloz" },
+    disposition: { kind: "discard" },
   },
   /**
    * "Z Płaskowyżu zeszła gęsta Mgła, okrywając nieprzeniknioną bielą wszystkie
@@ -152,7 +152,7 @@ export const SPOTKANIA: Readonly<Record<string, CardScript>> = {
    *
    * The cap the console has been able to conjure since `EFFECTS.fog` was
    * written — „Mgła", `move-max` 1 — arriving from the Karta it is named after.
-   * It was `{ op: "nic" }`, so the app told the table that the storm which
+   * It was `{ op: "nothing" }`, so the app told the table that the storm which
    * halves everybody's walk for two turns does nothing at all, and the engine
    * had every piece of it: the modifier by name, and the Południca two entries
    * down using the identical shape for one Postać.
@@ -164,13 +164,13 @@ export const SPOTKANIA: Readonly<Record<string, CardScript>> = {
    */
   mgla: {
     effect: {
-      op: "efekt",
+      op: "status",
       label: "Mgła — najwyżej 1 Obszar na turę",
       modifier: { kind: "move-max", fields: 1 },
       ends: { kind: "turns", turns: 2 },
-      target: "wszyscy",
+      target: "everyone",
     },
-    disposition: { kind: "po-turach", turns: 2 },
+    disposition: { kind: "after-turns", turns: 2 },
   },
   /**
    * "Przy tym szczególnym układzie planet, na czas 1 tury podwojona zostaje
@@ -187,8 +187,8 @@ export const SPOTKANIA: Readonly<Record<string, CardScript>> = {
    * dzieje" was doing on the panel.
    */
   "uklad-planet": {
-    effect: { op: "nic" },
-    disposition: { kind: "po-turach", turns: 1 },
+    effect: { op: "nothing" },
+    disposition: { kind: "after-turns", turns: 1 },
   },
   /**
    * The Beast's tax, and one of the few cards that reaches across the whole
@@ -198,33 +198,33 @@ export const SPOTKANIA: Readonly<Record<string, CardScript>> = {
    * the six groups are three Natury and three Kręgi. "Nie posiadający złota
    * tracą 1 Życie" is not an alternative the payer chooses: it is what happens
    * to somebody with an empty purse, so it is the second step rather than a
-   * `wybor`.
+   * `choice`.
    */
   danina: {
     effect: {
-      op: "rzut",
+      op: "roll",
       faces: Object.fromEntries(
         (
           [
-            [1, "dobrzy"],
-            [2, "chaotyczni"],
-            [3, "zli"],
-            [4, "w-dolnym-kregu"],
-            [5, "w-srodkowym-kregu"],
-            [6, "w-gornym-kregu"],
+            [1, "good"],
+            [2, "chaotic"],
+            [3, "evil"],
+            [4, "in-lower-ring"],
+            [5, "in-middle-ring"],
+            [6, "in-upper-ring"],
           ] as const
         ).map(([face, target]) => [
           face,
           {
-            op: "gdy",
-            warunek: { is: "ma-zloto" },
-            to: { op: "punkty", stat: "gold", delta: -1, target },
-            inaczej: { op: "punkty", stat: "life", delta: -1, target },
+            op: "when",
+            condition: { is: "has-gold" },
+            then: { op: "points", stat: "gold", delta: -1, target },
+            else: { op: "points", stat: "life", delta: -1, target },
           },
         ]),
       ),
     },
-    disposition: { kind: "odloz" },
+    disposition: { kind: "discard" },
   },
 
   /**
@@ -234,12 +234,12 @@ export const SPOTKANIA: Readonly<Record<string, CardScript>> = {
    */
   "zaklinacz-czasu": {
     effect: {
-      op: "tura-stracona",
+      op: "lose-turn",
       turns: 1,
-      target: "wszyscy",
-      oprocz: ["elf", "hummit", "spryciarz", "czarodziejka", "szczesciarz"],
+      target: "everyone",
+      except: ["elf", "hummit", "spryciarz", "czarodziejka", "szczesciarz"],
     },
-    disposition: { kind: "po-turach", turns: 1 },
+    disposition: { kind: "after-turns", turns: 1 },
   },
 
   // Every Zaklęcie in the game goes, in every Krąg — not just the drawer's.
@@ -252,8 +252,8 @@ export const SPOTKANIA: Readonly<Record<string, CardScript>> = {
    * Czarodziej one of his three.
    */
   przesilenie: {
-    effect: { op: "strata", co: "wszystkie-zaklecia", target: "wszyscy" },
-    disposition: { kind: "odloz" },
+    effect: { op: "lose", what: "all-spells", target: "everyone" },
+    disposition: { kind: "discard" },
   },
 
   /**
@@ -272,12 +272,12 @@ export const SPOTKANIA: Readonly<Record<string, CardScript>> = {
    */
   poludnica: {
     effect: {
-      op: "efekt",
+      op: "status",
       label: "Południca — najwyżej 1 Obszar na turę",
       modifier: { kind: "move-max", fields: 1 },
       ends: { kind: "event", what: "crossing" },
     },
-    disposition: { kind: "bierzesz" },
+    disposition: { kind: "kept" },
   },
 
   /**
@@ -297,17 +297,17 @@ export const SPOTKANIA: Readonly<Record<string, CardScript>> = {
    */
   "zly-duch": {
     effect: {
-      op: "po-kolei",
+      op: "sequence",
       steps: [
-        { op: "strata", co: "wszyscy-przyjaciele-oprocz", oprocz: ["poludnica"] },
+        { op: "lose", what: "all-friends-except", except: ["poludnica"] },
         {
-          op: "efekt",
+          op: "status",
           label: "Zły Duch — nie zdobędziesz Przyjaciół, póki nie odwiedzisz Pustelni",
           modifier: { kind: "no-friends" },
           ends: { kind: "dispelled" },
         },
       ],
     },
-    disposition: { kind: "bierzesz" },
+    disposition: { kind: "kept" },
   },
 };

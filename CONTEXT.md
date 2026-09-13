@@ -157,7 +157,7 @@ moment, which is the whole reason they are ports.
   Ability kinds would become Modifier kinds and the union would shrink to
   per-card data; that is the wrong shape. `ABILITIES` is one table saying what
   every card prints, `describeAbility` renders it on the seat card, and even
-  `punkty` — the kind whose reader moved first — is still the source
+  `points` — the kind whose reader moved first — is still the source
   `BONUS_BY_ID` is *built from*. Retiring the kinds would scatter card data
   into ad-hoc lookups and buy nothing: the duplication was always in the
   **readers**, and folding those fixed it. Keep both unions, keep the bridge

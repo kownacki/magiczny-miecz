@@ -17,16 +17,16 @@ import type { Effect } from "../cardScript";
  */
 export function WISH(): Effect {
   return {
-    op: "wybor",
+    op: "choice",
     options: [
-      { label: "zyskujesz 1 punkt Miecza", effect: { op: "punkty", stat: "sword", delta: 1 } },
-      { label: "zyskujesz 1 punkt Magii", effect: { op: "punkty", stat: "magic", delta: 1 } },
-      { label: "zyskujesz 1 punkt Życia", effect: { op: "punkty", stat: "life", delta: 1 } },
-      { label: "zyskujesz 1 Zaklęcie", effect: { op: "zaklecie", count: 1 } },
-      { label: "zyskujesz 1 Sztukę Złota", effect: { op: "punkty", stat: "gold", delta: 1 } },
+      { label: "zyskujesz 1 punkt Miecza", effect: { op: "points", stat: "sword", delta: 1 } },
+      { label: "zyskujesz 1 punkt Magii", effect: { op: "points", stat: "magic", delta: 1 } },
+      { label: "zyskujesz 1 punkt Życia", effect: { op: "points", stat: "life", delta: 1 } },
+      { label: "zyskujesz 1 Zaklęcie", effect: { op: "gain-spell", count: 1 } },
+      { label: "zyskujesz 1 Sztukę Złota", effect: { op: "points", stat: "gold", delta: 1 } },
       {
         label: "przenosisz się na dowolny Obszar w tym Kręgu",
-        effect: { op: "przenies", to: { kind: "dowolne-w-kregu" } },
+        effect: { op: "move", to: { kind: "anywhere-in-ring" } },
       },
     ],
   };

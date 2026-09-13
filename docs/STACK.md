@@ -60,8 +60,8 @@ before the first engine commit, and it is what "done" means.
 ## What is wrong today
 
 `games.turn_state` is a single `TurnPhase` — `roll | move | field | fight |
-bridge | end`. Card scripts are a tree of 27 ops (`po-kolei`, `wybor`, `rzut`,
-`gdy` composing the rest) walked recursively by `effects.ts`. When a step opens
+bridge | end`. Card scripts are a tree of 27 ops (`sequence`, `choice`, `roll`,
+`when` composing the rest) walked recursively by `effects.ts`. When a step opens
 something that has to finish first, the engine handles it by **replacement**
 plus two escape hatches:
 
@@ -70,15 +70,15 @@ plus two escape hatches:
 - `placeSeat` — a teleport overwrites the field frame with a fresh one at the
   destination.
 
-And a decision is handled by **re-walking**: `wybor` returns the whole effect
+And a decision is handled by **re-walking**: `choice` returns the whole effect
 as `pending`, the browser answers with a number, and the server re-runs the card
-from the top with `choices` in hand. That is why `po-kolei` has an "all or
+from the top with `choices` in hand. That is why `sequence` has an "all or
 nothing" branch — the first step's point of Miecz cannot be written before the
 second step's question, because nothing remembers *where in the card* the turn
 is.
 
 The evidence that this is a real limit and not a theoretical one: **the corpus
-has zero scripts with a `walka` inside a `po-kolei`.** Not because no card does
+has zero scripts with a `fight` inside a `sequence`.** Not because no card does
 that — Grota's faces 5 and 6, Sidh's 4 to 6 — but because a fight replaces the
 frame and the rest of the sequence would be lost, so nobody authored one. Six of
 the twenty MANUAL entries in `coverage.ts` are the same gap wearing different
@@ -126,7 +126,7 @@ thing.
 Płaskowyż Mgieł, Zaklęta Ścieżka moves him, and the rulebook says outright he
 will *not* fight the Niedźwiedź and will *not* take the gold — they stay face up
 for the next character — and he continues "tak, jakby jego ruch zakończył się
-na Równinie Traw". So `przenies` pops down to and including the `field` frame
+na Równinie Traw". So `move` pops down to and including the `field` frame
 and pushes a new one at the destination. What was above is abandoned, not
 queued.
 
@@ -189,11 +189,11 @@ turn_state = { stack: Frame[] }   // top is what is on screen
 Three operations, all pure `Snapshot → Changeset`, all under the same CAS on
 `games.revision`:
 
-- **push** — `walka` pushes a fight above the script; `wybor` pushes an `ask`;
+- **push** — `fight` pushes a fight above the script; `choice` pushes an `ask`;
   a spell pushes a `cast`.
 - **pop** — `endFight` pops and the frame beneath resumes at its `cursor`.
   `Fight.resume` and the all-or-nothing branch delete themselves.
-- **cut** — `przenies` to a field: pop to the `field` frame inclusive, push a
+- **cut** — `move` to a field: pop to the `field` frame inclusive, push a
   fresh one.
 
 `Decisions` stays a list of numbers and targets **the top frame**, not the
@@ -214,7 +214,7 @@ refusal at once.
 **And one read that is not `top()`.** A write aimed at the *Obszar* — the die
 on it, the kolejka in it — must find the `field` frame wherever it now stands,
 because a Karta suspended over a question has pushed a `script` frame above it
-and a `walka` another above that. `beneath(state, "field")` is that question and
+and a `fight` another above that. `beneath(state, "field")` is that question and
 `replaceAt` is how the answer is written back. Reaching for `top()` there is a
 silent bug rather than a loud one: the frame is simply the wrong shape, the
 guard says no, and nothing happens. It cost the Eremita, who settled on his
@@ -244,7 +244,7 @@ subscription.
 |---|---|---|
 | **0** | this page; the acceptance test below written as a test | the test exists and is skipped |
 | **1** | `turn_state = { stack }`; `top()`; every read goes through `top()`, every write through `only`/`replaceTop`/`push`/`pop`; `Fight.resume` deleted — a summoned fight **pushes** over the frame it interrupted and closing it pops | suite green; console `state` prints the stack when it is deeper than one |
-| **2** | `script` frames with a cursor; `ask` replaces `pending` re-walk; `walka` inside a script pushes; `cast` above `fight` | acceptance test passes; `po-kolei`'s all-or-nothing branch is gone |
+| **2** | `script` frames with a cursor; `ask` replaces `pending` re-walk; `fight` inside a script pushes; `cast` above `fight` | acceptance test passes; `sequence`'s all-or-nothing branch is gone |
 | **3** | cash in: Trójgłowy Smok (`loop`), CHOCHLIK (`ask` outside a script), Odmiana Losu by a bystander, the 18 anytime spells acting on the fight beneath | one commit per card; its MANUAL entry deleted; `coverage.ts` shrinks |
 | **4** | browser: draw sheet and fight sheet render `top(stack)`; "waiting for X" drawn from the frame's `seatId` | the scenario clicked through on a real table |
 
@@ -261,7 +261,7 @@ prints the stack raw; if it cannot show a frame, the GUI has nothing to draw.
 - **Guardian fights stay replacements.** The bridge and crossing guardians
   resolve into `endTurn()` and resume nothing beneath; pushing them would be
   depth with no reader.
-- **The browser's batching stays.** An ordinary own-`wybor` still resolves in
+- **The browser's batching stays.** An ordinary own-`choice` still resolves in
   one commit with the choices batched in; frames appear only where the atomic
   walk genuinely cannot finish. The acceptance test's card moments (the Smok
   loop, bystander casts) close with step 3, which authors the cards; the
@@ -326,10 +326,10 @@ decisions with it:
   after `deck` and `seed`. `asSeenBy` empties the refs for every device but the
   one seat's and sends `count` in their place: the table may see two cards held
   up (9.3), and no more. The browser draws backs from the count.
-- **`suspended.opens` became a union.** A `zaklecie` step inside a `po-kolei`
-  suspends the same way a `walka` does, and `framed` opens whichever kind was
+- **`suspended.opens` became a union.** A `gain-spell` step inside a `sequence`
+  suspends the same way a `fight` does, and `framed` opens whichever kind was
   asked for — so the card carries on after the answer instead of losing its
-  tail. Only for `count: 1`, which is every `zaklecie` in the box; the
+  tail. Only for `count: 1`, which is every `gain-spell` in the box; the
   Nieznajomy's price is charged before the question, because the coin buys the
   draw and the draw has happened by the time anything is on screen.
 

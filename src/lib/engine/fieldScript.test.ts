@@ -16,14 +16,14 @@ import { fieldWithText, offerText } from "@/lib/view/fieldText";
 /** Every effect in a field's offers, flattened. */
 function every(effect: Effect): Effect[] {
   const found = [effect];
-  if (effect.op === "po-kolei") effect.steps.forEach((s) => found.push(...every(s)));
-  if (effect.op === "wybor") effect.options.forEach((o) => found.push(...every(o.effect)));
-  if (effect.op === "rzut") {
+  if (effect.op === "sequence") effect.steps.forEach((s) => found.push(...every(s)));
+  if (effect.op === "choice") effect.options.forEach((o) => found.push(...every(o.effect)));
+  if (effect.op === "roll") {
     Object.values(effect.faces).forEach((f) => found.push(...every(f)));
   }
-  if (effect.op === "gdy") {
-    found.push(...every(effect.to));
-    if (effect.inaczej) found.push(...every(effect.inaczej));
+  if (effect.op === "when") {
+    found.push(...every(effect.then));
+    if (effect.else) found.push(...every(effect.else));
   }
   return found;
 }
@@ -43,34 +43,34 @@ describe("the fields that trade", () => {
 
   it("sends every character somewhere the board has", () => {
     for (const { fieldId, effect } of ALL) {
-      if (effect.op === "przenies" && effect.to.kind === "pole") {
+      if (effect.op === "move" && effect.to.kind === "field") {
         expect(FIELDS.has(effect.to.fieldId), `${fieldId} → ${effect.to.fieldId}`).toBe(true);
       }
     }
   });
 
   it("sells only Wyposażenie cards that exist", () => {
-    const priced = ALL.filter((e) => e.effect.op === "kup");
+    const priced = ALL.filter((e) => e.effect.op === "buy");
     expect(priced.length).toBeGreaterThan(0);
     for (const { fieldId, effect } of priced) {
-      if (effect.op !== "kup") continue;
-      for (const towar of effect.towar) {
-        expect(goodsId(towar.co), `${fieldId}: ${towar.co}`).not.toBeNull();
-        expect(towar.cena).toBeGreaterThan(0);
+      if (effect.op !== "buy") continue;
+      for (const good of effect.goods) {
+        expect(goodsId(good.name), `${fieldId}: ${good.name}`).not.toBeNull();
+        expect(good.price).toBeGreaterThan(0);
       }
     }
   });
 
   it("prices the Osada's Płatnerz as the board prints it", () => {
     const shop = fieldScriptFor("osada")!.offers.find((o) => o.name === "Płatnerz")!;
-    expect(shop.effect.op).toBe("kup");
-    if (shop.effect.op !== "kup") return;
+    expect(shop.effect.op).toBe("buy");
+    if (shop.effect.op !== "buy") return;
     // "za 2 Sz. Z. miecz; sztylet za 3 Sz. Z.; hełm - 1 Sz. Z." — the sword is
     // cheaper than the dagger, which reads like a misprint and is not one.
-    expect(shop.effect.towar).toEqual([
-      { co: "Miecz", cena: 2 },
-      { co: "Sztylet", cena: 3 },
-      { co: "Hełm", cena: 1 },
+    expect(shop.effect.goods).toEqual([
+      { name: "Miecz", price: 2 },
+      { name: "Sztylet", price: 3 },
+      { name: "Hełm", price: 1 },
     ]);
   });
 
@@ -82,13 +82,13 @@ describe("the fields that trade", () => {
    */
   it("gives every die table every face it can land on", () => {
     for (const { fieldId, offer, effect } of ALL) {
-      if (effect.op !== "rzut") continue;
+      if (effect.op !== "roll") continue;
       const faces =
-        effect.kostki === 2 ? [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] : [1, 2, 3, 4, 5, 6];
+        effect.dice === 2 ? [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] : [1, 2, 3, 4, 5, 6];
       for (const face of faces) {
         expect(effect.faces[face], `${fieldId}/${offer} face ${face}`).toBeDefined();
       }
-      if (effect.kostki === 2) {
+      if (effect.dice === 2) {
         expect(effect.faces[1], `${fieldId}/${offer} cannot roll a 1`).toBeUndefined();
       }
     }
@@ -100,7 +100,7 @@ describe("the fields that trade", () => {
     // whose mission is deliberately absent from this file.
     for (const [fieldId, script] of Object.entries(FIELD_SCRIPTS)) {
       const does = script.offers.some((offer) =>
-        every(offer.effect).some((effect) => effect.op !== "nic" && effect.op !== "rzut"),
+        every(offer.effect).some((effect) => effect.op !== "nothing" && effect.op !== "roll"),
       );
       expect(does, fieldId).toBe(true);
     }
@@ -108,19 +108,19 @@ describe("the fields that trade", () => {
 
   it("makes the two fields nobody may walk past mandatory", () => {
     // "MUSISZ RZUCIĆ KOSTKĄ" at the Karczma, and the Strażnik's toll.
-    expect(fieldScriptFor("karczma")?.obowiazkowe).toBe(true);
-    expect(fieldScriptFor("straznik-magicznych-wrot")?.obowiazkowe).toBe(true);
-    expect(fieldScriptFor("osada")?.obowiazkowe).toBeUndefined();
+    expect(fieldScriptFor("karczma")?.mandatory).toBe(true);
+    expect(fieldScriptFor("straznik-magicznych-wrot")?.mandatory).toBe(true);
+    expect(fieldScriptFor("osada")?.mandatory).toBeUndefined();
   });
 
   it("charges for healing where the board charges", () => {
     for (const id of ["osada", "pustelnia", "zamek"] as const) {
       const cure = fieldScriptFor(id)!
         .offers.flatMap((o) => every(o.effect))
-        .find((e) => e.op === "uzdrow");
+        .find((e) => e.op === "heal");
       expect(cure, id).toBeDefined();
-      if (cure?.op !== "uzdrow") continue;
-      expect(cure.cena, id).toBe(1);
+      if (cure?.op !== "heal") continue;
+      expect(cure.price, id).toBe(1);
       // 4.7: never above the four a character starts with.
       expect(cure.upTo, id).toBe(4);
     }
@@ -146,14 +146,14 @@ describe("a price list names real cards", () => {
  *
  * This decides whether a turn can be walked away from, and it lived in the page
  * component until now, which is why it had no tests. The two fields it answers
- * for are the only two carrying `obowiazkowe: true`: the Karczma's "MUSISZ
+ * for are the only two carrying `mandatory: true`: the Karczma's "MUSISZ
  * RZUCIĆ KOSTKĄ" and the Strażnik's toll.
  */
 describe("the offer an Obszar makes whether or not it is asked", () => {
   it("hands back the Karczma's die table before anything is settled", () => {
     const owed = compulsoryOffer("karczma", []);
     expect(owed?.name).toBe("Karczma");
-    expect(owed?.effect.op).toBe("rzut");
+    expect(owed?.effect.op).toBe("roll");
   });
 
   it("hands back the Strażnik's toll, which is a choice but not an optional one", () => {
@@ -161,7 +161,7 @@ describe("the offer an Obszar makes whether or not it is asked", () => {
     // fields, and only these two are.
     const owed = compulsoryOffer("straznik-magicznych-wrot", []);
     expect(owed?.name).toBe("Strażnik");
-    expect(owed?.effect.op).toBe("wybor");
+    expect(owed?.effect.op).toBe("choice");
   });
 
   /**
@@ -217,25 +217,25 @@ describe("the offer an Obszar makes whether or not it is asked", () => {
 
 describe("the cards that are shops", () => {
   it("recognises each of the three trading operations", () => {
-    expect(trades({ op: "kup", towar: [{ co: "Miecz", cena: 2 }] })).toBe(true);
-    expect(trades({ op: "sprzedaj", cena: 1 })).toBe(true);
-    expect(trades({ op: "uzdrow", upTo: 4, cena: 1 })).toBe(true);
+    expect(trades({ op: "buy", goods: [{ name: "Miecz", price: 2 }] })).toBe(true);
+    expect(trades({ op: "sell", price: 1 })).toBe(true);
+    expect(trades({ op: "heal", upTo: 4, price: 1 })).toBe(true);
   });
 
   it("counts free healing, which is still somebody you visit", () => {
     // The Pustelnik charges and the Nieznajomy on the road does not, and both
     // are a person standing on the Obszar with something to give.
-    expect(trades({ op: "uzdrow", upTo: 2 })).toBe(true);
+    expect(trades({ op: "heal", upTo: 2 })).toBe(true);
   });
 
   it("finds a shop inside a sequence or a choice", () => {
-    const buy: Effect = { op: "kup", towar: [{ co: "Zaklęcie", cena: 1 }] };
-    expect(trades({ op: "po-kolei", steps: [{ op: "nic" }, buy] })).toBe(true);
+    const buy: Effect = { op: "buy", goods: [{ name: "Zaklęcie", price: 1 }] };
+    expect(trades({ op: "sequence", steps: [{ op: "nothing" }, buy] })).toBe(true);
     expect(
       trades({
-        op: "wybor",
+        op: "choice",
         options: [
-          { label: "Nie", effect: { op: "nic" } },
+          { label: "Nie", effect: { op: "nothing" } },
           { label: "Tak", effect: buy },
         ],
       }),
@@ -249,14 +249,14 @@ describe("the cards that are shops", () => {
     // buy. Deliberately shallower than `fieldsNamedBy`, which walks everything.
     expect(
       trades({
-        op: "rzut",
+        op: "roll",
         faces: {
-          1: { op: "nic" },
-          2: { op: "nic" },
-          3: { op: "uzdrow", upTo: 1 },
-          4: { op: "uzdrow", upTo: 1 },
-          5: { op: "nic" },
-          6: { op: "nic" },
+          1: { op: "nothing" },
+          2: { op: "nothing" },
+          3: { op: "heal", upTo: 1 },
+          4: { op: "heal", upTo: 1 },
+          5: { op: "nothing" },
+          6: { op: "nothing" },
         },
       }),
     ).toBe(false);
@@ -264,14 +264,14 @@ describe("the cards that are shops", () => {
 
   it("does not go looking inside a condition either", () => {
     expect(
-      trades({ op: "gdy", warunek: { is: "ma-zloto" }, to: { op: "sprzedaj", cena: 1 } }),
+      trades({ op: "when", condition: { is: "has-gold" }, then: { op: "sell", price: 1 } }),
     ).toBe(false);
   });
 
   it("says no to everything that merely happens to you", () => {
-    expect(trades({ op: "nic" })).toBe(false);
-    expect(trades({ op: "punkty", stat: "gold", delta: -1 })).toBe(false);
-    expect(trades({ op: "walka", nazwa: "CYKLOP", miecz: 6 })).toBe(false);
+    expect(trades({ op: "nothing" })).toBe(false);
+    expect(trades({ op: "points", stat: "gold", delta: -1 })).toBe(false);
+    expect(trades({ op: "fight", name: "CYKLOP", sword: 6 })).toBe(false);
   });
 
   it("agrees with the board about which fields keep a shop", () => {
@@ -310,7 +310,7 @@ describe("an offer's printed line", () => {
    */
   it("is present wherever an Obszar makes more than one, except the Egzorcyzm", () => {
     for (const [id, script] of Object.entries(FIELD_SCRIPTS)) {
-      if (!script || script.obowiazkowe || script.offers.length < 2) continue;
+      if (!script || script.mandatory || script.offers.length < 2) continue;
       for (const offer of script.offers) {
         // The one offer the board is silent about: the ZŁY DUCH's own Karta
         // carries the words, and the Pustelnia prints only the herbs.

@@ -126,8 +126,8 @@ export async function playExample(cardId: CardId, example: Example): Promise<Pla
     if (!frame.held) {
       const asking = nodeAt(frame.effect, frame.cursor);
       const ask = asking ? wordOf(asking).asks(asking) : null;
-      if (!asking || !ask || ask.kind === "nieobslugiwane") return stopped(table, asking?.op ?? null);
-      if (ask.kind === "gdzie") {
+      if (!asking || !ask || ask.kind === "unsupported") return stopped(table, asking?.op ?? null);
+      if (ask.kind === "where") {
         if (!example.destination) return stopped(table, asking.op);
         decided = { destination: example.destination };
       } else {

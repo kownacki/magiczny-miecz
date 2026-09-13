@@ -155,7 +155,7 @@ describe("the Zły Duch, who empties the room", () => {
 /**
  * The third Spotkanie that lasts, and the only one that lands on everybody.
  *
- * It was `{ op: "nic" }` with a two-turn disposition, so the app counted the
+ * It was `{ op: "nothing" }` with a two-turn disposition, so the app counted the
  * turns and told the table the storm did nothing — while `EFFECTS.fog` in the
  * console had been able to conjure the very same cap under this Karta's own
  * name the whole time.

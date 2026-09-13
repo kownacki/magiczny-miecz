@@ -24,14 +24,14 @@ import type { Effect } from "./cardScript";
 
 describe("what a loss takes off you", () => {
   it("names the one thing without counting it", () => {
-    expect(describeLoss({ op: "strata", co: "przedmiot" })).toBe("tracisz Przedmiot");
+    expect(describeLoss({ op: "lose", what: "item" })).toBe("tracisz Przedmiot");
   });
 
   it("counts only when there is more than one to count", () => {
     // "tracisz 1 Przedmiot" reads as a card with a number printed on it. The
     // card says "tracisz Przedmiot" and so does this.
-    expect(describeLoss({ op: "strata", co: "przedmiot", count: 1 })).toBe("tracisz Przedmiot");
-    expect(describeLoss({ op: "strata", co: "przedmiot", count: 2 })).toBe("tracisz 2 Przedmioty");
+    expect(describeLoss({ op: "lose", what: "item", count: 1 })).toBe("tracisz Przedmiot");
+    expect(describeLoss({ op: "lose", what: "item", count: 2 })).toBe("tracisz 2 Przedmioty");
   });
 
   it("declines the noun it counts, all three ways", () => {
@@ -44,32 +44,32 @@ describe("what a loss takes off you", () => {
      * 5+, so Przyjaciel reads the same in both and Przedmiot does not. That is
      * the reason the forms are a table rather than a suffix rule.
      */
-    expect(describeLoss({ op: "strata", co: "przyjaciel", count: 2 })).toBe(
+    expect(describeLoss({ op: "lose", what: "friend", count: 2 })).toBe(
       "tracisz 2 Przyjaciół",
     );
-    expect(describeLoss({ op: "strata", co: "przyjaciel", count: 5 })).toBe(
+    expect(describeLoss({ op: "lose", what: "friend", count: 5 })).toBe(
       "tracisz 5 Przyjaciół",
     );
   });
 
   it("says when the choice is not yours", () => {
-    expect(describeLoss({ op: "strata", co: "zaklecie", wybor: "losowo" })).toBe(
+    expect(describeLoss({ op: "lose", what: "spell", chosenBy: "random" })).toBe(
       "tracisz Zaklęcie (losowo)",
     );
   });
 
   it("declines the plural losses the way the cards print them", () => {
-    expect(describeLoss({ op: "strata", co: "wszystkie-przedmioty" })).toBe(
+    expect(describeLoss({ op: "lose", what: "all-items" })).toBe(
       "tracisz wszystkie Przedmioty",
     );
-    expect(describeLoss({ op: "strata", co: "gold" })).toBe("tracisz całe złoto");
+    expect(describeLoss({ op: "lose", what: "gold" })).toBe("tracisz całe złoto");
   });
 
   it("leaves the target to whoever is setting the sentence", () => {
     // The panel names the target in its own layout and the summary hangs it off
     // the end, so the fragment itself must not decide. `describeEffect` is the
     // one that adds it.
-    const effect = { op: "strata", co: "przedmiot", target: "zli" } as const;
+    const effect = { op: "lose", what: "item", target: "evil" } as const;
     expect(describeLoss(effect)).toBe("tracisz Przedmiot");
     expect(describeEffect(effect)).toBe("tracisz Przedmiot — Złe Postacie");
   });
@@ -77,22 +77,22 @@ describe("what a loss takes off you", () => {
 
 describe("the clause a conditional effect opens with", () => {
   it("reads a Natura in Polish, not as the key it is stored under", () => {
-    expect(describeCondition({ is: "natura", jedna_z: ["evil"] })).toBe("jeśli zła");
+    expect(describeCondition({ is: "nature", oneOf: ["evil"] })).toBe("jeśli zła");
   });
 
   it("joins two Natury with an alternative", () => {
-    expect(describeCondition({ is: "natura", jedna_z: ["evil", "chaotic"] })).toBe(
+    expect(describeCondition({ is: "nature", oneOf: ["evil", "chaotic"] })).toBe(
       "jeśli zła lub chaotyczna",
     );
   });
 
   it("names the stat a threshold is measured on", () => {
-    expect(describeCondition({ is: "prog", stat: "sword", ponizej: 4 })).toBe("jeśli Miecz < 4");
-    expect(describeCondition({ is: "prog", stat: "magic", ponizej: 3 })).toBe("jeśli Magia < 3");
+    expect(describeCondition({ is: "threshold", stat: "sword", below: 4 })).toBe("jeśli Miecz < 4");
+    expect(describeCondition({ is: "threshold", stat: "magic", below: 3 })).toBe("jeśli Magia < 3");
   });
 
   it("asks about gold without asking how much", () => {
-    expect(describeCondition({ is: "ma-zloto" })).toBe("jeśli masz złoto");
+    expect(describeCondition({ is: "has-gold" })).toBe("jeśli masz złoto");
   });
 });
 
@@ -102,7 +102,7 @@ describe("who an effect passes over", () => {
     // Spryciarza". This read "oprócz: elf" until the lookup the panel had all
     // along was moved somewhere the engine could reach it.
     expect(
-      describeEffect({ op: "tura-stracona", turns: 1, target: "wszyscy", oprocz: ["elf"] }),
+      describeEffect({ op: "lose-turn", turns: 1, target: "everyone", except: ["elf"] }),
     ).toBe("wszyscy tracą 1 turę (oprócz: ELF)");
   });
 
@@ -110,7 +110,7 @@ describe("who an effect passes over", () => {
     // Two of the five that card names are expansion characters, so they are not
     // `CharacterId`s and never will be while the scope is the base game.
     expect(
-      describeEffect({ op: "tura-stracona", turns: 1, target: "wszyscy", oprocz: ["szczesciarz"] }),
+      describeEffect({ op: "lose-turn", turns: 1, target: "everyone", except: ["szczesciarz"] }),
     ).toBe("wszyscy tracą 1 turę (oprócz: SZCZĘŚCIARZ)");
   });
 });
@@ -134,54 +134,54 @@ describe("who an effect passes over", () => {
  * tests at the foot of the file.
  */
 const ONE_OF_EACH: Record<Effect["op"], Effect> = {
-  nic: { op: "nic" },
-  punkty: { op: "punkty", stat: "sword", delta: 2 },
-  "tura-stracona": { op: "tura-stracona", turns: 1 },
-  walka: { op: "walka", nazwa: "Miejscowy osiłek", miecz: 4 },
-  przyzwij: { op: "przyzwij", nazwa: "GOLEM", miecz: 3 },
-  podejrzyj: { op: "podejrzyj", count: 5 },
-  "przenies-karte": { op: "przenies-karte" },
-  "wymien-karte": { op: "wymien-karte" },
-  przenies: { op: "przenies", to: { kind: "dowolne-w-kregu" } },
-  zaklecie: { op: "zaklecie", count: 1 },
-  kamien: { op: "kamien" },
-  uzdrow: { op: "uzdrow", upTo: 4 },
-  wybor: {
-    op: "wybor",
+  nothing: { op: "nothing" },
+  points: { op: "points", stat: "sword", delta: 2 },
+  "lose-turn": { op: "lose-turn", turns: 1 },
+  fight: { op: "fight", name: "Miejscowy osiłek", sword: 4 },
+  summon: { op: "summon", name: "GOLEM", sword: 3 },
+  peek: { op: "peek", count: 5 },
+  "move-card": { op: "move-card" },
+  redraw: { op: "redraw" },
+  move: { op: "move", to: { kind: "anywhere-in-ring" } },
+  "gain-spell": { op: "gain-spell", count: 1 },
+  stone: { op: "stone" },
+  heal: { op: "heal", upTo: 4 },
+  choice: {
+    op: "choice",
     options: [
-      { label: "Zapłać 1 Sz. Z.", effect: { op: "punkty", stat: "gold", delta: -1 } },
-      { label: "Tracisz 1 Życia", effect: { op: "punkty", stat: "life", delta: -1 } },
+      { label: "Zapłać 1 Sz. Z.", effect: { op: "points", stat: "gold", delta: -1 } },
+      { label: "Tracisz 1 Życia", effect: { op: "points", stat: "life", delta: -1 } },
     ],
   },
-  "po-kolei": { op: "po-kolei", steps: [{ op: "nic" }, { op: "kamien" }] },
-  gdy: {
-    op: "gdy",
-    warunek: { is: "prog", stat: "sword", ponizej: 4 },
-    to: { op: "zaklecie", count: 1 },
-    inaczej: { op: "nic" },
+  sequence: { op: "sequence", steps: [{ op: "nothing" }, { op: "stone" }] },
+  when: {
+    op: "when",
+    condition: { is: "threshold", stat: "sword", below: 4 },
+    then: { op: "gain-spell", count: 1 },
+    else: { op: "nothing" },
   },
 
   // Everything below has no terse form and falls to the fallback. Kept in the
   // same table so the union stays covered whichever side of the line an op is.
-  rzut: { op: "rzut", faces: { 1: { op: "nic" } } },
-  sprzedaj: { op: "sprzedaj", cena: 1 },
-  "ruch-dodatkowy": { op: "ruch-dodatkowy" },
-  "zaklecia-do-limitu": { op: "zaklecia-do-limitu" },
-  wyciagnij: { op: "wyciagnij", count: 1 },
-  strata: { op: "strata", co: "przedmiot" },
-  katastrofa: { op: "katastrofa", klasa: "stranger", zasieg: "krag" },
-  "zamien-punkty": { op: "zamien-punkty", z: "sword" },
-  zgadnij: { op: "zgadnij", nagroda: { op: "zaklecie", count: 1 } },
-  natura: { op: "natura", na: "good" },
-  kup: { op: "kup", towar: [{ co: "Tarcza", cena: 2 }] },
-  "jak-pole": { op: "jak-pole", fieldId: "swiatynia-bogini-nemed" },
-  "poloz-karte": { op: "poloz-karte", gdzie: { kind: "dowolne-w-kregu" } },
-  otrzymaj: { op: "otrzymaj", co: "Magiczny Miecz" },
-  "rzut-za-kazdego": { op: "rzut-za-kazdego", co: "przyjaciel", gubiPrzy: 2 },
-  uwolnij: { op: "uwolnij", od: "zly-duch" },
-  zabierz: { op: "zabierz", co: "przyjaciel" },
-  efekt: {
-    op: "efekt",
+  roll: { op: "roll", faces: { 1: { op: "nothing" } } },
+  sell: { op: "sell", price: 1 },
+  "extra-move": { op: "extra-move" },
+  "spells-to-limit": { op: "spells-to-limit" },
+  "draw-cards": { op: "draw-cards", count: 1 },
+  lose: { op: "lose", what: "item" },
+  wipe: { op: "wipe", cardClass: "stranger", reach: "krag" },
+  "swap-points": { op: "swap-points", from: "sword" },
+  guess: { op: "guess", prize: { op: "gain-spell", count: 1 } },
+  "set-nature": { op: "set-nature", to: "good" },
+  buy: { op: "buy", goods: [{ name: "Tarcza", price: 2 }] },
+  "as-field": { op: "as-field", fieldId: "swiatynia-bogini-nemed" },
+  "place-card": { op: "place-card", where: { kind: "anywhere-in-ring" } },
+  receive: { op: "receive", what: "Magiczny Miecz" },
+  "roll-for-each": { op: "roll-for-each", what: "friend", lostOn: 2 },
+  release: { op: "release", from: "zly-duch" },
+  take: { op: "take", what: "friend" },
+  status: {
+    op: "status",
     label: "Opętany",
     modifier: { kind: "move-max", fields: 0 },
     ends: { kind: "dispelled" },
@@ -193,43 +193,43 @@ describe("what one row of a field's table says", () => {
     // The labels are `polish.ts`'s, shared with the long register. They used to
     // be a fourth private copy of the same table written out inside the draw
     // modal, which is the hazard that file exists to end.
-    expect(summariseEffect({ op: "punkty", stat: "sword", delta: 2 })).toBe("+2 Miecza");
-    expect(summariseEffect({ op: "punkty", stat: "magic", delta: 1 })).toBe("+1 Magii");
-    expect(summariseEffect({ op: "punkty", stat: "life", delta: -1 })).toBe("−1 Życia");
-    expect(summariseEffect({ op: "punkty", stat: "gold", delta: -1 })).toBe("−1 Złota");
+    expect(summariseEffect({ op: "points", stat: "sword", delta: 2 })).toBe("+2 Miecza");
+    expect(summariseEffect({ op: "points", stat: "magic", delta: 1 })).toBe("+1 Magii");
+    expect(summariseEffect({ op: "points", stat: "life", delta: -1 })).toBe("−1 Życia");
+    expect(summariseEffect({ op: "points", stat: "gold", delta: -1 })).toBe("−1 Złota");
   });
 
   it("counts turns the way Polish counts, including the exception in the teens", () => {
     // This branch used to say "turę" whatever the number, and got away with it
     // only because every table in the box loses you exactly one.
-    expect(summariseEffect({ op: "tura-stracona", turns: 1 })).toBe("tracisz 1 turę");
-    expect(summariseEffect({ op: "tura-stracona", turns: 3 })).toBe("tracisz 3 tury");
-    expect(summariseEffect({ op: "tura-stracona", turns: 5 })).toBe("tracisz 5 tur");
-    expect(summariseEffect({ op: "tura-stracona", turns: 13 })).toBe("tracisz 13 tur");
-    expect(summariseEffect({ op: "tura-stracona", turns: 22 })).toBe("tracisz 22 tury");
+    expect(summariseEffect({ op: "lose-turn", turns: 1 })).toBe("tracisz 1 turę");
+    expect(summariseEffect({ op: "lose-turn", turns: 3 })).toBe("tracisz 3 tury");
+    expect(summariseEffect({ op: "lose-turn", turns: 5 })).toBe("tracisz 5 tur");
+    expect(summariseEffect({ op: "lose-turn", turns: 13 })).toBe("tracisz 13 tur");
+    expect(summariseEffect({ op: "lose-turn", turns: 22 })).toBe("tracisz 22 tury");
   });
 
   it("says which of the two numbers a creature is fought with", () => {
-    expect(summariseEffect({ op: "walka", nazwa: "Miejscowy osiłek", miecz: 4 })).toBe(
+    expect(summariseEffect({ op: "fight", name: "Miejscowy osiłek", sword: 4 })).toBe(
       "walka: Miejscowy osiłek (Miecz 4)",
     );
-    expect(summariseEffect({ op: "walka", nazwa: "Upiór", magia: 4 })).toBe(
+    expect(summariseEffect({ op: "fight", name: "Upiór", magic: 4 })).toBe(
       "walka: Upiór (Magia 4)",
     );
   });
 
   it("distinguishes a destination the card names from one the player points at", () => {
-    expect(summariseEffect({ op: "przenies", to: { kind: "pole", fieldId: "karczma" } })).toBe(
+    expect(summariseEffect({ op: "move", to: { kind: "field", fieldId: "karczma" } })).toBe(
       "przenieś się na: Karczma",
     );
-    expect(summariseEffect({ op: "przenies", to: { kind: "dowolne-w-kregu" } })).toBe(
+    expect(summariseEffect({ op: "move", to: { kind: "anywhere-in-ring" } })).toBe(
       "przenieś się na dowolny Obszar w tym Kręgu",
     );
   });
 
   it("separates free healing from healing that is a purchase", () => {
-    expect(summariseEffect({ op: "uzdrow", upTo: 4 })).toBe("uzdrowienie");
-    expect(summariseEffect({ op: "uzdrow", upTo: 4, cena: 1 })).toBe(
+    expect(summariseEffect({ op: "heal", upTo: 4 })).toBe("uzdrowienie");
+    expect(summariseEffect({ op: "heal", upTo: 4, price: 1 })).toBe(
       "leczenie za 1 Sz. Z. za punkt",
     );
   });
@@ -237,17 +237,17 @@ describe("what one row of a field's table says", () => {
   it("trusts an option's own label rather than reading its effect back", () => {
     // The whole reason for a second register. "Zapłać 1 Sz. Z." is already the
     // sentence; the long form would print "Zapłać 1 Sz. Z.: −1 Złota".
-    expect(summariseEffect(ONE_OF_EACH.wybor)).toBe("Zapłać 1 Sz. Z. albo Tracisz 1 Życia");
+    expect(summariseEffect(ONE_OF_EACH.choice)).toBe("Zapłać 1 Sz. Z. albo Tracisz 1 Życia");
   });
 
   it("strings a sequence together in the order it happens", () => {
     expect(
       summariseEffect({
-        op: "po-kolei",
+        op: "sequence",
         steps: [
-          { op: "punkty", stat: "gold", delta: -1 },
-          { op: "uzdrow", upTo: 4 },
-          { op: "kamien" },
+          { op: "points", stat: "gold", delta: -1 },
+          { op: "heal", upTo: 4 },
+          { op: "stone" },
         ],
       }),
     ).toBe("−1 Złota, potem uzdrowienie, potem Zamiana w Kamień (20.1)");
@@ -257,14 +257,14 @@ describe("what one row of a field's table says", () => {
     // It used to print the consequences alone — "+1 Zaklęcie, inaczej nic się
     // nie dzieje" — which leaves a reader no way to tell which half applies to
     // them. That is a rule told wrong, not a rule told briefly.
-    expect(summariseEffect(ONE_OF_EACH.gdy)).toBe(
+    expect(summariseEffect(ONE_OF_EACH.when)).toBe(
       "jeśli Miecz < 4: +1 Zaklęcie, inaczej nic się nie dzieje",
     );
     expect(
       summariseEffect({
-        op: "gdy",
-        warunek: { is: "ma-zloto" },
-        to: { op: "punkty", stat: "gold", delta: -1 },
+        op: "when",
+        condition: { is: "has-gold" },
+        then: { op: "points", stat: "gold", delta: -1 },
       }),
     ).toBe("jeśli masz złoto: −1 Złota");
   });
@@ -280,12 +280,12 @@ describe("what one row of a field's table says", () => {
   it("names every Natura in Polish, here and in the long register alike", () => {
     expect(
       summariseEffect({
-        op: "gdy",
-        warunek: { is: "natura", jedna_z: ["good"] },
-        to: { op: "nic" },
+        op: "when",
+        condition: { is: "nature", oneOf: ["good"] },
+        then: { op: "nothing" },
       }),
     ).toBe("jeśli dobra: nic się nie dzieje");
-    expect(describeCondition({ is: "natura", jedna_z: ["chaotic"] })).toBe("jeśli chaotyczna");
+    expect(describeCondition({ is: "nature", oneOf: ["chaotic"] })).toBe("jeśli chaotyczna");
   });
 
   /**
@@ -294,15 +294,15 @@ describe("what one row of a field's table says", () => {
    * so the SABAT translated `evil` and the SŁUP OGNIA said „Natura: good".
    */
   it("names a forced Natura in Polish too", () => {
-    expect(describeEffect({ op: "natura", na: "good" })).toBe("Natura: dobra");
-    expect(describeEffect({ op: "natura", na: "evil" })).toBe("Natura: zła");
-    expect(describeEffect({ op: "natura", na: "chaotic" })).toBe("Natura: chaotyczna");
+    expect(describeEffect({ op: "set-nature", to: "good" })).toBe("Natura: dobra");
+    expect(describeEffect({ op: "set-nature", to: "evil" })).toBe("Natura: zła");
+    expect(describeEffect({ op: "set-nature", to: "chaotic" })).toBe("Natura: chaotyczna");
   });
 
   it("says nothing happened rather than saying nothing", () => {
-    expect(summariseEffect({ op: "nic" })).toBe("nic się nie dzieje");
-    expect(summariseEffect({ op: "zaklecie", count: 1 })).toBe("+1 Zaklęcie");
-    expect(summariseEffect({ op: "kamien" })).toBe("Zamiana w Kamień (20.1)");
+    expect(summariseEffect({ op: "nothing" })).toBe("nic się nie dzieje");
+    expect(summariseEffect({ op: "gain-spell", count: 1 })).toBe("+1 Zaklęcie");
+    expect(summariseEffect({ op: "stone" })).toBe("Zamiana w Kamień (20.1)");
   });
 });
 
@@ -343,13 +343,13 @@ describe("the terse register, now that it has no hole", () => {
     // offer, so they are the two whose every row is read by somebody who did
     // not choose to read it.
     for (const [fieldId, script] of Object.entries(FIELD_SCRIPTS)) {
-      if (!script!.obowiazkowe) continue;
+      if (!script!.mandatory) continue;
       for (const offer of script!.offers) {
         const effect = offer.effect;
         // A die table is read a face at a time, which is the arrangement this
         // register exists for; anything else is the one row.
         const rows: Effect[] =
-          effect.op === "rzut"
+          effect.op === "roll"
             ? [1, 2, 3, 4, 5, 6].map((face) => effect.faces[face]).filter(Boolean)
             : [effect];
         for (const row of rows) {
@@ -373,7 +373,7 @@ describe("the terse register, now that it has no hole", () => {
 describe("naming the target a panel is talking about", () => {
   it("says nothing when it is you", () => {
     // "tracisz Przedmiot — ty" is the app explaining who "tracisz" means.
-    expect(andWhom("ty")).toBe("");
+    expect(andWhom("you")).toBe("");
   });
 
   it("says nothing when the card names nobody", () => {
@@ -383,8 +383,8 @@ describe("naming the target a panel is talking about", () => {
   });
 
   it("names everybody else in the long form", () => {
-    expect(andWhom("wszyscy")).toBe(" — wszystkie Postacie");
-    expect(andWhom("dobrzy")).toBe(" — Postacie o Naturze dobrej");
+    expect(andWhom("everyone")).toBe(" — wszystkie Postacie");
+    expect(andWhom("good")).toBe(" — Postacie o Naturze dobrej");
   });
 
   it("is the panel's wording and not the summary's", () => {
@@ -395,8 +395,8 @@ describe("naming the target a panel is talking about", () => {
      * This is the long one, and a test that did not say so would pass just as
      * well if it quietly became the other.
      */
-    expect(andWhom("w-dolnym-kregu")).toBe(" — wędrujący po Dolnym Kręgu");
-    expect(andWhom("w-dolnym-kregu")).not.toBe(" — wędrujący Dolnym Kręgiem");
+    expect(andWhom("in-lower-ring")).toBe(" — wędrujący po Dolnym Kręgu");
+    expect(andWhom("in-lower-ring")).not.toBe(" — wędrujący Dolnym Kręgiem");
   });
 
   it("covers every target the union has", () => {
@@ -404,7 +404,7 @@ describe("naming the target a panel is talking about", () => {
     // builds from being empty or undefined for one of them.
     for (const target of Object.keys(TARGET_FULL) as (keyof typeof TARGET_FULL)[]) {
       const said = andWhom(target);
-      if (target === "ty") continue;
+      if (target === "you") continue;
       expect(said.startsWith(" — ")).toBe(true);
       expect(said.length).toBeGreaterThan(4);
     }
@@ -472,7 +472,7 @@ describe("a Karta with two occasions", () => {
 
   /** A sequence of plain steps keeps its sentence. */
   it("leaves prose as prose", () => {
-    expect(effectRows({ op: "po-kolei", steps: [{ op: "nic" }, { op: "nic" }] })).toBeNull();
+    expect(effectRows({ op: "sequence", steps: [{ op: "nothing" }, { op: "nothing" }] })).toBeNull();
   });
 });
 

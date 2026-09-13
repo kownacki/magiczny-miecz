@@ -24,7 +24,7 @@
  * **Weight — whether this is *the* one.** This is the part that looked like
  * drift and is not. „Walcz" is filled and „Walcz ze wszystkimi naraz" is
  * outlined, because one of them is what you came here to do. The options of a
- * `wybor` are all outlined and none filled, because the rules offer them as
+ * `choice` are all outlined and none filled, because the rules offer them as
  * equals and the app has no business recommending one. And „Zostaw" is quieter
  * still, because a way out is not a fifth option, it is the door.
  *
@@ -178,7 +178,7 @@ export function ActionButton({
    * Press it and it happens: no three seconds, no „Anuluj".
    *
    * The window exists to take back a *decision* — „Weź Przedmiot" cannot be
-   * un-taken, a `wybor` answered is answered — and a die is not one. Nothing is
+   * un-taken, a `choice` answered is answered — and a die is not one. Nothing is
    * being chosen: the Karta is compulsory, the app throws for you, and there is
    * no other answer to have preferred. A countdown in front of that is a delay
    * with a cancel on it, and what the player is waiting to see is the face.

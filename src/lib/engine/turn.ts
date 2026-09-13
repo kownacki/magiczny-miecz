@@ -153,12 +153,12 @@ export type TurnPhase =
    * even a card full of choices resolves in one commit when the player sent
    * the answers along (the browser walks the public script and batches them —
    * see `pendingIn`). A frame is written only where the atomic walk genuinely
-   * cannot finish: a `walka` step that opens a fight above this frame, or a
+   * cannot finish: a `fight` step that opens a fight above this frame, or a
    * decision owed to a seat that is not the one resolving.
    *
    * `cursor` is the path taken through the effect tree to the suspension
-   * point, one index per branching node — a `po-kolei` step, a `wybor` pick, a
-   * `rzut` face as rolled, a `gdy` branch as taken. Recording the rolled face
+   * point, one index per branching node — a `sequence` step, a `choice` pick, a
+   * `roll` face as rolled, a `when` branch as taken. Recording the rolled face
    * and the taken branch is what makes the resume deterministic: the walk back
    * down follows the cursor instead of re-rolling or re-judging, and continues
    * from the node after it.
@@ -189,7 +189,7 @@ export type TurnPhase =
        *
        * A frame is written when a walk *stops*, and everywhere else that means
        * the node at the cursor was reached and asked something: coming back
-       * down, a `walka` there has since been fought and counts as done. A die
+       * down, a `fight` there has since been fought and counts as done. A die
        * suspends the other way round — the face is thrown and the row it chose
        * is waiting for „Dalej" (see `heldAt`) — so the same cursor means the
        * opposite thing, and the difference has to be written down or a table
@@ -251,7 +251,7 @@ export type TurnPhase =
    * A question owed to a seat that no card script is asking (docs/STACK.md,
    * the shape).
    *
-   * Most questions in this game are a `wybor` inside a Karta's own effect, and
+   * Most questions in this game are a `choice` inside a Karta's own effect, and
    * a `script` frame standing on one *is* the ask — seat, question and all.
    * This frame is for the ones printed on a Charakterystyka instead, where
    * there is no script and no cursor: the Chochlik's "pozwoli ci obejrzeć

@@ -3,7 +3,7 @@
 # He did not. „Rzuć kostką i umieść Kartę Eremity na odpowiednim Obszarze"
 # suspends over the face it threw and waits for „Dalej" (`heldAt`), so by the
 # time the row actually runs, the frame on screen is the `script` frame and the
-# Obszar's is one below it. `poloz-karte` read `top()`, found no kolejka to lift
+# Obszar's is one below it. `place-card` read `top()`, found no kolejka to lift
 # the Karta out of, and did nothing: the Eremita was laid down on his Obszar
 # *and* left in the turn's `drawn`, where the browser's sheet kept holding him
 # up — press „Dalej" and he asked to roll again.

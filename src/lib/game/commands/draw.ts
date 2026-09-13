@@ -97,7 +97,7 @@ export interface Drawn {
 /**
  * One off the Obszar's tally — unless a Karta asked for it.
  *
- * `wyciagnij` (Skalne Wrota) and Odmiana Losu draw *past* what the square owes,
+ * `draw-cards` (Skalne Wrota) and Odmiana Losu draw *past* what the square owes,
  * so they must not spend it: three extra Karty should not stop the player
  * drawing the one the Obszar was printed with.
  */
@@ -377,7 +377,7 @@ export interface DrawSpell extends FromThePile {
 /**
  * Whether taking a Zaklęcie is a question rather than a deal, for this seat.
  *
- * Asked in two places — here, and by the `zaklecie` step deciding whether to
+ * Asked in two places — here, and by the `gain-spell` step deciding whether to
  * suspend — so it is one predicate rather than two readings that have to agree.
  * Exact rather than approximate: `remaining` counts both piles, and 9.5 turns
  * the used one over, so a draw pile of one and a used pile of five can still

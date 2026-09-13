@@ -17,10 +17,10 @@ import type { TurnPhase } from "@/lib/engine/turn";
 /**
  * Runs the card the closed frame was sitting on, in the same commit.
  *
- * A fight opened by a `walka` step sits above a `script` frame, and closing it
+ * A fight opened by a `fight` step sits above a `script` frame, and closing it
  * reveals a card mid-sentence. The player already pressed the only button
  * there was — the fight's — so the card continues by itself: one call, because
- * one is all it can take. A completion pops the frame; a second `walka` opens
+ * one is all it can take. A completion pops the frame; a second `fight` opens
  * the next fight and the top is a fight again; an unanswered question leaves
  * the frame waiting for `answerScript`. None of those wants a second call.
  *

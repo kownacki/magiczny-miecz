@@ -137,7 +137,7 @@ const SPENT_BY_READING = new Set<CardClass>(["encounter", "stranger", "place"]);
  */
 export function leavesWhenResolved(card: TurnCard): boolean {
   return (
-    SPENT_BY_READING.has(card.cardClass) && scriptFor(card.cardId)?.disposition.kind === "odloz"
+    SPENT_BY_READING.has(card.cardClass) && scriptFor(card.cardId)?.disposition.kind === "discard"
   );
 }
 

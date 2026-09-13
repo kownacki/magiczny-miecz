@@ -26,12 +26,12 @@ const standing = (field: FieldId, cards: CardId[], nature: Nature = "good") =>
     ),
   });
 
-const LOSE_LIFE = { op: "punkty", stat: "life", delta: -1 } as unknown as Effect;
+const LOSE_LIFE = { op: "points", stat: "life", delta: -1 } as unknown as Effect;
 const LOSE_ITEM = {
-  op: "strata",
-  co: "przedmiot",
+  op: "lose",
+  what: "item",
   count: 1,
-  wybor: "losowo",
+  chosenBy: "random",
 } as unknown as Effect;
 
 /** Piles are not shuffled here; the order in is the order out. */
@@ -84,7 +84,7 @@ describe("keeping the point of Życie an Obszar would take", () => {
   /** These cards say what an Obszar will not do *to* you. None declines a gift. */
   it("does not decline a point the Obszar gives", async () => {
     const table = standing("ruchome-skaly-1", ["rekawice"]);
-    const gain = { op: "punkty", stat: "life", delta: 1 } as unknown as Effect;
+    const gain = { op: "points", stat: "life", delta: 1 } as unknown as Effect;
     expect(apply(table, (await run(table, gain)).writes).seats[0].life).toBe(5);
   });
 });

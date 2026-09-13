@@ -65,7 +65,7 @@ export async function spendHolding(
   const seatId = held.seat_id;
   const script = use.rozpatruje === "aplikacja" ? scriptFor(cardId) : null;
   const face =
-    script?.effect.op === "rzut" ? await ports.random.rollD6(`${cardName(cardId)}: tabela`) : undefined;
+    script?.effect.op === "roll" ? await ports.random.rollD6(`${cardName(cardId)}: tabela`) : undefined;
 
   const gone: Changeset = { holdings: { delete: [held.id] } };
   const spent = mergeAll(
@@ -102,7 +102,7 @@ export async function spendHolding(
   }
 
   const effect =
-    face !== undefined && script.effect.op === "rzut" ? script.effect.faces[face] : script.effect;
+    face !== undefined && script.effect.op === "roll" ? script.effect.faces[face] : script.effect;
   const done = await applyEffect(
     apply(snapshot, spent),
     {
@@ -138,7 +138,7 @@ export async function spendHolding(
  * to say about a square's own printed text. What governs this is "Postać stosuje
  * się do instrukcji wydrukowanej na Obszarze, na którym się znalazła [...] Do
  * niektórych instrukcji Postać musi się zastosować, do innych może, jeśli ma
- * ochotę", which is also where `obowiazkowe` comes from.
+ * ochotę", which is also where `mandatory` comes from.
  *
  * One die, and only when the offer is a table. Said here rather than left to
  * whatever the face happens to do — a face that opens a fight would otherwise
@@ -170,7 +170,7 @@ export async function resolveFieldOffer(
     throw new Error(`${offer.name} — to już rozpatrzone.`);
   }
 
-  const table = offer.effect.op === "rzut";
+  const table = offer.effect.op === "roll";
 
   /**
    * "nie musisz wykonywać rzutów kostką w Wieży Przeznaczenia i na Urwisku.
@@ -188,9 +188,9 @@ export async function resolveFieldOffer(
   /**
    * Asked of the Obszar, not of the shape the offer happens to have.
    *
-   * This used to require a top-level `rzut`, which held while every protected
+   * This used to require a top-level `roll`, which held while every protected
    * Obszar was one die and one table. The Urwisko is not: it throws once for
-   * the character and again for each Przyjaciel, so its offer is a `po-kolei`
+   * the character and again for each Przyjaciel, so its offer is a `sequence`
    * — and the Opiekun, the Elflin and the Barbarzyńca walked straight into it,
    * because the guard was looking at the encoding rather than at the board.
    *
@@ -221,7 +221,7 @@ export async function resolveFieldOffer(
   // Two dice where the Obszar prints two — "MOŻESZ MODLIĆ SIĘ RZUCAJĄC 2
   // KOSTKAMI" — because a 2-12 table read off one die would never reach half
   // its rows and would reach the rest far too evenly.
-  const pair = table && offer.effect.op === "rzut" && offer.effect.kostki === 2;
+  const pair = table && offer.effect.op === "roll" && offer.effect.dice === 2;
   const face = !table
     ? undefined
     : pair
@@ -392,14 +392,14 @@ export async function resolveDrawnCard(
   /**
    * Which of the Karta's sentences is being read (15.1).
    *
-   * A card with a `placed` says one thing to whoever turned it over — roll,
+   * A card with an `onDraw` says one thing to whoever turned it over — roll,
    * and put me on that Obszar — and another to whoever finds it there. Which
    * one this is turns on where the copy came from, and `being.lying` is the
    * mark `liftFieldCards` puts on everything it takes off the board.
    */
   const instruction = instructionIn(script, being.lying);
 
-  const table = instruction.op === "rzut";
+  const table = instruction.op === "roll";
   const face = table ? await ports.random.rollD6(`${cardName(command.cardId)}: tabela`) : undefined;
   const rolled: Changeset =
     face !== undefined
@@ -418,7 +418,7 @@ export async function resolveDrawnCard(
   const carried: ApplyEffect = {
       seatId: seat.id,
       effect: instruction,
-      // The card is its own subject for `poloz-karte`: three Karty roll for
+      // The card is its own subject for `place-card`: three Karty roll for
       // where they settle, and the effect has to know which card it is.
       cardId: command.cardId,
       // The debts a suspension carries across commits: crossing the card off
@@ -427,7 +427,7 @@ export async function resolveDrawnCard(
       // Karta that suspends and finishes two commits later strikes through the
       // one that ran rather than every card of its name.
       mark: keyOf(being),
-      ...(script.disposition.kind === "bierzesz" ? { keep: true } : {}),
+      ...(script.disposition.kind === "kept" ? { keep: true } : {}),
       reason:
         face !== undefined ? `${cardName(command.cardId)} (${face})` : cardName(command.cardId),
       decided: command.decided,
@@ -463,7 +463,7 @@ export async function resolveDrawnCard(
    * Zły Duch's own text has to name the Południca as the exception it spares.
    */
   const kept =
-    script.disposition.kind === "bierzesz" && !done.result.pending && !done.result.suspended
+    script.disposition.kind === "kept" && !done.result.pending && !done.result.suspended
       ? ({
           holdings: {
             insert: [
@@ -509,7 +509,7 @@ export async function resolveDrawnCard(
 
   /**
    * UKŁAD PLANET's own board-wide half — see `doubleDemons`. Its script is a
-   * plain `{ op: "nic" }`, so `done` never suspends and never asks anything;
+   * plain `{ op: "nothing" }`, so `done` never suspends and never asks anything;
    * this runs unconditionally once the card is actually the one drawn.
    */
   const planets =

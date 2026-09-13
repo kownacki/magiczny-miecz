@@ -2,21 +2,21 @@
 
 import type { CardId } from "@/data/ids";
 
-/** The shape `strata` carries on a card's script. */
+/** The shape `lose` carries on a card's script. */
 export interface Loss {
-  co:
-    | "przedmiot"
-    | "przyjaciel"
-    | "zaklecie"
+  what:
+    | "item"
+    | "friend"
+    | "spell"
     | "gold"
-    | "wszystkie-przedmioty"
-    | "wszystkie-zaklecia"
-    | "wszyscy-przyjaciele-oprocz";
+    | "all-items"
+    | "all-spells"
+    | "all-friends-except";
   /** Cards a sweeping loss leaves alone, by id (the Zły Duch spares the Południca). */
-  oprocz?: readonly CardId[];
+  except?: readonly CardId[];
   count?: number;
   /** Whose choice it is. Absent means the holder's, which is the rulebook's default (5.6). */
-  wybor?: "ty" | "losowo";
+  chosenBy?: "you" | "random";
 }
 
 export interface Losable {
@@ -46,48 +46,48 @@ export interface Losable {
  * Two places need this and each used to keep its own list, which is how they
  * came to disagree: `chooseLosses` below knew that „wszystkie" is everything of
  * a kind and never a question, and `isSettled` in `resolve.ts` named
- * `wszystkie-przedmioty` and forgot `wszystkie-zaklecia`. So the Przesilenie —
+ * `all-items` and forgot `all-spells`. So the Przesilenie —
  * "wszystkie Karty Zaklęć, znajdujące się w posiadaniu Postaci" — was held at
  * the gate as an unanswered choice and never reached the code that knew it was
  * not one. It announced nothing and took nothing, on every table, since it was
  * written.
  *
- * An exhaustive switch rather than a set, so a new `co` cannot be added without
+ * An exhaustive switch rather than a set, so a new `what` cannot be added without
  * somebody saying which of the two it is.
  */
-export function takesEverything(co: Loss["co"]): boolean {
-  switch (co) {
+export function takesEverything(what: Loss["what"]): boolean {
+  switch (what) {
     // Everything of a kind. The card has already decided.
-    case "wszystkie-przedmioty":
-    case "wszystkie-zaklecia":
+    case "all-items":
+    case "all-spells":
       return true;
     // The same, minus the ones the card names — still the card deciding. Only
     // the Zły Duch: "wszyscy dotychczasowi Przyjaciele (z wyjątkiem Południcy)".
-    case "wszyscy-przyjaciele-oprocz":
+    case "all-friends-except":
       return true;
     // A number on the seat rather than a card in the pack (3.5), so there is
     // nothing to point at.
     case "gold":
       return true;
     // The four that 5.6 leaves to the holder: "zależy wyłącznie od decyzji
-    // gracza". A die answers instead where the card says `wybor: "losowo"`.
-    case "przedmiot":
-    case "przyjaciel":
-    case "zaklecie":
+    // gracza". A die answers instead where the card says `chosenBy: "random"`.
+    case "item":
+    case "friend":
+    case "spell":
       return false;
   }
 }
 
-export function reachableBy(loss: Loss["co"]): Losable["kind"] | null {
+export function reachableBy(loss: Loss["what"]): Losable["kind"] | null {
   switch (loss) {
-    case "przedmiot":
-    case "wszystkie-przedmioty":
+    case "item":
+    case "all-items":
       return "item";
-    case "przyjaciel":
-    case "wszyscy-przyjaciele-oprocz":
+    case "friend":
+    case "all-friends-except":
       return "friend";
-    case "zaklecie":
-    case "wszystkie-zaklecia":
+    case "spell":
+    case "all-spells":
       return "spell";
     case "gold":
       // Gold is a number on the seat, not a card in the pack (3.5).
@@ -118,7 +118,7 @@ export function chooseLosses(
    */
   pick: (upTo: number) => number | null = () => null,
 ): string[] | null {
-  const kind = reachableBy(loss.co);
+  const kind = reachableBy(loss.what);
   if (kind === null) return [];
 
   const candidates = holdings.filter((held) => held.kind === kind);
@@ -135,8 +135,8 @@ export function chooseLosses(
    * Przyjaciele (z wyjątkiem Południcy)". A character whose only Przyjaciel is
    * the Południca loses nobody.
    */
-  if (takesEverything(loss.co)) {
-    const spared = new Set(loss.co === "wszyscy-przyjaciele-oprocz" ? (loss.oprocz ?? []) : []);
+  if (takesEverything(loss.what)) {
+    const spared = new Set(loss.what === "all-friends-except" ? (loss.except ?? []) : []);
     return candidates.filter((held) => !spared.has(held.cardId)).map((held) => held.id);
   }
 
@@ -169,7 +169,7 @@ export function chooseLosses(
      * holder chooses stays a question until they answer it, which is what keeps
      * the effect pending rather than costing them a card they never picked.
      */
-    const asked = pick(left.length) ?? (loss.wybor === "losowo" ? 0 : null);
+    const asked = pick(left.length) ?? (loss.chosenBy === "random" ? 0 : null);
     if (asked === null) return null;
     const at = Number.isFinite(asked)
       ? Math.min(Math.max(0, Math.trunc(asked)), left.length - 1)
@@ -182,7 +182,7 @@ export function chooseLosses(
 
 /** How much gold a loss takes, given what the seat has. */
 export function goldLost(loss: Loss, held: number): number {
-  if (loss.co !== "gold") return 0;
+  if (loss.what !== "gold") return 0;
   // "Tracisz całe złoto" is the common case and carries no count.
   return loss.count === undefined ? held : Math.min(loss.count, held);
 }
@@ -199,16 +199,16 @@ export function goldLost(loss: Loss, held: number): number {
  * the call which had been meant.
  */
 export function lossTaken(loss: Loss): string {
-  const what = {
-    przedmiot: "Przedmiot",
-    przyjaciel: "Przyjaciela",
-    "wszyscy-przyjaciele-oprocz": "wszystkich Przyjaciół",
-    zaklecie: "Zaklęcie",
+  const noun = {
+    item: "Przedmiot",
+    friend: "Przyjaciela",
+    "all-friends-except": "wszystkich Przyjaciół",
+    spell: "Zaklęcie",
     gold: "złoto",
-    "wszystkie-przedmioty": "wszystkie Przedmioty",
-    "wszystkie-zaklecia": "wszystkie Zaklęcia",
-  }[loss.co];
+    "all-items": "wszystkie Przedmioty",
+    "all-spells": "wszystkie Zaklęcia",
+  }[loss.what];
   const many = loss.count && loss.count > 1 ? `${loss.count} ` : "";
-  const how = loss.wybor === "losowo" ? " (losowo)" : "";
-  return `${many}${what}${how}`;
+  const how = loss.chosenBy === "random" ? " (losowo)" : "";
+  return `${many}${noun}${how}`;
 }

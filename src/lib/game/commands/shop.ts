@@ -339,11 +339,11 @@ export function sellHolding(
 
   // Whose desk it is and what he pays is `buyerFor`'s, so the button the
   // browser draws and the sale this makes cannot disagree about the price.
-  const deskHere = offerOn(snapshot, seat.field_id as FieldId, "sprzedaj");
+  const deskHere = offerOn(snapshot, seat.field_id as FieldId, "sell");
   const buyer = buyerFor(
     held.card_id,
     seat.field_id as FieldId,
-    deskHere?.effect.cena ?? null,
+    deskHere?.effect.price ?? null,
     mine.map((h) => h.card_id),
   );
   if (!buyer) throw new Error("Nikt tu nie skupuje Przedmiotów.");
@@ -387,12 +387,12 @@ export function payHealer(
   command: { seatId: string; points: number },
 ): Outcome<{ healed: number; paid: number }> {
   const seat = standingShopper(snapshot, command.seatId);
-  const desk = offerOn(snapshot, seat.field_id as FieldId, "uzdrow");
+  const desk = offerOn(snapshot, seat.field_id as FieldId, "heal");
   if (!desk) throw new Error("Na tym Obszarze nikt nie leczy.");
   const cure = desk.effect;
   if (!Number.isInteger(command.points) || command.points < 1) throw new Error("Ile punktów?");
 
-  const price = cure.cena ?? 0;
+  const price = cure.price ?? 0;
   const affordable = price > 0 ? Math.floor(seat.gold / price) : command.points;
   const wanted = Math.min(command.points, affordable, Math.max(0, HEAL_CEILING - seat.life));
   if (wanted <= 0) {
@@ -434,13 +434,13 @@ export function buyGoods(
   command: { seatId: string; cardId: CardId },
 ): Outcome<Taken> {
   const seat = standingShopper(snapshot, command.seatId);
-  const desk = offerOn(snapshot, seat.field_id as FieldId, "kup");
+  const desk = offerOn(snapshot, seat.field_id as FieldId, "buy");
   if (!desk) throw new Error("Na tym Obszarze nie ma czego kupić.");
 
-  const entry = desk.effect.towar.find((t) => goodsId(t.co) === command.cardId);
+  const entry = desk.effect.goods.find((t) => goodsId(t.name) === command.cardId);
   if (!entry) throw new Error(`${cardName(command.cardId)} nie jest tu na sprzedaż.`);
-  if (seat.gold < entry.cena) {
-    throw new Error(`Za mało złota: ${entry.co} kosztuje ${entry.cena} Sz. Z.`);
+  if (seat.gold < entry.price) {
+    throw new Error(`Za mało złota: ${entry.name} kosztuje ${entry.price} Sz. Z.`);
   }
 
   // Taking it and paying for it are one changeset. `takeCard` writes holdings,
@@ -455,7 +455,7 @@ export function buyGoods(
   const taken = takeCard(snapshot, { seatId: seat.id, cardId: command.cardId, silent: true });
   return {
     writes: merge(taken.writes, {
-      seats: [{ id: seat.id, patch: { gold: seat.gold - entry.cena } }],
+      seats: [{ id: seat.id, patch: { gold: seat.gold - entry.price } }],
       journal: [
         {
           seatId: seat.id,
@@ -463,7 +463,7 @@ export function buyGoods(
           kind: "bought",
           payload: {
             cardId: command.cardId,
-            price: entry.cena,
+            price: entry.price,
             fieldId: seat.field_id,
             from: desk.from,
           },

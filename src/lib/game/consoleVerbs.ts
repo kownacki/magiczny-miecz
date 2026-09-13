@@ -1427,7 +1427,7 @@ export const VERBS: { [K in Command["kind"]]: VerbRun<K> } = {
     const { gameId } = ctx;
     const snapshot = await activeStore().load(gameId);
     // A question owed to a Charakterystyka outranks even a suspended card,
-    // because it is what is literally on screen — a `zaklecie` step that
+    // because it is what is literally on screen — a `gain-spell` step that
     // asked put this above its own frame.
     const asked = askOnTop(snapshot.game.turn_state);
     if (asked) {

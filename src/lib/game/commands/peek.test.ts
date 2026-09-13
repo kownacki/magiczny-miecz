@@ -167,11 +167,11 @@ describe("a card that stops mid-sentence to ask", () => {
    * was nowhere to keep "the card is here" while somebody chose.
    */
   const card: Effect = {
-    op: "po-kolei",
+    op: "sequence",
     steps: [
-      { op: "punkty", stat: "sword", delta: 1, target: "ty" },
-      { op: "zaklecie", count: 1 },
-      { op: "punkty", stat: "gold", delta: 2, target: "ty" },
+      { op: "points", stat: "sword", delta: 1, target: "you" },
+      { op: "gain-spell", count: 1 },
+      { op: "points", stat: "gold", delta: 2, target: "you" },
     ],
   };
 
@@ -223,7 +223,7 @@ describe("a card that stops mid-sentence to ask", () => {
       table,
       {
         seatId: "seat-a",
-        effect: { op: "zaklecie", count: 1, cena: 1 },
+        effect: { op: "gain-spell", count: 1, price: 1 },
         reason: "NIEZNAJOMY",
         shuffle: asIs,
       },

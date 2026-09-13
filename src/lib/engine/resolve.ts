@@ -9,7 +9,7 @@ import { wordOf, type Child } from "./words";
  * The nodes under an effect, borrowed tables included.
  *
  * `WORDS` says what a word's own children are. The one word that borrows —
- * `jak-pole`, „Możesz modlić się na takich samych zasadach, jak w Świątyni
+ * `as-field`, „Możesz modlić się na takich samych zasadach, jak w Świątyni
  * Bogini Nemed" — names an Obszar whose table lives in `FIELD_SCRIPTS`, and
  * that registry cannot be read from the vocabulary without an import cycle
  * through `state.ts`. So the borrowing happens here, once, and every walk in
@@ -47,8 +47,8 @@ export function everyNode(effect: Effect): Effect[] {
  * Each word answers for itself in `words.ts` (`settled`); this only
  * hands it its children and the recursion. The history worth keeping from
  * when the answers were a switch here: four times a word sat among the
- * unsettled ones only because it had no implementation yet — `otrzymaj`,
- * `kup`/`sprzedaj`, `zaklecia-do-limitu`, `zamien-punkty` — and the symptom
+ * unsettled ones only because it had no implementation yet — `receive`,
+ * `buy`/`sell`, `spells-to-limit`, `swap-points` — and the symptom
  * was always the same, a Karta reported `pelne` that no surface could
  * resolve, or a turn deadlocked on a question nobody had been asked.
  * `coverage.test.ts` now asks that of every card, which is why the fifth time
@@ -88,7 +88,7 @@ export function pendingIn(
   /**
    * The Natura of the character the card is being resolved for, when known.
    *
-   * Narrows divergence one below. Everything else a `gdy` can test lives in a
+   * Narrows divergence one below. Everything else a `when` can test lives in a
    * Snapshot the browser is never sent; a Natura is on the seat and on the
    * screen, so the one condition that gates three of the Nieznajomi need not be
    * a blind spot.
@@ -101,7 +101,7 @@ export function pendingIn(
 /**
  * Whether the Karta has nothing at all for this character.
  *
- * Three Nieznajomi are a `gdy natura` with no `inaczej`: the WRÓŻKA serves „the
+ * Three Nieznajomi are a `when` on `nature` with no `else`: the WRÓŻKA serves „the
  * first Dobra Postać", the KOSZMAR a Zła one, the CZARODZIEJ a Dobra one. Meet
  * one as the wrong Natura and the card does not merely do less — it does
  * nothing, and it stays lying there for whoever it was written for.
@@ -111,8 +111,8 @@ export function pendingIn(
  *
  * # Why the condition arrives as an answer rather than as a Natura
  *
- * This used to read the `gdy` itself — `warunek.is === "natura"`, and is the
- * Postać's one of `jedna_z`. That is narrower than the rule: a `gdy` can test
+ * This used to read the `when` itself — `condition.is === "nature"`, and is the
+ * Postać's one of `oneOf`. That is narrower than the rule: a `when` can test
  * things that are not a Natura, and the DOBRE BÓSTWO tests whether you have
  * raised a hand against anybody. It fell straight through to a button promising
  * to do what it could, which was nothing.
@@ -120,21 +120,21 @@ export function pendingIn(
  * So the question is asked once, by `requirementOf`, which knows every form the
  * condition takes and reads it for a particular Postać — and what comes back
  * here is the verdict. The shape stays this function's business; who fails it is
- * the caller's. `inaczej.op === "nic"` counts as no branch at all, because a
+ * the caller's. `else.op === "nothing"` counts as no branch at all, because a
  * card that says "otherwise nothing" and a card that says nothing are the same
  * card to the player in front of it.
  */
 export function inertFor(effect: Effect | undefined, failsCondition: boolean): boolean {
-  if (!effect || effect.op !== "gdy") return false;
-  return failsCondition && (effect.inaczej === undefined || effect.inaczej.op === "nic");
+  if (!effect || effect.op !== "when") return false;
+  return failsCondition && (effect.else === undefined || effect.else.op === "nothing");
 }
 
 /**
  * The node a `script` frame's cursor stands on (docs/STACK.md).
  *
  * Not `pendingIn`: that walks by *choices*, skipping every node that asks
- * nothing. A cursor records the whole path — a `po-kolei` step, a `wybor`
- * pick, a `rzut` face as rolled, a `gdy` branch as taken, a borrowed table's
+ * nothing. A cursor records the whole path — a `sequence` step, a `choice`
+ * pick, a `roll` face as rolled, a `when` branch as taken, a borrowed table's
  * `0`, the MĘDRZEC's guessed face — so following it is plain indexing into
  * `childrenOf`, and what it lands on is the question the frame is suspended
  * over. Null for a path the effect does not have, which is a frame written by
@@ -159,7 +159,7 @@ export function nodeAt(effect: Effect, cursor: readonly number[]): Effect | null
 }
 
 function owedIn(effect: Effect, queue: number[], natura: Nature | null = null): Effect | null {
-  if (effect.op === "wybor") {
+  if (effect.op === "choice") {
     const pick = queue.shift();
     const option = pick === undefined ? undefined : effect.options[pick];
     // Nothing picked yet, or a pick that names no option: the choice itself is
@@ -171,14 +171,14 @@ function owedIn(effect: Effect, queue: number[], natura: Nature | null = null): 
   // „Obszar, z którego rozpocząłeś wędrówkę", which is as exact as one and read
   // off the frame. „Dowolny Obszar w tym Kręgu" is the player pointing at the
   // board, and is a question even when everything around it is settled.
-  if (effect.op === "przenies") {
-    return effect.to.kind === "pole" || effect.to.kind === "poczatek-ruchu" ? null : effect;
+  if (effect.op === "move") {
+    return effect.to.kind === "field" || effect.to.kind === "move-start" ? null : effect;
   }
 
   // The first owed step stops the sequence, as it does on the server: what
   // follows may depend on it, and doing the rest first would resolve the card
   // out of its own order.
-  if (effect.op === "po-kolei") {
+  if (effect.op === "sequence") {
     for (const step of effect.steps) {
       const owed = owedIn(step, queue, natura);
       if (owed) return owed;
@@ -197,28 +197,28 @@ function owedIn(effect: Effect, queue: number[], natura: Nature | null = null): 
    * after a round trip, on a card whose whole content is the choice.
    *
    * Descending also keeps the answer queue honest. `applyEffect` walks into the
-   * branch and spends a decision on the `wybor` there; stopping here spent
-   * none, so any card with something after a `gdy` counted its own answers
+   * branch and spends a decision on the `choice` there; stopping here spent
+   * none, so any card with something after a `when` counted its own answers
    * differently on the two sides.
    *
    * Every other condition still stops here. If either branch needs asking, the
    * server says so when it gets there.
    */
-  if (effect.op === "gdy") {
-    if (effect.warunek.is !== "natura" || !natura) return null;
-    const branch = effect.warunek.jedna_z.includes(natura) ? effect.to : effect.inaczej;
+  if (effect.op === "when") {
+    if (effect.condition.is !== "nature" || !natura) return null;
+    const branch = effect.condition.oneOf.includes(natura) ? effect.then : effect.else;
     return branch ? owedIn(branch, queue, natura) : null;
   }
 
   // Divergence two: a die table is not a question — the app rolls it — so what
   // it lands on is asked about after the roll, from the server's answer.
-  if (effect.op === "rzut") return null;
+  if (effect.op === "roll") return null;
 
   // A borrowed table is the table it borrows, and both of them are dice. The
   // node itself is never the question — reported as one, it was a question the
   // sheet had no control for, which is how the two Kapliczki became cards a
   // player could only ever leave for later.
-  if (effect.op === "jak-pole") {
+  if (effect.op === "as-field") {
     const borrowed = childrenOf(effect)[0]?.[1];
     return borrowed ? owedIn(borrowed, queue, natura) : null;
   }
@@ -226,9 +226,9 @@ function owedIn(effect: Effect, queue: number[], natura: Nature | null = null): 
   /**
    * A loss the holder chooses from takes one answer per card it will cost, the
    * same as any other decision — so the queue is drawn down here too, or a
-   * `po-kolei` after one would read the wrong answers for itself.
+   * `sequence` after one would read the wrong answers for itself.
    */
-  if (effect.op === "strata" && !isSettled(effect)) {
+  if (effect.op === "lose" && !isSettled(effect)) {
     const wanted = effect.count ?? 1;
     for (let i = 0; i < wanted; i++) {
       if (queue.shift() === undefined) return effect;

@@ -23,7 +23,7 @@ import type { CardId } from "@/data/ids";
  * of card — so the goods are drawn the way every other card in this app is
  * drawn: the illustration at tile size, the name under it, the whole Karta one
  * hover away. It is the same row the Obszar's own Karty sit in two taps back,
- * with `kup` where `weź` is, because buying something off a shelf and picking
+ * with `buy` where `weź` is, because buying something off a shelf and picking
  * something up off the ground are the same gesture with a price on one of them.
  *
  * The price rides in the tile's `badge`, which is what that was built for — "a
@@ -52,7 +52,7 @@ export function Shop({
   onAsk,
   onService,
 }: {
-  effect: Extract<Effect, { op: "kup" }>;
+  effect: Extract<Effect, { op: "buy" }>;
   gold: number;
   /** How many of each Wyposażenie card are left in the box (21.2). */
   stock?: Record<string, number>;
@@ -76,13 +76,13 @@ export function Shop({
     <div className="flex flex-col gap-2">
 
       <TileRow frame={false}>
-        {effect.towar.map((towar) => {
-          const cardId = goodsId(towar.co);
+        {effect.goods.map((good) => {
+          const cardId = goodsId(good.name);
           // 21.2: a shop with none left is not offering it. Said plainly rather
           // than hidden, because "nieosiągalny" is information the table wants.
           const left = cardId && stock ? (stock[cardId] ?? Infinity) : Infinity;
           const gone = left <= 0;
-          const poor = gold < towar.cena;
+          const poor = gold < good.price;
           // 5.4, asked of this card: in slotowy a Hełm goes on your head and a
           // full Plecak has nothing to say about it.
           const full =
@@ -97,14 +97,14 @@ export function Shop({
 
           return (
             <CardTile
-              key={towar.co}
+              key={good.name}
               card={{
                 ...(cardId
                   ? tileFor({ cardId, granted: false })
-                  : { cardId: towar.co, name: towar.co, noCard: true as const }),
+                  : { cardId: good.name, name: good.name, noCard: true as const }),
                 holdable: true,
               }}
-              badge={`${towar.cena} Sz. Z.`}
+              badge={`${good.price} Sz. Z.`}
               /* Greyed where it cannot be had, the same way a Karta whose take
                  is out greys where it lies. The reason is under the tile. */
               dimmed={gone || poor}
@@ -114,7 +114,7 @@ export function Shop({
               {can ? (
                 <button
                   disabled={busy}
-                  onClick={() => askToBuy({ cardId: cardId!, cena: towar.cena, gold, onAsk, onService })}
+                  onClick={() => askToBuy({ cardId: cardId!, price: good.price, gold, onAsk, onService })}
                   /* The same control as „weź" on the Obszar's own shelf, and
                      deliberately: one gesture, learnt once. */
                   className="text-[9px] text-verdigris underline transition hover:text-ink disabled:text-muted/50 disabled:no-underline"
@@ -163,13 +163,13 @@ export function Shop({
  */
 function askToBuy({
   cardId,
-  cena,
+  price,
   gold,
   onAsk,
   onService,
 }: {
   cardId: CardId;
-  cena: number;
+  price: number;
   gold: number;
   onAsk: (ask: Confirmation) => void;
   onService?: OnService;
@@ -177,7 +177,7 @@ function askToBuy({
   const name = cardName(cardId);
   onAsk({
     title: `Kup: ${name}`,
-    body: `${name} kosztuje ${cena} ${cena === 1 ? "Sztukę" : cena < 5 ? "Sztuki" : "Sztuk"} Złota. Zostanie ci ${gold - cena} z ${gold}.`,
+    body: `${name} kosztuje ${price} ${price === 1 ? "Sztukę" : price < 5 ? "Sztuki" : "Sztuk"} Złota. Zostanie ci ${gold - price} z ${gold}.`,
     confirmLabel: "Kup",
     onConfirm: () => onService?.({ action: "buy", cardId }),
   });

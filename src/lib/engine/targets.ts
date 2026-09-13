@@ -19,14 +19,14 @@ export interface TargetSeat {
  * The seats an effect hits right now, or null when that cannot be decided here.
  *
  * Null is not a failure. Two of the targets are genuinely not answerable at the
- * moment a card is resolved: `kazdy-kto-tu-trafi` belongs to a card that stays
- * on the board and catches whoever stops there later, and `inna-postac` is a
+ * moment a card is resolved: `whoever-lands-here` belongs to a card that stays
+ * on the board and catches whoever stops there later, and `another-character` is a
  * choice the holder has yet to make. Callers keep those pending, which is what
  * the effect pipeline already does with anything it cannot finish.
  *
  * Everything else is answerable, and was being treated as though it were not:
  * Burza Siedmiu Słońc, Zaćmienie Słońc and Zaklinacz Czasu all resolved to
- * nothing at all, because the applier only understood "ty".
+ * nothing at all, because the applier only understood "you".
  */
 export function seatsTargeted(
   target: Target | undefined,
@@ -61,7 +61,7 @@ export function seatsTargeted(
    * Kamienia, czyli po 3 turach" — which PRZESILENIE would make untrue.
    *
    * So a statue is out of the game for three turns, and the four ops that go
-   * through here — `punkty`, `strata`, `tura-stracona`, `efekt` — pass it by.
+   * through here — `points`, `lose`, `lose-turn`, `status` — pass it by.
    * Filtered rather than refused, because a Władca Gromu thrown at an Obszar
    * with a statue and two live Postacie is still a Zaklęcie that lands: it just
    * does not land on the statue. A Zaklęcie aimed at *one* named Postać is the
@@ -77,13 +77,13 @@ export function seatsTargeted(
   switch (target) {
     // No target named means the card is talking to whoever drew it.
     case undefined:
-    case "ty":
+    case "you":
       return actor && !actor.eliminated ? only([actor]) : [];
 
-    case "wszyscy":
+    case "everyone":
       return only(playing);
 
-    case "wszyscy-w-kregu": {
+    case "everyone-in-ring": {
       const ring = regionOf(actor?.fieldId ?? null);
       if (!ring) return [];
       return only(playing.filter((seat) => regionOf(seat.fieldId) === ring));
@@ -98,30 +98,30 @@ export function seatsTargeted(
      * is what "także Postacie" is doing in the card's own sentence: it is
      * warning you.
      */
-    case "wszyscy-tutaj": {
+    case "everyone-here": {
       const here = actor?.fieldId ?? null;
       if (!here) return [];
       return only(playing.filter((seat) => seat.fieldId === here));
     }
 
-    case "w-dolnym-kregu":
+    case "in-lower-ring":
       return only(playing.filter((seat) => regionOf(seat.fieldId) === "dolny"));
-    case "w-srodkowym-kregu":
+    case "in-middle-ring":
       return only(playing.filter((seat) => regionOf(seat.fieldId) === "srodkowy"));
-    case "w-gornym-kregu":
+    case "in-upper-ring":
       return only(playing.filter((seat) => regionOf(seat.fieldId) === "gorny"));
 
-    case "dobrzy":
+    case "good":
       return only(playing.filter((seat) => seat.nature === "good"));
-    case "chaotyczni":
+    case "chaotic":
       return only(playing.filter((seat) => seat.nature === "chaotic"));
-    case "zli":
+    case "evil":
       return only(playing.filter((seat) => seat.nature === "evil"));
 
     // Not answerable now: one waits for somebody to arrive, the other for
     // somebody to choose.
-    case "kazdy-kto-tu-trafi":
-    case "inna-postac":
+    case "whoever-lands-here":
+    case "another-character":
       return null;
   }
 }

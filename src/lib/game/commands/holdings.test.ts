@@ -258,7 +258,7 @@ describe("taking a card", () => {
     const { writes, result } = takeCard(table(), { seatId: "seat-a", cardId: "1-sztuka-zlota" });
     expect(result.kind).toBeNull();
     expect(result.resolve).toEqual({
-      effect: { op: "punkty", stat: "gold", delta: 1 },
+      effect: { op: "points", stat: "gold", delta: 1 },
       reason: "1 SZTUKA ZŁOTA",
     });
     expect(writes.holdings?.insert ?? []).toEqual([]);

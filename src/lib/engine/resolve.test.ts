@@ -6,13 +6,13 @@ import type { Effect } from "./cardScript";
 
 describe("what the app may carry out on its own", () => {
   it("settles what has one outcome", () => {
-    expect(isSettled({ op: "nic" })).toBe(true);
-    expect(isSettled({ op: "punkty", stat: "gold", delta: -1 })).toBe(true);
-    expect(isSettled({ op: "tura-stracona", turns: 1 })).toBe(true);
-    expect(isSettled({ op: "zaklecie", count: 1 })).toBe(true);
-    expect(isSettled({ op: "kamien" })).toBe(true);
-    expect(isSettled({ op: "walka", nazwa: "Osiłek", miecz: 4 })).toBe(true);
-    expect(isSettled({ op: "przenies", to: { kind: "pole", fieldId: "karczma" } })).toBe(true);
+    expect(isSettled({ op: "nothing" })).toBe(true);
+    expect(isSettled({ op: "points", stat: "gold", delta: -1 })).toBe(true);
+    expect(isSettled({ op: "lose-turn", turns: 1 })).toBe(true);
+    expect(isSettled({ op: "gain-spell", count: 1 })).toBe(true);
+    expect(isSettled({ op: "stone" })).toBe(true);
+    expect(isSettled({ op: "fight", name: "Osiłek", sword: 4 })).toBe(true);
+    expect(isSettled({ op: "move", to: { kind: "field", fieldId: "karczma" } })).toBe(true);
   });
 
   it("refuses what the rules leave to the player", () => {
@@ -20,33 +20,33 @@ describe("what the app may carry out on its own", () => {
     // character, which is the whole line this function draws.
     expect(
       isSettled({
-        op: "wybor",
+        op: "choice",
         options: [
-          { label: "a", effect: { op: "punkty", stat: "sword", delta: 1 } },
-          { label: "b", effect: { op: "punkty", stat: "magic", delta: 1 } },
+          { label: "a", effect: { op: "points", stat: "sword", delta: 1 } },
+          { label: "b", effect: { op: "points", stat: "magic", delta: 1 } },
         ],
       }),
     ).toBe(false);
-    expect(isSettled({ op: "strata", co: "przedmiot" })).toBe(false);
-    expect(isSettled({ op: "przenies", to: { kind: "dowolne-w-kregu" } })).toBe(false);
-    expect(isSettled({ op: "zgadnij", nagroda: { op: "zaklecie", count: 1 } })).toBe(false);
+    expect(isSettled({ op: "lose", what: "item" })).toBe(false);
+    expect(isSettled({ op: "move", to: { kind: "anywhere-in-ring" } })).toBe(false);
+    expect(isSettled({ op: "guess", prize: { op: "gain-spell", count: 1 } })).toBe(false);
     // Free healing has one answer; paid healing is a purchase, and how much to
     // buy is the buyer's.
-    expect(isSettled({ op: "uzdrow", upTo: 4 })).toBe(true);
-    expect(isSettled({ op: "uzdrow", upTo: 4, cena: 1 })).toBe(false);
+    expect(isSettled({ op: "heal", upTo: 4 })).toBe(true);
+    expect(isSettled({ op: "heal", upTo: 4, price: 1 })).toBe(false);
   });
 
   it("is only as settled as its least settled step", () => {
     const withChoice: Effect = {
-      op: "po-kolei",
+      op: "sequence",
       steps: [
-        { op: "punkty", stat: "gold", delta: 1 },
-        { op: "wybor", options: [{ label: "a", effect: { op: "nic" } }] },
+        { op: "points", stat: "gold", delta: 1 },
+        { op: "choice", options: [{ label: "a", effect: { op: "nothing" } }] },
       ],
     };
     expect(isSettled(withChoice)).toBe(false);
     expect(
-      isSettled({ op: "po-kolei", steps: [{ op: "nic" }, { op: "kamien" }] }),
+      isSettled({ op: "sequence", steps: [{ op: "nothing" }, { op: "stone" }] }),
     ).toBe(true);
   });
 
@@ -54,7 +54,7 @@ describe("what the app may carry out on its own", () => {
     // Six faces, five of them things that simply happen and one — "przenieś się
     // na dowolny Obszar w tym Kręgu" — that is the player pointing at a board.
     const karczma = FIELD_SCRIPTS.karczma!.offers[0].effect;
-    if (karczma.op !== "rzut") throw new Error("expected a die table");
+    if (karczma.op !== "roll") throw new Error("expected a die table");
     const settled = [1, 2, 3, 4, 5, 6].filter((face) => isSettled(karczma.faces[face]));
     expect(settled).toEqual([1, 2, 3, 4, 6]);
   });
@@ -85,34 +85,34 @@ describe("what the app may carry out on its own", () => {
  */
 describe("what an effect is still waiting on", () => {
   const nested: Effect = {
-    op: "wybor",
+    op: "choice",
     options: [
       {
         label: "w lewo",
         effect: {
-          op: "wybor",
+          op: "choice",
           options: [
-            { label: "dalej", effect: { op: "strata", co: "przedmiot" } },
-            { label: "z powrotem", effect: { op: "nic" } },
+            { label: "dalej", effect: { op: "lose", what: "item" } },
+            { label: "z powrotem", effect: { op: "nothing" } },
           ],
         },
       },
-      { label: "w prawo", effect: { op: "nic" } },
+      { label: "w prawo", effect: { op: "nothing" } },
     ],
   };
 
   it("asks nothing about an effect the app can simply carry out", () => {
-    expect(pendingIn({ op: "nic" }, [])).toBeNull();
-    expect(pendingIn({ op: "punkty", stat: "gold", delta: -1 }, [])).toBeNull();
-    expect(pendingIn({ op: "przenies", to: { kind: "pole", fieldId: "karczma" } }, [])).toBeNull();
+    expect(pendingIn({ op: "nothing" }, [])).toBeNull();
+    expect(pendingIn({ op: "points", stat: "gold", delta: -1 }, [])).toBeNull();
+    expect(pendingIn({ op: "move", to: { kind: "field", fieldId: "karczma" } }, [])).toBeNull();
   });
 
   it("owes an unsettled leaf as itself, so the sheet knows what to put on screen", () => {
-    const loss: Effect = { op: "strata", co: "przedmiot" };
+    const loss: Effect = { op: "lose", what: "item" };
     expect(pendingIn(loss, [])).toBe(loss);
-    expect(pendingIn({ op: "przenies", to: { kind: "dowolne-w-kregu" } }, [])).toEqual({
-      op: "przenies",
-      to: { kind: "dowolne-w-kregu" },
+    expect(pendingIn({ op: "move", to: { kind: "anywhere-in-ring" } }, [])).toEqual({
+      op: "move",
+      to: { kind: "anywhere-in-ring" },
     });
   });
 
@@ -127,13 +127,13 @@ describe("what an effect is still waiting on", () => {
     // Two steps down and the answer is a loss, not either of the choices above
     // it — which is the whole reason the choices travel with the question.
     expect(pendingIn(nested, [0])).toEqual({
-      op: "wybor",
+      op: "choice",
       options: [
-        { label: "dalej", effect: { op: "strata", co: "przedmiot" } },
-        { label: "z powrotem", effect: { op: "nic" } },
+        { label: "dalej", effect: { op: "lose", what: "item" } },
+        { label: "z powrotem", effect: { op: "nothing" } },
       ],
     });
-    expect(pendingIn(nested, [0, 0])).toEqual({ op: "strata", co: "przedmiot" });
+    expect(pendingIn(nested, [0, 0])).toEqual({ op: "lose", what: "item" });
     expect(pendingIn(nested, [0, 1])).toBeNull();
     expect(pendingIn(nested, [1])).toBeNull();
   });
@@ -142,26 +142,26 @@ describe("what an effect is still waiting on", () => {
     // The queue is `Decisions.choices` in the order the effect asks. A copy
     // taken per step would answer the second question with the first answer.
     const twice: Effect = {
-      op: "po-kolei",
+      op: "sequence",
       steps: [
         {
-          op: "wybor",
+          op: "choice",
           options: [
-            { label: "a", effect: { op: "nic" } },
-            { label: "b", effect: { op: "kamien" } },
+            { label: "a", effect: { op: "nothing" } },
+            { label: "b", effect: { op: "stone" } },
           ],
         },
         {
-          op: "wybor",
+          op: "choice",
           options: [
-            { label: "c", effect: { op: "nic" } },
-            { label: "d", effect: { op: "zaklecie", count: 1 } },
+            { label: "c", effect: { op: "nothing" } },
+            { label: "d", effect: { op: "gain-spell", count: 1 } },
           ],
         },
       ],
     };
-    expect(pendingIn(twice, [])).toBe(twice.op === "po-kolei" ? twice.steps[0] : null);
-    expect(pendingIn(twice, [0])).toBe(twice.op === "po-kolei" ? twice.steps[1] : null);
+    expect(pendingIn(twice, [])).toBe(twice.op === "sequence" ? twice.steps[0] : null);
+    expect(pendingIn(twice, [0])).toBe(twice.op === "sequence" ? twice.steps[1] : null);
     expect(pendingIn(twice, [0, 1])).toBeNull();
   });
 
@@ -170,20 +170,20 @@ describe("what an effect is still waiting on", () => {
     // call site spread the array itself to survive being asked twice in one
     // render. The copy is the function's now.
     const answers = [0, 0];
-    expect(pendingIn(nested, answers)).toEqual({ op: "strata", co: "przedmiot" });
+    expect(pendingIn(nested, answers)).toEqual({ op: "lose", what: "item" });
     expect(answers).toEqual([0, 0]);
   });
 
   it("stops a sequence at the first step that is owed", () => {
     const stopped: Effect = {
-      op: "po-kolei",
+      op: "sequence",
       steps: [
-        { op: "punkty", stat: "gold", delta: 1 },
-        { op: "strata", co: "przedmiot" },
-        { op: "przenies", to: { kind: "dowolne-w-kregu" } },
+        { op: "points", stat: "gold", delta: 1 },
+        { op: "lose", what: "item" },
+        { op: "move", to: { kind: "anywhere-in-ring" } },
       ],
     };
-    expect(pendingIn(stopped, [])).toEqual({ op: "strata", co: "przedmiot" });
+    expect(pendingIn(stopped, [])).toEqual({ op: "lose", what: "item" });
   });
 
   /**
@@ -199,10 +199,10 @@ describe("what an effect is still waiting on", () => {
     expect(
       pendingIn(
         {
-          op: "gdy",
-          warunek: { is: "ma-zloto" },
-          to: { op: "strata", co: "przedmiot" },
-          inaczej: { op: "wybor", options: [{ label: "a", effect: { op: "nic" } }] },
+          op: "when",
+          condition: { is: "has-gold" },
+          then: { op: "lose", what: "item" },
+          else: { op: "choice", options: [{ label: "a", effect: { op: "nothing" } }] },
         },
         [],
       ),
@@ -244,18 +244,18 @@ describe("what an effect is still waiting on", () => {
 
 describe("nodeAt — the node a script frame's cursor stands on", () => {
   const card: Effect = {
-    op: "po-kolei",
+    op: "sequence",
     steps: [
-      { op: "punkty", stat: "sword", delta: 1, target: "ty" },
+      { op: "points", stat: "sword", delta: 1, target: "you" },
       {
-        op: "rzut",
+        op: "roll",
         faces: {
           3: {
-            op: "gdy",
-            warunek: { is: "ma-zloto" },
-            to: {
-              op: "wybor",
-              options: [{ label: "A", effect: { op: "nic" } }],
+            op: "when",
+            condition: { is: "has-gold" },
+            then: {
+              op: "choice",
+              options: [{ label: "A", effect: { op: "nothing" } }],
             },
           },
         },
@@ -265,9 +265,9 @@ describe("nodeAt — the node a script frame's cursor stands on", () => {
 
   it("follows steps, faces, branches and picks by plain indexing", () => {
     expect(nodeAt(card, [])).toBe(card);
-    expect(nodeAt(card, [0])).toMatchObject({ op: "punkty" });
-    expect(nodeAt(card, [1, 3, 0])).toMatchObject({ op: "wybor" });
-    expect(nodeAt(card, [1, 3, 0, 0])).toMatchObject({ op: "nic" });
+    expect(nodeAt(card, [0])).toMatchObject({ op: "points" });
+    expect(nodeAt(card, [1, 3, 0])).toMatchObject({ op: "choice" });
+    expect(nodeAt(card, [1, 3, 0, 0])).toMatchObject({ op: "nothing" });
   });
 
   /** A path the effect does not have is nothing, not the wrong question. */
@@ -287,7 +287,7 @@ describe("a condition the browser can test for itself", () => {
   const wrozka = SCRIPTS["wrozka"]!.effect;
 
   it("finds the wish inside a Natura the reader knows", () => {
-    expect(pendingIn(wrozka, [], "good")?.op).toBe("wybor");
+    expect(pendingIn(wrozka, [], "good")?.op).toBe("choice");
   });
 
   it("finds nothing for a character the card is not for", () => {
@@ -325,9 +325,9 @@ describe("a condition the browser can test for itself", () => {
 describe("a Karta that has nothing for this Postać", () => {
   /** The WRÓŻKA's shape: serve one Natura, and say nothing to anyone else. */
   const wrozkaShape: Effect = {
-    op: "gdy",
-    warunek: { is: "natura", jedna_z: ["good"] },
-    to: { op: "punkty", stat: "sword", delta: 1 },
+    op: "when",
+    condition: { is: "nature", oneOf: ["good"] },
+    then: { op: "points", stat: "sword", delta: 1 },
   };
 
   it("is inert for somebody who fails the condition", () => {
@@ -350,22 +350,22 @@ describe("a Karta that has nothing for this Postać", () => {
    */
   it("is inert whatever kind of condition was failed", () => {
     const bostwo: Effect = {
-      op: "gdy",
-      warunek: { is: "attacker" },
-      to: { op: "punkty", stat: "life", delta: 1 },
+      op: "when",
+      condition: { is: "attacker" },
+      then: { op: "points", stat: "life", delta: 1 },
     };
     expect(inertFor(bostwo, true)).toBe(true);
 
     // And the other two the box uses, for the same reason.
     const prog: Effect = {
-      op: "gdy",
-      warunek: { is: "prog", stat: "sword", ponizej: 4 },
-      to: { op: "punkty", stat: "sword", delta: 1 },
+      op: "when",
+      condition: { is: "threshold", stat: "sword", below: 4 },
+      then: { op: "points", stat: "sword", delta: 1 },
     };
     const zloto: Effect = {
-      op: "gdy",
-      warunek: { is: "ma-zloto" },
-      to: { op: "punkty", stat: "gold", delta: -1 },
+      op: "when",
+      condition: { is: "has-gold" },
+      then: { op: "points", stat: "gold", delta: -1 },
     };
     expect(inertFor(prog, true)).toBe(true);
     expect(inertFor(zloto, true)).toBe(true);
@@ -373,16 +373,16 @@ describe("a Karta that has nothing for this Postać", () => {
 
   /** „Otherwise nothing" and „no otherwise" are the same card to the player. */
   it("counts an `inaczej` that does nothing as no branch at all", () => {
-    expect(inertFor({ ...wrozkaShape, inaczej: { op: "nic" } }, true)).toBe(true);
+    expect(inertFor({ ...wrozkaShape, else: { op: "nothing" } }, true)).toBe(true);
   });
 
   it("is not inert when the other branch does something", () => {
-    const either: Effect = { ...wrozkaShape, inaczej: { op: "punkty", stat: "life", delta: -1 } };
+    const either: Effect = { ...wrozkaShape, else: { op: "points", stat: "life", delta: -1 } };
     expect(inertFor(either, true)).toBe(false);
   });
 
   it("says nothing about a Karta that is not a `gdy` at all", () => {
-    expect(inertFor({ op: "punkty", stat: "gold", delta: 1 }, true)).toBe(false);
+    expect(inertFor({ op: "points", stat: "gold", delta: 1 }, true)).toBe(false);
   });
 
   /** A Karta with no script — most of the Przedmioty. */

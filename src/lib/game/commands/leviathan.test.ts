@@ -63,14 +63,14 @@ describe("where the Lewiatan settles", () => {
   it("is a question, and the two registers now agree it is one", () => {
     // `placed`, not `effect`: where he goes is 15.1's instruction to whoever
     // drew him, and what he does to whoever finds him in the water is a fight.
-    const effect = scriptFor(LEWIATAN)!.placed!;
+    const effect = scriptFor(LEWIATAN)!.onDraw!;
     expect(isSettled(effect)).toBe(false);
-    expect(pendingIn(effect, [])).toMatchObject({ op: "poloz-karte" });
+    expect(pendingIn(effect, [])).toMatchObject({ op: "place-card" });
   });
 
   it("waits to be told which Obszar, when several are free", async () => {
     const done = await settle(drawnBy([]));
-    expect(done.result.pending).toMatchObject({ op: "poloz-karte" });
+    expect(done.result.pending).toMatchObject({ op: "place-card" });
     expect(done.writes.fieldCards).toBeUndefined();
   });
 
@@ -84,7 +84,7 @@ describe("where the Lewiatan settles", () => {
   /** "nie zajętym przez inną Postać" — a pointed-at Obszar with somebody on it is not free. */
   it("will not be put down on top of somebody", async () => {
     const done = await settle(drawnBy(["bagna-1"]), "bagna-1");
-    expect(done.result.pending).toMatchObject({ op: "poloz-karte" });
+    expect(done.result.pending).toMatchObject({ op: "place-card" });
   });
 
   /** One left free is not a choice, so nobody is asked. */

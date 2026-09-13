@@ -13,7 +13,7 @@
  * are never marked with a token); **parametr** adds what is always on;
  * **w walce** adds what only counts when somebody swings.
  *
- * All three are read by something. `w walce` is 17.4 and every `op: "walka"`.
+ * All three are read by something. `w walce` is 17.4 and every `op: "fight"`.
  * `parametr` is what the Trzęsawiska test and the six Kamienny Most ordeals
  * subtract, and what the Labirynt and the Spalona Ziemia measure — obstacles
  * rather than fights, which is the line the box actually draws. `bazowe` is

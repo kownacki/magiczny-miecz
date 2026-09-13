@@ -38,9 +38,9 @@ export function EffectControls({
   );
 
   switch (effect.op) {
-    case "nic":
+    case "nothing":
       return stated("nic się nie dzieje");
-    case "po-kolei":
+    case "sequence":
       return (
         <div className="flex flex-col gap-1">
           {effect.steps.map((step, i) => (
@@ -48,7 +48,7 @@ export function EffectControls({
           ))}
         </div>
       );
-    case "wybor":
+    case "choice":
       return (
         <div>
           <p className="mb-1 text-[11px] text-muted">{prefix}Wybierz jedno:</p>
@@ -59,7 +59,7 @@ export function EffectControls({
           </div>
         </div>
       );
-    case "rzut":
+    case "roll":
       return (
         <div>
           <p className="mb-1 text-[11px] text-muted">{prefix}Rzuć kostką:</p>
@@ -73,125 +73,125 @@ export function EffectControls({
           </ol>
         </div>
       );
-    case "punkty": {
+    case "points": {
       const label = `${effect.delta > 0 ? "+" : "−"}${Math.abs(effect.delta)} ${STAT_LABEL[effect.stat]}`;
-      if (effect.target && effect.target !== "ty") {
+      if (effect.target && effect.target !== "you") {
         return stated(`${label}${andWhom(effect.target)}`);
       }
       return stated(label);
     }
-    case "uzdrow":
+    case "heal":
       return stated(`uzdrowienie do ${effect.upTo} punktów Życia (nie ponad start, 4.7)`);
-    case "tura-stracona":
+    case "lose-turn":
       return stated(
-        effect.target && effect.target !== "ty"
+        effect.target && effect.target !== "you"
           ? `−${effect.turns} tura${andWhom(effect.target)}` +
-              (effect.oprocz?.length
-                ? `, oprócz: ${effect.oprocz.map(characterName).join(", ")}`
+              (effect.except?.length
+                ? `, oprócz: ${effect.except.map(characterName).join(", ")}`
                 : "")
           : `−${effect.turns} tura`,
       );
-    case "ruch-dodatkowy":
+    case "extra-move":
       return stated("dodatkowy ruch");
-    case "zaklecie":
+    case "gain-spell":
       return stated(`+${effect.count} Zaklęcie`);
-    case "zaklecia-do-limitu":
+    case "spells-to-limit":
       return stated("Zaklęcia do limitu twojej Magii (2.6)");
-    case "przenies":
+    case "move":
       return stated(
-        effect.to.kind === "pole"
+        effect.to.kind === "field"
           ? `przenieś się na: ${FIELDS.get(effect.to.fieldId)?.name ?? effect.to.fieldId}`
-          : effect.to.kind === "dowolne-w-kregu"
+          : effect.to.kind === "anywhere-in-ring"
             ? "przenieś się na dowolny Obszar w tym Kręgu"
             : "wracasz tam, skąd zacząłeś ruch",
       );
-    case "wyciagnij":
+    case "draw-cards":
       return stated(`wyciągnij ${effect.count} Karty`);
-    case "walka":
+    case "fight":
       return stated(
-        `walka: ${effect.nazwa} (${effect.miecz !== undefined ? `Miecz ${effect.miecz}` : `Magia ${effect.magia}`})`,
+        `walka: ${effect.name} (${effect.sword !== undefined ? `Miecz ${effect.sword}` : `Magia ${effect.magic}`})`,
       );
-    case "strata":
+    case "lose":
       /**
        * Whose loss it is, said out loud — like the two cases above it.
        *
-       * `punkty` and `tura-stracona` both name a target that is not you, and
-       * `strata` did not: it was the one effect in this switch that takes cards
+       * `points` and `lose-turn` both name a target that is not you, and
+       * `lose` did not: it was the one effect in this switch that takes cards
        * away and the one that never said whose. Burza Siedmiu Słońc is
-       * `{ co: "wszystkie-zaklecia", target: "wszyscy" }`, and the panel read
+       * `{ what: "all-spells", target: "everyone" }`, and the panel read
        * "tracisz wszystkie Zaklęcia" — a storm that ends the magic in the world
        * looking like a bad afternoon for whoever drew it.
        */
       return stated(`${describeLoss(effect)}${andWhom(effect.target)}`);
-    case "kamien":
+    case "stone":
       return stated("Zamiana w Kamień (20.1)");
-    case "zamien-punkty":
+    case "swap-points":
       // 1.3 and 2.3 still hold on both sides of the swap, which is what makes
       // it a decision rather than a free re-roll of the character sheet. The
       // direction is settled by now — it is what the player chose off the
       // Kuglarz's three — so this states one trade rather than offering both.
       return stated(
-        effect.z === "sword"
+        effect.from === "sword"
           ? "zamiana punktów Miecza na punkty Magii (nie poniżej wartości początkowych)"
           : "zamiana punktów Magii na punkty Miecza (nie poniżej wartości początkowych)",
       );
-    case "zgadnij":
+    case "guess":
       return (
         <div>
           <p className="text-[11px] text-muted">
             {prefix}Powiedz na głos cyfrę od 1 do 6, potem rzuć. Trafienie:
           </p>
           <div className="mt-0.5">
-            <EffectControls effect={effect.nagroda} />
+            <EffectControls effect={effect.prize} />
           </div>
         </div>
       );
-    case "natura":
-      return stated(`zmiana Natury na: ${effect.na === "evil" ? "zła" : effect.na}`);
-    case "kup":
+    case "set-nature":
+      return stated(`zmiana Natury na: ${effect.to === "evil" ? "zła" : effect.to}`);
+    case "buy":
       return (
         <div>
           <p className="text-[11px] text-muted">{prefix}Możesz kupić:</p>
           <ul className="mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5">
-            {effect.towar.map((towar) => (
-              <li key={towar.co} className="text-[11px] text-ink">
-                {towar.co}{" "}
+            {effect.goods.map((good) => (
+              <li key={good.name} className="text-[11px] text-ink">
+                {good.name}{" "}
                 <span className="text-zloto">
-                  {towar.cena} Sz. Z.
+                  {good.price} Sz. Z.
                 </span>
               </li>
             ))}
           </ul>
         </div>
       );
-    case "sprzedaj":
-      return stated(`skup Przedmiotów: ${effect.cena} Sz. Z. za sztukę`);
-    case "jak-pole":
+    case "sell":
+      return stated(`skup Przedmiotów: ${effect.price} Sz. Z. za sztukę`);
+    case "as-field":
       return stated(
         `modlisz się na zasadach z: ${FIELDS.get(effect.fieldId)?.name ?? effect.fieldId}`,
       );
-    case "poloz-karte":
+    case "place-card":
       return stated(
-        effect.gdzie.kind === "pole"
-          ? `połóż Kartę na: ${FIELDS.get(effect.gdzie.fieldId)?.name ?? effect.gdzie.fieldId}`
-          : effect.gdzie.kind === "jedno-z"
-            ? `połóż Kartę na wolnym z: ${effect.gdzie.fieldIds
+        effect.where.kind === "field"
+          ? `połóż Kartę na: ${FIELDS.get(effect.where.fieldId)?.name ?? effect.where.fieldId}`
+          : effect.where.kind === "one-of"
+            ? `połóż Kartę na wolnym z: ${effect.where.fieldIds
                 .map((id) => FIELDS.get(id)?.name ?? id)
                 .filter((name, i, all) => all.indexOf(name) === i)
                 .join(", ")}`
             : "połóż Kartę",
       );
-    case "otrzymaj":
-      return stated(`otrzymujesz: ${effect.co}`);
-    case "gdy":
+    case "receive":
+      return stated(`otrzymujesz: ${effect.what}`);
+    case "when":
       return (
         <div className="flex flex-col gap-1">
           <EffectControls
-            effect={effect.to}
-            prefix={`${describeCondition(effect.warunek)}: `}
+            effect={effect.then}
+            prefix={`${describeCondition(effect.condition)}: `}
           />
-          {effect.inaczej && (
-            <EffectControls effect={effect.inaczej} prefix="w przeciwnym razie: " />
+          {effect.else && (
+            <EffectControls effect={effect.else} prefix="w przeciwnym razie: " />
           )}
         </div>
       );

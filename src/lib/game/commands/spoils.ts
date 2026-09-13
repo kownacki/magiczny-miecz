@@ -569,7 +569,7 @@ export async function resolveFight(
  * each of them may have something to say about it.
  *
  * Whatever the toll asks is asked through the ordinary suspension machinery —
- * a `wybor` becomes a `script` frame above the field the fight was
+ * a `choice` becomes a `script` frame above the field the fight was
  * interrupting, answered by `answerScript` like every other card's question.
  */
 async function tollFor(
@@ -585,7 +585,7 @@ async function tollFor(
     // `pole:`/`seat:`. None of those has a script, which is what this guard
     // says — the same answer `scriptFor` gave when it took a bare string.
     if (!isCardId(cardId)) continue;
-    const owed = scriptFor(cardId)?.przegrana;
+    const owed = scriptFor(cardId)?.onLoss;
     if (!owed) continue;
     const done = await applyEffect(
       apply(snapshot, writes),

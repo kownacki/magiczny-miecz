@@ -9,7 +9,7 @@ import { OPS_IN_ORDER, WORDS } from "./words";
  * the vocabulary and consulted by nothing is a rule the app silently drops.
  * This holds the same line one level down, for the *fields* of an `Effect`
  * word. The PÓŁBÓG is the case: „Możesz je wybrać ze stosu" became
- * `zeStosu: true` on his `zaklecie`, both text renderers read it and say so
+ * `fromPile: true` on his `gain-spell`, both text renderers read it and say so
  * under the card, and the executor in `ops.ts` never looks — the card promises
  * a choice and deals the top of the pile. Nothing failed, because nothing
  * requires a field of the vocabulary to have a reader in the engine.
@@ -34,13 +34,13 @@ const WALK = readFileSync("src/lib/game/commands/effects.ts", "utf8");
 /** `op.field` read by a file other than the executor's, and which one. */
 const ELSEWHERE: Readonly<Record<string, string>> = {
   // The Lichwiarz's desk: `sell` reads the offer off the Obszar, not the op.
-  "sprzedaj.cena": "src/lib/game/commands/shop.ts",
+  "sell.price": "src/lib/game/commands/shop.ts",
   // The Medyk's and the Pustelnik's price: `heal` reads the cure off the
-  // Obszar — a priced `uzdrow` is a purchase, and the purchase is the shop's
+  // Obszar — a priced `heal` is a purchase, and the purchase is the shop's
   // door, not the walk's.
-  "uzdrow.cena": "src/lib/game/commands/shop.ts",
+  "heal.price": "src/lib/game/commands/shop.ts",
   // The ZŁY DUCH's „z wyjątkiem Południcy": `chooseLosses` spares them.
-  "strata.oprocz": "src/lib/engine/losses.ts",
+  "lose.except": "src/lib/engine/losses.ts",
 };
 
 /**
@@ -52,15 +52,15 @@ const ELSEWHERE: Readonly<Record<string, string>> = {
 const UNREAD: readonly string[] = [
   // PÓŁBÓG: „Możesz je wybrać ze stosu." The chooser the CHOCHLIK uses is the
   // door; the executor deals the top of the pile regardless.
-  "zaklecie.zeStosu",
+  "gain-spell.fromPile",
   // SZALEŃSTWO: „obejrzeć Zaklęcia i wybrać jedno z nich" hands the pick to
-  // the caster (`wybiera: "rzucajacy"`); the executor takes whatever answer
+  // the caster (`chosenBy: "caster"`); the executor takes whatever answer
   // the frame carries and never asks who the card says should give it.
-  "zabierz.wybiera",
-  // KOMETA: `zasieg` has one value, `krag`, and the executor sweeps the Krąg
+  "take.chosenBy",
+  // KOMETA: `reach` has one value, `krag`, and the executor sweeps the Krąg
   // without looking. Harmless today; a word with one value and no reader is
   // vocabulary nobody speaks — read it or delete it.
-  "katastrofa.zasieg",
+  "wipe.reach",
 ];
 
 /** The executor table's entries, keyed on the op, as source text. */

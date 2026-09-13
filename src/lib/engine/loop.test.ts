@@ -158,7 +158,7 @@ describe("closing a loop", () => {
       seatId: "seat-a",
       cardId: SMOK,
       reason: "SMOK",
-      effect: { op: "nic" },
+      effect: { op: "nothing" },
       cursor: [],
     };
     const state = closeLoopFrame(push(only(script), loop()), loop());

@@ -348,7 +348,7 @@ Zaklęcie on the same line goes to the hand (9.5) and the rest to the Obszar.
 **Still open, found while building:** `me` prints a character's *own* Miecz and
 Magia. Rules 1.2–1.5 and 2.2–2.6 say points from items and friends are computed
 at read time and never stored, so a player reading `me` is not seeing what they
-would fight with. `commands/seat.ts` already derives `parametr` and `walka`;
+would fight with. `commands/seat.ts` already derives `parametr` and `fight`;
 `me` should use them.
 
 ## The journal is not the record

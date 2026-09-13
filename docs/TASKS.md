@@ -142,7 +142,7 @@ one `Karta` shape, one file per card, the five registries as views.
       sweep of what came before — fields on `TurnPhase`, `Status`, `Ability`
       and the console `Command` union, function names, test-fixture keys —
       one file per commit, `tsc` as the guide, no behaviour change. Whether
-      the card words themselves (`punkty`, `wybor`, `rzut`…) go English is a
+      the card words themselves (`points`, `choice`, `roll`…) go English is a
       separate decision for step 3, not part of this sweep.
 
 Two cards the second test found saying one thing and doing another, kept in
@@ -152,7 +152,7 @@ its `UNREAD` list until fixed:
       `zeStosu: true`, read by both text renderers and by no op. The CHOCHLIK's
       chooser (`ask` frame) is the door.
 - [ ] **SZALEŃSTWO** — `wybiera: "rzucajacy"` is rendered under the card and
-      never asked for: the `zabierz` executor takes whatever answer the frame
+      never asked for: the `take` executor takes whatever answer the frame
       carries. „Obejrzeć Zaklęcia i wybrać jedno z nich" is the caster's look at
       a hand held under 9.3, which is the part that needs building.
 
@@ -215,7 +215,7 @@ holder is *under* is a **Status** (CONTEXT.md). The prose reader is deleted
 every reader onto one list. Its step three — retiring the `Ability` kinds — was
 **dropped after tracing what it costs**: `ABILITIES` is the printed-card data
 table, `describeAbility` renders it on the seat card, and `BONUS_BY_ID` is
-*built from* it rather than replacing it, so even `punkty` still needs its kind.
+*built from* it rather than replacing it, so even `points` still needs its kind.
 The duplication was always in the readers, and folding those fixed it. An
 `Ability` is what a card prints; a `Status` is what is true of a holder now;
 `HELD_TWIN` is the exhaustive bridge. **Do not reopen.**
@@ -286,7 +286,7 @@ stayed but can no longer convict, and says so in `MANUAL`: both halves of its
 trigger are unreachable, since nothing sets `how: "zdolnosc"` either.
 
 **When it returns:** the Turniej needs a dynamic choice — „wyzwać każdą Postać"
-is a choice among however many Postacie are at the table, and `wybor` is a fixed
+is a choice among however many Postacie are at the table, and `choice` is a fixed
 list re-walked by index. And 17.9's spoils need a browser picker; the press and
 the route already exist.
 

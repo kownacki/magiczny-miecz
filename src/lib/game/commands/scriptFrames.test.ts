@@ -73,11 +73,11 @@ const wonAbove = (state: TurnState): TurnState => {
 
 describe("a walka mid-sequence: the whole life", () => {
   const card: Effect = {
-    op: "po-kolei",
+    op: "sequence",
     steps: [
-      { op: "punkty", stat: "sword", delta: 1, target: "ty" },
-      { op: "walka", nazwa: "Strażnik Skarbu", miecz: 3 },
-      { op: "punkty", stat: "gold", delta: 2, target: "ty" },
+      { op: "points", stat: "sword", delta: 1, target: "you" },
+      { op: "fight", name: "Strażnik Skarbu", sword: 3 },
+      { op: "points", stat: "gold", delta: 2, target: "you" },
     ],
   };
 
@@ -135,13 +135,13 @@ describe("a rzut is not re-rolled on the way back", () => {
   it("reads the face off the cursor", async () => {
     const table = onField();
     const card: Effect = {
-      op: "rzut",
+      op: "roll",
       faces: {
         3: {
-          op: "po-kolei",
+          op: "sequence",
           steps: [
-            { op: "walka", nazwa: "Hadron", miecz: 3 },
-            { op: "punkty", stat: "life", delta: -1, target: "ty" },
+            { op: "fight", name: "Hadron", sword: 3 },
+            { op: "points", stat: "life", delta: -1, target: "you" },
           ],
         },
       },
@@ -163,14 +163,14 @@ describe("a rzut is not re-rolled on the way back", () => {
 
 describe("a question answered through the frame", () => {
   const card: Effect = {
-    op: "po-kolei",
+    op: "sequence",
     steps: [
-      { op: "punkty", stat: "sword", delta: 1, target: "ty" },
+      { op: "points", stat: "sword", delta: 1, target: "you" },
       {
-        op: "wybor",
+        op: "choice",
         options: [
-          { label: "Miecz", effect: { op: "punkty", stat: "sword", delta: 1, target: "ty" } },
-          { label: "Złoto", effect: { op: "punkty", stat: "gold", delta: 1, target: "ty" } },
+          { label: "Miecz", effect: { op: "points", stat: "sword", delta: 1, target: "you" } },
+          { label: "Złoto", effect: { op: "points", stat: "gold", delta: 1, target: "you" } },
         ],
       },
     ],
@@ -203,8 +203,8 @@ describe("what a suspended card blocks", () => {
   it("refuses to pass the turn over a card mid-sentence", async () => {
     const table = onField();
     const first = await runOn(table, {
-      op: "wybor",
-      options: [{ label: "A", effect: { op: "nic" } }],
+      op: "choice",
+      options: [{ label: "A", effect: { op: "nothing" } }],
     });
     const mid = apply(table, first.writes);
     expect(() => passTurn(mid)).toThrow(/dokończ/);
@@ -221,10 +221,10 @@ describe("a second walka in one card", () => {
   it("opens the next fight from the same frame", async () => {
     const table = onField();
     const card: Effect = {
-      op: "po-kolei",
+      op: "sequence",
       steps: [
-        { op: "walka", nazwa: "Pierwszy", miecz: 2 },
-        { op: "walka", nazwa: "Drugi", miecz: 3 },
+        { op: "fight", name: "Pierwszy", sword: 2 },
+        { op: "fight", name: "Drugi", sword: 3 },
       ],
     };
     const first = await runOn(table, card);

@@ -141,7 +141,7 @@ export function roundShown(round: number): number {
 }
 
 /** The four tracked numbers, in the case they are read in ("+2 Miecza"). */
-export type Stat = Extract<Effect, { op: "punkty" }>["stat"];
+export type Stat = Extract<Effect, { op: "points" }>["stat"];
 
 export const STAT_LABEL: Record<Stat, string> = {
   sword: "Miecza",
@@ -196,17 +196,17 @@ export const NATURE_LABEL_G: Record<string, string> = {
   any: "dowolnej",
 };
 
-/** What a `strata` takes off you. */
-export type Loss = Extract<Effect, { op: "strata" }>["co"];
+/** What a `lose` takes off you. */
+export type Loss = Extract<Effect, { op: "lose" }>["what"];
 
 export const LOST_LABEL: Record<Loss, string> = {
-  przedmiot: "Przedmiot",
-  przyjaciel: "Przyjaciela",
-  "wszyscy-przyjaciele-oprocz": "wszystkich Przyjaciół",
-  zaklecie: "Zaklęcie",
+  item: "Przedmiot",
+  friend: "Przyjaciela",
+  "all-friends-except": "wszystkich Przyjaciół",
+  spell: "Zaklęcie",
   gold: "całe złoto",
-  "wszystkie-przedmioty": "wszystkie Przedmioty",
-  "wszystkie-zaklecia": "wszystkie Zaklęcia",
+  "all-items": "wszystkie Przedmioty",
+  "all-spells": "wszystkie Zaklęcia",
 };
 
 /**
@@ -215,11 +215,11 @@ export const LOST_LABEL: Record<Loss, string> = {
  * `LOST_LABEL` above is the accusative singular — "tracisz Przyjaciela" — and
  * putting a numeral in front of it gives "tracisz 5 Przyjaciela", which is not
  * a sentence. It went unnoticed because nothing in the corpus takes more than
- * one of anything: every `strata` in the box either has no count or has a count
- * of one, and the two `wszystkie-` entries are already plural by construction.
+ * one of anything: every `lose` in the box either has no count or has a count
+ * of one, and the two `all-` entries are already plural by construction.
  *
  * So this is here before the card that needs it rather than after. Only the
- * three countable losses are listed; złoto and the two `wszystkie-` forms are
+ * three countable losses are listed; złoto and the two `all-` forms are
  * never counted, and a `Partial` says so rather than inventing forms nothing
  * will ask for.
  *
@@ -227,9 +227,9 @@ export const LOST_LABEL: Record<Loss, string> = {
  * which is why Przyjaciel has the same word twice and Przedmiot does not.
  */
 export const LOST_COUNTED: Partial<Record<Loss, readonly [string, string, string]>> = {
-  przedmiot: ["Przedmiot", "Przedmioty", "Przedmiotów"],
-  przyjaciel: ["Przyjaciela", "Przyjaciół", "Przyjaciół"],
-  zaklecie: ["Zaklęcie", "Zaklęcia", "Zaklęć"],
+  item: ["Przedmiot", "Przedmioty", "Przedmiotów"],
+  friend: ["Przyjaciela", "Przyjaciół", "Przyjaciół"],
+  spell: ["Zaklęcie", "Zaklęcia", "Zaklęć"],
 };
 
 /**
@@ -240,18 +240,18 @@ export const LOST_COUNTED: Partial<Record<Loss, readonly [string, string, string
  * line.
  */
 export const TARGET_SHORT: Record<Target, string> = {
-  ty: "ty",
-  wszyscy: "wszyscy",
-  "wszyscy-w-kregu": "wszyscy w tym Kręgu",
-  "wszyscy-tutaj": "wszyscy na tym Obszarze",
-  "kazdy-kto-tu-trafi": "każdy, kto tu trafi",
-  dobrzy: "Dobre Postacie",
-  chaotyczni: "Chaotyczne Postacie",
-  zli: "Złe Postacie",
-  "w-dolnym-kregu": "wędrujący Dolnym Kręgiem",
-  "w-srodkowym-kregu": "wędrujący Środkowym Kręgiem",
-  "w-gornym-kregu": "wędrujący Górnym Kręgiem",
-  "inna-postac": "wybrana Postać",
+  you: "ty",
+  everyone: "wszyscy",
+  "everyone-in-ring": "wszyscy w tym Kręgu",
+  "everyone-here": "wszyscy na tym Obszarze",
+  "whoever-lands-here": "każdy, kto tu trafi",
+  good: "Dobre Postacie",
+  chaotic: "Chaotyczne Postacie",
+  evil: "Złe Postacie",
+  "in-lower-ring": "wędrujący Dolnym Kręgiem",
+  "in-middle-ring": "wędrujący Środkowym Kręgiem",
+  "in-upper-ring": "wędrujący Górnym Kręgiem",
+  "another-character": "wybrana Postać",
 };
 
 /**
@@ -262,7 +262,7 @@ export const TARGET_SHORT: Record<Target, string> = {
  * „wszyscy **tracą** 1 turę". Two entries and a default is the whole of it, and
  * it lives here beside the words it is about.
  */
-export const TARGET_SINGULAR = new Set<Target>(["kazdy-kto-tu-trafi", "inna-postac"]);
+export const TARGET_SINGULAR = new Set<Target>(["whoever-lands-here", "another-character"]);
 
 /**
  * The same eleven, spelled out.
@@ -274,18 +274,18 @@ export const TARGET_SINGULAR = new Set<Target>(["kazdy-kto-tu-trafi", "inna-post
  * makes sure the union stays covered by both.
  */
 export const TARGET_FULL: Record<Target, string> = {
-  ty: "ty",
-  wszyscy: "wszystkie Postacie",
-  "wszyscy-w-kregu": "wszystkie Postacie w tym Kręgu",
-  "wszyscy-tutaj": "wszystkie Postacie na tym Obszarze",
-  "kazdy-kto-tu-trafi": "każdy, kto tu trafi",
-  dobrzy: "Postacie o Naturze dobrej",
-  chaotyczni: "Postacie o Naturze chaotycznej",
-  zli: "Postacie o Naturze złej",
-  "w-dolnym-kregu": "wędrujący po Dolnym Kręgu",
-  "w-srodkowym-kregu": "wędrujący po Środkowym Kręgu",
-  "w-gornym-kregu": "wędrujący po Górnym Kręgu",
-  "inna-postac": "wybrana inna Postać",
+  you: "ty",
+  everyone: "wszystkie Postacie",
+  "everyone-in-ring": "wszystkie Postacie w tym Kręgu",
+  "everyone-here": "wszystkie Postacie na tym Obszarze",
+  "whoever-lands-here": "każdy, kto tu trafi",
+  good: "Postacie o Naturze dobrej",
+  chaotic: "Postacie o Naturze chaotycznej",
+  evil: "Postacie o Naturze złej",
+  "in-lower-ring": "wędrujący po Dolnym Kręgu",
+  "in-middle-ring": "wędrujący po Środkowym Kręgu",
+  "in-upper-ring": "wędrujący po Górnym Kręgu",
+  "another-character": "wybrana inna Postać",
 };
 
 /**

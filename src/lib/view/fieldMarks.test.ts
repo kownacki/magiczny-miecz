@@ -34,7 +34,7 @@ describe("marksFor", () => {
   });
 
   it("marks a die you cannot refuse", () => {
-    // The Karczma is `obowiazkowe`, so it earns no sakwa though it can take a
+    // The Karczma is `mandatory`, so it earns no sakwa though it can take a
     // coin — but a table nobody may walk past is exactly what wants a warning.
     expect(at("karczma")).toEqual(["kostka"]);
   });

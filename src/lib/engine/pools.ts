@@ -29,7 +29,7 @@ import type { CardId } from "@/data/ids";
 /** What this card lays out when it settles, or null if it lays out nothing. */
 export function startingPool(cardId: CardId): number | null {
   const disposition = scriptFor(cardId)?.disposition;
-  return disposition?.kind === "zostaje-z-pula" ? disposition.points : null;
+  return disposition?.kind === "stays-with-pool" ? disposition.points : null;
 }
 
 /** Whether visiting this card draws its pool down by one. */

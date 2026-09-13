@@ -76,7 +76,7 @@ export function refuseAgainstStone(
    * how anybody gets them out.
    *
    * Read off the status rather than named here, so a second thing that puts a
-   * character out of reach lands in one place. `tura-stracona` is left out by
+   * character out of reach lands in one place. `lose-turn` is left out by
    * `untouchable` for the obvious reason — somebody skipping a turn is standing
    * on the board like anybody else.
    */

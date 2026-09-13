@@ -623,7 +623,7 @@ export function slotsOnArrival(
  *   the question is asked of *this* card, which may not be going into the pack
  *   at all.
  * - **Both surfaces need the same answer.** `takeCard` throws it and a shop
- *   greys its `kup` on it, and a shelf that refuses what the command would sell
+ *   greys its `buy` on it, and a shelf that refuses what the command would sell
  *   is worse than one that lets the server say no.
  */
 export function whyPackIsFull(

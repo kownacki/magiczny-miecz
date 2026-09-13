@@ -75,7 +75,7 @@ export interface ApplyEffect {
   /**
    * Who gains, where an effect moves a card rather than destroying it.
    *
-   * Only `zabierz` uses it, and only three Zaklęcia use that: `seatId` is the
+   * Only `take` uses it, and only three Zaklęcia use that: `seatId` is the
    * victim the spell was aimed at, and this is the caster it changes hands to.
    * Absent everywhere else, because nothing else in the box takes a card *for*
    * somebody.
@@ -93,7 +93,7 @@ export interface ApplyEffect {
   /**
    * A Karta on the board the player pointed at as they spoke.
    *
-   * Only `przyzwij` uses it, and only because that effect can be aimed at
+   * Only `summon` uses it, and only because that effect can be aimed at
    * either a Postać or a Wróg: „atakuje wybraną Postać lub Wroga". The seat is
    * carried by `seatId` as everywhere else; this is the other half of the same
    * question, and absent when the answer was a Postać.
@@ -102,7 +102,7 @@ export interface ApplyEffect {
   /**
    * The Karta being resolved, where the effect is about the card itself.
    *
-   * Only `poloz-karte` uses it: the Eremita, the Upiór and the Lewiatan all
+   * Only `place-card` uses it: the Eremita, the Upiór and the Lewiatan all
    * settle *themselves* somewhere the die chooses, so the effect needs to know
    * which card it is. Absent when an effect is not about its own card, which is
    * every other one.
@@ -112,7 +112,7 @@ export interface ApplyEffect {
    * The cursor points at a node that has not run — see `held` on the frame.
    *
    * Only `continueTopScript` sets it, off the frame it is resuming, and only
-   * the `walka`/`zaklecie` rule at the stopping node reads it.
+   * the `fight`/`gain-spell` rule at the stopping node reads it.
    */
   held?: boolean;
 }
@@ -127,8 +127,8 @@ export interface ApplyEffect {
  * card in the box.
  *
  * Recursion threads the snapshot: each step reads a table that already shows
- * what the step before it wrote, which is what lets `po-kolei` spend gold it
- * just gained and a `gdy` read a Natura the branch above changed.
+ * what the step before it wrote, which is what lets `sequence` spend gold it
+ * just gained and a `when` read a Natura the branch above changed.
  */
 export async function applyEffect(
   snapshot: Snapshot,
@@ -147,8 +147,8 @@ export async function applyEffect(
  * The frame it belongs to is the `field` one, which is not always the top: a
  * card that suspended mid-walk is sitting above it, and that card's die is
  * exactly the one worth showing. So the stack is walked from the top down for
- * the first `field` frame — `beneath`, the same question a `walka` step asks to
- * find the Obszar its fight belongs to, and the one `poloz-karte` failed to ask.
+ * the first `field` frame — `beneath`, the same question a `fight` step asks to
+ * find the Obszar its fight belongs to, and the one `place-card` failed to ask.
  */
 export function markRolled(
   snapshot: Snapshot,
@@ -184,7 +184,7 @@ export function markRolled(
  * frame, and the walk suspends over it with the cursor pointing at the row that
  * came up — `[4]` is „tracisz Przedmiot" on the UROCZA DIABLICA — which is
  * exactly the shape `continueTopScript` already resumes from: it reads a
- * `rzut`'s face off the cursor rather than rolling again, and completing pays
+ * `roll`'s face off the cursor rather than rolling again, and completing pays
  * the Karta's debts the way a card that never suspended pays them.
  *
  * Nothing about the die is undone by this. It has been thrown, it is in the
@@ -212,7 +212,7 @@ export function heldAt(
 
 /**
  * Writes the suspension down: a `script` frame with the cursor, and the fight
- * above it when a `walka` is what stopped the walk.
+ * above it when a `fight` is what stopped the walk.
  *
  * This is where the stack earns its keep (docs/STACK.md, law 3): everything
  * the walk did before the stop has already landed in `done.writes`, the frame
@@ -255,7 +255,7 @@ function framed(
  *
  * One place rather than two, because `framed` and `continueTopScript` both
  * suspend and both have to open the same things the same way — the second and
- * third `walka` in a card go through the resume path, not the first one's.
+ * third `fight` in a card go through the resume path, not the first one's.
  */
 function openOver(
   state: TurnState,
@@ -278,7 +278,7 @@ function openOver(
 }
 
 /**
- * The fight a `walka` step opens, built the way `beginNamedFight` builds one —
+ * The fight a `fight` step opens, built the way `beginNamedFight` builds one —
  * same shape, same journal line — off the field frame beneath the script, so
  * that closing it pops back to the card mid-sentence.
  */
@@ -317,16 +317,16 @@ function fightOver(
 /**
  * Resumes the `script` frame on top of the stack.
  *
- * The walk goes back down the cursor without executing anything — a `rzut`
- * face is read off the cursor rather than rolled again, a `gdy` takes the
- * branch it took, a `po-kolei` skips the steps whose writes already landed —
- * and picks up at the node it stopped at: a settled `walka` counts as done and
+ * The walk goes back down the cursor without executing anything — a `roll`
+ * face is read off the cursor rather than rolled again, a `when` takes the
+ * branch it took, a `sequence` skips the steps whose writes already landed —
+ * and picks up at the node it stopped at: a settled `fight` counts as done and
  * the steps after it run; a question runs now against `decided`.
  *
  * Completion pops the frame and pays the card's debts — `mark` onto the field
  * frame's resolved list, `keep` for the two Spotkania that stay as Przyjaciele
  * — exactly what `resolveDrawnCard` does for a card that never suspended. A
- * second suspension replaces the cursor and, for a second `walka`, opens the
+ * second suspension replaces the cursor and, for a second `fight`, opens the
  * next fight.
  */
 export async function continueTopScript(
@@ -355,7 +355,7 @@ export async function continueTopScript(
   const sus = done.result.suspended;
   if (sus) {
     // Still not finished: the frame stays, with the new cursor — and a second
-    // `walka` opens its fight above it, the same way the first did.
+    // `fight` opens its fight above it, the same way the first did.
     const after = apply(snapshot, done.writes);
     /* `held` does not survive the walk it was holding: whatever stops it next
        is an ordinary stop, at a node that has been reached and asked. */
@@ -437,7 +437,7 @@ async function walk(
   /**
    * Resume mode: the remaining cursor to follow down without executing.
    * Null is the ordinary walk. An empty array means *this* node is the one the
-   * walk stopped at — a settled `walka` counts as done, a question runs now.
+   * walk stopped at — a settled `fight` counts as done, a question runs now.
    */
   follow: number[] | null,
 ): Promise<Outcome<Resolution>> {
@@ -453,7 +453,7 @@ async function walk(
     follow !== null &&
     follow.length === 0 &&
     !command.held &&
-    (effect.op === "walka" || effect.op === "zaklecie")
+    (effect.op === "fight" || effect.op === "gain-spell")
   ) {
     return nothing([]);
   }
@@ -461,7 +461,7 @@ async function walk(
   // A decision the player has already made turns an unsettled effect into a
   // settled one, so this is asked after the choices have been consumed rather
   // than before.
-  if (effect.op === "wybor") {
+  if (effect.op === "choice") {
     const pick = follow !== null && follow.length > 0 ? follow[0] : decided.choices?.shift();
     const option = pick === undefined ? undefined : effect.options[pick];
     if (!option || pick === undefined) return owed();
@@ -501,12 +501,12 @@ async function walk(
   /**
    * The Władca Zdarzeń, whose two halves are both the player's to point at.
    *
-   * Gated here beside `przenies` rather than inside the settled switch, for the
+   * Gated here beside `move` rather than inside the settled switch, for the
    * same reason: the destination arrives as a decision, and until it does the
    * effect is owed rather than done. Which Karta is the other half, and it came
    * with the casting — a Zaklęcie names its target as it is spoken.
    */
-  if (effect.op === "przenies-karte") {
+  if (effect.op === "move-card") {
     const lying = snapshot.fieldCards.find((row) => row.id === command.fieldCardId);
     if (!lying) throw new Error("Wskaż odkrytą Kartę na planszy.");
     const where = decided.destination;
@@ -545,7 +545,7 @@ async function walk(
     };
   }
 
-  if (effect.op === "przenies" && effect.to.kind !== "pole") {
+  if (effect.op === "move" && effect.to.kind !== "field") {
     /**
      * „na Obszar, z którego rozpocząłeś wędrówkę" is not a question.
      *
@@ -559,7 +559,7 @@ async function walk(
      * a Karta conjured onto a square, a frame from before `from` existed —
      * and then the guards are already standing where they found you.
      */
-    const back = effect.to.kind === "poczatek-ruchu";
+    const back = effect.to.kind === "move-start";
     const started = beneath(snapshot.game.turn_state, "field")?.frame.from ?? null;
     if (back && !started) return nothing(["Straż zawraca cię tam, gdzie stoisz"]);
 
@@ -597,7 +597,7 @@ async function walk(
     });
     if (!allowed.includes(where)) {
       throw new Error(
-        effect.to.kind === "dowolne-w-kregu"
+        effect.to.kind === "anywhere-in-ring"
           ? `${fieldName(where)} jest w innym Kręgu (11.2).`
           : `${fieldName(where)} nie jest jednym z Obszarów tej Karty.`,
       );
@@ -637,14 +637,14 @@ async function walk(
    * rather than the monster appearing on somebody's head. One Obszar left is
    * not a choice and nobody is asked.
    *
-   * Above the gate for the same reason `przenies` is: pointing at the board is
+   * Above the gate for the same reason `move` is: pointing at the board is
    * what makes this unsettled, and the gate would hand it back as a question
    * even once it had been answered. The chosen Obszar is written back into the
-   * node as a `pole`, so the settled form below does the work and there is one
+   * node as a `field`, so the settled form below does the work and there is one
    * place a Karta is laid down.
    */
-  if (effect.op === "poloz-karte" && effect.gdzie.kind === "jedno-z" && command.cardId) {
-    const free = effect.gdzie.fieldIds.filter(
+  if (effect.op === "place-card" && effect.where.kind === "one-of" && command.cardId) {
+    const free = effect.where.fieldIds.filter(
       (fieldId) => !snapshot.seats.some((one) => !one.eliminated && one.field_id === fieldId),
     );
     if (free.length === 0) {
@@ -680,7 +680,7 @@ async function walk(
     return walk(
       snapshot,
       command,
-      { ...effect, gdzie: { kind: "pole", fieldId: where } },
+      { ...effect, where: { kind: "field", fieldId: where } },
       reason,
       ports,
       path,
@@ -697,14 +697,14 @@ async function walk(
    * Written here rather than inside `isSettled` because that function is the
    * browser's too and answers about an effect alone, with no decisions in hand.
    *
-   * `zabierz` is the same shape from the other side — somebody has to say which
+   * `take` is the same shape from the other side — somebody has to say which
    * card changes hands — so it passes the same way once they have.
    */
   /**
    * A sequence is walked before the gate, because its settledness is its steps'
    * business and not its own.
    *
-   * `isSettled` calls a `po-kolei` settled only when *every* step is, so one
+   * `isSettled` calls a `sequence` settled only when *every* step is, so one
    * step holding a question refused the whole card — the Eremita rolls for
    * where he settles and then offers a choice of two Karty, and that choice
    * made the roll unreachable. Each step is gated on its own merits now, and
@@ -712,7 +712,7 @@ async function walk(
    * may depend on it, and doing the rest first would resolve the card out of
    * its own order.
    */
-  if (effect.op === "po-kolei") {
+  if (effect.op === "sequence") {
     /**
      * Steps run in order and each one's writes land as it finishes — the
      * all-or-nothing gate that used to stand here died with the stack. A step
@@ -752,7 +752,7 @@ async function walk(
    * A die table is rolled before the gate, because the gate asks about the
    * whole table and a throw lands on one row of it.
    *
-   * `isSettled` calls a `rzut` settled only when *every* face is, which is the
+   * `isSettled` calls a `roll` settled only when *every* face is, which is the
    * right answer for the browser — it cannot know the face before the die is
    * thrown — and the wrong one here. Fatum has a choice on its fifth face and
    * nothing else, and that one row made the other five unreachable: the table
@@ -782,7 +782,7 @@ async function walk(
    * card prints. Everything else answered by number here is an index into a
    * list, so this is the exception and it is written down.
    */
-  if (effect.op === "zgadnij") {
+  if (effect.op === "guess") {
     const guess = follow !== null && follow.length > 0 ? follow[0] : decided.choices?.shift();
     if (guess === undefined || guess < 1 || guess > 6) return owed();
 
@@ -791,7 +791,7 @@ async function walk(
     if (face !== guess) {
       return { writes: {}, result: { did: [`${said} — nie zgadłeś`], pending: null } };
     }
-    const won = await walk(snapshot, command, effect.nagroda, `${reason} (${guess})`, ports, [
+    const won = await walk(snapshot, command, effect.prize, `${reason} (${guess})`, ports, [
       ...path,
       guess,
     ], null);
@@ -801,7 +801,7 @@ async function walk(
     };
   }
 
-  if (effect.op === "rzut") {
+  if (effect.op === "roll") {
     // On a resume the face is read off the cursor, not rolled again: the die
     // was thrown and journalled in the commit that suspended, and a table that
     // rolled twice for one visit would be a different table.
@@ -810,7 +810,7 @@ async function walk(
     // distribution is the whole point of a 2-12 table.
     const face = following
       ? follow[0]
-      : effect.kostki === 2
+      : effect.dice === 2
         ? (await ports.random.rollD6(`${reason}: tabela (1)`)) +
           (await ports.random.rollD6(`${reason}: tabela (2)`))
         : await ports.random.rollD6(`${reason}: tabela`);
@@ -851,9 +851,9 @@ async function walk(
    * A condition the app can test is the app's to test, and only the branch it
    * takes is anybody's to answer.
    *
-   * Handled here rather than in the switch, beside `wybor` and `przenies`, for
+   * Handled here rather than in the switch, beside `choice` and `move`, for
    * the reason those are: the gate below asks `isSettled` of the whole effect,
-   * and a `gdy` counts as unsettled while *either* branch holds a question. The
+   * and a `when` counts as unsettled while *either* branch holds a question. The
    * Czarci Młyn is exactly that — a Dobra Postać there simply loses a point of
    * Życie, and it was the Zły branch's "możesz wezwać Siły Ciemności" that made
    * the Obszar unanswerable for all three Natury at once.
@@ -862,18 +862,18 @@ async function walk(
    * condition without a Snapshot, so it leaves the question to the server, and
    * this is the server getting there.
    */
-  if (effect.op === "gdy") {
+  if (effect.op === "when") {
     const seat = snapshot.seats.find((s) => s.id === seatId);
     if (!seat) throw new Error("Nieznane miejsce.");
     const nature = seat.nature as Nature | null;
     const holds =
-      effect.warunek.is === "natura"
-        ? nature !== null && effect.warunek.jedna_z.includes(nature)
-        : effect.warunek.is === "ma-zloto"
+      effect.condition.is === "nature"
+        ? nature !== null && effect.condition.oneOf.includes(nature)
+        : effect.condition.is === "has-gold"
           ? seat.gold > 0
           : // What the character did earlier, which 13.3 wrote down for the one
             // card that asks.
-            effect.warunek.is === "attacker"
+            effect.condition.is === "attacker"
             ? hasAttacked(storedStatuses(snapshot, seat.id))
             : /**
                * `prog` reads the **parametr**, not the żetony.
@@ -887,17 +887,17 @@ async function walk(
                *
                * It read `sword_own` / `magic_own`, so a character with Magia 3
                * and a Pierścień Mocy had a parametr of 5 and still got lost in
-               * the Labirynt. Not `walka`: neither Obszar is a fight, which is
+               * the Labirynt. Not `fight`: neither Obszar is a fight, which is
                * the same line the Trzęsawiska and the six Most ordeals draw.
                */
-              (effect.warunek.stat === "sword"
+              (effect.condition.stat === "sword"
                 ? pointsOf(snapshot, seat.id, "parametr").miecz
-                : pointsOf(snapshot, seat.id, "parametr").magia) < effect.warunek.ponizej;
+                : pointsOf(snapshot, seat.id, "parametr").magia) < effect.condition.below;
     // On a resume the branch is the one taken, off the cursor: the fight the
     // suspension was for may itself have changed what the condition reads.
     const following = follow !== null && follow.length > 0;
     const taken = following ? follow[0] === 0 : holds;
-    const branch = taken ? effect.to : effect.inaczej;
+    const branch = taken ? effect.then : effect.else;
     return branch
       ? walk(
           snapshot,
@@ -927,7 +927,7 @@ async function walk(
                     kind: "no-effect",
                     payload: {
                       cardId: command.cardId,
-                      why: describeCondition(effect.warunek),
+                      why: describeCondition(effect.condition),
                     },
                   },
                 ],
@@ -946,9 +946,9 @@ async function walk(
    * than a second copy: a Kapliczka whose prayer had drifted from the
    * Świątynia's would be the worse of the two bugs available here.
    *
-   * Handled up here beside `rzut` and `gdy`, and for the same reason they are:
+   * Handled up here beside `roll` and `when`, and for the same reason they are:
    * the gate below asks `isSettled` of the whole effect, and both Świątynie's
-   * prayers hold a `wybor` on one face or another — so a borrowed table is
+   * prayers hold a `choice` on one face or another — so a borrowed table is
    * never "settled" and would be owed back as a question the moment it was
    * asked for. What it actually is is a die table, which the app rolls.
    *
@@ -956,7 +956,7 @@ async function walk(
    * Świątynie offer exactly "Modlitwa", and a card that borrowed a field with
    * several would have to name which, which is a question no card asks.
    */
-  if (effect.op === "jak-pole") {
+  if (effect.op === "as-field") {
     const borrowed = FIELD_SCRIPTS[effect.fieldId]?.offers[0];
     if (!borrowed) throw new Error(`${fieldName(effect.fieldId)} nie ma tabeli do pożyczenia.`);
     const done = await walk(
@@ -978,7 +978,7 @@ async function walk(
   }
 
   const holderPicks =
-    (effect.op === "strata" || effect.op === "zabierz") &&
+    (effect.op === "lose" || effect.op === "take") &&
     !isSettled(effect) &&
     (decided.choices?.length ?? 0) > 0;
   if (!isSettled(effect) && !holderPicks) return owed();

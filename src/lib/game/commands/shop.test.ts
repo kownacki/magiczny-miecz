@@ -49,19 +49,19 @@ describe("what an Obszar is offering", () => {
   it("finds the desk printed on the board, and says whose it is", () => {
     // The name comes back with the offer so a journal line can say where a
     // purse changed — two vendors in this box sell a Miecz at different prices.
-    expect(offerOn(standing(GROD), GROD, "sprzedaj")).toMatchObject({
+    expect(offerOn(standing(GROD), GROD, "sell")).toMatchObject({
       from: "Lichwiarz",
-      effect: { cena: 1 },
+      effect: { price: 1 },
     });
-    expect(offerOn(standing(OSADA), OSADA, "uzdrow")).toMatchObject({
+    expect(offerOn(standing(OSADA), OSADA, "heal")).toMatchObject({
       from: "Medyk",
-      effect: { cena: 1 },
+      effect: { price: 1 },
     });
   });
 
   it("finds nothing where there is nothing", () => {
-    expect(offerOn(standing(STEP), STEP, "sprzedaj")).toBeNull();
-    expect(offerOn(standing(STEP), STEP, "uzdrow")).toBeNull();
+    expect(offerOn(standing(STEP), STEP, "sell")).toBeNull();
+    expect(offerOn(standing(STEP), STEP, "heal")).toBeNull();
   });
 
   /**
@@ -90,10 +90,10 @@ describe("what an Obszar is offering", () => {
         } as TurnPhase),
       },
     });
-    expect(offerOn(midTurn, HERE, "kup")).not.toBeNull();
+    expect(offerOn(midTurn, HERE, "buy")).not.toBeNull();
     // And the Karta has to be on *this* square: another turn's frame elsewhere
     // is not a shelf here.
-    expect(offerOn(midTurn, STEP, "kup")).toBeNull();
+    expect(offerOn(midTurn, STEP, "buy")).toBeNull();
   });
 
   /** 16.8 leaves a shop that walked in as a Karta lying there; 21.1 counts it. */
@@ -104,7 +104,7 @@ describe("what an Obszar is offering", () => {
     });
     // Only asserts the walk reaches field cards at all; which card carries what
     // is `cardScript.ts`'s business and is tested there.
-    expect(offerOn(withCard, STEP, "sprzedaj")).not.toBeUndefined();
+    expect(offerOn(withCard, STEP, "sell")).not.toBeUndefined();
   });
 });
 
@@ -361,9 +361,9 @@ describe("buying from a shelf (21.1)", () => {
   const shopping = (gold: number) => standing(OSADA, { gold });
 
   const forSale = () => {
-    const shop = offerOn(shopping(9), OSADA, "kup");
+    const shop = offerOn(shopping(9), OSADA, "buy");
     if (!shop) throw new Error("Osada should have a shop — read fieldScript.ts");
-    return shop.effect.towar;
+    return shop.effect.goods;
   };
 
   it("refuses where there is no shelf", () => {
@@ -382,7 +382,7 @@ describe("buying from a shelf (21.1)", () => {
   it("refuses a purse that cannot cover it", () => {
     const [first] = forSale();
     expect(() =>
-      buyGoods(shopping(0), { seatId: "seat-a", cardId: goodsId(first.co)! }),
+      buyGoods(shopping(0), { seatId: "seat-a", cardId: goodsId(first.name)! }),
     ).toThrow(/Za mało złota/);
   });
 
@@ -395,11 +395,11 @@ describe("buying from a shelf (21.1)", () => {
    */
   it("takes the card and pays for it in one changeset", () => {
     const [first] = forSale();
-    const cardId = goodsId(first.co)!;
+    const cardId = goodsId(first.name)!;
     const { writes } = buyGoods(shopping(9), { seatId: "seat-a", cardId });
 
     expect(writes.holdings?.insert?.[0]).toMatchObject({ seat_id: "seat-a", card_id: cardId });
-    expect(writes.seats).toContainEqual({ id: "seat-a", patch: { gold: 9 - first.cena } });
+    expect(writes.seats).toContainEqual({ id: "seat-a", patch: { gold: 9 - first.price } });
     expect(writes.journal?.map((line) => line.kind)).toContain("bought");
   });
 
@@ -413,13 +413,13 @@ describe("buying from a shelf (21.1)", () => {
    */
   it("writes one journal line, naming the Obszar and the vendor", () => {
     const [first] = forSale();
-    const cardId = goodsId(first.co)!;
+    const cardId = goodsId(first.name)!;
     const { writes } = buyGoods(shopping(9), { seatId: "seat-a", cardId });
 
     expect(writes.journal?.map((line) => line.kind)).toEqual(["bought"]);
     expect(writes.journal?.[0]).toMatchObject({
       kind: "bought",
-      payload: { cardId, price: first.cena, fieldId: OSADA, from: "Płatnerz" },
+      payload: { cardId, price: first.price, fieldId: OSADA, from: "Płatnerz" },
     });
   });
 });

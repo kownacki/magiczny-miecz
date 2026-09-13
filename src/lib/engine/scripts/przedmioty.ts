@@ -14,13 +14,13 @@ export const PRZEDMIOTY: Readonly<Record<string, CardScript>> = {
   // nothing against the four-item limit of 5.4 and there is nothing to lose on
   // the Bagna later. The card is the gold, and then it is gone.
   "1-sztuka-zlota": {
-    effect: { op: "punkty", stat: "gold", delta: 1 },
-    disposition: { kind: "odloz" },
+    effect: { op: "points", stat: "gold", delta: 1 },
+    disposition: { kind: "discard" },
     consumed: true,
   },
   "2-sztuki-zlota": {
-    effect: { op: "punkty", stat: "gold", delta: 2 },
-    disposition: { kind: "odloz" },
+    effect: { op: "points", stat: "gold", delta: 2 },
+    disposition: { kind: "discard" },
     consumed: true,
   },
 
@@ -53,22 +53,22 @@ export const PRZEDMIOTY: Readonly<Record<string, CardScript>> = {
    */
   lodz: {
     effect: {
-      op: "efekt",
+      op: "status",
       label: "Łódź",
       modifier: { kind: "przeprawa", przez: "trzesawiska" },
       ends: { kind: "turns", turns: 1 },
     },
-    disposition: { kind: "odloz" },
+    disposition: { kind: "discard" },
     consumed: true,
   },
   latarnia: {
     effect: {
-      op: "efekt",
+      op: "status",
       label: "Latarnia",
       modifier: { kind: "przeprawa", przez: "lodowy-las" },
       ends: { kind: "turns", turns: 1 },
     },
-    disposition: { kind: "odloz" },
+    disposition: { kind: "discard" },
     consumed: true,
   },
 
@@ -82,17 +82,17 @@ export const PRZEDMIOTY: Readonly<Record<string, CardScript>> = {
    */
   "tajemnicza-szkatula": {
     effect: {
-      op: "rzut",
+      op: "roll",
       faces: {
-        1: { op: "otrzymaj", co: "Tarcza Tolimana" },
-        2: { op: "zaklecie", count: 1 },
-        3: { op: "punkty", stat: "gold", delta: 2 },
-        4: { op: "tura-stracona", turns: 1 },
-        5: { op: "punkty", stat: "life", delta: -1 },
-        6: { op: "punkty", stat: "life", delta: -2 },
+        1: { op: "receive", what: "Tarcza Tolimana" },
+        2: { op: "gain-spell", count: 1 },
+        3: { op: "points", stat: "gold", delta: 2 },
+        4: { op: "lose-turn", turns: 1 },
+        5: { op: "points", stat: "life", delta: -1 },
+        6: { op: "points", stat: "life", delta: -2 },
       },
     },
     optional: true,
-    disposition: { kind: "odloz" },
+    disposition: { kind: "discard" },
   },
 };

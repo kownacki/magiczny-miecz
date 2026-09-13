@@ -8,7 +8,7 @@ import { resolveDrawnCard } from "./resolving";
  * UKŁAD PLANET: "Przy tym szczególnym układzie planet, na czas 1 tury
  * podwojona zostaje Magia wszystkich Demonów."
  *
- * The card's own script is `{ op: "nic" }` — the doubling reaches every Demon
+ * The card's own script is `{ op: "nothing" }` — the doubling reaches every Demon
  * on the board rather than a seat, which is nowhere in `cardScript.ts`'s op
  * tree, so `resolveDrawnCard` applies it bespoke to this one card id (`
  * doubleDemons`), the way `landSpell` special-cases the Władca Gromu.

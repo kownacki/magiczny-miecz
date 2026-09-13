@@ -91,9 +91,9 @@ describe("the shared label tables", () => {
     // Deliberately two wordings and not one copy: the summary hangs off an
     // effect that has already named itself, the panel is telling somebody to
     // go and do a thing with no card in front of them.
-    expect(TARGET_SHORT.dobrzy).toBe("Dobre Postacie");
-    expect(TARGET_FULL.dobrzy).toBe("Postacie o Naturze dobrej");
-    expect(TARGET_SHORT.ty).toBe(TARGET_FULL.ty);
+    expect(TARGET_SHORT.good).toBe("Dobre Postacie");
+    expect(TARGET_FULL.good).toBe("Postacie o Naturze dobrej");
+    expect(TARGET_SHORT.you).toBe(TARGET_FULL.you);
   });
 
   it("reads the stats in the case they are counted in", () => {
@@ -102,8 +102,8 @@ describe("the shared label tables", () => {
   });
 
   it("distinguishes losing one thing from losing all of them", () => {
-    expect(LOST_LABEL.zaklecie).toBe("Zaklęcie");
-    expect(LOST_LABEL["wszystkie-zaklecia"]).toBe("wszystkie Zaklęcia");
+    expect(LOST_LABEL.spell).toBe("Zaklęcie");
+    expect(LOST_LABEL["all-spells"]).toBe("wszystkie Zaklęcia");
   });
 });
 

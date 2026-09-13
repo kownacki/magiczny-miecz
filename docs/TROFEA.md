@@ -153,7 +153,7 @@ takes the score to zero.
 screen and changed nothing.
 
 **The values are English**, `points` / `cards`, not the Polish of this doc's
-headings. They were `punkty` / `karty` for a day. Every other stored enum in the
+headings. They were `points` / `karty` for a day. Every other stored enum in the
 schema is English — `classic|slots`, `lobby|playing|finished`,
 `good|evil|chaotic` — and the seat-card session had already written its toggle
 against `points`, so the Polish outlier was the thing to move. The Polish stays

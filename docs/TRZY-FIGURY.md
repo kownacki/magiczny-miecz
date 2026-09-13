@@ -69,7 +69,7 @@ should say which:
 - **„gdy założony"** — slotowy only. `inEffect` drops anything `isWearable` that
   is not in a slot, so a Miecz in the Plecak lends nothing *anywhere*. In
   klasyczny there is no wearing and this badge never applies.
-- **„tylko w walce"** — `tylkoWalka` on the card's `punkty` ability. A property
+- **„tylko w walce"** — `tylkoWalka` on the card's `points` ability. A property
   of the card, true in both variants.
 
 They compose and neither implies the other. An item may be wearable and always-on
@@ -142,7 +142,7 @@ kind that a reader would have carried forward.
 
 **The list of three missing `tylkoWalka` was five.** ARONDIGHT („Miecz Lancelota
 **użyty w walce**") and ŚWIĘTA WŁÓCZNIA („**Użyta w walce**") were missed. The
-audit is now a test — `excalibur.test.ts` compares every `punkty` ability's flag
+audit is now a test — `excalibur.test.ts` compares every `points` ability's flag
 against its own card text and fails on any disagreement — so a transcription
 that says „w walce" and forgets the flag cannot slip through again. The page's
 conclusion holds and is stronger than it stated: *every* weapon in the box is
@@ -152,7 +152,7 @@ fight-only by its own words, with no exceptions.
 ordeals (`bridge.ts:582`) it is the Trzęsawiska / Lodowy Las crossing
 (`bridge.ts:508`, a Magia threshold, 11.x) and — see below — the two Obszary
 that measure a character. So the line is not "the endgame gate is special", it
-is **fights read `walka`, obstacles read `parametr`**, and obstacles happen all
+is **fights read `fight`, obstacles read `parametr`**, and obstacles happen all
 game. The argument for keeping the figures apart is better than the version
 written above.
 

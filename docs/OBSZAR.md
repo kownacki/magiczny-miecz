@@ -63,7 +63,7 @@ Which is why the placement is a field of its own — `CardScript.placed` — and
 the card's `effect`. A Karta with both says one sentence to whoever turns it
 over and another to whoever finds it, and `lying` (set by `liftFieldCards` on
 everything it takes off the board) is the one fact that says which is being
-read. The Eremita is the card that proves it: with the two in one `po-kolei` he
+read. The Eremita is the card that proves it: with the two in one `sequence` he
 handed his Magiczny Miecz to the player who drew him and rolled for his Obszar
 again every time somebody visited.
 
@@ -247,7 +247,7 @@ or a visit. So the question „when does the square's own instruction happen"
 only ever arises on a 13.5 square, and 13.5 answers it in its own sentence
 order. That is why nothing needs saying about it.
 
-**`przyzwij`: no card in the base game summons a Wróg.** So the Wrogowie gate
+**`summon`: no card in the base game summons a Wróg.** So the Wrogowie gate
 can never re-close once passed. True of this box only — an expansion could
 break it, and the assumption should be a comment rather than a silence.
 

@@ -62,7 +62,7 @@ export function FieldOffer({
   const [sent, setSent] = useState<{ option: number | null } | null>(null);
   const owed = pendingIn(offer.effect, []);
   /** The app throws for this one, so the button says so and carries a die. */
-  const rolls = !owed && offer.effect.op === "rzut";
+  const rolls = !owed && offer.effect.op === "roll";
 
   /** Sends one answer and holds it on screen until the server has answered. */
   const answer = async (was: { option: number | null }, choices: number[]) => {
@@ -92,7 +92,7 @@ export function FieldOffer({
               did={rolled.did}
               onDone={onRollRead ?? (() => {})}
             />
-          ) : owed?.op === "wybor" ? (
+          ) : owed?.op === "choice" ? (
             owed.options.map((option, index) => (
               <ActionButton
                 key={option.label}
@@ -126,7 +126,7 @@ export function FieldOffer({
 
 /** A field's table, written out. The app rolls it; nothing here is pressable. */
 function FieldEffect({ effect }: { effect: Effect }) {
-  if (effect.op === "rzut") {
+  if (effect.op === "roll") {
     return (
       <ol className="flex flex-col gap-0.5 text-xs">
         {[1, 2, 3, 4, 5, 6].map((face) => (

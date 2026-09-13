@@ -11,7 +11,7 @@ import type { CardScript } from "../cardScript";
  *
  * # `zostaje` is the printed rule, and the printed rule silts the board up
  *
- * A Miejsce with `disposition: { kind: "zostaje" }` never leaves its Obszar, and
+ * A Miejsce with `disposition: { kind: "stays" }` never leaves its Obszar, and
  * 13.4 counts every Karta lying on an Obszar against what that Obszar draws. So
  * a Krąg the table walks round for an hour fills with Miejsca and stops dealing
  * anything — not by anyone's doing, just by the deck running.
@@ -38,127 +38,127 @@ import type { CardScript } from "../cardScript";
 export const MIEJSCA: Readonly<Record<string, CardScript>> = {
   "drzewo-zycia": {
     optional: true,
-    effect: { op: "punkty", stat: "life", delta: 1, target: "kazdy-kto-tu-trafi" },
-    disposition: { kind: "zostaje-z-pula", stat: "life", points: 4 },
+    effect: { op: "points", stat: "life", delta: 1, target: "whoever-lands-here" },
+    disposition: { kind: "stays-with-pool", stat: "life", points: 4 },
   },
   "jezioro-magiczne": {
     optional: true,
-    effect: { op: "punkty", stat: "sword", delta: 1, target: "kazdy-kto-tu-trafi" },
-    disposition: { kind: "zostaje-z-pula", stat: "sword", points: 4 },
+    effect: { op: "points", stat: "sword", delta: 1, target: "whoever-lands-here" },
+    disposition: { kind: "stays-with-pool", stat: "sword", points: 4 },
   },
   "zaklete-zrodlo": {
     optional: true,
-    effect: { op: "punkty", stat: "magic", delta: 1, target: "kazdy-kto-tu-trafi" },
-    disposition: { kind: "zostaje-z-pula", stat: "magic", points: 4 },
+    effect: { op: "points", stat: "magic", delta: 1, target: "whoever-lands-here" },
+    disposition: { kind: "stays-with-pool", stat: "magic", points: 4 },
   },
   labirynt: {
     effect: {
-      op: "gdy",
-      warunek: { is: "prog", stat: "magic", ponizej: 5 },
-      to: { op: "tura-stracona", turns: 1, target: "kazdy-kto-tu-trafi" },
+      op: "when",
+      condition: { is: "threshold", stat: "magic", below: 5 },
+      then: { op: "lose-turn", turns: 1, target: "whoever-lands-here" },
     },
-    disposition: { kind: "zostaje" },
+    disposition: { kind: "stays" },
   },
   "spalona-ziemia": {
     effect: {
-      op: "gdy",
-      warunek: { is: "prog", stat: "sword", ponizej: 5 },
-      to: { op: "tura-stracona", turns: 1, target: "kazdy-kto-tu-trafi" },
+      op: "when",
+      condition: { is: "threshold", stat: "sword", below: 5 },
+      then: { op: "lose-turn", turns: 1, target: "whoever-lands-here" },
     },
-    disposition: { kind: "zostaje" },
+    disposition: { kind: "stays" },
   },
   grota: {
     optional: true,
     effect: {
-      op: "rzut",
+      op: "roll",
       faces: {
-        1: { op: "punkty", stat: "gold", delta: 3 },
-        2: { op: "punkty", stat: "gold", delta: 2 },
-        3: { op: "punkty", stat: "gold", delta: 1 },
-        4: { op: "tura-stracona", turns: 1 },
-        5: { op: "walka", nazwa: "Hadron", miecz: 3 },
-        6: { op: "walka", nazwa: "Wilkołak", miecz: 10 },
+        1: { op: "points", stat: "gold", delta: 3 },
+        2: { op: "points", stat: "gold", delta: 2 },
+        3: { op: "points", stat: "gold", delta: 1 },
+        4: { op: "lose-turn", turns: 1 },
+        5: { op: "fight", name: "Hadron", sword: 3 },
+        6: { op: "fight", name: "Wilkołak", sword: 10 },
       },
     },
-    disposition: { kind: "zostaje" },
+    disposition: { kind: "stays" },
   },
   sidh: {
     optional: true,
     effect: {
-      op: "rzut",
+      op: "roll",
       faces: {
-        1: { op: "punkty", stat: "gold", delta: 3 },
-        2: { op: "punkty", stat: "gold", delta: 2 },
-        3: { op: "punkty", stat: "gold", delta: 1 },
-        4: { op: "walka", nazwa: "Widmo", magia: 3 },
-        5: { op: "walka", nazwa: "Zjawa", magia: 5 },
-        6: { op: "walka", nazwa: "Demon", magia: 10 },
+        1: { op: "points", stat: "gold", delta: 3 },
+        2: { op: "points", stat: "gold", delta: 2 },
+        3: { op: "points", stat: "gold", delta: 1 },
+        4: { op: "fight", name: "Widmo", magic: 3 },
+        5: { op: "fight", name: "Zjawa", magic: 5 },
+        6: { op: "fight", name: "Demon", magic: 10 },
       },
     },
-    disposition: { kind: "zostaje" },
+    disposition: { kind: "stays" },
   },
   "tajemne-przejscie": {
     optional: true,
     effect: {
-      op: "rzut",
+      op: "roll",
       faces: {
-        1: { op: "przenies", to: { kind: "pole", fieldId: "grod" } },
-        2: { op: "przenies", to: { kind: "pole", fieldId: "osada" } },
-        3: { op: "przenies", to: { kind: "pole", fieldId: "twierdza-strzegaca-drog" } },
-        4: { op: "przenies", to: { kind: "pole", fieldId: "swiatynia-bogini-nemed" } },
-        5: { op: "przenies", to: { kind: "pole", fieldId: "wymarle-miasto" } },
-        6: { op: "przenies", to: { kind: "pole", fieldId: "krypta-upiorow" } },
+        1: { op: "move", to: { kind: "field", fieldId: "grod" } },
+        2: { op: "move", to: { kind: "field", fieldId: "osada" } },
+        3: { op: "move", to: { kind: "field", fieldId: "twierdza-strzegaca-drog" } },
+        4: { op: "move", to: { kind: "field", fieldId: "swiatynia-bogini-nemed" } },
+        5: { op: "move", to: { kind: "field", fieldId: "wymarle-miasto" } },
+        6: { op: "move", to: { kind: "field", fieldId: "krypta-upiorow" } },
       },
     },
-    disposition: { kind: "zostaje" },
+    disposition: { kind: "stays" },
   },
   "skalne-wrota": {
     optional: true,
-    effect: { op: "wyciagnij", count: 3 },
-    disposition: { kind: "odloz" },
+    effect: { op: "draw-cards", count: 3 },
+    disposition: { kind: "discard" },
   },
   "nieznana-swiatynia": {
     optional: true,
     effect: {
-      op: "rzut",
+      op: "roll",
       faces: {
-        1: { op: "przenies", to: { kind: "dowolne-w-kregu" } },
-        2: { op: "punkty", stat: "life", delta: 1 },
-        3: { op: "zaklecie", count: 1 },
-        4: { op: "punkty", stat: "gold", delta: 2 },
-        5: { op: "punkty", stat: "gold", delta: 1 },
-        6: { op: "nic" },
+        1: { op: "move", to: { kind: "anywhere-in-ring" } },
+        2: { op: "points", stat: "life", delta: 1 },
+        3: { op: "gain-spell", count: 1 },
+        4: { op: "points", stat: "gold", delta: 2 },
+        5: { op: "points", stat: "gold", delta: 1 },
+        6: { op: "nothing" },
       },
     },
-    disposition: { kind: "zostaje" },
+    disposition: { kind: "stays" },
   },
   targowisko: {
     optional: true,
     effect: {
-      op: "kup",
-      towar: [
-        { co: "Miecz", cena: 1 },
-        { co: "Hełm", cena: 1 },
-        { co: "Kij i Sznur", cena: 1 },
-        { co: "Latarnia", cena: 2 },
-        { co: "Tarcza", cena: 2 },
-        { co: "Rękawice", cena: 2 },
-        { co: "Koń", cena: 2 },
-        { co: "Łódź", cena: 3 },
+      op: "buy",
+      goods: [
+        { name: "Miecz", price: 1 },
+        { name: "Hełm", price: 1 },
+        { name: "Kij i Sznur", price: 1 },
+        { name: "Latarnia", price: 2 },
+        { name: "Tarcza", price: 2 },
+        { name: "Rękawice", price: 2 },
+        { name: "Koń", price: 2 },
+        { name: "Łódź", price: 3 },
       ],
     },
-    disposition: { kind: "zostaje" },
+    disposition: { kind: "stays" },
   },
   // Both Kapliczki borrow their temple's table rather than reprinting it, and
   // then close for good — which is what separates them from the temple itself.
   "kapliczka-nemed": {
     optional: true,
-    effect: { op: "jak-pole", fieldId: "swiatynia-bogini-nemed" },
-    disposition: { kind: "odloz" },
+    effect: { op: "as-field", fieldId: "swiatynia-bogini-nemed" },
+    disposition: { kind: "discard" },
   },
   "kapliczka-tolimana": {
     optional: true,
-    effect: { op: "jak-pole", fieldId: "swiatynia-tolimana" },
-    disposition: { kind: "odloz" },
+    effect: { op: "as-field", fieldId: "swiatynia-tolimana" },
+    disposition: { kind: "discard" },
   },
 };

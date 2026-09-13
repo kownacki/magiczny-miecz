@@ -40,12 +40,12 @@ export interface CardScript {
    * cards in the box do it: the UPIÓR and the EREMITA roll for their Obszar,
    * the LEWIATAN is put down on one of six.
    *
-   * Its own field for the same reason `przegrana` is: this is a *second* thing
+   * Its own field for the same reason `onLoss` is: this is a *second* thing
    * the card's text says, and it is said to somebody else. The Eremita reads
    * „Rzuć kostką i umieść Kartę Eremity na odpowiednim Obszarze… Pierwszej
    * Postaci, Eremita ofiaruje do wyboru: Magiczny Miecz lub Tarczę Tolimana" —
    * one sentence to whoever turned him over and one to whoever finds him, and
-   * they are never the same person. Both lived in `effect` as a `po-kolei`
+   * they are never the same person. Both lived in `effect` as a `sequence`
    * until this field existed, which handed the Magiczny Miecz to the very
    * Postać 15.1 says the Karta cannot touch, and made a visitor roll for his
    * Obszar all over again — an Eremita who moved every time somebody called on
@@ -54,7 +54,7 @@ export interface CardScript {
    * `instructionIn` is what picks between the two, off the one fact that tells
    * them apart: whether the Karta came off the pile or off the board.
    */
-  placed?: Effect;
+  onDraw?: Effect;
   /**
    * What losing a fight to this creature costs, on top of 17.4's point of Życie.
    *
@@ -73,7 +73,7 @@ export interface CardScript {
    * and says nothing about the point of Życie, and 17.4 is the general rule
    * that governs every fight.
    */
-  przegrana?: Effect;
+  onLoss?: Effect;
   /** Where the card goes once it has been resolved. */
   disposition: Disposition;
   /**
@@ -138,7 +138,7 @@ export interface Example {
   dice?: readonly number[];
   /** Answers, one per question the Karta asks, in the order it asks. */
   answers?: readonly number[];
-  /** The Obszar pointed at, when the Karta asks „gdzie". */
+  /** The Obszar pointed at, when the Karta asks `where`. */
   destination?: FieldId;
   expect: {
     gold?: number;
@@ -164,60 +164,60 @@ export interface Example {
  */
 export type Disposition =
   /** "odłóż jego Kartę" — onto the used pile, gone. */
-  | { kind: "odloz" }
+  | { kind: "discard" }
   /** "pozostanie na tym Obszarze do końca rozgrywki" — a permanent fixture. */
-  | { kind: "zostaje" }
+  | { kind: "stays" }
   /**
    * Stays with a pool of points that visitors draw down, and is discarded when
    * they run out: Drzewo Życia with four Życie, Jezioro Magiczne with four
    * Miecza, Zaklęte Źródło with four Magii.
    */
-  | { kind: "zostaje-z-pula"; stat: "life" | "sword" | "magic"; points: number }
+  | { kind: "stays-with-pool"; stat: "life" | "sword" | "magic"; points: number }
   /**
    * Waits for one character and then leaves — "Pierwszej Postaci ... Następnie
-   * odłóż jego Kartę". Distinct from `odloz` because the card sits on the board
-   * in the meantime, and from `zostaje` because it does not stay.
+   * odłóż jego Kartę". Distinct from `discard` because the card sits on the board
+   * in the meantime, and from `stays` because it does not stay.
    */
-  | { kind: "do-pierwszej" }
+  | { kind: "until-first-visitor" }
   /** Taken into the character's keeping, like any Przedmiot or Przyjaciel. */
-  | { kind: "bierzesz" }
+  | { kind: "kept" }
   /** Lasts a stated number of turns and is then discarded (Mgła, Układ Planet). */
-  | { kind: "po-turach"; turns: number }
+  | { kind: "after-turns"; turns: number }
   /** Shuffled back in rather than discarded (a Magiczny Miecz found too low). */
-  | { kind: "wraca-do-stosu" };
+  | { kind: "back-to-pile" };
 
 /** Who an effect lands on. */
 export type Target =
-  | "ty"
+  | "you"
   /** Every character on the board, the drawer included (Burza Siedmiu Słońc). */
-  | "wszyscy"
+  | "everyone"
   /** Everyone in the drawer's own Krąg (Zaraza). */
-  | "wszyscy-w-kregu"
+  | "everyone-in-ring"
   /** Whoever later stops on the field the card is lying on. */
-  | "kazdy-kto-tu-trafi"
+  | "whoever-lands-here"
   /**
    * Everybody standing on one Obszar, the caster included where they stand
    * there. The Władca Gromu: "Wszystkie istoty w tym Obszarze (także Postacie)
    * zostaną sparaliżowane lękiem."
    *
-   * Distinct from `wszyscy-w-kregu`, which is a whole Kraina — this is the
+   * Distinct from `everyone-in-ring`, which is a whole Kraina — this is the
    * square somebody is pointing at, and the only spell in the box that aims at
    * one.
    */
-  | "wszyscy-tutaj"
+  | "everyone-here"
   /**
    * A group picked out by Natura or by which ring they are walking. The Danina
    * rolls a die to decide which of the six groups pays the Beast this time, so
    * these are not six special cases but one card's six faces.
    */
-  | "dobrzy"
-  | "chaotyczni"
-  | "zli"
-  | "w-dolnym-kregu"
-  | "w-srodkowym-kregu"
-  | "w-gornym-kregu"
+  | "good"
+  | "chaotic"
+  | "evil"
+  | "in-lower-ring"
+  | "in-middle-ring"
+  | "in-upper-ring"
   /** One other character, chosen by whoever is holding the card. */
-  | "inna-postac";
+  | "another-character";
 
 /**
  * Where a card can send a character.
@@ -240,33 +240,33 @@ export type Target =
  * the command, which made it a fact about one dispatcher instead of a fact
  * about the language, and left a reader in the engine with nothing to ask.
  *
- * `words.ts` carries the same fact per word as `sklada`, typed off this list,
- * so the two cannot disagree: a word listed here must say `sklada: true` in
+ * `words.ts` carries the same fact per word as `composes`, typed off this list,
+ * so the two cannot disagree: a word listed here must say `composes: true` in
  * its entry, and one not listed must say `false`.
  */
 export const COMPOSING_OPS = [
-  "wybor",
-  "po-kolei",
-  "rzut",
-  "gdy",
-  "jak-pole",
-  "przenies-karte",
-  "zgadnij",
+  "choice",
+  "sequence",
+  "roll",
+  "when",
+  "as-field",
+  "move-card",
+  "guess",
 ] as const;
 
 export type ComposingOp = (typeof COMPOSING_OPS)[number];
 
 export type Destination =
-  | { kind: "pole"; fieldId: FieldId }
-  | { kind: "dowolne-w-kregu" }
+  | { kind: "field"; fieldId: FieldId }
+  | { kind: "anywhere-in-ring" }
   /** Straight back where the move began (Straż). */
-  | { kind: "poczatek-ruchu" }
+  | { kind: "move-start" }
   /**
    * One of a listed set, whichever is free — the Lewiatan settles on whichever
    * of the Mokradła, Przeprawa or Bagna is unoccupied. The choice among them is
    * the players'; what matters is that it is these fields and no others.
    */
-  | { kind: "jedno-z"; fieldIds: readonly FieldId[] };
+  | { kind: "one-of"; fieldIds: readonly FieldId[] };
 
 /**
  * What a card does, as an ordered list of operations.
@@ -277,43 +277,43 @@ export type Destination =
  */
 export type Effect =
   /** Do nothing at all — a die table's "Zostałeś zignorowany" face. */
-  | { op: "nic" }
+  | { op: "nothing" }
   /** Several things in order. */
-  | { op: "po-kolei"; steps: Effect[] }
+  | { op: "sequence"; steps: Effect[] }
   /** The character picks one (Król Lasu, Wróżka, Koszmar). */
-  | { op: "wybor"; options: { label: string; effect: Effect }[] }
+  | { op: "choice"; options: { label: string; effect: Effect }[] }
   /**
    * A die table: one die and six outcomes (Grota, Sidh, Urocza Diablica,
    * Nieznana Świątynia), or two dice and eleven.
    *
-   * `kostki` is the count, and defaults to one because that is what every card
+   * `dice` is the count, and defaults to one because that is what every card
    * in the box rolls. The two Świątynie are the exception — "MOŻESZ MODLIĆ SIĘ
    * RZUCAJĄC 2 KOSTKAMI" — and their tables are keyed 2 to 12, which is why the
    * faces are a map rather than a tuple: a two-die table has no face 1 and the
    * middle of it is far likelier than the ends.
    */
-  | { op: "rzut"; faces: Record<number, Effect>; kostki?: 2 }
-  | { op: "punkty"; stat: "sword" | "magic" | "life" | "gold"; delta: number; target?: Target }
+  | { op: "roll"; faces: Record<number, Effect>; dice?: 2 }
+  | { op: "points"; stat: "sword" | "magic" | "life" | "gold"; delta: number; target?: Target }
   /**
    * Restores Życie but no higher than the four a character starts with (4.7) —
    * Cudotwórca, Księżniczka, the Zamek's Medyk.
    *
-   * `cena` is what one restored point costs, where it costs anything: the
+   * `price` is what one restored point costs, where it costs anything: the
    * Osada's Medyk asks "za każdą Sztukę Złota przywróci ci 1 punkt Życia" and
    * the Pustelnik "1 Sz. Z. za każdą wyleczoną ranę". Free healing leaves it
    * out. It matters because a character with two gold cannot buy back three
    * wounds, and that arithmetic is exactly what a table gets wrong.
    */
-  | { op: "uzdrow"; upTo: number; cena?: number }
+  | { op: "heal"; upTo: number; price?: number }
   /**
    * The other direction: Przedmioty handed back for gold. The Gród's Lichwiarz
    * pays a Sztuka Złota apiece, "odłóż ich Karty i weź po 1 Sz.Z. za każdy" —
    * and by 21.2 the card returning to its pile is the point, because it puts
    * the thing back within somebody's reach.
    */
-  | { op: "sprzedaj"; cena: number }
+  | { op: "sell"; price: number }
   | {
-      op: "tura-stracona";
+      op: "lose-turn";
       turns: number;
       target?: Target;
       /**
@@ -328,15 +328,15 @@ export type Effect =
        * Narrowing this would mean deleting them from the card, and the card is
        * what is being transcribed. They simply never match, which is correct.
        */
-      oprocz?: readonly string[];
+      except?: readonly string[];
     }
-  | { op: "ruch-dodatkowy" }
+  | { op: "extra-move" }
   /**
    * Draws Zaklęcia, and where one is being sold, charges for it.
    *
    * The Sztukmistrz is the only seller: "mogą podczas każdej wizyty kupić u
-   * niego 1 Zaklęcie za 1 Sztukę Złota". A price here rather than in `kup`
-   * because `kup` sells Wyposażenie, and a Zaklęcie is not a thing on that
+   * niego 1 Zaklęcie za 1 Sztukę Złota". A price here rather than in `buy`
+   * because `buy` sells Wyposażenie, and a Zaklęcie is not a thing on that
    * sheet — it comes off the pile, under 2.6's limit and 9.5's reshuffle, and
    * only the drawing knows whether either of those refused.
    *
@@ -345,9 +345,9 @@ export type Effect =
    * so.
    */
   | {
-      op: "zaklecie";
+      op: "gain-spell";
       count: number;
-      cena?: number;
+      price?: number;
       /**
        * Chosen off the pile rather than taken off the top.
        *
@@ -357,19 +357,19 @@ export type Effect =
        * meeting — a Zaklęcie you pick is not the same gift as one you are
        * dealt.
        */
-      zeStosu?: true;
+      fromPile?: true;
     }
   /** "taką liczbę Zaklęć, na jaką pozwala ci twoja Magia" (Magiczna Tablica). */
-  | { op: "zaklecia-do-limitu" }
-  | { op: "przenies"; to: Destination }
-  | { op: "wyciagnij"; count: number }
+  | { op: "spells-to-limit" }
+  | { op: "move"; to: Destination }
+  | { op: "draw-cards"; count: number }
   /** A creature attacks (usually from inside a die table). */
-  | { op: "walka"; nazwa: string; miecz?: number; magia?: number }
+  | { op: "fight"; name: string; sword?: number; magic?: number }
   /**
    * A creature the caster conjures and sends at somebody else.
    *
    * The Golem (Miecz 3) and the Homunculus (Miecz 5), and the difference from
-   * `walka` is who is in danger. `walka` is a creature that attacks *you* — a
+   * `fight` is who is in danger. `fight` is a creature that attacks *you* — a
    * die table's Duch, the Straż at a gate — and you fight it with everything
    * you have. This one is a creature that attacks *them*: „atakuje wybraną
    * Postać lub Wroga (w granicach Kręgu). Ofiara musi walczyć na zwykłych
@@ -380,7 +380,7 @@ export type Effect =
    * path: a fighter that is not the character, at a distance the character
    * never crosses. What it is not is a duel — neither side of it is the caster.
    */
-  | { op: "przyzwij"; nazwa: string; miecz: number }
+  | { op: "summon"; name: string; sword: number }
   /**
    * A look at the top of a pile, for the caster's eyes only.
    *
@@ -394,7 +394,7 @@ export type Effect =
    * the journal line for a Zaklęcie says which card was spoken and never what
    * it showed.
    */
-  | { op: "podejrzyj"; count: number }
+  | { op: "peek"; count: number }
   /**
    * Moves a Karta that is already lying on the board to another Obszar.
    *
@@ -402,27 +402,27 @@ export type Effect =
    * położyć ją na innym Obszarze w tym samym Kręgu. Nowy Obszar nie może być
    * zajęty przez inną Postać."
    *
-   * Not `poloz-karte`, which puts the card being *resolved* somewhere — the
+   * Not `place-card`, which puts the card being *resolved* somewhere — the
    * Upiór rolling for which Obszar he haunts. This one takes a card nobody is
    * resolving, off a field the character is not standing on, and the player
    * points at both ends of it: which Karta, and which Obszar.
    */
-  | { op: "przenies-karte" }
+  | { op: "move-card" }
   /**
    * Wipes a whole class of Karta off the acting seat's Krąg.
    *
    * Kometa alone: "Na Krainę, po której wędrujesz spada apokaliptyczna Gwiazda.
    * W katastrofie giną wszyscy Nieznajomi - należy odłożyć ich Karty." Not
-   * `strata`, which takes something the *character* holds — this reaches for
+   * `lose`, which takes something the *character* holds — this reaches for
    * Karty nobody has picked up yet, lying on squares the character may never
    * even have visited, and sends every one of them to the used pile at once.
    *
-   * `zasieg` is a field of its own rather than a hardcoded ring, on the chance
+   * `reach` is a field of its own rather than a hardcoded ring, on the chance
    * a future card asks for less than a Krąg — Kometa is the only one
    * transcribed and it always says `krag`, the same Krąg `zaraza` and
    * `burza-siedmiu-slonc` already reach with a `target`.
    */
-  | { op: "katastrofa"; klasa: CardClass; zasieg: "krag" }
+  | { op: "wipe"; cardClass: CardClass; reach: "krag" }
   /**
    * Throws back the Karta in front of you and turns over another.
    *
@@ -436,52 +436,52 @@ export type Effect =
    * this may be spoken. So there is nothing to point at and no picker for a
    * stack that already has an order.
    */
-  | { op: "wymien-karte" }
+  | { op: "redraw" }
   | {
-      op: "strata";
-      co:
-        | "przedmiot"
-        | "przyjaciel"
-        | "zaklecie"
+      op: "lose";
+      what:
+        | "item"
+        | "friend"
+        | "spell"
         | "gold"
-        | "wszystkie-przedmioty"
-        | "wszystkie-zaklecia"
+        | "all-items"
+        | "all-spells"
         /**
          * Every Przyjaciel but the ones named. Only the Zły Duch: "Natychmiast
          * opuszczą cię wszyscy dotychczasowi Przyjaciele (z wyjątkiem
          * Południcy)" — and the exception is the card telling you these two are
          * meant to be met together. She is not a Przyjaciel anybody gained.
          */
-        | "wszyscy-przyjaciele-oprocz";
+        | "all-friends-except";
       /** Cards a sweeping loss leaves alone, by id. */
-      oprocz?: readonly CardId[];
+      except?: readonly CardId[];
       count?: number;
       /** Who picks which one goes: the holder, or chance. */
-      wybor?: "ty" | "losowo";
+      chosenBy?: "you" | "random";
       target?: Target;
     }
-  | { op: "kamien" }
+  | { op: "stone" }
   /**
    * The Kuglarz's trade: Miecz points become Magia points or the other way
-   * about. Not two `punkty` steps — the number swapped is the player's choice
+   * about. Not two `points` steps — the number swapped is the player's choice
    * and the two halves must move together or a character could take the gain
    * and refuse the cost.
    *
-   * `z` is the side being spent, and it is part of the op rather than a second
+   * `from` is the side being spent, and it is part of the op rather than a second
    * question asked afterwards. „Zamienić twoje punkty Miecza na punkty Magii
    * **lub odwrotnie**" is two offers, and a card that showed one „Zamień
    * punkty" was hiding the only part of it a player actually decides — which
    * way round. There is no third direction and no „either", so the op cannot
    * be built without saying.
    */
-  | { op: "zamien-punkty"; z: "sword" | "magic" }
+  | { op: "swap-points"; from: "sword" | "magic" }
   /**
-   * The Mędrzec's riddle: name a face aloud, then roll. Distinct from `rzut`
+   * The Mędrzec's riddle: name a face aloud, then roll. Distinct from `roll`
    * because the guess comes first and is the whole game of it — a die table
    * would give away that five faces are worth nothing.
    */
-  | { op: "zgadnij"; nagroda: Effect }
-  | { op: "natura"; na: Nature }
+  | { op: "guess"; prize: Effect }
+  | { op: "set-nature"; to: Nature }
   /**
    * A shop. Targowisko lists eight Przedmioty with prices, the Sztukmistrz
    * sells Zaklęcia at one Sztuka Złota each, and the Gród and Osada do the same
@@ -489,11 +489,11 @@ export type Effect =
    * than a special case for one card.
    */
   /*
-   * `co` is the name printed on the Karta, not an id — „Miecz", „Hełm", „Kij i
+   * `name` is the name printed on the Karta, not an id — „Miecz", „Hełm", „Kij i
    * Sznur" — because that is what the Obszar prints and this is a
    * transcription. `goodsId` is the one door from that name to an `ItemId`.
    */
-  | { op: "kup"; towar: { co: string; cena: number }[] }
+  | { op: "buy"; goods: { name: string; price: number }[] }
   /**
    * "Możesz modlić się na takich samych zasadach, jak w Świątyni Nemed."
    *
@@ -501,23 +501,23 @@ export type Effect =
    * Pointing at the field is more faithful than copying its outcomes, and it
    * cannot drift out of step with the field it borrows from.
    */
-  | { op: "jak-pole"; fieldId: FieldId }
+  | { op: "as-field"; fieldId: FieldId }
   /**
    * Puts the *card* somewhere, which is not the same as moving a character.
    *
    * The Upiór rolls for which of six fields he haunts; the Eremita rolls for
    * where he settles; the Lewiatan takes whichever crossing is free. Encoding
-   * any of these as `przenies` would teleport the player who drew the card,
+   * any of these as `move` would teleport the player who drew the card,
    * which is a different and wrong game.
    */
-  | { op: "poloz-karte"; gdzie: Destination }
+  | { op: "place-card"; where: Destination }
   /**
    * A specific named thing rather than a point: the Eremita offers a Magiczny
    * Miecz or a Tarcza Tolimana, and two temples give the same two away. Both
    * are finite — "jeśli jeszcze są" — which is why the name matters and a
    * generic "+1 Przedmiot" would not do.
    */
-  | { op: "otrzymaj"; co: string }
+  | { op: "receive"; what: string }
   /**
    * Puts the character under something that lasts (`status.ts`).
    *
@@ -532,7 +532,7 @@ export type Effect =
    * you may walk, held until something lifts it.
    */
   | {
-      op: "efekt";
+      op: "status";
       label: string;
       modifier: Modifier;
       ends: Ends;
@@ -540,8 +540,8 @@ export type Effect =
        * Who it lands on, where it is not only the one it happened to.
        *
        * The Wojna Żywiołów is the first: „żaden gracz, łącznie z tobą" is
-       * `wszyscy`, and the same three words `punkty`, `strata` and
-       * `tura-stracona` have carried since the Burza. Absent, it lands on the
+       * `everyone`, and the same three words `points`, `lose` and
+       * `lose-turn` have carried since the Burza. Absent, it lands on the
        * seat the effect is being applied to, which is every other card.
        */
       target?: Target;
@@ -550,17 +550,17 @@ export type Effect =
    * One die per card of a kind, each thrown for that card alone.
    *
    * Both Urwiska: "Rzuć także za każdego z Przyjaciół: 1 lub 2 oczka Przyjaciel
-   * traci Życie (odłóż jego kartę)." Not a `strata` — nobody chooses and no
-   * single card is at stake — and not a `rzut`, whose one die decides one
+   * traci Życie (odłóż jego kartę)." Not a `lose` — nobody chooses and no
+   * single card is at stake — and not a `roll`, whose one die decides one
    * outcome for the whole seat. A character with four Przyjaciele throws four
    * times and may lose all of them or none.
    *
-   * `gubiPrzy` is the highest face that loses the card. The Kamienny Most's
+   * `lostOn` is the highest face that loses the card. The Kamienny Most's
    * fall is the same shape with the polarity reversed — there 1 and 2 are what
    * *keeps* a card — and it is left in `bridge.ts` where its own rule lives,
    * because it reaches for Przedmioty as well and 14.5 states it separately.
    */
-  | { op: "rzut-za-kazdego"; co: "przyjaciel" | "przedmiot"; gubiPrzy: number }
+  | { op: "roll-for-each"; what: "friend" | "item"; lostOn: number }
   /**
    * Rid of a named card and everything it was doing to you.
    *
@@ -574,7 +574,7 @@ export type Effect =
    * an event rather than an Obszar offering a cure, which is the difference
    * between shaking something off and being freed of it.
    */
-  | { op: "uwolnij"; od: CardId }
+  | { op: "release"; from: CardId }
   /**
    * Takes a card off somebody else and gives it to the caster.
    *
@@ -583,7 +583,7 @@ export type Effect =
    * the Pan Przyjaciół "jednego z Przyjaciół i dołączyć go do swoich", and
    * Szaleństwo "jedno z należących do niej Zaklęć".
    *
-   * Distinct from `strata`, which destroys: what is taken here changes hands
+   * Distinct from `lose`, which destroys: what is taken here changes hands
    * and is still in the game. That difference is the whole of the Pan
    * Przyjaciół — a Przyjaciel who went to the used pile would be no use to
    * anybody, and the card says "dołączyć go do swoich".
@@ -594,19 +594,19 @@ export type Effect =
    * else.
    */
   | {
-      op: "zabierz";
-      co: "przedmiot" | "przyjaciel" | "zaklecie" | "przedmiot-lub-zloto";
+      op: "take";
+      what: "item" | "friend" | "spell" | "item-or-gold";
       /** Who picks. Defaults to the victim, which is 5.6's rule. */
-      wybiera?: "ofiara" | "rzucajacy";
+      chosenBy?: "victim" | "caster";
     }
   /** Only happens to some characters (Posłańcy Bogów, Sabat Czarownic). */
-  | { op: "gdy"; warunek: Condition; to: Effect; inaczej?: Effect };
+  | { op: "when"; condition: Condition; then: Effect; else?: Effect };
 
 /** A test a card applies before doing anything. */
 export type Condition =
-  | { is: "natura"; jedna_z: Nature[] }
-  | { is: "prog"; stat: "sword" | "magic"; ponizej: number }
-  | { is: "ma-zloto" }
+  | { is: "nature"; oneOf: Nature[] }
+  | { is: "threshold"; stat: "sword" | "magic"; below: number }
+  | { is: "has-gold" }
   /**
    * Whether this character has attacked another during the game.
    *
@@ -677,24 +677,24 @@ export function isConsumedOnResolve(cardId: CardId): boolean {
  * the box: the Lewiatan, the Upiór and the Eremita, whose die tables send them
  * to water, to the Osada and to the Bezdroża.
  *
- * Asked of `placed`, which is that instruction and nothing else. It used to be
- * a `JSON.stringify(effect).includes('"poloz-karte"')` — the whole script
- * searched as text, because the placement was buried inside a `rzut` inside a
- * `po-kolei` and there was no field to ask. A card that is asked "do you send
+ * Asked of `onDraw`, which is that instruction and nothing else. It used to be
+ * a `JSON.stringify(effect).includes('"place-card"')` — the whole script
+ * searched as text, because the placement was buried inside a `roll` inside a
+ * `sequence` and there was no field to ask. A card that is asked "do you send
  * yourself somewhere" now answers from the one place that says so.
  *
  * Read off the script rather than listed, so a fourth transcribed tomorrow is
  * ordered correctly without anybody remembering this rule exists.
  */
 export function goesToAField(cardId: CardId): boolean {
-  return scriptFor(cardId)?.placed !== undefined;
+  return scriptFor(cardId)?.onDraw !== undefined;
 }
 
 /**
  * Which of a Karta's two instructions is the one being carried out now.
  *
  * 15.1 is a *draw-time* rule — the parenthesis scopes it to the turn the card
- * was turned over — so a Karta with a `placed` says one thing on the way to its
+ * was turned over — so a Karta with a `onDraw` says one thing on the way to its
  * Obszar and another once it is there, and the only fact that tells the two
  * apart is where this copy came from: off the pile, or off the board.
  *
@@ -705,7 +705,7 @@ export function goesToAField(cardId: CardId): boolean {
  * both halves look right on their own.
  */
 export function instructionIn(script: CardScript, lying: boolean | undefined): Effect {
-  return !lying && script.placed ? script.placed : script.effect;
+  return !lying && script.onDraw ? script.onDraw : script.effect;
 }
 
 /**
@@ -715,7 +715,7 @@ export function instructionIn(script: CardScript, lying: boolean | undefined): E
  * the script rather than named, the way `goesToAField` is, so a second one
  * transcribed tomorrow is ordered correctly without anybody remembering this
  * exists — and the whole script is searched, not just its top level, because
- * the next one may well reach `wyciagnij` through a `rzut` table.
+ * the next one may well reach `draw-cards` through a `roll` table.
  *
  * # Why the ordering needs it
  *
@@ -744,9 +744,9 @@ export function reopensTheDrawing(cardId: CardId): boolean {
   const script = scriptFor(cardId);
   if (!script) return false;
   // Walked, not searched as text: it was `JSON.stringify(effect).includes(
-  // '"wyciagnij"')` for a while, which is a reader of the vocabulary that the
+  // '"draw-cards"')` for a while, which is a reader of the vocabulary that the
   // vocabulary cannot see.
-  return nodesOf(script.effect).some((node) => node.op === "wyciagnij");
+  return nodesOf(script.effect).some((node) => node.op === "draw-cards");
 }
 
 /**
@@ -760,7 +760,7 @@ export function reopensTheDrawing(cardId: CardId): boolean {
  * Spotkanie, where a Natura usually names who *suffers*. ZAĆMIENIE SŁOŃC told a
  * Dobra Postać in green that she qualified, for a turn taken off her.
  */
-export type Valence = "korzysc" | "strata";
+export type Valence = "gain" | "loss";
 
 export function scriptFor(cardId: CardId): CardScript | null {
   // Both ends are checked. The registry's *keys* are `CardId`, so a typo in one
@@ -788,24 +788,24 @@ export function fieldsNamedBy(effect: Effect): FieldId[] {
  */
 export function describeDisposition(disposition: Disposition): string {
   switch (disposition.kind) {
-    case "odloz":
+    case "discard":
       return "Odłóż Kartę na stos użytych.";
-    case "zostaje":
+    case "stays":
       return "Karta zostaje na tym Obszarze do końca gry.";
-    case "zostaje-z-pula": {
+    case "stays-with-pool": {
       const stat =
         disposition.stat === "life" ? "Życia" : disposition.stat === "sword" ? "Miecza" : "Magii";
       return `Karta zostaje z ${disposition.points} punktami ${stat}; odłóż ją, gdy się wyczerpią.`;
     }
-    case "do-pierwszej":
+    case "until-first-visitor":
       return "Karta czeka tu na pierwszą Postać, potem ją odłóż.";
-    case "bierzesz":
+    case "kept":
       return "Bierzesz Kartę ze sobą.";
-    case "po-turach":
+    case "after-turns":
       return `Karta działa przez ${disposition.turns} ${
         disposition.turns === 1 ? "turę" : "tury"
       }, potem ją odłóż.`;
-    case "wraca-do-stosu":
+    case "back-to-pile":
       return "Karta wraca do stosu — potasuj.";
   }
 }

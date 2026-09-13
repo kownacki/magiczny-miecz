@@ -64,7 +64,7 @@ export interface Resolution {
   /**
    * The part still owed to a player's decision, if any. Null when the whole
    * effect has been carried out — and null too when the walk suspended on a
-   * `walka`, which asks nobody anything: it opens a fight.
+   * `fight`, which asks nobody anything: it opens a fight.
    */
   pending: Effect | null;
   /**
@@ -114,7 +114,7 @@ export interface OpContext {
    * *Which copy* of `cardId` is being resolved — `keyOf`'s key, or absent.
    *
    * The same mark the suspension carries (`ApplyEffect.mark`), passed down
-   * because one op needs it: `poloz-karte` takes the Karta out of the kolejka,
+   * because one op needs it: `place-card` takes the Karta out of the kolejka,
    * and the deck prints two UPIORY, each of which rolls for its own Obszar
    * (15.1). Keyed by name, placing one would have lifted both.
    */
@@ -125,7 +125,7 @@ export interface OpContext {
  * One Karta out of the turn's kolejka, and whether it was conjured.
  *
  * Two callers, both of them a Karta that stops being one of this Obszar's
- * (16.8): `poloz-karte`, where it goes to live somewhere else, and the
+ * (16.8): `place-card`, where it goes to live somewhere else, and the
  * Lewiatan's dead end, where every Obszar it could appear on is occupied and
  * the Karta goes back on the pile instead.
  *
@@ -188,13 +188,13 @@ export const nothing = (did: string[]): Outcome<Resolution> => ({
  * at, a Magia too low to accept the Zaklęcie — those are the game, and the
  * table wants them written down.
  *
- * What does not is plumbing: `zabierz` with nobody to give to, `poloz-karte`
- * with no Karta named, `otrzymaj` with a name nobody has transcribed. Those say
+ * What does not is plumbing: `take` with nobody to give to, `place-card`
+ * with no Karta named, `receive` with a name nobody has transcribed. Those say
  * the op was called wrong, not that anything happened, and a row for them is
  * the noise that makes the real ones stop being read. They stay on `nothing`.
  *
- * Silent without a `cardId` for the same reason: `nic` and its neighbours are
- * also die faces and `wybor` branches, which have lines of their own, and
+ * Silent without a `cardId` for the same reason: `nothing` and its neighbours are
+ * also die faces and `choice` branches, which have lines of their own, and
  * without a Karta there is nothing here to name.
  */
 export const cameToNothing = (
@@ -206,7 +206,7 @@ export const cameToNothing = (
    *
    * Defaults to what the player was told, because for most of these the two are
    * the same sentence: „nie masz Przyjaciół" is both. Null where there is no
-   * reason to give — a Karta whose own branch is `nic` did nothing for no
+   * reason to give — a Karta whose own branch is `nothing` did nothing for no
    * stated cause, and „nic nie daje — nic się nie dzieje" is the same shrug
    * twice.
    */
@@ -329,20 +329,20 @@ const OPS: { [K in LeafOp]: OpRun<K> } = {
    * moves a figure, a number or a card — so a turn that walks past it in
    * silence is indistinguishable from the app having lost the Karta. That is
    * `no-effect`'s whole argument, and it applied here too: it was written for
-   * a `gdy` whose condition failed *and had no other branch*, while a card that
-   * spells the branch out (`inaczej: { op: "nic" }` — the DOBRE BÓSTWO for
+   * a `when` whose condition failed *and had no other branch*, while a card that
+   * spells the branch out (`else: { op: "nothing" }` — the DOBRE BÓSTWO for
    * anybody who has attacked nobody) reached the same nothing by the other road
    * and said it nowhere. Two ways of writing one card's shrug should not be the
    * difference between a record and none.
    *
-   * Only for a Karta. `nic` is also a face of a die table and a branch of a
-   * `wybor`, and those have their own lines; without a `cardId` there is
+   * Only for a Karta. `nothing` is also a face of a die table and a branch of a
+   * `choice`, and those have their own lines; without a `cardId` there is
    * nothing here to name and nothing is written.
    *
-   * No `why`: the condition is what `gdy` knows and this does not. The card and
+   * No `why`: the condition is what `when` knows and this does not. The card and
    * the fact that it did nothing are what there is to say.
    */
-  nic: (ctx) => cameToNothing(ctx, "nic się nie dzieje", null),
+  nothing: (ctx) => cameToNothing(ctx, "nic się nie dzieje", null),
 
   /**
    * Puts the character under something that lasts.
@@ -353,12 +353,12 @@ const OPS: { [K in LeafOp]: OpRun<K> } = {
    * a row and not an adjustment: an effect is added at read time and never
    * written into own points, or it would outlive its own expiry.
    */
-  efekt: (ctx, effect) => {
+  status: (ctx, effect) => {
     const { snapshot, seatId, reason } = ctx;
     /**
      * One seat, or everybody the card names.
      *
-     * The same loop `punkty` and `tura-stracona` run, and for the same
+     * The same loop `points` and `lose-turn` run, and for the same
      * reason: „żaden gracz, łącznie z tobą" is a fact about the table rather
      * than about whoever spoke it. Chained through `apply` so two seats
      * cannot be given the same row id.
@@ -398,31 +398,31 @@ const OPS: { [K in LeafOp]: OpRun<K> } = {
    * Both Urwiska: "Rzuć także za każdego z Przyjaciół: 1 lub 2 oczka
    * Przyjaciel traci Życie (odłóż jego kartę)." A character with four
    * Przyjaciele throws four times and may lose all of them or none, which is
-   * why this is neither a `strata` (nobody chooses) nor a `rzut` (one die
+   * why this is neither a `lose` (nobody chooses) nor a `roll` (one die
    * settling one outcome for the whole seat).
    *
    * 6.4 sends a Przyjaciel who dies to the used pile, which is where a
    * discarded Przedmiot goes too — neither is left on the Obszar, because
    * nobody put it down.
    */
-  "rzut-za-kazdego": async (ctx, effect) => {
+  "roll-for-each": async (ctx, effect) => {
     const { snapshot, seatId, reason, ports } = ctx;
     // The board names the kinds in Polish and the rows are stored in the
     // engine's own words; `reachableBy` is the one place that translation
     // lives, so a loss and a roll agree about what a Przyjaciel is.
-    const kind = reachableBy(effect.co);
+    const kind = reachableBy(effect.what);
     const mine = snapshot.holdings.filter(
       (held) => held.seat_id === seatId && held.kind === kind,
     );
     if (mine.length === 0) {
-      return cameToNothing(ctx, `nie masz ${effect.co === "przyjaciel" ? "Przyjaciół" : "Przedmiotów"}`);
+      return cameToNothing(ctx, `nie masz ${effect.what === "friend" ? "Przyjaciół" : "Przedmiotów"}`);
     }
 
     const gone: typeof mine = [];
     const said: string[] = [];
     for (const held of mine) {
       const die = await ports.random.rollD6(`${reason}: ${held.card_id}`);
-      if (die <= effect.gubiPrzy) {
+      if (die <= effect.lostOn) {
         gone.push(held);
         said.push(`${cardName(held.card_id)} przepada (${die})`);
       } else {
@@ -457,13 +457,13 @@ const OPS: { [K in LeafOp]: OpRun<K> } = {
    * Nothing at all when the character is not carrying it, which is a visit to
    * the Pustelnia by somebody who never met the Zły Duch.
    */
-  uwolnij: (ctx, effect) => {
+  release: (ctx, effect) => {
     const { snapshot, seatId } = ctx;
-    const name = cardName(effect.od);
+    const name = cardName(effect.from);
     const held = storedStatuses(snapshot, seatId);
     const left = held.filter((status) => status.source !== name);
     const card = snapshot.holdings.find(
-      (h) => h.seat_id === seatId && h.card_id === effect.od,
+      (h) => h.seat_id === seatId && h.card_id === effect.from,
     );
     if (left.length === held.length && !card) return cameToNothing(ctx, `${name} — nic cię nie trzyma`);
 
@@ -484,7 +484,7 @@ const OPS: { [K in LeafOp]: OpRun<K> } = {
    * Two pools answer to „wszyscy". Everything of the named class still lying
    * in `field_cards` anywhere on the acting seat's Krąg — reachable whether or
    * not anybody ever stood on that Obszar, which is exactly what makes this
-   * unlike `strata`: that takes something a *character* holds, and this
+   * unlike `lose`: that takes something a *character* holds, and this
    * reaches for Karty nobody has picked up. And whatever this turn already
    * lifted off its own square into `drawn` (`liftFieldCards`) and has not yet
    * resolved — the one place `field_cards` does not reach, because arriving
@@ -497,7 +497,7 @@ const OPS: { [K in LeafOp]: OpRun<K> } = {
    * to. A card the console `granted` belongs to no pile and joins none —
    * `putOnPile`/`asReturnable` already know that; it is only deleted here.
    */
-  katastrofa: (ctx, effect) => {
+  wipe: (ctx, effect) => {
     const { snapshot, seatId } = ctx;
     const seat = snapshot.seats.find((row) => row.id === seatId);
     const ring = new Set(ringFields(seat?.field_id ?? null));
@@ -505,11 +505,11 @@ const OPS: { [K in LeafOp]: OpRun<K> } = {
     const onBoard = snapshot.fieldCards.filter((row) => {
       if (!ring.has(row.field_id as FieldId)) return false;
       const card = EVENTS.find((one) => one.id === row.card_id);
-      return card?.cardClass === effect.klasa;
+      return card?.cardClass === effect.cardClass;
     });
 
     const state = top(snapshot.game.turn_state);
-    const inTurn = state.phase === "field" ? state.drawn.filter((card) => card.cardClass === effect.klasa) : [];
+    const inTurn = state.phase === "field" ? state.drawn.filter((card) => card.cardClass === effect.cardClass) : [];
 
     if (onBoard.length === 0 && inTurn.length === 0) {
       return cameToNothing(ctx, "nie ma tu nikogo, kogo dosięgnie Kometa");
@@ -522,7 +522,7 @@ const OPS: { [K in LeafOp]: OpRun<K> } = {
             game: {
               turn_state: replaceTop(snapshot.game.turn_state, {
                 ...state,
-                drawn: state.drawn.filter((card) => card.cardClass !== effect.klasa),
+                drawn: state.drawn.filter((card) => card.cardClass !== effect.cardClass),
               }),
             },
           }
@@ -553,7 +553,7 @@ const OPS: { [K in LeafOp]: OpRun<K> } = {
   /**
    * A card taken off the victim and handed to the caster.
    *
-   * Not a `strata`: what is taken changes hands and is still in the game,
+   * Not a `lose`: what is taken changes hands and is still in the game,
    * which is the whole of the Pan Przyjaciół — "dołączyć go do swoich".
    *
    * Which card goes is answered the same way every other choice is, as an
@@ -562,7 +562,7 @@ const OPS: { [K in LeafOp]: OpRun<K> } = {
    * Szaleństwo's own text takes it back — "obejrzeć Zaklęcia i wybrać jedno
    * z nich", the one place a hand held under 9.3 is opened to somebody else.
    */
-  zabierz: (ctx, effect) => {
+  take: (ctx, effect) => {
     const { snapshot, seatId, decided, path } = ctx;
     const taker = ctx.toSeatId;
     if (!taker) return nothing(["nie wiadomo, komu miałoby przypaść"]);
@@ -570,7 +570,7 @@ const OPS: { [K in LeafOp]: OpRun<K> } = {
 
     // "jeden Przedmiot lub jedną Sztukę Złota" — the coin is the simpler half
     // and is taken when the victim has no Przedmiot to give.
-    const kind = effect.co === "przedmiot-lub-zloto" ? "item" : reachableBy(effect.co);
+    const kind = effect.what === "item-or-gold" ? "item" : reachableBy(effect.what);
     /**
      * 5.3/8.1, asked of the taker rather than the victim.
      *
@@ -596,7 +596,7 @@ const OPS: { [K in LeafOp]: OpRun<K> } = {
 
     if (mine.length === 0) {
       const victim = snapshot.seats.find((one) => one.id === seatId);
-      if (effect.co === "przedmiot-lub-zloto" && victim && victim.gold > 0) {
+      if (effect.what === "item-or-gold" && victim && victim.gold > 0) {
         return {
           writes: {
             seats: [
@@ -650,13 +650,13 @@ const OPS: { [K in LeafOp]: OpRun<K> } = {
    * by the time „Dalej" runs this the frame on screen is the `script` frame and
    * the Obszar's is one below.
    */
-  "poloz-karte": (ctx, effect) => {
+  "place-card": (ctx, effect) => {
     const { snapshot, seatId, path } = ctx;
     if (!ctx.cardId) return nothing(["nie wiadomo, którą Kartę położyć"]);
     // A list of Obszary is answered before the gate above and arrives here as
     // the one that was chosen — see the `jedno-z` block in the walk.
-    if (effect.gdzie.kind !== "pole") return owedAt(effect, path);
-    const chosen = effect.gdzie.fieldId;
+    if (effect.where.kind !== "field") return owedAt(effect, path);
+    const chosen = effect.where.fieldId;
 
     const { writes: lifted, granted } = liftFromKolejka(snapshot, ctx);
 
@@ -696,11 +696,11 @@ const OPS: { [K in LeafOp]: OpRun<K> } = {
    * Declared in the vocabulary from the start and never implemented — no card
    * used it, and the two Obszary that do were not scripted until now.
    */
-  otrzymaj: (ctx, effect) => {
+  receive: (ctx, effect) => {
     const { snapshot, seatId } = ctx;
-    const found = cardIdNamed(effect.co);
+    const found = cardIdNamed(effect.what);
     if (!("id" in found)) {
-      return nothing([`${effect.co} — nie wiadomo, o którą Kartę chodzi`]);
+      return nothing([`${effect.what} — nie wiadomo, o którą Kartę chodzi`]);
     }
     try {
       const taken = takeCard(snapshot, { seatId, cardId: found.id });
@@ -713,7 +713,7 @@ const OPS: { [K in LeafOp]: OpRun<K> } = {
     }
   },
 
-  punkty: (ctx, effect) => {
+  points: (ctx, effect) => {
     const { snapshot, seatId, reason, path } = ctx;
     const hit = targeted(snapshot, seatId, effect.target, [], ctx.fieldId);
     // Waits for somebody to arrive, or for the holder to choose.
@@ -779,9 +779,9 @@ const OPS: { [K in LeafOp]: OpRun<K> } = {
     };
   },
 
-  "tura-stracona": (ctx, effect) => {
+  "lose-turn": (ctx, effect) => {
     const { snapshot, seatId, reason, path } = ctx;
-    const hit = targeted(snapshot, seatId, effect.target, effect.oprocz ?? [], ctx.fieldId);
+    const hit = targeted(snapshot, seatId, effect.target, effect.except ?? [], ctx.fieldId);
     if (hit === null) return owedAt(effect, path);
     if (hit.length === 0) return cameToNothing(ctx, "nikogo to nie dotyczy");
 
@@ -845,7 +845,7 @@ const OPS: { [K in LeafOp]: OpRun<K> } = {
     };
   },
 
-  strata: async (ctx, effect) => {
+  lose: async (ctx, effect) => {
     const { snapshot, seatId, decided, ports, path } = ctx;
     const hit = targeted(snapshot, seatId, effect.target, [], ctx.fieldId);
     if (hit === null) return owedAt(effect, path);
@@ -880,7 +880,7 @@ const OPS: { [K in LeafOp]: OpRun<K> } = {
        * And the Tajemna Sakwa, with whatever is in it. "Przedmiot ten i
        * Sakwę będziesz mógł utracić **jedynie** w wypadku użycia Zaklęcia
        * »Pan Bogactwa«" — so every door but that one is shut, and this is the
-       * door: `strata` is what the Bagna, the Złoczyńca, the Wielkolud, the
+       * door: `lose` is what the Bagna, the Złoczyńca, the Wielkolud, the
        * Zasadzka, a lost fight's ransom and the Urocza Diablica all come
        * through. Pan Bogactwa does not; it names its target and takes it, so
        * it reaches past this on purpose.
@@ -910,13 +910,13 @@ const OPS: { [K in LeafOp]: OpRun<K> } = {
       // and the dice are a port. Exactly as many as it can ask for — the
       // kind it reaches into, counted against what this seat actually holds —
       // so a scripted port is not charged for picks nobody makes.
-      const kind = reachableBy(effect.co);
+      const kind = reachableBy(effect.what);
       const takesEverything =
-        effect.co === "wszystkie-przedmioty" || effect.co === "wszystkie-zaklecia";
+        effect.what === "all-items" || effect.what === "all-spells";
       const candidates =
         kind === null ? 0 : mine.filter((held) => held.kind === kind).length;
       const asks =
-        effect.wybor === "losowo" && !takesEverything
+        effect.chosenBy === "random" && !takesEverything
           ? Math.min(effect.count ?? 1, candidates)
           : 0;
       // `chooseLosses` picks from a pool that shrinks by one each time, so the
@@ -939,7 +939,7 @@ const OPS: { [K in LeafOp]: OpRun<K> } = {
        * being taken on the player's behalf.
        */
       const gone =
-        effect.wybor === "losowo"
+        effect.chosenBy === "random"
           ? chooseLosses(mine, effect, () => rolls[next++] ?? 0)
           : chooseLosses(mine, effect, () => decided.choices?.shift() ?? null);
       if (gone === null) return { writes, result: { did: [], pending: effect } };
@@ -977,7 +977,7 @@ const OPS: { [K in LeafOp]: OpRun<K> } = {
             seatId: row.id,
             round: snapshot.game.round,
             kind: "lost-card",
-            payload: { co: effect.co, cardIds: lost.map((h) => h.cardId), gold: gold },
+            payload: { co: effect.what, cardIds: lost.map((h) => h.cardId), gold: gold },
           },
         ],
       });
@@ -1000,7 +1000,7 @@ const OPS: { [K in LeafOp]: OpRun<K> } = {
     };
   },
 
-  uzdrow: (ctx, effect) => {
+  heal: (ctx, effect) => {
     const { snapshot, seatId } = ctx;
     // 4.7 refuses when there is nothing to restore, and a card offering a
     // heal to somebody already whole is not an error — it simply does nothing.
@@ -1027,7 +1027,7 @@ const OPS: { [K in LeafOp]: OpRun<K> } = {
     }
   },
 
-  zaklecie: (ctx, effect) => {
+  "gain-spell": (ctx, effect) => {
     const { snapshot, seatId, shuffle, path } = ctx;
     let writes: Changeset = {};
     const names: string[] = [];
@@ -1041,11 +1041,11 @@ const OPS: { [K in LeafOp]: OpRun<K> } = {
      * Zaklęcia actually drawn — 2.6 or an empty pile may stop it short, and
      * nobody pays to be told their Magia is too low.
      */
-    const buyer = effect.cena ? snapshot.seats.find((one) => one.id === seatId) : undefined;
-    if (effect.cena && buyer && buyer.gold < effect.cena * effect.count) {
+    const buyer = effect.price ? snapshot.seats.find((one) => one.id === seatId) : undefined;
+    if (effect.price && buyer && buyer.gold < effect.price * effect.count) {
       return cameToNothing(
         ctx,
-        `Za mało złota: ${plural(effect.cena * effect.count, "Sztuka Złota", "Sztuki Złota", "Sztuk Złota")}.`,
+        `Za mało złota: ${plural(effect.price * effect.count, "Sztuka Złota", "Sztuki Złota", "Sztuk Złota")}.`,
       );
     }
     /**
@@ -1054,7 +1054,7 @@ const OPS: { [K in LeafOp]: OpRun<K> } = {
      * 2.6 caps the hand by Magia and `drawSpell` refuses over it — which is
      * right, and used to abort the whole resolution: a Świątynia table whose
      * seventh row is a Zaklęcie would crash mid-prayer for a Postać with
-     * Magia 0, losing the rows already applied. The same bargain `otrzymaj`
+     * Magia 0, losing the rows already applied. The same bargain `receive`
      * makes, and for the same reason: "your Magia does not allow it" is an
      * outcome a table needs told, not a stack trace.
      *
@@ -1075,14 +1075,14 @@ const OPS: { [K in LeafOp]: OpRun<K> } = {
      * both, and the coin buys the draw — which has happened by the time the
      * question is on screen, since the cards are already off the pile.
      *
-     * Only for a single Zaklęcie. Every `zaklecie` in the box asks for one,
+     * Only for a single Zaklęcie. Every `gain-spell` in the box asks for one,
      * and a suspension part-way through a run of them would owe a second
      * question this frame has nowhere to remember.
      */
     if (effect.count === 1 && peekDue(snapshot, seatId)) {
       const paidUp: Changeset =
-        effect.cena && buyer
-          ? { seats: [{ id: buyer.id, patch: { gold: buyer.gold - effect.cena } }] }
+        effect.price && buyer
+          ? { seats: [{ id: buyer.id, patch: { gold: buyer.gold - effect.price } }] }
           : {};
       return {
         writes: paidUp,
@@ -1111,10 +1111,10 @@ const OPS: { [K in LeafOp]: OpRun<K> } = {
       }
     }
     const paid =
-      effect.cena && buyer && names.length > 0
+      effect.price && buyer && names.length > 0
         ? {
             seats: [
-              { id: buyer.id, patch: { gold: buyer.gold - effect.cena * names.length } },
+              { id: buyer.id, patch: { gold: buyer.gold - effect.price * names.length } },
             ],
           }
         : {};
@@ -1123,8 +1123,8 @@ const OPS: { [K in LeafOp]: OpRun<K> } = {
       result: {
         did: [
           `Zaklęcie: ${names.join(", ")}` +
-            (effect.cena && names.length > 0
-              ? ` (za ${effect.cena * names.length} Sz. Z.)`
+            (effect.price && names.length > 0
+              ? ` (za ${effect.price * names.length} Sz. Z.)`
               : ""),
         ],
         pending: null,
@@ -1132,14 +1132,14 @@ const OPS: { [K in LeafOp]: OpRun<K> } = {
     };
   },
 
-  kamien: (ctx) => ({
+  stone: (ctx) => ({
     writes: turnToStone(ctx.snapshot, { seatId: ctx.seatId }),
     result: { did: ["Zamiana w Kamień (20.1)"], pending: null },
   }),
 
-  natura: (ctx, effect) => {
-    const done = changeNature(ctx.snapshot, { seatId: ctx.seatId, nature: effect.na });
-    const name = NATURE_LABEL[effect.na] ?? effect.na;
+  "set-nature": (ctx, effect) => {
+    const done = changeNature(ctx.snapshot, { seatId: ctx.seatId, nature: effect.to });
+    const name = NATURE_LABEL[effect.to] ?? effect.to;
     // Nothing written to the seat means the Natura was already the one the
     // card asks for. Saying "Natura: zła" there would report a turn of the
     // card that did not happen — see `changeNature`, which journals the
@@ -1154,9 +1154,9 @@ const OPS: { [K in LeafOp]: OpRun<K> } = {
     };
   },
 
-  przenies: (ctx, effect) => {
+  move: (ctx, effect) => {
     const { snapshot, seatId, reason, path } = ctx;
-    if (effect.to.kind !== "pole") return owedAt(effect, path);
+    if (effect.to.kind !== "field") return owedAt(effect, path);
     // 13.1 and the Instrukcja's own example: „Obbol jednak musi kontynuować
     // turę, czyli zachować się tak, jakby jego ruch zakończył się na Równinie
     // Traw." The Obszar he lands on is his to explore, and it draws.
@@ -1178,7 +1178,7 @@ const OPS: { [K in LeafOp]: OpRun<K> } = {
     };
   },
 
-  walka: (ctx, effect) => {
+  fight: (ctx, effect) => {
     // A creature the card conjures rather than a card on the field. The walk
     // cannot fight — dice, spells and other seats live above it — so it
     // suspends here and `framed` opens the fight over the script frame.
@@ -1186,17 +1186,17 @@ const OPS: { [K in LeafOp]: OpRun<K> } = {
     return {
       writes: {},
       result: {
-        did: [`walka: ${effect.nazwa}`],
+        did: [`walka: ${effect.name}`],
         pending: null,
         suspended: {
           cursor: ctx.path,
-          opens: { kind: "walka", nazwa: effect.nazwa, miecz: effect.miecz, magia: effect.magia },
+          opens: { kind: "walka", nazwa: effect.name, miecz: effect.sword, magia: effect.magic },
         },
       },
     };
   },
 
-  "wymien-karte": (ctx) => {
+  redraw: (ctx) => {
     const { snapshot, shuffle } = ctx;
     /**
      * The Karta in front of the player goes back and another comes over.
@@ -1254,7 +1254,7 @@ const OPS: { [K in LeafOp]: OpRun<K> } = {
     };
   },
 
-  podejrzyj: (ctx, effect) => {
+  peek: (ctx, effect) => {
     /**
      * The five that are actually next, off the same end `drawFrom` takes
      * from — a peek that showed a different five would be worse than none.
@@ -1274,7 +1274,7 @@ const OPS: { [K in LeafOp]: OpRun<K> } = {
     };
   },
 
-  przyzwij: (ctx, effect) => {
+  summon: (ctx, effect) => {
     const { snapshot, seatId } = ctx;
     /**
      * Sent at whoever was named as the Zaklęcie was spoken.
@@ -1286,8 +1286,8 @@ const OPS: { [K in LeafOp]: OpRun<K> } = {
      * caster is exactly how a Golem would end up eating its summoner.
      */
     const summoned = summonFighter(snapshot, {
-      name: effect.nazwa,
-      miecz: effect.miecz,
+      name: effect.name,
+      miecz: effect.sword,
       spellId: ctx.reason,
       ...(ctx.fieldCardId !== undefined
         ? { fieldCardId: ctx.fieldCardId }
@@ -1295,7 +1295,7 @@ const OPS: { [K in LeafOp]: OpRun<K> } = {
     });
     return {
       writes: summoned.writes,
-      result: { did: [`${effect.nazwa} atakuje`], pending: null },
+      result: { did: [`${effect.name} atakuje`], pending: null },
     };
   },
 
@@ -1317,7 +1317,7 @@ const OPS: { [K in LeafOp]: OpRun<K> } = {
    * while nobody could reach it and stopped being fine the moment the Rumak
    * grew a button.
    */
-  "ruch-dodatkowy": (ctx) =>
+  "extra-move": (ctx) =>
     ({
       writes: addEffect(ctx.snapshot, {
         seatId: ctx.seatId,
@@ -1341,12 +1341,12 @@ const OPS: { [K in LeafOp]: OpRun<K> } = {
    * made when they like and as often as the stock allows; it was never this
    * card's job to ask.
    */
-  kup: (_ctx, effect) =>
-    nothing([`otwarte na sprzedaż: ${effect.towar.map((one) => one.co).join(", ")}`]),
+  buy: (_ctx, effect) =>
+    nothing([`otwarte na sprzedaż: ${effect.goods.map((one) => one.name).join(", ")}`]),
 
-  sprzedaj: () => nothing(["można tu sprzedawać"]),
+  sell: () => nothing(["można tu sprzedawać"]),
 
-  wyciagnij: (ctx, effect) => {
+  "draw-cards": (ctx, effect) => {
     const { snapshot, shuffle } = ctx;
     let writes: Changeset = {};
     for (let i = 0; i < effect.count; i++) {
@@ -1371,7 +1371,7 @@ const OPS: { [K in LeafOp]: OpRun<K> } = {
    * said from the other side. An empty pile stops it just as honestly, and the
    * bound is there so that a refusal nobody anticipated cannot spin.
    */
-  "zaklecia-do-limitu": (ctx) => {
+  "spells-to-limit": (ctx) => {
     const { snapshot, seatId, shuffle } = ctx;
     let writes: Changeset = {};
     const names: string[] = [];
@@ -1405,21 +1405,21 @@ const OPS: { [K in LeafOp]: OpRun<K> } = {
    * as the delta that lands on the target, so nothing here has to know how the
    * flooring works — only what the answer should be.
    */
-  "zamien-punkty": (ctx, effect) => {
+  "swap-points": (ctx, effect) => {
     const { snapshot, seatId, reason } = ctx;
     const seat = snapshot.seats.find((one) => one.id === seatId);
     if (!seat) throw new Error("Nieznane miejsce.");
     const [now, target] =
-      effect.z === "sword" ? [seat.sword_own, seat.magic_own] : [seat.magic_own, seat.sword_own];
+      effect.from === "sword" ? [seat.sword_own, seat.magic_own] : [seat.magic_own, seat.sword_own];
     const done = adjustSeat(snapshot, {
       seatId,
-      stat: effect.z,
+      stat: effect.from,
       delta: target - now,
       reason,
       byCard: ctx.cardId ?? undefined,
       record: { kind: "points", manual: false },
     });
-    const label = effect.z === "sword" ? "Miecz" : "Magia";
+    const label = effect.from === "sword" ? "Miecz" : "Magia";
     return {
       writes: done.writes,
       result: {

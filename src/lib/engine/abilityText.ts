@@ -154,11 +154,11 @@ export function staysAs(cardId: CardId): string | null {
   if (!resident && cardClass !== "encounter") return null;
   const disposition = scriptFor(cardId)?.disposition;
   if (!disposition) return null;
-  if (!resident && disposition.kind === "odloz") return null;
+  if (!resident && disposition.kind === "discard") return null;
   switch (disposition.kind) {
-    case "odloz":
+    case "discard":
       return "jednorazowa — potem wraca na stos";
-    case "do-pierwszej":
+    case "until-first-visitor":
       /**
        * „na pierwszą Postać" is the EREMITA, who serves anybody. The WRÓŻKA
        * does not — „Pierwszej **Dobrej** Postaci" — and a Zła Postać standing
@@ -169,16 +169,16 @@ export function staysAs(cardId: CardId): string | null {
       return servedNatures(cardId)
         ? "czeka na Obszarze na pierwszą Postać, która spełni warunki — potem wraca na stos"
         : "czeka na Obszarze na pierwszą Postać — potem wraca na stos";
-    case "zostaje":
+    case "stays":
       return "zostaje na Obszarze do końca gry";
-    case "zostaje-z-pula":
+    case "stays-with-pool":
       return "zostaje na Obszarze, dopóki się nie wyczerpie";
-    case "po-turach":
+    case "after-turns":
       // `tury` and not a two-way choice: five turns are „5 tur", not „5 tury".
       return `działa przez ${tury(disposition.turns)}`;
-    case "wraca-do-stosu":
+    case "back-to-pile":
       return "wraca do stosu";
-    case "bierzesz":
+    case "kept":
       return "bierzesz ją ze sobą";
   }
 }
@@ -291,19 +291,19 @@ function specialOf(cardId: CardId): string[] {
    * The two kinds are exactly the two `requirementOf` states, and only where
    * the other branch does nothing: a second branch that acts is content rather
    * than a gate, and dropping the condition would leave two outcomes with
-   * nothing to tell them apart. An `inaczej` of „nic" is not one of those — it
+   * nothing to tell them apart. An `else` of „nic" is not one of those — it
    * is the shape a card takes when it simply does not apply, which is what the
    * requirement line is for.
    */
   const gate = wholeCardGate(cardId);
   const stated =
-    gate !== null && (gate.warunek.is === "natura" || gate.warunek.is === "attacker");
-  const body = stated && gate !== null ? gate.to : script.effect;
+    gate !== null && (gate.condition.is === "nature" || gate.condition.is === "attacker");
+  const body = stated && gate !== null ? gate.then : script.effect;
   /**
    * A script that is only a disposition has nothing to say in a list of what
    * the card does, and „nic się nie dzieje" is a claim rather than a blank.
    *
-   * It was on twenty-five cards. Every plain Wróg is `{ op: "nic" }`, because
+   * It was on twenty-five cards. Every plain Wróg is `{ op: "nothing" }`, because
    * turning a WILK over does nothing — you fight it, and the fight is not this
    * panel's — so the one formalised line under a creature's picture said the
    * card had no rules at all. And UKŁAD PLANET, whose entry is only the clock
@@ -313,7 +313,7 @@ function specialOf(cardId: CardId): string[] {
    * Asked after `cardRows`, not instead of it: a Karta whose body is empty may
    * still have a placement to say (15.1), and that is a row.
    */
-  const lines = cardRows(script, body) ?? (body.op === "nic" ? [] : [describeEffect(body)]);
+  const lines = cardRows(script, body) ?? (body.op === "nothing" ? [] : [describeEffect(body)]);
   /**
    * Only worth saying when the card does not simply stay with you — and not at
    * all where `staysAs` has already said it. On a Nieznajomy the two ran one
@@ -321,7 +321,7 @@ function specialOf(cardId: CardId): string[] {
    * tu na pierwszą Postać, potem ją odłóż", the second being the first with
    * the Natura dropped and an instruction to the table added.
    */
-  if (script.disposition.kind !== "zostaje" && staysAs(cardId) === null) {
+  if (script.disposition.kind !== "stays" && staysAs(cardId) === null) {
     lines.push(describeDisposition(script.disposition));
   }
   return lines;
@@ -359,24 +359,24 @@ export function forbiddenNatures(cardId: CardId): readonly Nature[] | undefined 
  * the Talizman and nothing for the Wróżka.
  */
 /**
- * The `gdy` that IS the card, rather than one branch of what it does.
+ * The `when` that IS the card, rather than one branch of what it does.
  *
  * Two places were asking this question with two different answers. The
- * requirement line wanted `inaczej === undefined`; `specialOf`, which drops the
+ * requirement line wanted `else === undefined`; `specialOf`, which drops the
  * condition from the rows *because* the requirement line is saying it, also
- * accepted an `inaczej` of „nic". The GODZINA DUCHÓW is written the second way
+ * accepted an `else` of „nic". The GODZINA DUCHÓW is written the second way
  * — „Może je wezwać każda **Zła** Postać", with nothing at all for anybody else
  * — so `specialOf` struck the condition out on the strength of a line that was
  * never drawn, and the one thing the card is about vanished from the sheet.
  *
- * One predicate, so the two cannot disagree again. An `inaczej` that *acts* is
+ * One predicate, so the two cannot disagree again. An `else` that *acts* is
  * still not a gate: two live arms are content, and the SABAT would otherwise
  * claim to be for Złe Postacie only while changing the Natura of everyone else.
  */
-function wholeCardGate(cardId: CardId): Extract<Effect, { op: "gdy" }> | null {
+function wholeCardGate(cardId: CardId): Extract<Effect, { op: "when" }> | null {
   const effect = scriptFor(cardId)?.effect;
-  if (effect?.op !== "gdy") return null;
-  return effect.inaczej === undefined || effect.inaczej.op === "nic" ? effect : null;
+  if (effect?.op !== "when") return null;
+  return effect.else === undefined || effect.else.op === "nothing" ? effect : null;
 }
 
 function servedNatures(
@@ -390,11 +390,11 @@ function servedNatures(
   if (only && only.kind === "tylko-natura") {
     // 5.3 is a rule about *holding* a Karta, so meeting it is by definition in
     // the reader's favour: what it gates is the card being theirs at all.
-    return { natures: only.natury, rule: "(5.3)", valence: "korzysc" };
+    return { natures: only.natury, rule: "(5.3)", valence: "gain" };
   }
   const gate = wholeCardGate(cardId);
-  if (gate && gate.warunek.is === "natura") {
-    return { natures: gate.warunek.jedna_z, rule: null, valence: valenceOf(gate.to) };
+  if (gate && gate.condition.is === "nature") {
+    return { natures: gate.condition.oneOf, rule: null, valence: valenceOf(gate.then) };
   }
   return undefined;
 }
@@ -476,7 +476,7 @@ export function requirementOf(
      * does not admit Dobre i Chaotyczne Postacie to anything — it takes a turn
      * off them, and „tylko" said the opposite of what the Karta says.
      */
-    const hurts = only.valence === "strata";
+    const hurts = only.valence === "loss";
     const label = hurts ? "dotyczy Postaci" : "tylko Postać";
     const words = hurts ? NATURE_LABEL_G : NATURE_LABEL;
     return {
@@ -511,7 +511,7 @@ export function requirementOf(
    * na jej niekorzyść".
    */
   const gate = wholeCardGate(cardId);
-  if (gate?.warunek.is === "attacker") {
+  if (gate?.condition.is === "attacker") {
     /**
      * „dotyczy Postaci", like a Spotkanie that hits a Natura, because that is
      * what the Karta does: the Bóstwo judges a guilty Postać and the judgement
@@ -521,7 +521,7 @@ export function requirementOf(
     const line = {
       label: "dotyczy Postaci",
       value: "uznanej za agresora",
-      valence: valenceOf(gate.to),
+      valence: valenceOf(gate.then),
     };
     if (who.aggression === undefined) return { ...line, met: null };
     return {
@@ -599,7 +599,7 @@ export function previewOf(effect: Effect, points: OwnPoints): string | null {
   const shown = (label: string, from: number, to: number) =>
     from === to ? `${label} ${from}${UNCHANGED}` : `${label} ${from} → ${to}`;
 
-  if (effect.op === "punkty") {
+  if (effect.op === "points") {
     const now = { sword: points.sword, magic: points.magic, life: points.life, gold: points.gold }[
       effect.stat
     ];
@@ -609,20 +609,20 @@ export function previewOf(effect: Effect, points: OwnPoints): string | null {
     return shown(STAT_OF[effect.stat], now, next);
   }
 
-  if (effect.op === "zamien-punkty") {
+  if (effect.op === "swap-points") {
     /**
      * One parameter takes the other's value and the other stands — see the op.
-     * `z` names the one that changes, so the two directions land on different
+     * `from` names the one that changes, so the two directions land on different
      * numbers and the two buttons are two different offers.
      */
     const [now, from, floor] =
-      effect.z === "sword"
+      effect.from === "sword"
         ? [points.sword, points.magic, points.swordFloor]
         : [points.magic, points.sword, points.magicFloor];
-    return shown(effect.z === "sword" ? "Miecz" : "Magia", now, Math.max(floor, from));
+    return shown(effect.from === "sword" ? "Miecz" : "Magia", now, Math.max(floor, from));
   }
 
-  if (effect.op === "uzdrow" && effect.upTo !== undefined) {
+  if (effect.op === "heal" && effect.upTo !== undefined) {
     /**
      * Asked of `heal`, not worked out again here.
      *
@@ -641,8 +641,8 @@ export function previewOf(effect: Effect, points: OwnPoints): string | null {
     return shown("Życie", points.life, heal({ life: points.life }, effect.upTo).life);
   }
 
-  if (effect.op === "zaklecie" && effect.cena) {
-    return shown("Złoto", points.gold, Math.max(0, points.gold - effect.cena * effect.count));
+  if (effect.op === "gain-spell" && effect.price) {
+    return shown("Złoto", points.gold, Math.max(0, points.gold - effect.price * effect.count));
   }
 
   return null;

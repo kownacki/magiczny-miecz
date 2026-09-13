@@ -157,7 +157,7 @@ export function drawnDecisionsFor({
   /**
    * Nothing here for this Postać at all.
    *
-   * A `gdy` whose condition they fail and whose other branch does nothing — the
+   * A `when` whose condition they fail and whose other branch does nothing — the
    * WRÓŻKA met by a Zła Postać, the DOBRE BÓSTWO met by somebody who has raised
    * no hand. The shape is `inertFor`'s question and the verdict is
    * `requirementOf`'s; this only puts the two together.
@@ -225,7 +225,7 @@ export function drawnDecisionsFor({
    * panel says its own piece.
    */
   const chosen =
-    intent?.option !== undefined && asking?.op === "wybor"
+    intent?.option !== undefined && asking?.op === "choice"
       ? (asking.options[intent.option]?.label ?? null)
       : null;
   const said = intent
@@ -252,14 +252,14 @@ export function drawnDecisionsFor({
    * rest of the table reads says he is rolling rather than deciding, since
    * there is nothing here to decide.
    */
-  const rolls = nothingLeftToAsk && !inert && instruction?.op === "rzut";
+  const rolls = nothingLeftToAsk && !inert && instruction?.op === "roll";
 
   /**
    * What can come up, grouped as the card groups it.
    *
    * `DrawnCard` empties `special` for the player whose turn it is, on the
    * grounds that what a Karta does is what the buttons under it are — true of a
-   * `wybor`, whose options are the buttons, and false of a die: one button and
+   * `choice`, whose options are the buttons, and false of a die: one button and
    * six outcomes, none of them written anywhere the actor could read.
    *
    * The groups rather than the rendered rows, because a table that has been
@@ -268,7 +268,7 @@ export function drawnDecisionsFor({
    * grouping before it becomes a string.
    */
   const faces =
-    rolls && instruction?.op === "rzut" ? dieGroups(instruction.faces) : [];
+    rolls && instruction?.op === "roll" ? dieGroups(instruction.faces) : [];
 
   /** What the face that came up says it does, so the outcome need not repeat it. */
   const saidByFace = (face: number) => faces.find((group) => group.on.includes(face))?.said;

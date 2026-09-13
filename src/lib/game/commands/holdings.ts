@@ -251,7 +251,7 @@ function chosenHere(snapshot: Snapshot, seatId: string, cardId: CardId): FieldCo
  *
  * "zabrać **leżące** złoto, Przedmioty lub Przyjaciół". A card bought at a
  * Targowisko, the Tarcza the Władca hands over for a finished errand, one a
- * Karta's own `otrzymaj` grants — none of those is lying here, and none of them
+ * Karta's own `receive` grants — none of those is lying here, and none of them
  * is what 12.1's two exceptions are holding back.
  *
  * Both lists, for the reason `refuseOverAFoe` reads both: arriving lifts every
@@ -540,7 +540,7 @@ export function takeCard(snapshot: Snapshot, command: TakeCard): Outcome<Taken> 
      */
     const variant = eqModeOf(snapshot.game);
     // The sentence and the three subtleties behind it are `whyPackIsFull`'s, so
-    // the shop greys its `kup` on exactly what this throws. It re-asks
+    // the shop greys its `buy` on exactly what this throws. It re-asks
     // `slotOnArrival` rather than reading `worn` above, which is the same
     // question and the one thing that must not be answered twice differently.
     const full = whyPackIsFull(

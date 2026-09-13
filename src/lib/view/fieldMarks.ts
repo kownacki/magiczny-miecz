@@ -91,7 +91,7 @@ export function marksFor(
   lying: readonly { cardId: CardId }[] = [],
 ): IconMark[] {
   const script = fieldScriptFor(fieldId);
-  const chosen = script?.obowiazkowe ? [] : (script?.offers ?? []);
+  const chosen = script?.mandatory ? [] : (script?.offers ?? []);
   const fromCards = lying.flatMap((card) => marksFromCard(card.cardId));
 
   const found = new Set<IconMark>(fromCards);

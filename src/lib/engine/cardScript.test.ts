@@ -36,18 +36,18 @@ describe("the script registry against the real deck", () => {
     // A table missing a face is a card that cannot be resolved on that roll,
     // which is worse than not encoding it at all.
     const check = (cardId: string, effect: Effect): void => {
-      if (effect.op === "rzut") {
+      if (effect.op === "roll") {
         expect(Object.keys(effect.faces).map(Number).sort(), cardId).toEqual([
           1, 2, 3, 4, 5, 6,
         ]);
       }
-      if (effect.op === "po-kolei") effect.steps.forEach((step) => check(cardId, step));
-      if (effect.op === "wybor") effect.options.forEach((o) => check(cardId, o.effect));
-      if (effect.op === "gdy") {
-        check(cardId, effect.to);
-        if (effect.inaczej) check(cardId, effect.inaczej);
+      if (effect.op === "sequence") effect.steps.forEach((step) => check(cardId, step));
+      if (effect.op === "choice") effect.options.forEach((o) => check(cardId, o.effect));
+      if (effect.op === "when") {
+        check(cardId, effect.then);
+        if (effect.else) check(cardId, effect.else);
       }
-      if (effect.op === "rzut") Object.values(effect.faces).forEach((f) => check(cardId, f));
+      if (effect.op === "roll") Object.values(effect.faces).forEach((f) => check(cardId, f));
     };
     for (const [cardId, script] of Object.entries(SCRIPTS)) check(cardId, script.effect);
   });
@@ -65,9 +65,9 @@ describe("the script registry against the real deck", () => {
       const text = BY_ID.get(cardId)!.text.toLowerCase();
       const saysStays = /pozostanie (?:na tym obszarze|tu)|będzie mieszka|zostanie twoim/.test(text);
       const stays =
-        script.disposition.kind === "zostaje" ||
-        script.disposition.kind === "zostaje-z-pula" ||
-        script.disposition.kind === "do-pierwszej";
+        script.disposition.kind === "stays" ||
+        script.disposition.kind === "stays-with-pool" ||
+        script.disposition.kind === "until-first-visitor";
       if (saysStays) expect(stays, `${cardId} says it stays`).toBe(true);
     }
   });
@@ -83,15 +83,15 @@ describe("the card that prompted the vocabulary", () => {
     // card contemplating the refusal, so the refusal is one of its own two
     // answers rather than a way of walking past it (16.5).
     expect(script.effect).toEqual({
-      op: "wybor",
+      op: "choice",
       options: [
-        { label: "przenosisz się na dowolny Obszar w tym Kręgu", effect: { op: "przenies", to: { kind: "dowolne-w-kregu" } } },
-        { label: "Pomiń", effect: { op: "nic" } },
+        { label: "przenosisz się na dowolny Obszar w tym Kręgu", effect: { op: "move", to: { kind: "anywhere-in-ring" } } },
+        { label: "Pomiń", effect: { op: "nothing" } },
       ],
     });
     expect(script.optional).toBeUndefined();
     // His leaving is not a choice, and neither answer changes it.
-    expect(script.disposition).toEqual({ kind: "odloz" });
+    expect(script.disposition).toEqual({ kind: "discard" });
   });
 });
 
@@ -101,8 +101,8 @@ describe("the Sobowtór", () => {
     // `MIRRORS_ITS_OPPONENT` in cards.ts, already read by `combatValueOf`;
     // what the script had to add was "Pozostanie tu, aż ktoś go pokona".
     expect(scriptFor("sobowtor")).toEqual({
-      effect: { op: "nic" },
-      disposition: { kind: "zostaje" },
+      effect: { op: "nothing" },
+      disposition: { kind: "stays" },
     });
   });
 
@@ -119,7 +119,7 @@ describe("fixtures that hold a pool", () => {
       ["zaklete-zrodlo", "magic"],
     ] as const) {
       expect(scriptFor(cardId)!.disposition, cardId).toEqual({
-        kind: "zostaje-z-pula",
+        kind: "stays-with-pool",
         stat,
         points: 4,
       });
@@ -134,20 +134,20 @@ describe("fixtures that hold a pool", () => {
 describe("cards that turn on Nature", () => {
   it("rewards the Evil and converts everyone else at the Sabat", () => {
     const effect = scriptFor("sabat-czarownic")!.effect;
-    if (effect.op !== "gdy") throw new Error("expected a condition");
-    expect(effect.warunek).toEqual({ is: "natura", jedna_z: ["evil"] });
-    expect(effect.inaczej).toEqual({ op: "natura", na: "evil" });
+    if (effect.op !== "when") throw new Error("expected a condition");
+    expect(effect.condition).toEqual({ is: "nature", oneOf: ["evil"] });
+    expect(effect.else).toEqual({ op: "set-nature", to: "evil" });
   });
 
   it("leaves Chaotic characters alone where the card says it does", () => {
     // "Zapach Ziół nie działa na Chaotyczne Postacie" — encoded as the absence
     // of a branch rather than a no-op, so nothing is offered for them at all.
     const effect = scriptFor("zatrute-ziola")!.effect;
-    if (effect.op !== "gdy" || !effect.inaczej) throw new Error("expected a fallthrough");
-    const otherwise = effect.inaczej;
-    if (otherwise.op !== "gdy") throw new Error("expected a second condition");
-    expect(otherwise.warunek).toEqual({ is: "natura", jedna_z: ["good"] });
-    expect(otherwise.inaczej).toBeUndefined();
+    if (effect.op !== "when" || !effect.else) throw new Error("expected a fallthrough");
+    const otherwise = effect.else;
+    if (otherwise.op !== "when") throw new Error("expected a second condition");
+    expect(otherwise.condition).toEqual({ is: "nature", oneOf: ["good"] });
+    expect(otherwise.else).toBeUndefined();
   });
 });
 
@@ -158,25 +158,25 @@ describe("cards that turn on Nature", () => {
  */
 describe("whether an effect is in the reader's favour", () => {
   it("reads the two ops a card gives and takes with", () => {
-    expect(valenceOf({ op: "punkty", stat: "life", delta: 1 })).toBe("korzysc");
-    expect(valenceOf({ op: "punkty", stat: "life", delta: -1 })).toBe("strata");
-    expect(valenceOf({ op: "strata", co: "przedmiot" })).toBe("strata");
-    expect(valenceOf({ op: "tura-stracona", turns: 1 })).toBe("strata");
-    expect(valenceOf({ op: "kamien" })).toBe("strata");
-    expect(valenceOf({ op: "zaklecie", count: 1 })).toBe("korzysc");
+    expect(valenceOf({ op: "points", stat: "life", delta: 1 })).toBe("gain");
+    expect(valenceOf({ op: "points", stat: "life", delta: -1 })).toBe("loss");
+    expect(valenceOf({ op: "lose", what: "item" })).toBe("loss");
+    expect(valenceOf({ op: "lose-turn", turns: 1 })).toBe("loss");
+    expect(valenceOf({ op: "stone" })).toBe("loss");
+    expect(valenceOf({ op: "gain-spell", count: 1 })).toBe("gain");
   });
 
   /** A price makes it a trade, and a trade is the reader's to judge. */
   it("declines to call a purchase a gift", () => {
-    expect(valenceOf({ op: "zaklecie", count: 1, cena: 1 })).toBeNull();
-    expect(valenceOf({ op: "uzdrow", upTo: 1, cena: 1 })).toBeNull();
-    expect(valenceOf({ op: "uzdrow", upTo: 1 })).toBe("korzysc");
+    expect(valenceOf({ op: "gain-spell", count: 1, price: 1 })).toBeNull();
+    expect(valenceOf({ op: "heal", upTo: 1, price: 1 })).toBeNull();
+    expect(valenceOf({ op: "heal", upTo: 1 })).toBe("gain");
   });
 
   it("says nothing about the ops that are neither", () => {
-    expect(valenceOf({ op: "walka", nazwa: "GOLEM", miecz: 3 })).toBeNull();
-    expect(valenceOf({ op: "przenies", to: { kind: "dowolne-w-kregu" } })).toBeNull();
-    expect(valenceOf({ op: "nic" })).toBeNull();
+    expect(valenceOf({ op: "fight", name: "GOLEM", sword: 3 })).toBeNull();
+    expect(valenceOf({ op: "move", to: { kind: "anywhere-in-ring" } })).toBeNull();
+    expect(valenceOf({ op: "nothing" })).toBeNull();
   });
 
   /**
@@ -184,24 +184,24 @@ describe("whether an effect is in the reader's favour", () => {
    * it — the GODZINA DUCHÓW's „Nie wzywaj". The DOBRE BÓSTWO has no such arm.
    */
   it("counts a way out as worth as much as anything on offer", () => {
-    expect(valenceOf(SCRIPTS["godzina-duchow"]!.effect)).toBe("korzysc");
-    expect(valenceOf(SCRIPTS["dobre-bostwo"]!.effect)).toBe("strata");
+    expect(valenceOf(SCRIPTS["godzina-duchow"]!.effect)).toBe("gain");
+    expect(valenceOf(SCRIPTS["dobre-bostwo"]!.effect)).toBe("loss");
   });
 
   /** A sequence costs you if any step does; the gift does not offset it. */
   it("lets one loss decide a sequence", () => {
     expect(
       valenceOf({
-        op: "po-kolei",
-        steps: [{ op: "zaklecie", count: 1 }, { op: "kamien" }],
+        op: "sequence",
+        steps: [{ op: "gain-spell", count: 1 }, { op: "stone" }],
       }),
-    ).toBe("strata");
+    ).toBe("loss");
   });
 
   /** The cards the requirement line actually asks about. */
   it("reads the arm behind a Spotkanie's condition", () => {
-    expect(valenceOf(SCRIPTS["zacmienie-slonc"]!.effect)).toBe("strata");
-    expect(valenceOf(SCRIPTS["wrozka"]!.effect)).toBe("korzysc");
-    expect(valenceOf(SCRIPTS["czarodziej"]!.effect)).toBe("korzysc");
+    expect(valenceOf(SCRIPTS["zacmienie-slonc"]!.effect)).toBe("loss");
+    expect(valenceOf(SCRIPTS["wrozka"]!.effect)).toBe("gain");
+    expect(valenceOf(SCRIPTS["czarodziej"]!.effect)).toBe("gain");
   });
 });

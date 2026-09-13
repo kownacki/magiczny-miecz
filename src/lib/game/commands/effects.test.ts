@@ -51,8 +51,8 @@ const run = (
  * Pierścień Mocy had a parametr of 5 and still got lost in the Labirynt.
  */
 describe("a threshold on a character's points", () => {
-  const lost = { op: "tura-stracona", turns: 1 } as const;
-  const labirynt = { op: "gdy", warunek: { is: "prog", stat: "magic", ponizej: 5 }, to: lost } as const;
+  const lost = { op: "lose-turn", turns: 1 } as const;
+  const labirynt = { op: "when", condition: { is: "threshold", stat: "magic", below: 5 }, then: lost } as const;
 
   const standing = (magicOwn: number, cards: CardId[] = []) =>
     aTable({
@@ -76,7 +76,7 @@ describe("a threshold on a character's points", () => {
 
   /** Neither Obszar is a fight, so a fight-only card lends nothing here. */
   it("is not helped by anything that only works in a fight", async () => {
-    const sword = { op: "gdy", warunek: { is: "prog", stat: "sword", ponizej: 5 }, to: lost } as const;
+    const sword = { op: "when", condition: { is: "threshold", stat: "sword", below: 5 }, then: lost } as const;
     const armed = aTable({
       seats: [aSeat({ id: "seat-a", seat_index: 0, sword_own: 4 })],
       holdings: [aHolding({ id: "h0", seat_id: "seat-a", card_id: "excalibur", kind: "item" })],
@@ -112,7 +112,7 @@ describe("a loss that names what goes", () => {
   it("takes every Zaklęcie at the table without asking", async () => {
     const at = table();
     const { writes, result } = await run(
-      { op: "strata", co: "wszystkie-zaklecia", target: "wszyscy" } as Effect,
+      { op: "lose", what: "all-spells", target: "everyone" } as Effect,
       at,
     );
     expect(result.pending).toBeNull();
@@ -124,7 +124,7 @@ describe("a loss that names what goes", () => {
 
   it("says whose they were, rather than announcing nothing", async () => {
     const { result } = await run(
-      { op: "strata", co: "wszystkie-zaklecia", target: "wszyscy" } as Effect,
+      { op: "lose", what: "all-spells", target: "everyone" } as Effect,
       table(),
     );
     expect(result.did.join(" ")).toMatch(/FATUM|GOLEM/);
@@ -133,26 +133,26 @@ describe("a loss that names what goes", () => {
 
 describe("carrying out what a Karta says", () => {
   it("does nothing, and says so", async () => {
-    const { writes, result } = await run({ op: "nic" });
+    const { writes, result } = await run({ op: "nothing" });
     expect(writes).toEqual({});
     expect(result).toEqual({ did: ["nic się nie dzieje"], pending: null });
   });
 
   it("moves points and declines the noun", async () => {
-    const { writes, result } = await run({ op: "punkty", stat: "sword", delta: 2, target: "ty" });
+    const { writes, result } = await run({ op: "points", stat: "sword", delta: 2, target: "you" });
     expect(result.did).toEqual(["+2 Miecza"]);
     expect(writes.seats?.[0]).toMatchObject({ id: "seat-a", patch: { sword_own: 4 } });
     expect(writes.journal?.[0]).toMatchObject({ kind: "points", manual: false });
   });
 
   it("declines Złoto, which is the one that declines", async () => {
-    expect((await run({ op: "punkty", stat: "gold", delta: 1, target: "ty" })).result.did).toEqual([
+    expect((await run({ op: "points", stat: "gold", delta: 1, target: "you" })).result.did).toEqual([
       "+1 Sztukę Złota",
     ]);
-    expect((await run({ op: "punkty", stat: "gold", delta: 3, target: "ty" })).result.did).toEqual([
+    expect((await run({ op: "points", stat: "gold", delta: 3, target: "you" })).result.did).toEqual([
       "+3 Sztuki Złota",
     ]);
-    expect((await run({ op: "punkty", stat: "gold", delta: 7, target: "ty" })).result.did).toEqual([
+    expect((await run({ op: "points", stat: "gold", delta: 7, target: "you" })).result.did).toEqual([
       "+7 Sztuk Złota",
     ]);
   });
@@ -166,10 +166,10 @@ describe("carrying out what a Karta says", () => {
    */
   it("lets a later step see what an earlier one did", async () => {
     const { writes } = await run({
-      op: "po-kolei",
+      op: "sequence",
       steps: [
-        { op: "punkty", stat: "sword", delta: 1, target: "ty" },
-        { op: "punkty", stat: "sword", delta: 1, target: "ty" },
+        { op: "points", stat: "sword", delta: 1, target: "you" },
+        { op: "points", stat: "sword", delta: 1, target: "you" },
       ],
     });
     // Two patches for one row, folded in order by `apply` exactly as `commit`
@@ -185,10 +185,10 @@ describe("carrying out what a Karta says", () => {
    */
   it("does not start a sequence that has an undecided step in it", async () => {
     const undecided: Effect = {
-      op: "po-kolei",
+      op: "sequence",
       steps: [
-        { op: "punkty", stat: "sword", delta: 1, target: "ty" },
-        { op: "wybor", options: [{ label: "A", effect: { op: "nic" } }] },
+        { op: "points", stat: "sword", delta: 1, target: "you" },
+        { op: "choice", options: [{ label: "A", effect: { op: "nothing" } }] },
       ],
     };
     const { writes, result } = await run(undecided);
@@ -196,16 +196,16 @@ describe("carrying out what a Karta says", () => {
     // stack — and the frame's cursor stands on the undecided second.
     expect(writes.seats).toEqual([{ id: "seat-a", patch: { sword_own: 3 } }]);
     expect(frameIn(writes)).toMatchObject({ phase: "script", cursor: [1] });
-    expect(result.pending).toMatchObject({ op: "wybor" });
+    expect(result.pending).toMatchObject({ op: "choice" });
   });
 });
 
 describe("a choice the player makes", () => {
   const choice: Effect = {
-    op: "wybor",
+    op: "choice",
     options: [
-      { label: "+1 Miecza", effect: { op: "punkty", stat: "sword", delta: 1, target: "ty" } },
-      { label: "nic", effect: { op: "nic" } },
+      { label: "+1 Miecza", effect: { op: "points", stat: "sword", delta: 1, target: "you" } },
+      { label: "nic", effect: { op: "nothing" } },
     ],
   };
 
@@ -228,10 +228,10 @@ describe("a choice the player makes", () => {
 });
 
 describe("a condition on the character (gdy)", () => {
-  const onNature = (na: "good" | "evil"): Effect => ({
-    op: "gdy",
-    warunek: { is: "natura", jedna_z: [na] },
-    to: { op: "punkty", stat: "magic", delta: 1, target: "ty" },
+  const onNature = (nature: "good" | "evil"): Effect => ({
+    op: "when",
+    condition: { is: "nature", oneOf: [nature] },
+    then: { op: "points", stat: "magic", delta: 1, target: "you" },
   });
 
   it("takes the branch when it holds", async () => {
@@ -249,7 +249,7 @@ describe("a condition on the character (gdy)", () => {
   it("reads the purse for ma-zloto", async () => {
     const broke = aTable({ seats: [aSeat({ id: "seat-a", gold: 0 })] });
     const { result } = await run(
-      { op: "gdy", warunek: { is: "ma-zloto" }, to: { op: "nic" } },
+      { op: "when", condition: { is: "has-gold" }, then: { op: "nothing" } },
       broke,
     );
     expect(result.did).toEqual(["warunek niespełniony — nic się nie dzieje"]);
@@ -280,7 +280,7 @@ describe("losing a turn (16.1)", () => {
    * closed, which is why the phase goes to `koniec`.
    */
   it("spends the turn in progress on the character who drew it", async () => {
-    const { writes, result } = await run({ op: "tura-stracona", turns: 1, target: "ty" }, table());
+    const { writes, result } = await run({ op: "lose-turn", turns: 1, target: "you" }, table());
     expect(writes.seats).toEqual([{ id: "seat-a", patch: { turns_lost: 0 } }]);
     expect(writes.game?.turn_state).toEqual(only({ phase: "end" }));
     expect(result.did).toEqual(["tracisz 1 turę"]);
@@ -288,7 +288,7 @@ describe("losing a turn (16.1)", () => {
 
   it("banks it for everybody who is not playing", async () => {
     const { writes, result } = await run(
-      { op: "tura-stracona", turns: 1, target: "wszyscy" },
+      { op: "lose-turn", turns: 1, target: "everyone" },
       table(),
     );
     expect(writes.seats).toEqual([
@@ -301,7 +301,7 @@ describe("losing a turn (16.1)", () => {
   /** `oprocz` names Karty Postaci the card lets off, not seats. */
   it("leaves the turn alone when it lands on nobody who is playing", async () => {
     const { writes } = await run(
-      { op: "tura-stracona", turns: 1, target: "wszyscy", oprocz: ["goblin"] },
+      { op: "lose-turn", turns: 1, target: "everyone", except: ["goblin"] },
       table(),
     );
     expect(writes.seats).toEqual([{ id: "seat-b", patch: { turns_lost: 1 } }]);
@@ -343,7 +343,7 @@ describe("losing what you carry (strata)", () => {
     it("survives a card that takes every Przedmiot you have", async () => {
       // ZASADZKA: "Tracisz całe złoto i wszystkie Przedmioty." All of them but
       // these two.
-      const { writes } = await run({ op: "strata", co: "wszystkie-przedmioty", target: "ty" }, withBag());
+      const { writes } = await run({ op: "lose", what: "all-items", target: "you" }, withBag());
       expect(writes.holdings?.delete).toEqual(["h1"]);
     });
 
@@ -352,7 +352,7 @@ describe("losing what you carry (strata)", () => {
       // thrown — which is the assertion: there is nothing else to reach.
       for (const face of [1, 2, 6]) {
         const { writes } = await run(
-          { op: "strata", co: "przedmiot", ile: 1, wybor: "losowo", target: "ty" } as Effect,
+          { op: "lose", what: "item", ile: 1, chosenBy: "random", target: "you" } as Effect,
           withBag(),
           { random: scriptedRandom([face]) },
         );
@@ -377,7 +377,7 @@ describe("losing what you carry (strata)", () => {
         {
           seatId: "seat-a",
           toSeatId: "seat-b",
-          effect: { op: "zabierz", co: "przedmiot-lub-zloto" } as Effect,
+          effect: { op: "take", what: "item-or-gold" } as Effect,
           reason: "PAN BOGACTWA",
           decided: { choices: [0] },
           shuffle: asIs,
@@ -415,7 +415,7 @@ describe("losing what you carry (strata)", () => {
         {
           seatId: "seat-a",
           toSeatId: "seat-b",
-          effect: { op: "zabierz", co: "przedmiot-lub-zloto" } as Effect,
+          effect: { op: "take", what: "item-or-gold" } as Effect,
           reason: "PAN BOGACTWA",
           decided: { choices: [0] },
           shuffle: asIs,
@@ -439,13 +439,13 @@ describe("losing what you carry (strata)", () => {
         seats: [aSeat({ id: "seat-a" })],
         holdings: [aHolding({ id: "bag", card_id: "tajemna-sakwa", kind: "item" })],
       });
-      const { writes } = await run({ op: "strata", co: "wszystkie-przedmioty", target: "ty" }, empty);
+      const { writes } = await run({ op: "lose", what: "all-items", target: "you" }, empty);
       expect(writes.holdings?.delete).toEqual(["bag"]);
     });
   });
 
   it("takes everything of a kind when the card says wszystkie", async () => {
-    const { writes } = await run({ op: "strata", co: "wszystkie-przedmioty", target: "ty" }, carrying());
+    const { writes } = await run({ op: "lose", what: "all-items", target: "you" }, carrying());
     expect(writes.holdings?.delete?.sort()).toEqual(["h1", "h2"]);
   });
 
@@ -453,7 +453,7 @@ describe("losing what you carry (strata)", () => {
   it("picks at random when the card says losowo, and spends one die per pick", async () => {
     const random = scriptedRandom([1]);
     const { writes } = await run(
-      { op: "strata", co: "przedmiot", count: 1, wybor: "losowo", target: "ty" },
+      { op: "lose", what: "item", count: 1, chosenBy: "random", target: "you" },
       carrying(),
       { random },
     );
@@ -464,15 +464,15 @@ describe("losing what you carry (strata)", () => {
 
   it("waits rather than choosing for somebody when the choice is theirs (5.6)", async () => {
     const { writes, result } = await run(
-      { op: "strata", co: "przedmiot", count: 1, wybor: "ty", target: "ty" },
+      { op: "lose", what: "item", count: 1, chosenBy: "you", target: "you" },
       carrying(),
     );
     expect(frameIn(writes)).toMatchObject({ phase: "script", cursor: [] });
-    expect(result.pending).toMatchObject({ op: "strata" });
+    expect(result.pending).toMatchObject({ op: "lose" });
   });
 
   it("takes gold off the seat rather than out of the pack (3.5)", async () => {
-    const { writes } = await run({ op: "strata", co: "gold", count: 2, target: "ty" }, carrying());
+    const { writes } = await run({ op: "lose", what: "gold", count: 2, target: "you" }, carrying());
     expect(writes.seats).toEqual([{ id: "seat-a", patch: { gold: 1 } }]);
     expect(writes.holdings).toBeUndefined();
   });
@@ -480,7 +480,7 @@ describe("losing what you carry (strata)", () => {
   it("says there was nothing to lose rather than pretending something happened", async () => {
     const empty = aTable({ seats: [aSeat({ id: "seat-a", gold: 0 })] });
     const { writes, result } = await run(
-      { op: "strata", co: "wszystkie-przedmioty", target: "ty" },
+      { op: "lose", what: "all-items", target: "you" },
       empty,
     );
     expect(writes).toEqual({});
@@ -506,7 +506,7 @@ describe("moving a Karta that is lying on the board", () => {
       table,
       {
         seatId: "seat-a",
-        effect: { op: "przenies-karte" },
+        effect: { op: "move-card" },
         reason: "WŁADCA ZDARZEŃ",
         fieldCardId: "fc1",
         decided: destination ? { destination: destination as never } : undefined,
@@ -518,7 +518,7 @@ describe("moving a Karta that is lying on the board", () => {
   it("waits until somebody says where — as a frame", async () => {
     const { writes, result } = await move(board());
     expect(frameIn(writes)).toMatchObject({ phase: "script", cursor: [] });
-    expect(result.pending).toEqual({ op: "przenies-karte" });
+    expect(result.pending).toEqual({ op: "move-card" });
   });
 
   it("takes it off one Obszar and puts it on the other", async () => {
@@ -577,7 +577,7 @@ describe("swapping the Karta in front of you", () => {
   const swap = (table: ReturnType<typeof drawn>) =>
     applyEffect(
       table,
-      { seatId: "seat-a", effect: { op: "wymien-karte" }, reason: "ODMIANA LOSU", shuffle: asIs },
+      { seatId: "seat-a", effect: { op: "redraw" }, reason: "ODMIANA LOSU", shuffle: asIs },
       ports(),
     );
 
@@ -652,7 +652,7 @@ describe("Kometa sweeps a class of Karta off the whole Krąg", () => {
       {
         seatId: "seat-a",
         cardId: "kometa",
-        effect: { op: "katastrofa", klasa: "stranger", zasieg: "krag" },
+        effect: { op: "wipe", cardClass: "stranger", reach: "krag" },
         reason: "KOMETA",
         shuffle: asIs,
       },
@@ -746,7 +746,7 @@ describe("a Karta that draws three more (SKALNE WROTA)", () => {
       atTheWrota(deck),
       {
         seatId: "seat-a",
-        effect: { op: "wyciagnij", count: 3 },
+        effect: { op: "draw-cards", count: 3 },
         reason: "SKALNE WROTA",
         shuffle: asIs,
       },
@@ -811,7 +811,7 @@ describe("a Karta that draws three more (SKALNE WROTA)", () => {
  *
  * `no-effect` was written for a `gdy` whose condition fails and has no other
  * branch. A card that spells the branch out reaches the same nothing by the
- * other road — DOBRE BÓSTWO's `inaczej: { op: "nic" }`, which is what it does
+ * other road — DOBRE BÓSTWO's `else: { op: "nothing" }`, which is what it does
  * for anybody who has attacked nobody — and said it nowhere, so the turn walked
  * past in silence and that is indistinguishable from the app losing the Karta.
  */
@@ -819,7 +819,7 @@ describe("a Karta whose instruction comes to nothing", () => {
   const walk = (over: { cardId?: CardId } = {}) =>
     applyEffect(
       aTable({ seats: [aSeat({ id: "seat-a", seat_index: 0 })] }),
-      { seatId: "seat-a", effect: { op: "nic" }, reason: "KARTA", shuffle: asIs, ...over },
+      { seatId: "seat-a", effect: { op: "nothing" }, reason: "KARTA", shuffle: asIs, ...over },
       ports(),
     );
 
@@ -862,9 +862,9 @@ describe("a Karta whose instruction comes to nothing", () => {
       seats: [aSeat({ id: "seat-a", seat_index: 0, life: 4 })],
     });
     const each: [string, Effect][] = [
-      ["nie masz Przyjaciół", { op: "rzut-za-kazdego", co: "przyjaciel", gubiPrzy: 2 }],
-      ["Życie już na poziomie początkowym", { op: "uzdrow", upTo: 4 }],
-      ["stos jest pusty", { op: "podejrzyj", count: 5 }],
+      ["nie masz Przyjaciół", { op: "roll-for-each", what: "friend", lostOn: 2 }],
+      ["Życie już na poziomie początkowym", { op: "heal", upTo: 4 }],
+      ["stos jest pusty", { op: "peek", count: 5 }],
     ];
     for (const [why, effect] of each) {
       const { writes, result } = await applyEffect(
@@ -890,7 +890,7 @@ describe("a Karta whose instruction comes to nothing", () => {
       aTable({ seats: [aSeat({ id: "seat-a", seat_index: 0 })] }),
       {
         seatId: "seat-a",
-        effect: { op: "zabierz", co: "przyjaciel" },
+        effect: { op: "take", what: "friend" },
         cardId: "dobre-bostwo",
         reason: "KARTA",
         shuffle: asIs,
@@ -913,40 +913,40 @@ describe("the rest of the vocabulary", () => {
    */
   it("heals up to the starting level, and says so when there is nothing to heal", async () => {
     const hurt = aTable({ seats: [aSeat({ id: "seat-a", life: 2 })] });
-    expect((await run({ op: "uzdrow", upTo: 1 }, hurt)).result.did).toEqual(["+1 Życia (4.7)"]);
+    expect((await run({ op: "heal", upTo: 1 }, hurt)).result.did).toEqual(["+1 Życia (4.7)"]);
 
     // And the ceiling is not a payout: two offered to a seat on 3 is one given.
     const nearly = aTable({ seats: [aSeat({ id: "seat-a", life: 3 })] });
-    expect((await run({ op: "uzdrow", upTo: 2 }, nearly)).result.did).toEqual(["+1 Życia (4.7)"]);
+    expect((await run({ op: "heal", upTo: 2 }, nearly)).result.did).toEqual(["+1 Życia (4.7)"]);
 
     const whole = aTable({ seats: [aSeat({ id: "seat-a", life: 4 })] });
-    const { writes, result } = await run({ op: "uzdrow", upTo: 1 }, whole);
+    const { writes, result } = await run({ op: "heal", upTo: 1 }, whole);
     expect(writes).toEqual({});
     expect(result.did).toEqual(["Życie już na poziomie początkowym"]);
   });
 
   it("turns a character to stone", async () => {
-    const { writes, result } = await run({ op: "kamien" });
+    const { writes, result } = await run({ op: "stone" });
     expect(result.did).toEqual(["Zamiana w Kamień (20.1)"]);
     expect(writes.journal?.[0]).toMatchObject({ kind: "stone" });
   });
 
   it("changes a Natura and names it the way Polish does", async () => {
-    const { result } = await run({ op: "natura", na: "evil" });
+    const { result } = await run({ op: "set-nature", to: "evil" });
     expect(result.did).toEqual(["Natura: zła"]);
   });
 
   it("moves a figure to the Obszar the card names", async () => {
     const { writes, result } = await run({
-      op: "przenies",
-      to: { kind: "pole", fieldId: "karczma" },
+      op: "move",
+      to: { kind: "field", fieldId: "karczma" },
     });
     expect(result.did).toEqual(["przenosisz się na: Karczma"]);
     expect(writes.seats?.[0]).toMatchObject({ patch: { field_id: "karczma" } });
   });
 
   it("waits for a destination when the card leaves it open", async () => {
-    const open: Effect = { op: "przenies", to: { kind: "dowolne-w-kregu" } };
+    const open: Effect = { op: "move", to: { kind: "anywhere-in-ring" } };
     const { writes, result } = await run(open);
     expect(frameIn(writes)).toMatchObject({ phase: "script", cursor: [] });
     expect(result.pending).toBe(open);
@@ -961,7 +961,7 @@ describe("the rest of the vocabulary", () => {
       seats: [aSeat({ id: "seat-a", seat_index: 0, field_id: "karczma" })],
     });
     const { writes, result } = await run(
-      { op: "walka", nazwa: "miejscowy osiłek", miecz: 4 },
+      { op: "fight", name: "miejscowy osiłek", sword: 4 },
       arrived,
     );
     expect(result.did).toEqual(["walka: miejscowy osiłek"]);
@@ -976,7 +976,7 @@ describe("the rest of the vocabulary", () => {
    * sentence and write nothing.
    */
   it("grants an extra move as a turn that comes back", async () => {
-    const { writes, result } = await run({ op: "ruch-dodatkowy" });
+    const { writes, result } = await run({ op: "extra-move" });
     expect(writes.effects?.insert?.[0]).toMatchObject({
       modifier: { kind: "znowu" },
       ends: { kind: "turns", turns: 1 },
@@ -1336,7 +1336,7 @@ describe("a shop on a Karta (16.7, 21.1)", () => {
 
   /** Its counterpart: the offer is the Karta's, so the Karta has to stay. */
   it("stays on the Obszar it was drawn on", () => {
-    expect(SCRIPTS["targowisko"]?.disposition).toEqual({ kind: "zostaje" });
+    expect(SCRIPTS["targowisko"]?.disposition).toEqual({ kind: "stays" });
   });
 });
 
@@ -1360,7 +1360,7 @@ describe("przenies, when the Karta does not name one Obszar", () => {
       },
     });
 
-  const ring = { op: "przenies", to: { kind: "dowolne-w-kregu" } } as const;
+  const ring = { op: "move", to: { kind: "anywhere-in-ring" } } as const;
 
   /** „Jednorożec może natychmiast przewieźć cię do dowolnego Obszaru w tym Kręgu." */
   it("carries you anywhere on your own Krąg", async () => {
@@ -1388,7 +1388,7 @@ describe("przenies, when the Karta does not name one Obszar", () => {
    */
   it("sends the STRAŻ's victim back where the move began, unasked", async () => {
     const { writes } = await run(
-      { op: "przenies", to: { kind: "poczatek-ruchu" } },
+      { op: "move", to: { kind: "move-start" } },
       standing("karczma", "osada"),
       { decided: { destination: "zamek-bestii" } },
     );
@@ -1398,7 +1398,7 @@ describe("przenies, when the Karta does not name one Obszar", () => {
   /** A turn that never moved has nowhere to be sent back to, and says so. */
   it("leaves a character the turn never moved where they stand", async () => {
     const { writes, result } = await run(
-      { op: "przenies", to: { kind: "poczatek-ruchu" } },
+      { op: "move", to: { kind: "move-start" } },
       standing("karczma"),
     );
     expect(writes.seats).toBeUndefined();

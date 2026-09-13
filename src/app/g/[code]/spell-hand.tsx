@@ -508,7 +508,7 @@ export function SpellHand({
            * around the Karta, which the caller works out because it is the one
            * that knows where every Karta and every Postać is standing.
            */
-          const moves = script?.stosuje?.op === "przenies-karte";
+          const moves = script?.stosuje?.op === "move-card";
           const needsAim = atSeats || atCards || atFields;
           const mustAim = needsAim && aims.length > 0;
           /** Aimed at something, with nothing of that kind on the board. */

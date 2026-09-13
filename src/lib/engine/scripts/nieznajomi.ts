@@ -27,16 +27,16 @@ export const NIEZNAJOMI: Readonly<Record<string, CardScript>> = {
    */
   jednorozec: {
     effect: {
-      op: "wybor",
+      op: "choice",
       options: [
         {
           label: "przenosisz się na dowolny Obszar w tym Kręgu",
-          effect: { op: "przenies", to: { kind: "dowolne-w-kregu" } },
+          effect: { op: "move", to: { kind: "anywhere-in-ring" } },
         },
-        { label: "Pomiń", effect: { op: "nic" } },
+        { label: "Pomiń", effect: { op: "nothing" } },
       ],
     },
-    disposition: { kind: "odloz" },
+    disposition: { kind: "discard" },
     examples: [
       { name: "carries you anywhere in your own Krąg", answers: [0], destination: "pustelnia", expect: { standingOn: "pustelnia" } },
       { name: "leaves whether or not you ride", answers: [1], expect: { standingOn: "wrzosowiska" } },
@@ -44,19 +44,19 @@ export const NIEZNAJOMI: Readonly<Record<string, CardScript>> = {
   },
   "dziki-rumak": {
     effect: {
-      op: "wybor",
+      op: "choice",
       options: [
-        { label: "zyskujesz dodatkowy ruch", effect: { op: "ruch-dodatkowy" } },
-        { label: "Pomiń", effect: { op: "nic" } },
+        { label: "zyskujesz dodatkowy ruch", effect: { op: "extra-move" } },
+        { label: "Pomiń", effect: { op: "nothing" } },
       ],
     },
-    disposition: { kind: "odloz" },
+    disposition: { kind: "discard" },
     examples: [{ name: "offers an extra move", answers: [0], expect: { says: "dodatkowy ruch" } }],
   },
   // „Półbóg ofiaruje ci 1 Zaklęcie. Możesz je wybrać ze stosu."
   polbog: {
-    effect: { op: "zaklecie", count: 1, zeStosu: true },
-    disposition: { kind: "odloz" },
+    effect: { op: "gain-spell", count: 1, fromPile: true },
+    disposition: { kind: "discard" },
     examples: [{ name: "hands over one Zaklęcie", given: { magic: 4 }, expect: { spells: 1 } }],
   },
   /**
@@ -69,7 +69,7 @@ export const NIEZNAJOMI: Readonly<Record<string, CardScript>> = {
    */
   "krol-lasu": {
     effect: WISH(),
-    disposition: { kind: "do-pierwszej" },
+    disposition: { kind: "until-first-visitor" },
     examples: [
       { name: "a point of Miecz on the first wish", answers: [0], expect: { sword: 3 } },
       { name: "a Sztuka Złota on the fifth", answers: [4], expect: { gold: 2 } },
@@ -77,11 +77,11 @@ export const NIEZNAJOMI: Readonly<Record<string, CardScript>> = {
   },
   wrozka: {
     effect: {
-      op: "gdy",
-      warunek: { is: "natura", jedna_z: ["good"] },
-      to: WISH(),
+      op: "when",
+      condition: { is: "nature", oneOf: ["good"] },
+      then: WISH(),
     },
-    disposition: { kind: "do-pierwszej" },
+    disposition: { kind: "until-first-visitor" },
     examples: [
       { name: "grants a Dobra Postać her wish", given: { nature: "good" }, answers: [0], expect: { sword: 3 } },
       { name: "has nothing for a Zła Postać", given: { nature: "evil" }, expect: { sword: 2, says: "nic" } },
@@ -89,21 +89,21 @@ export const NIEZNAJOMI: Readonly<Record<string, CardScript>> = {
   },
   koszmar: {
     effect: {
-      op: "gdy",
-      warunek: { is: "natura", jedna_z: ["evil"] },
-      to: WISH(),
+      op: "when",
+      condition: { is: "nature", oneOf: ["evil"] },
+      then: WISH(),
     },
-    disposition: { kind: "do-pierwszej" },
+    disposition: { kind: "until-first-visitor" },
     examples: [{ name: "grants a Zła Postać its wish", given: { nature: "evil" }, answers: [1], expect: { magic: 2 } }],
   },
   "zlodziej-dobroczynca": {
     effect: {
-      op: "gdy",
-      warunek: { is: "ma-zloto" },
-      to: { op: "punkty", stat: "gold", delta: -1 },
-      inaczej: { op: "punkty", stat: "gold", delta: 1 },
+      op: "when",
+      condition: { is: "has-gold" },
+      then: { op: "points", stat: "gold", delta: -1 },
+      else: { op: "points", stat: "gold", delta: 1 },
     },
-    disposition: { kind: "odloz" },
+    disposition: { kind: "discard" },
     examples: [
       { name: "takes a coin from whoever has one", given: { gold: 1 }, expect: { gold: 0 } },
       { name: "gives a coin to whoever has none", given: { gold: 0 }, expect: { gold: 1 } },
@@ -111,17 +111,17 @@ export const NIEZNAJOMI: Readonly<Record<string, CardScript>> = {
   },
   wielkolud: {
     effect: {
-      op: "rzut",
+      op: "roll",
       faces: {
-        1: { op: "nic" },
-        2: { op: "nic" },
-        3: { op: "strata", co: "przedmiot", count: 1, wybor: "losowo" },
-        4: { op: "strata", co: "przedmiot", count: 1, wybor: "losowo" },
-        5: { op: "strata", co: "przyjaciel", count: 1, wybor: "losowo" },
-        6: { op: "strata", co: "przyjaciel", count: 1, wybor: "losowo" },
+        1: { op: "nothing" },
+        2: { op: "nothing" },
+        3: { op: "lose", what: "item", count: 1, chosenBy: "random" },
+        4: { op: "lose", what: "item", count: 1, chosenBy: "random" },
+        5: { op: "lose", what: "friend", count: 1, chosenBy: "random" },
+        6: { op: "lose", what: "friend", count: 1, chosenBy: "random" },
       },
     },
-    disposition: { kind: "odloz" },
+    disposition: { kind: "discard" },
     examples: [
       { name: "ignores you on a low throw", given: { items: ["miecz"] }, dice: [1], expect: { items: 1 } },
       { name: "takes a Przedmiot on a 3", given: { items: ["miecz"] }, dice: [3], expect: { items: 0 } },
@@ -129,17 +129,17 @@ export const NIEZNAJOMI: Readonly<Record<string, CardScript>> = {
   },
   "urocza-diablica": {
     effect: {
-      op: "rzut",
+      op: "roll",
       faces: {
-        1: { op: "zaklecie", count: 1 },
-        2: { op: "punkty", stat: "magic", delta: 1 },
-        3: { op: "punkty", stat: "sword", delta: 1 },
-        4: { op: "strata", co: "przedmiot", count: 1 },
-        5: { op: "punkty", stat: "life", delta: -1 },
-        6: { op: "kamien" },
+        1: { op: "gain-spell", count: 1 },
+        2: { op: "points", stat: "magic", delta: 1 },
+        3: { op: "points", stat: "sword", delta: 1 },
+        4: { op: "lose", what: "item", count: 1 },
+        5: { op: "points", stat: "life", delta: -1 },
+        6: { op: "stone" },
       },
     },
-    disposition: { kind: "zostaje" },
+    disposition: { kind: "stays" },
     examples: [
       { name: "a point of Magia on a 2", dice: [2], expect: { magic: 2 } },
       { name: "a point of Życie on a 5", dice: [5], expect: { life: 3 } },
@@ -165,7 +165,7 @@ export const NIEZNAJOMI: Readonly<Record<string, CardScript>> = {
    *
    * `optional` said so and nothing on the sheet did: their whole effect was one
    * node, so the only control was „Rozpatrz" and a player who did not want what
-   * was on offer had no way to say so. Wrapped in a `wybor` they read like the
+   * was on offer had no way to say so. Wrapped in a `choice` they read like the
    * Jednorożec and the Kuglarz, which is what they are — „Pomiń" is one of the
    * answers, not a way out of the Karta.
    */
@@ -187,26 +187,26 @@ export const NIEZNAJOMI: Readonly<Record<string, CardScript>> = {
   cudotworca: {
     optional: true,
     effect: {
-      op: "wybor",
+      op: "choice",
       options: [
-        { label: "odzyskujesz 2 punkty Życia (najwyżej do 4)", effect: { op: "uzdrow", upTo: 2 } },
+        { label: "odzyskujesz 2 punkty Życia (najwyżej do 4)", effect: { op: "heal", upTo: 2 } },
       ],
     },
-    disposition: { kind: "zostaje" },
+    disposition: { kind: "stays" },
     examples: [{ name: "heals two, and no higher than four", given: { life: 2 }, answers: [0], expect: { life: 4 } }],
   },
   /** "Każda Dobra Postać, która tu **zawita**, otrzyma 1 Zaklęcie." */
   czarodziej: {
     optional: true,
     effect: {
-      op: "gdy",
-      warunek: { is: "natura", jedna_z: ["good"] },
-      to: {
-        op: "wybor",
-        options: [{ label: "zyskujesz 1 Zaklęcie", effect: { op: "zaklecie", count: 1 } }],
+      op: "when",
+      condition: { is: "nature", oneOf: ["good"] },
+      then: {
+        op: "choice",
+        options: [{ label: "zyskujesz 1 Zaklęcie", effect: { op: "gain-spell", count: 1 } }],
       },
     },
-    disposition: { kind: "zostaje" },
+    disposition: { kind: "stays" },
     examples: [{ name: "a Zaklęcie for a Dobra Postać", given: { nature: "good", magic: 4 }, answers: [0], expect: { spells: 1 } }],
   },
   // A standing shop rather than a one-off gift, which is why he stays.
@@ -214,7 +214,7 @@ export const NIEZNAJOMI: Readonly<Record<string, CardScript>> = {
    * "Postacie, którym pozwala na to ich Magia, mogą podczas każdej wizyty kupić
    * u niego 1 Zaklęcie za 1 Sztukę Złota."
    *
-   * Not a `kup`, though it reads like one: `kup` sells Wyposażenie and a
+   * Not a `buy`, though it reads like one: `buy` sells Wyposażenie and a
    * Zaklęcie is not on that sheet. It comes off the pile, under 2.6's limit and
    * 9.5's reshuffle, and only the drawing knows whether either refused — which
    * is why the price rides on the draw.
@@ -225,15 +225,15 @@ export const NIEZNAJOMI: Readonly<Record<string, CardScript>> = {
   sztukmistrz: {
     optional: true,
     effect: {
-      op: "wybor",
+      op: "choice",
       options: [
         {
           label: "kupujesz 1 Zaklęcie za 1 Sztukę Złota",
-          effect: { op: "zaklecie", count: 1, cena: 1 },
+          effect: { op: "gain-spell", count: 1, price: 1 },
         },
       ],
     },
-    disposition: { kind: "zostaje" },
+    disposition: { kind: "stays" },
     examples: [
       { name: "takes the coin and hands over the card", given: { gold: 3, magic: 4 }, answers: [0], expect: { gold: 2, spells: 1 } },
       { name: "refuses an empty purse before touching the pile", given: { gold: 0, magic: 4 }, answers: [0], expect: { gold: 0, spells: 0, says: "Za mało złota" } },
@@ -249,33 +249,33 @@ export const NIEZNAJOMI: Readonly<Record<string, CardScript>> = {
    * is said to whoever turned him over, and 15.1 then puts him beyond their
    * reach for the rest of that turn. „Pierwszej Postaci, Eremita ofiaruje do
    * wyboru: Magiczny Miecz lub Tarczę Tolimana (jeśli jeszcze są)" is said
-   * where he settles, to whoever ends a move there first — see `placed`.
+   * where he settles, to whoever ends a move there first — see `onDraw`.
    *
-   * They were one `po-kolei` for a while, and it was wrong twice over: the
+   * They were one `sequence` for a while, and it was wrong twice over: the
    * player who drew him rolled for his Obszar and was handed the Magiczny
    * Miecz in the same breath, and the visitor who found him rolled for his
    * Obszar all over again and moved him on.
    */
   eremita: {
-    placed: {
-      op: "rzut",
+    onDraw: {
+      op: "roll",
       faces: {
-        1: { op: "poloz-karte", gdzie: { kind: "pole", fieldId: "bezdroza" } },
-        2: { op: "poloz-karte", gdzie: { kind: "pole", fieldId: "uroczysko" } },
-        3: { op: "poloz-karte", gdzie: { kind: "pole", fieldId: "pustelnia" } },
-        4: { op: "poloz-karte", gdzie: { kind: "pole", fieldId: "wieza-przeznaczenia" } },
-        5: { op: "poloz-karte", gdzie: { kind: "pole", fieldId: "rozstajne-drogi-1" } },
-        6: { op: "poloz-karte", gdzie: { kind: "pole", fieldId: "ruiny-twierdzy" } },
+        1: { op: "place-card", where: { kind: "field", fieldId: "bezdroza" } },
+        2: { op: "place-card", where: { kind: "field", fieldId: "uroczysko" } },
+        3: { op: "place-card", where: { kind: "field", fieldId: "pustelnia" } },
+        4: { op: "place-card", where: { kind: "field", fieldId: "wieza-przeznaczenia" } },
+        5: { op: "place-card", where: { kind: "field", fieldId: "rozstajne-drogi-1" } },
+        6: { op: "place-card", where: { kind: "field", fieldId: "ruiny-twierdzy" } },
       },
     },
     effect: {
-      op: "wybor",
+      op: "choice",
       options: [
-        { label: "otrzymujesz Magiczny Miecz", effect: { op: "otrzymaj", co: "Magiczny Miecz" } },
-        { label: "otrzymujesz Tarczę Tolimana", effect: { op: "otrzymaj", co: "Tarcza Tolimana" } },
+        { label: "otrzymujesz Magiczny Miecz", effect: { op: "receive", what: "Magiczny Miecz" } },
+        { label: "otrzymujesz Tarczę Tolimana", effect: { op: "receive", what: "Tarcza Tolimana" } },
       ],
     },
-    disposition: { kind: "do-pierwszej" },
+    disposition: { kind: "until-first-visitor" },
     examples: [
       { name: "rolls for his Obszar when turned over", dice: [3], expect: { lyingOn: "pustelnia" } },
       { name: "offers the first visitor a Magiczny Miecz", lying: true, answers: [0], expect: { items: 1 } },
@@ -308,25 +308,25 @@ export const NIEZNAJOMI: Readonly<Record<string, CardScript>> = {
    */
   kuglarz: {
     effect: {
-      op: "wybor",
+      op: "choice",
       options: [
         {
           label: "ustawiasz bazowy Miecz na wartość bazową Magii",
-          effect: { op: "zamien-punkty", z: "sword" },
+          effect: { op: "swap-points", from: "sword" },
         },
         {
           label: "ustawiasz bazową Magię na wartość bazową Miecza",
-          effect: { op: "zamien-punkty", z: "magic" },
+          effect: { op: "swap-points", from: "magic" },
         },
         // Bare, like every other declining option in the box. The two above
         // are long because each names a trade and the trade is the decision;
         // declining is the same act on every card that offers one, and saying
         // what it does not do adds a clause to the one option nobody has to
         // read.
-        { label: "Pomiń", effect: { op: "nic" } },
+        { label: "Pomiń", effect: { op: "nothing" } },
       ],
     },
-    disposition: { kind: "odloz" },
+    disposition: { kind: "discard" },
     examples: [
       { name: "sets the base Miecz to the base Magia", given: { sword: 2, magic: 4 }, answers: [0], expect: { sword: 4 } },
       { name: "sets the base Magia to the base Miecz", given: { sword: 4, magic: 1 }, answers: [1], expect: { magic: 4 } },
@@ -342,8 +342,8 @@ export const NIEZNAJOMI: Readonly<Record<string, CardScript>> = {
    * times — which a six-faced table would give away by showing five blanks.
    */
   medrzec: {
-    effect: { op: "zgadnij", nagroda: { op: "zaklecie", count: 1 } },
-    disposition: { kind: "odloz" },
+    effect: { op: "guess", prize: { op: "gain-spell", count: 1 } },
+    disposition: { kind: "discard" },
     examples: [
       { name: "a Zaklęcie when the die matches the guess", given: { magic: 4 }, answers: [2], dice: [2], expect: { spells: 1 } },
       { name: "nothing when it does not", given: { magic: 4 }, answers: [2], dice: [5], expect: { spells: 0 } },
@@ -367,16 +367,16 @@ export const NIEZNAJOMI: Readonly<Record<string, CardScript>> = {
    */
   "dobre-bostwo": {
     effect: {
-      op: "gdy",
-      warunek: { is: "attacker" },
-      to: {
-        op: "wybor",
+      op: "when",
+      condition: { is: "attacker" },
+      then: {
+        op: "choice",
         options: [
-          { label: "tracisz 1 Sztukę Złota", effect: { op: "punkty", stat: "gold", delta: -1 } },
+          { label: "tracisz 1 Sztukę Złota", effect: { op: "points", stat: "gold", delta: -1 } },
           {
             label: "nie ruszysz się stąd przez 1 turę",
             effect: {
-              op: "efekt",
+              op: "status",
               label: "Osądzony — nie ruszysz się stąd przez turę",
               modifier: { kind: "move-max", fields: 0 },
               ends: { kind: "turns", turns: 1 },
@@ -384,8 +384,8 @@ export const NIEZNAJOMI: Readonly<Record<string, CardScript>> = {
           },
         ],
       },
-      inaczej: { op: "nic" },
+      else: { op: "nothing" },
     },
-    disposition: { kind: "odloz" },
+    disposition: { kind: "discard" },
   },
 };

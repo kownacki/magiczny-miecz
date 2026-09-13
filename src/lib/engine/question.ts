@@ -27,15 +27,15 @@ import { wordOf } from "./words";
  * put a Postać anywhere at all.
  *
  * So the surfaces choose the widget and nothing else. The browser turns
- * `wybor` into buttons and `gdzie` into a row of Obszary; the console prints
+ * `choice` into buttons and `where` into a row of Obszary; the console prints
  * the same two as numbered lines and `answer … to <Obszar>`. Neither decides
  * *what* is being asked, and neither can be the only one that knows a rule.
  *
  * # And what it deliberately does not answer
  *
- * `przenies-karte` — the Władca Zdarzeń — asks two things at once, which Karta
+ * `move-card` — the Władca Zdarzeń — asks two things at once, which Karta
  * and where it goes, and the first of them is not on the frame. It comes back
- * `nieobslugiwane`, which is what both surfaces already said about it in their
+ * `unsupported`, which is what both surfaces already said about it in their
  * own words. Named rather than guessed at, and named identically on both.
  */
 export type TurnQuestion =
@@ -44,11 +44,11 @@ export type TurnQuestion =
    * one press. The face is on the Obszar's frame (`markRolled`) and in
    * `reason`, which is why this carries neither.
    */
-  | { kind: "dalej"; reason: string }
+  | { kind: "continue"; reason: string }
   /** „Do wyboru" — the Karta's own options, in the Karta's own order. */
-  | { kind: "wybor"; reason: string; options: readonly string[] }
+  | { kind: "choice"; reason: string; options: readonly string[] }
   /** An Obszar to point at, and the only ones the Karta allows. */
-  | { kind: "gdzie"; reason: string; fields: readonly FieldId[] }
+  | { kind: "where"; reason: string; fields: readonly FieldId[] }
   /**
    * A face of the die, named before it is thrown — the MĘDRZEC's riddle.
    *
@@ -56,14 +56,14 @@ export type TurnQuestion =
    * rather than an index into a list, which is why it is its own shape: an
    * index would let „6" mean the sixth option of six and read the same.
    */
-  | { kind: "cyfra"; reason: string; faces: readonly number[] }
+  | { kind: "digit"; reason: string; faces: readonly number[] }
   /**
    * Which of your own Karty — „tracisz 1 Przedmiot wedle własnego wyboru".
    *
    * The generic „pick one out of a list you are holding", and the shape the
    * box asks for far more often than it asks anything else. It was built once,
    * for the UROCZA DIABLICA's fourth face, and built *in the browser* — so the
-   * engine had no answer for it, `questionOn` called it `nieobslugiwane`, and
+   * engine had no answer for it, `questionOn` called it `unsupported`, and
    * the next card to want the same thing would have grown a second copy.
    *
    * `among` is the list both ends count, in one order, because an index is
@@ -71,13 +71,13 @@ export type TurnQuestion =
    * way.
    */
   | {
-      kind: "ktora";
+      kind: "which";
       reason: string;
-      co: HeldKind;
+      what: HeldKind;
       among: readonly { id: string; cardId: CardId }[];
     }
   /** A question no surface can ask yet, said the same way by all of them. */
-  | { kind: "nieobslugiwane"; reason: string; op: Effect["op"] };
+  | { kind: "unsupported"; reason: string; op: Effect["op"] };
 
 /** What a holder may be asked to give up — `Losable`'s own three. */
 export type HeldKind = "item" | "friend" | "spell";
@@ -89,8 +89,8 @@ export type HeldKind = "item" | "friend" | "spell";
  * this is the narrow half `questionOn` needs, kept here so the question type
  * does not import the loss vocabulary whole.
  */
-function heldKindFor(co: Extract<Effect, { op: "strata" }>["co"]): HeldKind | null {
-  return co === "przedmiot" ? "item" : co === "przyjaciel" ? "friend" : co === "zaklecie" ? "spell" : null;
+function heldKindFor(what: Extract<Effect, { op: "lose" }>["what"]): HeldKind | null {
+  return what === "item" ? "item" : what === "friend" ? "friend" : what === "spell" ? "spell" : null;
 }
 
 /**
@@ -102,7 +102,7 @@ function heldKindFor(co: Extract<Effect, { op: "strata" }>["co"]): HeldKind | nu
  * and the refusal cannot drift — which they had, in the only direction that
  * matters: the buttons were right and the refusal did not exist.
  *
- * `poczatek-ruchu` is not a choice at all. The STRAŻ names its destination in
+ * `move-start` is not a choice at all. The STRAŻ names its destination in
  * terms of the turn rather than of the board, so there is nothing to offer and
  * `questionOn` never reaches here for it.
  */
@@ -111,15 +111,15 @@ export function destinationsFor(
   at: { standingOn: FieldId | null; occupied: readonly FieldId[] },
 ): FieldId[] {
   switch (to.kind) {
-    case "pole":
+    case "field":
       return [to.fieldId];
-    case "dowolne-w-kregu":
+    case "anywhere-in-ring":
       return ringFields(at.standingOn);
-    case "jedno-z":
+    case "one-of":
       // „nie zajętym przez inną Postać" — the Lewiatan's own sentence, and the
       // only one of the three that reads the board as well as the card.
       return to.fieldIds.filter((fieldId) => !at.occupied.includes(fieldId));
-    case "poczatek-ruchu":
+    case "move-start":
       return [];
   }
 }
@@ -140,7 +140,7 @@ export function questionOn(
     /**
      * The frame's own seat's Karty, and whether any of its hand is concealed.
      *
-     * Only a `strata` needs them, and only to list what may be given up.
+     * Only a `lose` needs them, and only to list what may be given up.
      * Optional so the callers that ask about a destination need not carry a
      * hand they will not use.
      */
@@ -153,13 +153,13 @@ export function questionOn(
   if (frame.phase !== "script") return null;
   /* A thrown die is not a question — see `heldAt`. Nothing has run yet, so
      what the cursor points at is not being asked, it is about to happen. */
-  if (frame.held) return { kind: "dalej", reason: frame.reason };
+  if (frame.held) return { kind: "continue", reason: frame.reason };
 
   const asking = nodeAt(frame.effect, frame.cursor);
-  if (!asking) return { kind: "dalej", reason: frame.reason };
+  if (!asking) return { kind: "continue", reason: frame.reason };
 
   const reason = frame.reason;
-  const cannot: TurnQuestion = { kind: "nieobslugiwane", reason, op: asking.op };
+  const cannot: TurnQuestion = { kind: "unsupported", reason, op: asking.op };
   /**
    * What the word asks is the word's own (`words.ts`, `asks`); what the table
    * can add to it — free Obszary, the hand — is added here. A node that asks
@@ -170,13 +170,13 @@ export function questionOn(
   if (!ask) return cannot;
 
   switch (ask.kind) {
-    case "wybor":
-      return { kind: "wybor", reason, options: ask.options };
-    case "gdzie":
-      return { kind: "gdzie", reason, fields: destinationsFor(ask.to, at) };
-    case "cyfra":
-      return { kind: "cyfra", reason, faces: ask.faces };
-    case "nieobslugiwane":
+    case "choice":
+      return { kind: "choice", reason, options: ask.options };
+    case "where":
+      return { kind: "where", reason, fields: destinationsFor(ask.to, at) };
+    case "digit":
+      return { kind: "digit", reason, faces: ask.faces };
+    case "unsupported":
       return cannot;
     /**
      * „Tracisz 1 Przedmiot" — which one is the holder's, and 5.6 says so.
@@ -192,17 +192,17 @@ export function questionOn(
      *   concealed, and a short list numbers differently from the server's.
      * - **Nothing of that kind to lose**, which the server settles by itself.
      */
-    case "ktora": {
+    case "which": {
       const hand = at.hand;
-      const co = heldKindFor(ask.co);
-      if (!hand || !co || ask.count !== 1) return cannot;
-      if (co === "spell" && hand.hidden > 0) return cannot;
-      const among = hand.holdings.filter((held) => held.kind === co);
+      const what = heldKindFor(ask.what);
+      if (!hand || !what || ask.count !== 1) return cannot;
+      if (what === "spell" && hand.hidden > 0) return cannot;
+      const among = hand.holdings.filter((held) => held.kind === what);
       if (among.length === 0) return null;
       return {
-        kind: "ktora",
+        kind: "which",
         reason,
-        co,
+        what,
         among: among.map((held) => ({ id: held.id, cardId: held.cardId })),
       };
     }

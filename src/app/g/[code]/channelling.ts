@@ -5,7 +5,7 @@
  *
  * Every button under a Karta commits something the rules give no way back
  * from: „Weź Przedmiot" cannot be un-taken, „Walcz" cannot be un-fought, and a
- * `wybor` answered is answered. There is no inverse `Changeset` in this app and
+ * `choice` answered is answered. There is no inverse `Changeset` in this app and
  * there should not be — `commit` writes under a compare-and-swap and knows
  * nothing about undoing. So the window has to sit *before* the write: pressing
  * a button schedules the request rather than making it, and for three seconds

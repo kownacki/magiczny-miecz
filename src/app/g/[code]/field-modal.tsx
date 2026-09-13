@@ -469,7 +469,7 @@ export function FieldModal({
    *
    * A rule is a separator, so it needs two things to separate. A die table used
    * to be the other thing this checked for — `parseRollTable` against
-   * `field.text` — until the typed `rzut` inside `fieldScript` took over
+   * `field.text` — until the typed `roll` inside `fieldScript` took over
    * rendering it: `OfferList`/`FieldService` shows it for an Obszar with a
    * scripted offer, and `compulsoryOffer` opens it by itself for one that has
    * none. Prose that merely reads like a table is no longer a reason to draw
