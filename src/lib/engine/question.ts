@@ -5,6 +5,7 @@ import type { Destination, Effect } from "./cardScript";
 import type { CardId } from "@/data/ids";
 import { nodeAt } from "./resolve";
 import type { TurnPhase } from "./turn";
+import { wordOf } from "./words";
 
 /**
  * The question a suspended Karta is asking, decided once for every surface.
@@ -157,53 +158,53 @@ export function questionOn(
   const asking = nodeAt(frame.effect, frame.cursor);
   if (!asking) return { kind: "dalej", reason: frame.reason };
 
-  if (asking.op === "wybor") {
-    return {
-      kind: "wybor",
-      reason: frame.reason,
-      options: asking.options.map((option) => option.label),
-    };
-  }
-  if (asking.op === "przenies" && asking.to.kind !== "pole" && asking.to.kind !== "poczatek-ruchu") {
-    return { kind: "gdzie", reason: frame.reason, fields: destinationsFor(asking.to, at) };
-  }
+  const reason = frame.reason;
+  const cannot: TurnQuestion = { kind: "nieobslugiwane", reason, op: asking.op };
   /**
-   * „Tracisz 1 Przedmiot" — which one is the holder's, and 5.6 says so.
-   *
-   * Three ways this is *not* a question, and all three are rules rather than
-   * interface limits, which is why they live here now instead of in a browser
-   * file:
-   *
-   * - **More than one at a time.** `chooseLosses` picks against a pool that
-   *   shrinks between picks, so two answers are indices into two different
-   *   lists. No card in the box asks it.
-   * - **A hand somebody cannot see in full** (9.3). Only Zaklęcia are ever
-   *   concealed, and a short list numbers differently from the server's.
-   * - **Nothing of that kind to lose**, which the server settles by itself.
+   * What the word asks is the word's own (`words.ts`, `pyta`); what the table
+   * can add to it — free Obszary, the hand — is added here. A node that asks
+   * nothing should never be under an unheld cursor, and if one is, saying no
+   * surface can ask it is the honest answer rather than a guessed widget.
    */
-  if (asking.op === "strata") {
-    const hand = at.hand;
-    const co = heldKindFor(asking.co);
-    if (!hand || !co || (asking.count ?? 1) !== 1) {
-      return { kind: "nieobslugiwane", reason: frame.reason, op: asking.op };
+  const ask = wordOf(asking).pyta(asking);
+  if (!ask) return cannot;
+
+  switch (ask.kind) {
+    case "wybor":
+      return { kind: "wybor", reason, options: ask.options };
+    case "gdzie":
+      return { kind: "gdzie", reason, fields: destinationsFor(ask.to, at) };
+    case "cyfra":
+      return { kind: "cyfra", reason, faces: ask.faces };
+    case "nieobslugiwane":
+      return cannot;
+    /**
+     * „Tracisz 1 Przedmiot" — which one is the holder's, and 5.6 says so.
+     *
+     * Three ways this is *not* a question, and all three are rules rather than
+     * interface limits, which is why they live here now instead of in a
+     * browser file:
+     *
+     * - **More than one at a time.** `chooseLosses` picks against a pool that
+     *   shrinks between picks, so two answers are indices into two different
+     *   lists. No card in the box asks it.
+     * - **A hand somebody cannot see in full** (9.3). Only Zaklęcia are ever
+     *   concealed, and a short list numbers differently from the server's.
+     * - **Nothing of that kind to lose**, which the server settles by itself.
+     */
+    case "ktora": {
+      const hand = at.hand;
+      const co = heldKindFor(ask.co);
+      if (!hand || !co || ask.count !== 1) return cannot;
+      if (co === "spell" && hand.hidden > 0) return cannot;
+      const among = hand.holdings.filter((held) => held.kind === co);
+      if (among.length === 0) return null;
+      return {
+        kind: "ktora",
+        reason,
+        co,
+        among: among.map((held) => ({ id: held.id, cardId: held.cardId })),
+      };
     }
-    if (co === "spell" && hand.hidden > 0) {
-      return { kind: "nieobslugiwane", reason: frame.reason, op: asking.op };
-    }
-    const among = hand.holdings.filter((held) => held.kind === co);
-    if (among.length === 0) return null;
-    return {
-      kind: "ktora",
-      reason: frame.reason,
-      co,
-      among: among.map((held) => ({ id: held.id, cardId: held.cardId })),
-    };
   }
-  if (asking.op === "zgadnij") {
-    return { kind: "cyfra", reason: frame.reason, faces: [1, 2, 3, 4, 5, 6] };
-  }
-  if (asking.op === "poloz-karte" && asking.gdzie.kind === "jedno-z") {
-    return { kind: "gdzie", reason: frame.reason, fields: destinationsFor(asking.gdzie, at) };
-  }
-  return { kind: "nieobslugiwane", reason: frame.reason, op: asking.op };
 }

@@ -1546,3 +1546,21 @@ report which parts it reached for and which it forgot existed. `mm` is the
 cautionary tale: built months ago, documented, the fastest way to check
 anything, and ignored — including by the session that wrote the paragraph
 recommending it.
+
+## The card vocabulary is one table (2026-09-13)
+
+`src/lib/engine/words.ts`: `WORDS`, a `Record` over `Effect["op"]` saying for
+each word which fields a card may write (`pola`, a map the compiler keeps
+complete), whether the walk descends through it (`sklada`, typed off
+`COMPOSING_OPS`), its children with the index a cursor uses, whether it is
+settled, what it asks, its valence and the Obszary it names. `isSettled`,
+`nodeAt`, `questionOn`, `valenceOf`, `fieldsNamedBy` and `reopensTheDrawing`
+read it; the two test walkers went. Six hand-rolled readers of the vocabulary
+had accumulated, four ending in `default` and one searching a script as JSON
+text, and the newest did not know `jak-pole` had a child — which is how a
+frame suspended inside a Kapliczka's borrowed prayer, or in the MĘDRZEC's
+reward, had no question on screen. Step 1 of docs/KARTA.md; the reasoning,
+and the two deliberate deviations from its sketch, are there under „Stan po
+kroku 1". `ask slowo <op>` prints an entry back. The measurements that came
+first — `namedCards.test.ts` (23 Karty the engine still knows by name) and
+`wordsRead.test.ts` (three fields nothing reads) — are step 0.

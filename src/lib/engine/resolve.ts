@@ -1,9 +1,35 @@
 /** Which effects the app can carry out on its own, and which are genuinely the player's to decide. */
 
-import { takesEverything } from "./losses";
 import { FIELD_SCRIPTS } from "./fieldScript";
 import type { Effect } from "./cardScript";
 import type { Nature } from "@/data/types";
+import { wordOf, type Child } from "./words";
+
+/**
+ * The nodes under an effect, borrowed tables included.
+ *
+ * `WORDS` says what a word's own children are. The one word that borrows —
+ * `jak-pole`, „Możesz modlić się na takich samych zasadach, jak w Świątyni
+ * Bogini Nemed" — names an Obszar whose table lives in `FIELD_SCRIPTS`, and
+ * that registry cannot be read from the vocabulary without an import cycle
+ * through `state.ts`. So the borrowing happens here, once, and every walk in
+ * this file takes its children from this rather than from the table. The
+ * borrowed table's index is `0`, which is what the walk in
+ * `commands/effects.ts` writes into the cursor.
+ */
+export function childrenOf(effect: Effect): readonly Child[] {
+  const word = wordOf(effect);
+  const own = word.dzieci(effect);
+  const borrowed = word.pozycza?.(effect);
+  if (borrowed === undefined) return own;
+  const table = FIELD_SCRIPTS[borrowed]?.offers[0];
+  return table ? [...own, [0, table.effect]] : own;
+}
+
+/** Every node of an effect tree, the effect itself first, borrowed tables entered. */
+export function everyNode(effect: Effect): Effect[] {
+  return [effect, ...childrenOf(effect).flatMap(([, child]) => everyNode(child))];
+}
 
 /**
  * An effect is *settled* when nothing about it is left for a person to say.
@@ -17,207 +43,23 @@ import type { Nature } from "@/data/types";
  * So the rule is not "automate everything", it is **automate everything that is
  * not a decision**. What is left on screen after a roll is exactly the set of
  * choices the rules actually give you.
+ *
+ * Each word answers for itself in `words.ts` (`rozstrzygniete`); this only
+ * hands it its children and the recursion. The history worth keeping from
+ * when the answers were a switch here: four times a word sat among the
+ * unsettled ones only because it had no implementation yet — `otrzymaj`,
+ * `kup`/`sprzedaj`, `zaklecia-do-limitu`, `zamien-punkty` — and the symptom
+ * was always the same, a Karta reported `pelne` that no surface could
+ * resolve, or a turn deadlocked on a question nobody had been asked.
+ * `coverage.test.ts` now asks that of every card, which is why the fifth time
+ * will fail a build instead of a table.
  */
 export function isSettled(effect: Effect): boolean {
-  switch (effect.op) {
-    // Nothing to decide.
-    case "nic":
-    case "punkty":
-    case "tura-stracona":
-    case "zaklecie":
-    case "kamien":
-    case "natura":
-    case "walka":
-    // The class is on the card and the whole Krąg is swept — nobody picks
-    // which Nieznajomi die, the way nobody picks which face of a die comes up.
-    case "katastrofa":
-    // Whom it is sent at was named as the Zaklęcie was spoken, which is the
-    // only choice it holds — see `przyzwij`.
-    case "przyzwij":
-    // Nothing to choose: the pile has a top and the count is on the card.
-    case "podejrzyj":
-    // 15.2 has already said which Karta is in front of you.
-    case "wymien-karte":
-    case "ruch-dodatkowy":
-    case "wyciagnij":
-    // What it does and how long it lasts are both written on the card.
-    case "efekt":
-    // The card is named and the stock is the app's to count.
-    case "otrzymaj":
-
-    // A die per card, and nobody picks which — 5.6 is not engaged.
-    case "rzut-za-kazdego":
-    // The card is named by the effect; there is nothing to ask.
-    case "uwolnij":
-    /**
-     * A shop is a standing offer, not a question — and treating it as one
-     * wedged the game.
-     *
-     * These sat below with the unsettled ops on the reading that somebody has
-     * to say which card changes hands. Somebody does, but not *here*: a
-     * Targowisko is a Miejsce that „zostaje", and resolving the Karta is what
-     * puts it on the Obszar. The buying is `buy` afterwards, against
-     * `offerOn`, which reads the Obszar's own offers and the Karty lying on
-     * it — exactly how every printed shop on the board already works.
-     *
-     * Unsettled, it deadlocked instead. `resolveDrawnCard` suspended into a
-     * `script` frame; `buy` could not see the shop because the card was still
-     * in the turn's `drawn` and not yet in `fieldCards`; and the card could
-     * only reach `fieldCards` by resolving. „Nic się nie stało. Wciąż czeka"
-     * for ever, and `endturn` refused too — „Najpierw dokończ: TARGOWISKO".
-     * Drawing one Karta ended the game.
-     *
-     * This is `otrzymaj`'s bug in another coat; see the note below it, which
-     * describes the same shape and the same symptom.
-     */
-    case "kup":
-    case "sprzedaj":
-      return true;
-
-    // Somebody has to say which card changes hands (5.6, or Szaleństwo's own
-    // text handing the choice to the caster).
-    case "zabierz":
-      return false;
-
-    // Healing with no price is capped by 4.7 and has one answer. Healing that
-    // charges is a purchase, and how much to buy is the buyer's.
-    case "uzdrow":
-      return !effect.cena;
-
-    /**
-     * A destination the card names is settled; „dowolny Obszar w tym Kręgu" is
-     * the player pointing at the board.
-     *
-     * `poczatek-ruchu` counts as named. The STRAŻ „zawraca cię na Obszar, z
-     * którego rozpocząłeś wędrówkę" — as exact as any `pole`, only said in
-     * terms of the turn rather than of the board, and the walk reads it off the
-     * frame's `from`. Calling it unsettled made it a question nobody could ask:
-     * `coverage.test.ts` caught it from the player's side, which is what that
-     * test is for.
-     */
-    case "przenies":
-      return effect.to.kind === "pole" || effect.to.kind === "poczatek-ruchu";
-
-    /**
-     * The same question, about a Karta rather than a Postać.
-     *
-     * Two of the three cards that put a Karta down name one Obszar and ask
-     * nothing. The Lewiatan names six — "połóż jego Kartę na którymś z tych
-     * Obszarów, nie zajętym przez inną Postać" — and that is the player
-     * pointing at the board.
-     *
-     * This case used to say all three were settled, on the reading that the
-     * Obszar is rolled for. It is not, for the Lewiatan, and the executor knew:
-     * it suspended on `jedno-z` while this said there was nothing to ask, which
-     * is the divergence the comment on `pendingIn` calls a bug in this file.
-     */
-    case "poloz-karte":
-      return effect.gdzie.kind === "pole";
-
-    // Both ends of it are the player's: which Karta, and which Obszar.
-    case "przenies-karte":
-      return false;
-
-    // Every step has to be settled for the whole to be.
-    case "po-kolei":
-      return effect.steps.every(isSettled);
-
-    // A condition the app can test, on branches it can carry out.
-    case "gdy":
-      return isSettled(effect.to) && (!effect.inaczej || isSettled(effect.inaczej));
-
-    // The decision *is* the effect.
-    case "wybor":
-    case "zgadnij":
-      return false;
-
-    // "Tracisz 1 z Przedmiotów wedle własnego wyboru" — which one is yours.
-    /**
-     * A loss is a decision only when there is something to decide.
-     *
-     * 5.6 gives the choice of what to give up to the player, so the default is
-     * to ask — but three of the shapes leave nothing to ask about. Everything
-     * going is not a choice, gold is a number rather than a card to pick, and a
-     * loss the card assigns to chance is chance's to make. Saying no to all of
-     * them meant the app announced "tracisz 1 Przedmiot" and then left the
-     * player to remember to do it, which is the hand-entry simulation is
-     * supposed to be free of.
-     */
-    case "strata":
-      // Which losses name what goes is `takesEverything`'s, not this file's.
-      // Both used to keep the list and they disagreed about one value, so the
-      // Przesilenie was held here as an unanswered choice and never reached
-      // `chooseLosses`, which knew perfectly well it was not one.
-      if (takesEverything(effect.co)) return true;
-      return effect.wybor === "losowo";
-
-    // A die table is settled only if every face it can land on is. Rolled
-    // separately, so this asks about the table as a whole.
-    // Every face it can land on, which is 2-12 for a two-die table and 1-6 for
-    // the usual one. Reading the wrong range asked about faces that cannot come
-    // up and skipped the ones that can — and `isSettled(undefined)` throws.
-    case "rzut": {
-      const faces =
-        effect.kostki === 2 ? [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12] : [1, 2, 3, 4, 5, 6];
-      return faces.every((face) => isSettled(effect.faces[face]));
-    }
-
-    // Shops and borrowed tables are interactions rather than outcomes, and
-    // putting a card somewhere is not something a seat does.
-    //
-    // `otrzymaj` used to be counted among them and is not one: the card is
-    // named by the effect, the Wyposażenie's stock is checked by `takeCard`,
-    // and there is nothing left for anybody to answer. It sat here because it
-    // had no implementation at all, and while it was unsettled the two rows
-    // that hand out a Magiczny Miecz and a Tarcza Tolimana came back pending
-    // and empty — a prayer that appeared to do nothing and left the turn
-    // waiting on a question nobody had been asked.
-    /**
-     * The MAGICZNA TABLICA, which used to sit here with the unsettled ones —
-     * the fourth time this file has had this shape, and the comment above
-     * counted three.
-     *
-     * „Natychmiast uzyskujesz taką liczbę Zaklęć, na jaką pozwala ci twoja
-     * Magia" asks nobody anything: the card names a number and 2.6 says what it
-     * is. It was unsettled because it had no implementation, exactly as
-     * `otrzymaj` was, and the Karta was reported `pelne` the whole time while
-     * no surface could resolve it.
-     */
-    case "zaklecia-do-limitu":
-      return true;
-
-    /**
-     * The Kuglarz, which used to sit above with the unsettled ones.
-     *
-     * His two offers *are* the question, and answering one leaves nothing for
-     * anybody to decide: the parameter takes the other's value and `adjustSeat`
-     * puts 1.3 and 2.3's floor under it. While it was unsettled the walk handed
-     * it straight back as `pending`, so a player picked an option and watched
-     * nothing happen — the same shape as `otrzymaj`'s and the Targowisko's
-     * deadlocks above, and the third time this file has had it.
-     */
-    case "zamien-punkty":
-      return true;
-
-    /**
-     * A borrowed table is exactly as settled as the table it borrows.
-     *
-     * It used to sit above with the shops, on the reading that "dzieje się to,
-     * co na Obszarze" is an interaction rather than an outcome. That made the
-     * two Kapliczki permanently unsettled, which is worse than it sounds: an
-     * unsettled effect is `pendingIn`'s answer, and the sheet hides the
-     * "Rozpatrz" button whenever something is being asked — so the one thing a
-     * player could do with a Kapliczka was leave it for later, for ever.
-     *
-     * Both Świątynie's prayers are a `rzut` whose every face is settled, so
-     * both Kapliczki are settled, and the recursion says so for the right
-     * reason rather than by assertion.
-     */
-    case "jak-pole": {
-      const borrowed = FIELD_SCRIPTS[effect.fieldId]?.offers[0];
-      return borrowed ? isSettled(borrowed.effect) : false;
-    }
-  }
+  return wordOf(effect).rozstrzygniete(
+    effect,
+    childrenOf(effect).map(([, child]) => child),
+    isSettled,
+  );
 }
 
 /**
@@ -292,37 +134,26 @@ export function inertFor(effect: Effect | undefined, failsCondition: boolean): b
  *
  * Not `pendingIn`: that walks by *choices*, skipping every node that asks
  * nothing. A cursor records the whole path — a `po-kolei` step, a `wybor`
- * pick, a `rzut` face as rolled, a `gdy` branch as taken — so following it is
- * plain indexing, and what it lands on is the question the frame is suspended
+ * pick, a `rzut` face as rolled, a `gdy` branch as taken, a borrowed table's
+ * `0`, the MĘDRZEC's guessed face — so following it is plain indexing into
+ * `childrenOf`, and what it lands on is the question the frame is suspended
  * over. Null for a path the effect does not have, which is a frame written by
  * different code than is reading it and worth showing as nothing rather than
  * as the wrong question.
+ *
+ * It used to know four shapes and answer null for the other two, so a frame
+ * suspended inside a Kapliczka's borrowed prayer or a riddle's reward had no
+ * question on screen. The table knows all of them.
  */
 export function nodeAt(effect: Effect, cursor: readonly number[]): Effect | null {
   let at: Effect = effect;
   for (const index of cursor) {
-    switch (at.op) {
-      case "po-kolei":
-        if (!at.steps[index]) return null;
-        at = at.steps[index];
-        break;
-      case "wybor":
-        if (!at.options[index]) return null;
-        at = at.options[index].effect;
-        break;
-      case "rzut":
-        if (!at.faces[index]) return null;
-        at = at.faces[index];
-        break;
-      case "gdy": {
-        const branch = index === 0 ? at.to : at.inaczej;
-        if (!branch) return null;
-        at = branch;
-        break;
-      }
-      default:
-        return null;
-    }
+    const next =
+      wordOf(at).pod?.(at, index) ??
+      childrenOf(at).find(([reached]) => reached === index)?.[1] ??
+      null;
+    if (!next) return null;
+    at = next;
   }
   return at;
 }
@@ -388,8 +219,8 @@ function owedIn(effect: Effect, queue: number[], natura: Nature | null = null): 
   // sheet had no control for, which is how the two Kapliczki became cards a
   // player could only ever leave for later.
   if (effect.op === "jak-pole") {
-    const borrowed = FIELD_SCRIPTS[effect.fieldId]?.offers[0];
-    return borrowed ? owedIn(borrowed.effect, queue, natura) : null;
+    const borrowed = childrenOf(effect)[0]?.[1];
+    return borrowed ? owedIn(borrowed, queue, natura) : null;
   }
 
   /**

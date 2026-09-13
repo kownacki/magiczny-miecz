@@ -16,7 +16,8 @@ import { seatsTargeted, type TargetSeat } from "@/lib/engine/targets";
 import { chooseLosses, goldLost, lossTaken, reachableBy } from "@/lib/engine/losses";
 import { endTurn } from "@/lib/engine/turn";
 import { cardName, fieldName, NATURE_LABEL, plural } from "@/lib/engine/polish";
-import type { ComposingOp, Effect } from "@/lib/engine/cardScript";
+import type { Effect } from "@/lib/engine/cardScript";
+import type { LeafOp } from "@/lib/engine/words";
 import {
   apply,
   merge,
@@ -295,11 +296,11 @@ function targeted(
 }
 
 /**
- * The ops the walk never dispatches: composing ops it walks itself, the
- * decision-gated shapes it settles before the gate, and the three that
- * `isSettled` owes back to the table unconditionally.
+ * The ops the walk dispatches here — everything the vocabulary does not mark
+ * `sklada`. Declared with the vocabulary (`words.ts`) and re-exported for the
+ * readers that always found it here.
  */
-export type LeafOp = Exclude<Effect["op"], ComposingOp>;
+export type { LeafOp } from "@/lib/engine/words";
 
 type OpRun<K extends LeafOp> = (
   ctx: OpContext,

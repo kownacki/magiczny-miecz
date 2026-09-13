@@ -1,24 +1,22 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { COMPOSING_OPS, SCRIPTS, type Effect } from "./cardScript";
-import { FIELD_SCRIPTS } from "./fieldScript";
-import { SPELLS } from "./spells";
+import { OPS_IN_ORDER, WORDS } from "./words";
 
 /**
  * Every word a card says has to be heard by the thing that runs it.
  *
  * `reachable.test.ts` holds this for `Ability` kinds: a clause transcribed into
  * the vocabulary and consulted by nothing is a rule the app silently drops.
- * This holds the same line one level down, for the *parameters* of an
- * `Effect` op. The PÓŁBÓG is the case: „Możesz je wybrać ze stosu" became
+ * This holds the same line one level down, for the *fields* of an `Effect`
+ * word. The PÓŁBÓG is the case: „Możesz je wybrać ze stosu" became
  * `zeStosu: true` on his `zaklecie`, both text renderers read it and say so
  * under the card, and the executor in `ops.ts` never looks — the card promises
  * a choice and deals the top of the pile. Nothing failed, because nothing
  * requires a field of the vocabulary to have a reader in the engine.
  *
- * So, for every op the corpus actually uses, every parameter the corpus gives
- * it must be named in the code that carries that op out: the executor's entry
- * in `ops.ts` for a leaf, the walk in `effects.ts` for a composing op. Where
+ * So, for every word in `WORDS`, every field its `pola` declares must be
+ * named in the code that carries the word out: the executor's entry in
+ * `ops.ts` for a leaf, the walk in `effects.ts` for a composing word. Where
  * the reader honestly lives elsewhere, `ELSEWHERE` says which file and the
  * file is checked; where nothing reads it yet, `UNREAD` says so and is the
  * backlog — an entry there is a card that says one thing and does another,
@@ -33,20 +31,20 @@ import { SPELLS } from "./spells";
 const OPS = readFileSync("src/lib/game/commands/ops.ts", "utf8");
 const WALK = readFileSync("src/lib/game/commands/effects.ts", "utf8");
 
-/** `op.param` read by a file other than the executor's, and which one. */
+/** `op.field` read by a file other than the executor's, and which one. */
 const ELSEWHERE: Readonly<Record<string, string>> = {
   // The Lichwiarz's desk: `sell` reads the offer off the Obszar, not the op.
   "sprzedaj.cena": "src/lib/game/commands/shop.ts",
   // The Medyk's and the Pustelnik's price: `heal` reads the cure off the
-  // Obszar — `isSettled` calls a priced `uzdrow` a purchase, and the purchase
-  // is the shop's door, not the walk's.
+  // Obszar — a priced `uzdrow` is a purchase, and the purchase is the shop's
+  // door, not the walk's.
   "uzdrow.cena": "src/lib/game/commands/shop.ts",
   // The ZŁY DUCH's „z wyjątkiem Południcy": `chooseLosses` spares them.
   "strata.oprocz": "src/lib/engine/losses.ts",
 };
 
 /**
- * `op.param` nothing reads yet. A backlog, not a design — see docs/KARTA.md.
+ * `op.field` nothing reads yet. A backlog, not a design — see docs/KARTA.md.
  *
  * Two of the three are the same bug: a word that changes *who chooses* or
  * *from where*, rendered faithfully under the card and ignored by the walk.
@@ -80,51 +78,26 @@ function executors(): Record<string, string> {
   return out;
 }
 
-/** Every parameter the corpus hands each op, walked off the registries. */
-function paramsUsed(): Record<string, Set<string>> {
-  const used: Record<string, Set<string>> = {};
-  const visit = (node: unknown): void => {
-    if (!node || typeof node !== "object") return;
-    if (Array.isArray(node)) return node.forEach(visit);
-    const record = node as Record<string, unknown>;
-    if (typeof record.op === "string") {
-      const set = (used[record.op] ??= new Set());
-      for (const key of Object.keys(record)) if (key !== "op") set.add(key);
-    }
-    Object.values(record).forEach(visit);
-  };
-  for (const script of Object.values(SCRIPTS)) {
-    visit(script?.effect);
-    visit(script?.placed);
-    visit(script?.przegrana);
-  }
-  for (const spell of Object.values(SPELLS)) visit(spell.stosuje);
-  for (const field of Object.values(FIELD_SCRIPTS)) field?.offers.forEach((o) => visit(o.effect));
-  return used;
-}
-
 const mentions = (text: string, word: string) => new RegExp(`\\b${word}\\b`).test(text);
 
-describe("every parameter a card gives an op is read by the code that runs it", () => {
-  const used = paramsUsed();
+describe("every field a word declares is read by the code that runs it", () => {
   const bodies = executors();
-  const composing = new Set<string>(COMPOSING_OPS);
 
-  it("knows an executor for every leaf op the corpus uses", () => {
-    for (const op of Object.keys(used)) {
-      if (composing.has(op as Effect["op"])) continue;
+  it("knows an executor for every leaf word", () => {
+    for (const op of OPS_IN_ORDER) {
+      if (WORDS[op].sklada) continue;
       expect(bodies[op], `no entry for \`${op}\` in ops.ts`).toBeDefined();
     }
   });
 
-  for (const [op, params] of Object.entries(used)) {
-    const body = composing.has(op as Effect["op"]) ? WALK : (bodies[op] ?? "");
-    for (const param of params) {
-      const key = `${op}.${param}`;
+  for (const op of OPS_IN_ORDER) {
+    const body = WORDS[op].sklada ? WALK : (bodies[op] ?? "");
+    for (const field of Object.keys(WORDS[op].pola)) {
+      const key = `${op}.${field}`;
       if (UNREAD.includes(key)) {
         it(`${key} — still unread, as UNREAD says`, () => {
           expect(
-            mentions(body, param),
+            mentions(body, field),
             `${key} is read now — take it off UNREAD so the list stays the backlog`,
           ).toBe(false);
         });
@@ -134,8 +107,8 @@ describe("every parameter a card gives an op is read by the code that runs it", 
       it(`${key} is read${elsewhere ? ` in ${elsewhere}` : ""}`, () => {
         const text = elsewhere ? readFileSync(elsewhere, "utf8") : body;
         expect(
-          mentions(text, param),
-          `\`${param}\` on \`${op}\` is written by a card and read by nothing — the card says one thing and does another; read it, or list it in UNREAD as the gap it is`,
+          mentions(text, field),
+          `\`${field}\` on \`${op}\` is a field a card may write and nothing reads — the card would say one thing and do another; read it, or list it in UNREAD as the gap it is`,
         ).toBe(true);
       });
     }

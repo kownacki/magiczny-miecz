@@ -3,13 +3,8 @@
 import type { Nature } from "@/data/types";
 import { FIELDS, type FieldId } from "./board";
 import { ABILITIES, CARD_NOTES, type Ability } from "./abilities";
-import {
-  describeDisposition,
-  scriptFor,
-  valenceOf,
-  type Effect,
-  type Valence,
-} from "./cardScript";
+import { describeDisposition, scriptFor, type Effect, type Valence } from "./cardScript";
+import { valenceOf } from "./words";
 import type { Status } from "./status";
 import { classOf } from "./cards";
 import { cardRows, describeEffect } from "./effectText";

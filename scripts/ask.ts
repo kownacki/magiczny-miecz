@@ -43,6 +43,10 @@ import { cardIdNamed } from "@/lib/engine/lookup";
 import { findByName, fold } from "@/lib/engine/search";
 import { SPELLS } from "@/lib/engine/spells";
 import { USES } from "@/lib/engine/uses";
+import { FIELD_SCRIPTS } from "@/lib/engine/fieldScript";
+import { everyNode } from "@/lib/engine/resolve";
+import { OPS_IN_ORDER, WORDS, type Op } from "@/lib/engine/words";
+import type { Effect } from "@/lib/engine/cardScript";
 
 const EVENTS = events as EventCard[];
 const ITEMS = itemCards as Item[];
@@ -729,6 +733,87 @@ function askAnything(query: string): void {
   );
 }
 
+// ── ask slowo ────────────────────────────────────────────────────────────────
+
+const OPS_FILE = "src/lib/game/commands/ops.ts";
+const WALK_FILE = "src/lib/game/commands/effects.ts";
+const TEXT_FILE = "src/lib/engine/effectText.ts";
+
+/** The first line in a file that matches, as `path:line`, or null. */
+function lineOf(path: string, pattern: RegExp): string | null {
+  const lines = readFileSync(path, "utf8").split("\n");
+  const at = lines.findIndex((line) => pattern.test(line));
+  return at === -1 ? null : `${path}:${at + 1}`;
+}
+
+/** Every encoded effect in the box with the name of what carries it. */
+function corpus(): { owner: string; effect: Effect }[] {
+  const roots: { owner: string; effect: Effect }[] = [];
+  for (const [id, script] of Object.entries(SCRIPTS)) {
+    if (!script) continue;
+    roots.push({ owner: id, effect: script.effect });
+    if (script.placed) roots.push({ owner: `${id} (placed)`, effect: script.placed });
+    if (script.przegrana) roots.push({ owner: `${id} (przegrana)`, effect: script.przegrana });
+  }
+  for (const [id, spell] of Object.entries(SPELLS)) {
+    if (spell.stosuje) roots.push({ owner: `${id} (Zaklęcie)`, effect: spell.stosuje });
+  }
+  for (const [id, field] of Object.entries(FIELD_SCRIPTS)) {
+    field?.offers.forEach((offer) =>
+      roots.push({ owner: `${id} (Obszar: ${offer.name})`, effect: offer.effect }),
+    );
+  }
+  return roots;
+}
+
+/**
+ * One word of the card vocabulary: its fields, its shape, where it runs, where
+ * it is said, and who in the box speaks it.
+ *
+ * Read off `WORDS`, which is the one table every other reader of the
+ * vocabulary is built on (docs/KARTA.md) — so this is the builder's menu
+ * printed out, not a paraphrase of it.
+ */
+function askWord(query: string): void {
+  const needle = fold(query.trim());
+  const op =
+    OPS_IN_ORDER.find((one) => fold(one) === needle) ??
+    OPS_IN_ORDER.find((one) => fold(one).startsWith(needle));
+  if (!op) {
+    say(`no word \`${query}\` in the vocabulary. The words are:`, "");
+    say(...OPS_IN_ORDER.map((one) => `  ${one}${WORDS[one].sklada ? "  (składa)" : ""}`));
+    return;
+  }
+  const word = WORDS[op as Op];
+  const fields = Object.keys(word.pola);
+  say(`${op} — ${word.sklada ? "a shape the walk descends through" : "a thing that happens"}`, "");
+  say(`fields      ${fields.length > 0 ? fields.join(", ") : "(none)"}`);
+  say(
+    `runs in     ${
+      word.sklada
+        ? `${WALK_FILE} (the walk)`
+        : (lineOf(OPS_FILE, new RegExp(`^  "?${op}"?: `)) ?? `${OPS_FILE} — not found`)
+    }`,
+  );
+  const said = lineOf(TEXT_FILE, new RegExp(`^    case "${op}":`));
+  say(`said in     ${said ?? `${TEXT_FILE} — not found`}`);
+
+  const speakers = corpus()
+    .filter(({ effect }) => everyNode(effect).some((node) => node.op === op))
+    .map(({ owner }) => owner);
+  say("", `spoken by   ${speakers.length} ${speakers.length === 1 ? "card" : "cards"}`);
+  for (const owner of speakers.slice(0, 8)) say(`  ${owner}`);
+  if (speakers.length > 8) say(`  … and ${speakers.length - 8} more`);
+
+  const example = corpus()
+    .flatMap(({ owner, effect }) => everyNode(effect).map((node) => ({ owner, node })))
+    .find(({ node }) => node.op === op);
+  if (example) {
+    say("", `example     (${example.owner})`);
+    say(...JSON.stringify(example.node, null, 2).split("\n").map((line) => `  ${line}`));
+  }
+}
+
 const USAGE = [
   "ask — what the box says about a name.",
   "",
@@ -736,6 +821,7 @@ const USAGE = [
   "  ask card <id|name>       class, printed text, ABILITIES, SCRIPTS/USES/SPELLS, coverage, parked",
   "  ask character <id|name>  parameters, MGR, kit, printed clauses numbered, CHARACTER_ABILITIES",
   "  ask ability <kind>       every card and Postać that prints it, and what reads it",
+  "  ask slowo <op>           one word of the card vocabulary: fields, shape, where it runs, who speaks it",
   "  ask where <thing>        which files own a concept: console verb, engine, commands, tests, recipe",
   "  ask readers <name>       every line that uses an identifier — the question `where` cannot answer",
   "  ask <string>             id, plus which of the above would answer",
@@ -754,9 +840,10 @@ function main(): void {
   else if (verb === "card" && query) askCard(query);
   else if (verb === "character" && query) askCharacter(query);
   else if (verb === "ability" && query) askAbility(query);
+  else if (verb === "slowo" && query) askWord(query);
   else if (verb === "where" && query) askWhere(query);
   else if (verb === "readers" && query) askReaders(query);
-  else if (["id", "card", "character", "ability", "where", "readers"].includes(verb)) {
+  else if (["id", "card", "character", "ability", "slowo", "where", "readers"].includes(verb)) {
     say(`\`ask ${verb}\` needs something to look up.`, "", ...USAGE);
   } else askAnything([verb, query].filter(Boolean).join(" "));
 

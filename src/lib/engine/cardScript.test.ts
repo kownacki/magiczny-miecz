@@ -7,10 +7,10 @@ import {
   describeDisposition,
   fieldsNamedBy,
   scriptFor,
-  valenceOf,
   type Effect,
 } from "./cardScript";
 import { coverageOf } from "./coverage";
+import { valenceOf } from "./words";
 
 const EVENTS = events as EventCard[];
 const BY_ID = new Map<string, EventCard>(EVENTS.map((card) => [card.id, card]));

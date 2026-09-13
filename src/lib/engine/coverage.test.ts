@@ -9,9 +9,10 @@ import { coverageOf, manualNote, CARRIED_ELSEWHERE } from "./coverage";
 import { SPELLS } from "./spells";
 import { USES } from "./uses";
 import { isCardId } from "@/data/ids";
-import { isSettled } from "./resolve";
+import { everyNode, isSettled } from "./resolve";
 import { questionOn } from "./question";
-import { COMPOSING_OPS, type Effect } from "./cardScript";
+import type { Effect } from "./cardScript";
+import { wordOf } from "./words";
 import type { TurnPhase } from "./turn";
 import type { CardId } from "@/data/ids";
 
@@ -141,18 +142,6 @@ describe("what the app claims about itself", () => {
  * does not mirror `coverageOf` and can disagree with it.
  */
 describe("what `pelne` promises a player", () => {
-  /** Every node of an effect tree, branches included. */
-  const everyNode = (effect: Effect): Effect[] => [
-    effect,
-    ...(effect.op === "wybor" ? effect.options.flatMap((one) => everyNode(one.effect)) : []),
-    ...(effect.op === "po-kolei" ? effect.steps.flatMap(everyNode) : []),
-    ...(effect.op === "rzut" ? Object.values(effect.faces).flatMap(everyNode) : []),
-    ...(effect.op === "gdy"
-      ? [...everyNode(effect.to), ...(effect.inaczej ? everyNode(effect.inaczej) : [])]
-      : []),
-    ...(effect.op === "zgadnij" ? everyNode(effect.nagroda) : []),
-  ];
-
   /** What a surface would be able to ask about this node, if anything. */
   const asked = (effect: Effect) =>
     questionOn(
@@ -194,7 +183,7 @@ describe("what `pelne` promises a player", () => {
            `COMPOSING_OPS`. `isSettled` calls a `gdy` unsettled while either
            branch holds a question, which is true of the branch and not of the
            `gdy`. */
-        if ((COMPOSING_OPS as readonly string[]).includes(node.op)) continue;
+        if (wordOf(node).sklada) continue;
         if (isSettled(node)) continue;
         if (asked(node)?.kind === "nieobslugiwane") stalls.push(`${cardId}: ${node.op}`);
       }

@@ -1,6 +1,6 @@
 # Where does it go
 
-Twelve recipes: to add — or remove — one of the things this app is made of,
+Thirteen recipes: to add — or remove — one of the things this app is made of,
 which files to touch, in which order, and what fails if a step is skipped.
 
 This page exists because every brief written for this repo opened by listing
@@ -354,6 +354,45 @@ columns). The order matters:
    `db/migrations/`, `db/schema.sql` updated to match, applied only by the main
    session on Michał's explicit word, then read back from the catalog and
    confirmed with `npm run schema:check`.
+
+## 13. A word in the card vocabulary
+
+An op in `Effect` — a thing a card can say. Five places, four of them held by
+the compiler:
+
+1. `src/lib/engine/cardScript.ts` — the variant in the `Effect` union, with a
+   doc comment saying which printed card needs it and why no existing word
+   would do. If the walk *descends* through it rather than running it, add it
+   to `COMPOSING_OPS` too.
+2. `src/lib/engine/words.ts` — its entry in `WORDS`: every field in `pola`,
+   `sklada`, its children with the index a cursor uses to reach them, whether
+   it is settled, what it asks, its valence, the Obszary it names. A missing
+   entry, a missing field, or a `sklada` that disagrees with `COMPOSING_OPS`
+   is a compile error at the table.
+3. `src/lib/game/commands/ops.ts` — for a leaf, its entry in `OPS` (compile
+   error if missing). For a composing word, a branch in `walk` in
+   `effects.ts`, and **nothing catches a missing one** — the gate under the
+   walk will owe the node back as a question for ever. Write the test.
+4. `src/lib/engine/effectText.ts` — a `case` in both `describeEffect` and
+   `summariseEffect` (compile error if missing).
+5. A card that speaks it, in `scripts/*.ts`, `spells.ts` or `fieldScript.ts`.
+   `words.test.ts` fails on a word no card uses.
+
+**What catches a missed step.** 1, 2, 3 (leaf) and 4 are compile errors.
+`wordsRead.test.ts` fails on a field in `pola` the executor never mentions —
+the PÓŁBÓG's `zeStosu` shape, a word rendered under the card and ignored by
+the walk. `coverage.test.ts` fails on a node of a `pelne` card that is
+unsettled and no surface can ask. `ask slowo <op>` prints the entry back:
+fields, where it runs, where it is said, who speaks it.
+
+Do not add a reader of the vocabulary that switches on `op` by hand. Six of
+them existed before the table — `isSettled`, `nodeAt`, `valenceOf`,
+`fieldsNamedBy`, a `JSON.stringify` search and two test walkers — and the
+newest did not know `jak-pole` had a child. Ask `WORDS`; walk with
+`childrenOf`/`everyNode` in `resolve.ts` (borrowed tables entered) or
+`nodesOf` in `words.ts` (the card as written).
+
+Ground truth: the commit that made the table, 2026-09-13.
 
 ## Before you commit
 

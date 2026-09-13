@@ -119,11 +119,13 @@ gap stops looking like one.
 [KARTA.md](KARTA.md) answers the five questions SYSTEM-KART.md left open and
 sets six steps: close the vocabulary with a test, make it one table (`WORDS`),
 examples on the Karta with one runner, one `Karta` shape in one file per card,
-close the escapes, then a builder if wanted. **Step 0 is done**:
+close the escapes, then a builder if wanted. **Steps 0 and 1 are done**:
 `namedCards.test.ts` freezes every place the engine still knows a Karta by
-name (a list that may shrink and not grow), and `wordsRead.test.ts` holds that
-every parameter a card gives an op is read by the code that runs it. Steps 1–6
-wait on Michał reading the document; none of them is started.
+name (a list that may shrink and not grow), `wordsRead.test.ts` holds that
+every field a word declares is read by the code that runs it, and `words.ts`
+is the one table over `Effect["op"]` that `isSettled`, `nodeAt`, `questionOn`,
+`valenceOf` and the tree walkers now read (WHERE.md recipe 13, `ask slowo`).
+Next is step 2: examples on the Karta, one runner, `karta try` in the console.
 
 Two cards the second test found saying one thing and doing another, kept in
 its `UNREAD` list until fixed:

@@ -288,6 +288,33 @@ wybierz efekt" to *przejście po `WORDS.params`*. Nie trzeba go projektować —
 trzeba mieć tabelę. I `ask slowo punkty` w `npm run ask` staje się jedną
 linijką.
 
+**Stan po kroku 1 (2026-09-13).** `src/lib/engine/words.ts` istnieje: `WORDS`
+nad `Effect["op"]`, z `pola` (mapa, więc kompilator wymaga każdego pola i
+odrzuca obce), `sklada` (typowane z `COMPOSING_OPS`, więc lista i tabela nie
+mogą się rozjechać), `dzieci` z indeksem kursora, `rozstrzygniete`, `pyta`,
+`walencja`, `obszary`. `isSettled`, `nodeAt`, `valenceOf`, `fieldsNamedBy`,
+`reopensTheDrawing`, `questionOn`, `coverage.test.ts` i `wordsRead.test.ts`
+czytają tabelę zamiast znać kształty na pamięć. Dwa odstępstwa od szkicu
+wyżej, oba celowe:
+
+- **Tekst został w `effectText.ts`.** Dwa głosy były już wyczerpujące, a
+  reguła stylu Michała mówi „jeden `Record` na zachowanie, przy definicji
+  typu", nie „jeden `Record` na wszystko". Nad jedną unią stoją więc trzy
+  tabele: `WORDS` (struktura), dwa `switch`e tekstu, `OPS` (wykonanie).
+  Składanie tekstu do `WORDS` jest możliwe i nic nie daje, dopóki nie pojawi
+  się czytelnik, który potrzebuje obu naraz.
+- **Chodzenie po drzewie z pożyczonymi tabelami mieszka w `resolve.ts`.**
+  `jak-pole` pożycza tabelę Obszaru z `FIELD_SCRIPTS`, a ten rejestr importuje
+  `state.ts`, które importuje słownik; `words.ts` nie może więc sięgnąć po
+  tabelę bez cyklu. Słowo mówi *którą* pożycza (`pozycza`), a `childrenOf` w
+  `resolve.ts` ją dokłada. `nodesOf` w `words.ts` chodzi po karcie „jak
+  napisana", `everyNode` w `resolve.ts` wchodzi do pożyczonych tabel.
+
+Tabela naprawiła po drodze dwie ciche luki: `nodeAt` znał cztery kształty i
+odpowiadał `null` dla dwóch pozostałych, więc ramka zawieszona w pożyczonej
+modlitwie Kapliczki albo w nagrodzie Mędrca nie miała pytania na ekranie;
+teraz ma (`words.test.ts`).
+
 Strażnik z kroku 0, `wordsRead.test.ts`, zostaje: sprawdza, że każdy parametr,
 jaki treść daje słowu, jest czytany przez jego wpis w `OPS`. Dziś wie o trzech,
 których nikt nie czyta — `zaklecie.zeStosu` (PÓŁBÓG rozdaje z wierzchu zamiast
@@ -332,7 +359,7 @@ zgody na następny.
 | # | krok | co dowodzi, że zrobiony |
 |---|---|---|
 | 0 | **Strażnicy** — `namedCards.test.ts`, `wordsRead.test.ts` | **zrobione 2026-09-13**; liczby wyżej |
-| 1 | **`WORDS`** — jedna tabela w silniku, jedenaście przełączników staje się lookupem; `OPS` bez zmian | dodanie słowa dotyka unii, `WORDS` i `OPS` i niczego więcej; WHERE.md dostaje przepis 13 „A word"; `ask slowo` |
+| 1 | **`WORDS`** — jedna tabela w silniku, jedenaście przełączników staje się lookupem; `OPS` bez zmian | **zrobione 2026-09-13**: `words.ts`; słowo dotyka unii, `WORDS`, `OPS` i dwóch głosów w `effectText.ts`, wszystkie cztery pilnowane przez kompilator; WHERE.md przepis 13; `ask slowo` |
 | 2 | **`przyklady` + runner + `karta try`** | siedemnastu Nieznajomych niesie przykłady; `strangers.test.ts` chudnie |
 | 3 | **`Karta` + pliki + generowany indeks**; pięć rejestrów jako widoki | `karty/` istnieje, rejestry są jednolinijkowe, żaden czytelnik się nie ruszył; round-trip przez JSON |
 | 4 | **Zamknięcie ucieczek**, jedna cecha na commit | `FROZEN` w `namedCards.test.ts` pusty; `CARRIED_ELSEWHERE` skasowane; `pelne` wyprowadzone z `Karta` |

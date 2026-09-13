@@ -9,6 +9,7 @@ import { SPOTKANIA } from "./scripts/spotkania";
 import { WROGOWIE } from "./scripts/wrogowie";
 import type { FieldId } from "./board";
 import type { CardId } from "@/data/ids";
+import { nodesOf, wordOf } from "./words";
 
 /**
  * The second of the three card shapes.
@@ -175,6 +176,10 @@ export type Target =
  * `coverage.test.ts` asks it which nodes could ever stall. It was declared in
  * the command, which made it a fact about one dispatcher instead of a fact
  * about the language, and left a reader in the engine with nothing to ask.
+ *
+ * `words.ts` carries the same fact per word as `sklada`, typed off this list,
+ * so the two cannot disagree: a word listed here must say `sklada: true` in
+ * its entry, and one not listed must say `false`.
  */
 export const COMPOSING_OPS = [
   "wybor",
@@ -675,12 +680,15 @@ export function instructionIn(script: CardScript, lying: boolean | undefined): E
 export function reopensTheDrawing(cardId: CardId): boolean {
   const script = scriptFor(cardId);
   if (!script) return false;
-  return JSON.stringify(script.effect).includes('"wyciagnij"');
+  // Walked, not searched as text: it was `JSON.stringify(effect).includes(
+  // '"wyciagnij"')` for a while, which is a reader of the vocabulary that the
+  // vocabulary cannot see.
+  return nodesOf(script.effect).some((node) => node.op === "wyciagnij");
 }
 
 /**
  * Whether what an effect does is in the reader's favour, or null where the card
- * does not settle it.
+ * does not settle it — `valenceOf` in `words.ts` reads it off each word.
  *
  * For the one line that needs it: a Karta whose whole content sits behind a
  * condition, and a panel that colours that condition green where the reader
@@ -688,74 +696,8 @@ export function reopensTheDrawing(cardId: CardId): boolean {
  * because a condition on those gates a gift — and it is exactly backwards on a
  * Spotkanie, where a Natura usually names who *suffers*. ZAĆMIENIE SŁOŃC told a
  * Dobra Postać in green that she qualified, for a turn taken off her.
- *
- * # Why it may answer null
- *
- * Most of the box is neither: a `walka` is a fight you may win, a `przenies` is
- * a move that is good or bad depending on where you were going, an `efekt`
- * hangs a `Modifier` that may be the Mgła's cap or the Konik Polny's second
- * throw. Guessing at those would put a colour on a line that has no business
- * claiming one, so they say nothing and the panel draws them muted. This is
- * deliberately the small half of the union: the ops a card uses to give
- * something and the ops it uses to take something, and nothing else.
  */
 export type Valence = "korzysc" | "strata";
-
-export function valenceOf(effect: Effect): Valence | null {
-  switch (effect.op) {
-    case "punkty":
-      // Gold included: a Sztuka Złota is a point like the others here, and the
-      // Złodziej Dobroczyńca gives one with the same op he takes one with.
-      return effect.delta === 0 ? null : effect.delta > 0 ? "korzysc" : "strata";
-    case "zaklecie":
-      // A Zaklęcie with a price is the Sztukmistrz's shop, which is a trade
-      // rather than a gift — and a trade is the reader's to judge.
-      return effect.cena === undefined ? "korzysc" : null;
-    case "uzdrow":
-      return effect.cena === undefined ? "korzysc" : null;
-    case "otrzymaj":
-    case "ruch-dodatkowy":
-    case "zaklecia-do-limitu":
-      return "korzysc";
-    case "tura-stracona":
-    case "strata":
-    case "kamien":
-    case "rzut-za-kazdego":
-      return "strata";
-    /** A condition inside a condition is still one card, and its arm decides. */
-    case "gdy":
-      return valenceOf(effect.to);
-    /**
-     * A choice you may decline is not a loss, whatever else is on offer.
-     *
-     * The GODZINA DUCHÓW puts „Nie wzywaj" beside the summoning, so an Evil
-     * Postać is being offered something; the DOBRE BÓSTWO offers a coin or a
-     * turn pinned to the Obszar and no way past, so being the one it asks about
-     * costs you either way. The test is whether any arm is something other than
-     * a loss — which „nic" is.
-     */
-    case "wybor": {
-      const arms = effect.options.map((option) => valenceOf(option.effect));
-      // „Pomiń", „Nie wzywaj" — an arm on which nothing happens is a way past
-      // the whole Karta, and a card you may walk away from has cost you
-      // nothing whatever else is on it.
-      const declinable = effect.options.some((option) => option.effect.op === "nic");
-      if (arms.includes("korzysc") || declinable) return "korzysc";
-      // Nothing to gain and no way out: the DOBRE BÓSTWO asks a guilty Postać
-      // for a Sztuka Złota or a turn spent standing where it found them. One
-      // readable arm is enough — an unreadable one is not a way past.
-      return arms.includes("strata") ? "strata" : null;
-    }
-    /** A sequence costs you if any step does; the gift does not offset it. */
-    case "po-kolei": {
-      const steps = effect.steps.map(valenceOf);
-      if (steps.includes("strata")) return "strata";
-      return steps.includes("korzysc") ? "korzysc" : null;
-    }
-    default:
-      return null;
-  }
-}
 
 export function scriptFor(cardId: CardId): CardScript | null {
   // Both ends are checked. The registry's *keys* are `CardId`, so a typo in one
@@ -771,28 +713,7 @@ export function scriptFor(cardId: CardId): CardScript | null {
 
 /** Every field id a script names, for checking against the board. */
 export function fieldsNamedBy(effect: Effect): FieldId[] {
-  switch (effect.op) {
-    case "przenies":
-      return effect.to.kind === "pole" ? [effect.to.fieldId] : [];
-    case "jak-pole":
-      return [effect.fieldId];
-    case "poloz-karte":
-      return effect.gdzie.kind === "pole"
-        ? [effect.gdzie.fieldId]
-        : effect.gdzie.kind === "jedno-z"
-          ? [...effect.gdzie.fieldIds]
-          : [];
-    case "po-kolei":
-      return effect.steps.flatMap(fieldsNamedBy);
-    case "wybor":
-      return effect.options.flatMap((option) => fieldsNamedBy(option.effect));
-    case "rzut":
-      return Object.values(effect.faces).flatMap(fieldsNamedBy);
-    case "gdy":
-      return [...fieldsNamedBy(effect.to), ...(effect.inaczej ? fieldsNamedBy(effect.inaczej) : [])];
-    default:
-      return [];
-  }
+  return nodesOf(effect).flatMap((node) => wordOf(node).obszary(node));
 }
 
 /**
