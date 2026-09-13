@@ -1002,10 +1002,22 @@ const OPS: { [K in LeafOp]: OpRun<K> } = {
     // 4.7 refuses when there is nothing to restore, and a card offering a
     // heal to somebody already whole is not an error — it simply does nothing.
     try {
+      const before = snapshot.seats.find((one) => one.id === seatId)?.life ?? 0;
       const done = healSeat(snapshot, { seatId, amount: effect.upTo });
+      /**
+       * The points gained, not the points held.
+       *
+       * `healSeat` answers with the new total — which is what the Znachor's
+       * button and the console's `heal` both want, and both say so ("— 4
+       * Życia"). This line wears a plus sign, so the same number read as a
+       * gain: the CUDOTWÓRCA's „odzyskujesz 2 punkty Życia (najwyżej do 4)"
+       * took a character from 2 to 4 and reported „+4 Życia", which is the
+       * ceiling 4.7 had just applied, printed as if the card had paid it out.
+       */
+      const gained = done.result - before;
       return {
         writes: done.writes,
-        result: { did: [`+${done.result} Życia (4.7)`], pending: null },
+        result: { did: [`+${gained} Życia (4.7)`], pending: null },
       };
     } catch {
       return cameToNothing(ctx, "Życie już na poziomie początkowym");

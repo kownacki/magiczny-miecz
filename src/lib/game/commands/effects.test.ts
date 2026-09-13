@@ -900,9 +900,22 @@ describe("a Karta whose instruction comes to nothing", () => {
 });
 
 describe("the rest of the vocabulary", () => {
+  /**
+   * The number after the plus is what was gained, and this test used to pin the
+   * opposite: a seat on 2 healed by 1 reported „+3 Życia", which is the total
+   * `healSeat` answers with. The Znachor's button and the console's `heal` both
+   * want that total and both print it as one („— 4 Życia"); only this line wears
+   * a plus, and a total behind a plus is a different claim. The CUDOTWÓRCA is
+   * where it showed: „odzyskujesz 2 punkty Życia (najwyżej do 4)" took a
+   * character from 2 to 4 and announced „+4 Życia".
+   */
   it("heals up to the starting level, and says so when there is nothing to heal", async () => {
     const hurt = aTable({ seats: [aSeat({ id: "seat-a", life: 2 })] });
-    expect((await run({ op: "uzdrow", upTo: 1 }, hurt)).result.did).toEqual(["+3 Życia (4.7)"]);
+    expect((await run({ op: "uzdrow", upTo: 1 }, hurt)).result.did).toEqual(["+1 Życia (4.7)"]);
+
+    // And the ceiling is not a payout: two offered to a seat on 3 is one given.
+    const nearly = aTable({ seats: [aSeat({ id: "seat-a", life: 3 })] });
+    expect((await run({ op: "uzdrow", upTo: 2 }, nearly)).result.did).toEqual(["+1 Życia (4.7)"]);
 
     const whole = aTable({ seats: [aSeat({ id: "seat-a", life: 4 })] });
     const { writes, result } = await run({ op: "uzdrow", upTo: 1 }, whole);
@@ -1324,3 +1337,4 @@ describe("a shop on a Karta (16.7, 21.1)", () => {
     expect(SCRIPTS["targowisko"]?.disposition).toEqual({ kind: "zostaje" });
   });
 });
+
