@@ -114,6 +114,39 @@ write a transcript for it. The rule is carried; the surface is not.
 writing down what would close it — a note that explains a gap forever is how a
 gap stops looking like one.
 
+### What the Nieznajomi review left open (2026-09-13)
+
+All seventeen read against their printed text and played through `mm`. What was
+wrong is fixed and in LANDED.md; these are the three that need a decision rather
+than a fix.
+
+**A Karta that stays, and how often you may use it.** Michał's reading: a
+one-shot Karta keeps „skorzystaj albo pomiń" as a choice, because there and then
+is the whole of it — the JEDNOROŻEC and the KUGLARZ leave either way. A Karta
+that *stays* is different: the CUDOTWÓRCA should not offer a choice at all but
+something like **„raz na turę"**, since 12.1 lets you come back to him „w każdej
+chwili" and nothing stops you healing four times in one visit. The corner cases
+to think about before building it: a turn skipped, a Postać turned to stone, a
+Postać imprisoned on the Obszar — in each the question is whether the turn that
+never happened still spends the visit. Nothing is built; the door is `skipCard`
+and `declined`, which already keep the Karta reachable.
+
+**Seven Przedmioty still say „Skutek rozpatrzcie sami"** — `rozpatruje: "stol"`
+in `uses.ts`: JABŁKO NATCHNIENIA, OWOC JARZĘBINY WIEDZY, RÓŻDŻKA PRZEZNACZENIA,
+ZWIERCIADŁO ZNISZCZENIA, KRYSZTAŁ LOSU, ŁÓDŹ, LATARNIA. The first five are
+modifiers to a roll or a fight and are each their own piece of work; the last two
+are the board-adjacency blocker above. Deliberately left for after the Nieznajomi.
+
+**A full hand meeting a Zaklęcie-giver — settled by 9.4, worth writing down.**
+„Postać **nie może odrzucać Zaklęć**, chyba, że posiada ich więcej, niż wynika to
+z jej parametru Magii (2.6.)" — so there must be **no** discard-to-make-room
+mechanism; the rules forbid it outright. The app already says why nothing
+happened („Ta Postać może mieć najwyżej 2 Zaklęcia (2.6)"). What a player *may*
+do is cast one first: 9.6 allows it whenever the Karta's own text does, and
+thirteen of the twenty-seven say „w dowolnej chwili". So the escape hatch exists
+and is legal; whether the interface should offer it at that moment — „rzuć
+jakieś, zanim weźmiesz" — is a question about the screen, not about the rules.
+
 ### One house rule journals itself, the other does not
 
 `setEndlessStock` writes a line — "Zwykłego Wyposażenia nie będzie już
