@@ -80,7 +80,10 @@ reaches for is worse than no tool, because it looks like coverage.
   data. *Is `rusalka` a card or a character? Which ids does `czarodziej` claim?
   What does the Pustelnik print, and which of his clauses are live?* Grepping
   `abilities.ts` for a name once produced the answer "Rusałka is a Postać",
-  which is false and cost a whole design decision.
+  which is false and cost a whole design decision. For the code rather than the
+  box: `ask where <name>` is where a thing is declared, `ask readers <name>` is
+  everywhere it is used, and before you change what something shared *means* it
+  is the second one you want.
 
 ## House style, briefly
 

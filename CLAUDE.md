@@ -18,7 +18,7 @@ companion mode", the answer is that there is no such thing.
 **Temporary, added 2026-09-06.** Most of what this file points at for *working*
 rather than for *rules* was built in a single session, on one session's
 friction, and no fresh session has used any of it yet: `docs/WHERE.md`,
-`docs/BRIEFING.md`, `npm run ask` (including `ask where`), the `mm` transcripts,
+`docs/BRIEFING.md`, `npm run ask` (including `ask where` and `ask readers`), the `mm` transcripts,
 and the instruction to check mechanics by playing rather than in a browser.
 
 Some of it will be exactly right and some will be noise nobody reads. There is

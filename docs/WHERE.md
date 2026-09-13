@@ -20,6 +20,13 @@ session's head. For a task of any size:
    questions about the box — `ask id rusalka` (is that a card or a Postać?),
    `ask card`, `ask character`, `ask ability`. Grepping the data instead is
    how „Rusałka is a Postać" got said out loud; she is a Przyjaciel.
+
+   About the *code*, two verbs and they are not the same question. `ask where
+   <name>` finds where a thing is **declared**; `ask readers <name>` finds every
+   line that **uses** it. Reach for the second one before you change the meaning
+   of anything shared — that is the question „who else reads `resolved`?", and
+   asking the first one instead is how five readers of it were left wrong for
+   nine days.
 2. **Find out where it goes** — a recipe below, if the task is adding or
    removing one of the twelve things this app is made of.
 3. **Make the change**, following `tsc`. Every recipe says which of its steps

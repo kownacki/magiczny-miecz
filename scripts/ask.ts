@@ -632,10 +632,83 @@ function askWhere(query: string): void {
   }
 
   say(`${query} — where it lives${alsoBy.length > 0 ? `  (and \`${alsoBy.join("`, `")}\`, off the console verb)` : ""}`);
+  // Said out loud, because the difference is invisible from the answer and a
+  // reader who does not know it will take a partial answer for a whole one.
+  say(`(declarations and files that say the word — for every *use*, \`ask readers ${query}\`)`);
   for (const one of sections) {
     say("");
     say(one.title);
     say(...one.lines);
+  }
+}
+
+// ── ask readers ──────────────────────────────────────────────────────────────
+
+/**
+ * "I have a name — who touches it?"
+ *
+ * The other half of `ask where`, and the half that was missing when it mattered.
+ * `where` indexes **declarations** (see `EXPORTED`), so it answers "where does
+ * this live" and cannot answer "who reads this" — and the difference is not
+ * academic. A session hunting the readers of `resolved` asked `ask where
+ * resolved`, was handed `leavesWhenResolved`, `resolveDrawnCard` and
+ * `markResolved`, and moved on satisfied. The five readers that were actually
+ * wrong are called none of those things: they say `resolved.includes(...)` in
+ * files whose exports mention nothing of the sort.
+ *
+ * The tool did not fail to find them, which would have been loud. It found
+ * three other things, which was quiet — and a tool that quietly under-answers
+ * is worse than one that is not there, because the answer gets believed.
+ *
+ * So this greps the identifier as a whole word, drops imports and comments —
+ * neither is a reader — and marks the lines that *declare* it, so the answer
+ * reads as "here is where it is made, and here is everywhere it is used".
+ * Same grouping as `where`, tests kept and last: "which test would break" is a
+ * real question, just never the first one.
+ */
+function askReaders(query: string): void {
+  const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const word = new RegExp(`\\b${escaped}\\b`);
+  const declares = new RegExp(
+    `^\\s*(?:export\\s+)?(?:async\\s+)?(?:function|const|let|var|class|interface|type|enum)\\s+${escaped}\\b`,
+  );
+  const isComment = (line: string) => /^\s*(\/\/|\*|\/\*)/.test(line);
+  const isImport = (line: string) => /^\s*(import|export)\s/.test(line);
+
+  const hits = new Map<Area, string[]>();
+  let made = 0;
+  for (const path of sources("src", true)) {
+    const here: string[] = [];
+    readFileSync(path, "utf8")
+      .split("\n")
+      .forEach((line, at) => {
+        if (!word.test(line) || isComment(line) || isImport(line)) return;
+        const mint = declares.test(line);
+        if (mint) made += 1;
+        here.push(`  ${path}:${at + 1}${mint ? "  ·declares" : ""}`);
+        here.push(`      ${line.trim().slice(0, 96)}`);
+      });
+    if (here.length === 0) continue;
+    const { area } = areaOf(path);
+    hits.set(area, [...(hits.get(area) ?? []), ...here]);
+  }
+
+  if (hits.size === 0) {
+    say(`${query} — nothing under src/ uses that word.`, "", `next: ask where ${query}`);
+    return;
+  }
+
+  const total = [...hits.values()].reduce((sum, lines) => sum + lines.length, 0) / 2;
+  say(`${query} — who touches it  (${total} lines, ${made} of them a declaration)`);
+  for (const area of ["engine", "commands", "elsewhere", "tests"] as Area[]) {
+    const lines = hits.get(area);
+    if (!lines) continue;
+    say("");
+    say(area);
+    // Capped per area rather than overall, so a word with two hundred test
+    // mentions cannot push the engine's four off the bottom of the answer.
+    say(...lines.slice(0, 40));
+    if (lines.length > 40) say(`  … and ${(lines.length - 40) / 2} more in ${area}`);
   }
 }
 
@@ -664,6 +737,7 @@ const USAGE = [
   "  ask character <id|name>  parameters, MGR, kit, printed clauses numbered, CHARACTER_ABILITIES",
   "  ask ability <kind>       every card and Postać that prints it, and what reads it",
   "  ask where <thing>        which files own a concept: console verb, engine, commands, tests, recipe",
+  "  ask readers <name>       every line that uses an identifier — the question `where` cannot answer",
   "  ask <string>             id, plus which of the above would answer",
   "",
   "Names are matched the way the console matches them: case- and diacritic-insensitive",
@@ -681,7 +755,8 @@ function main(): void {
   else if (verb === "character" && query) askCharacter(query);
   else if (verb === "ability" && query) askAbility(query);
   else if (verb === "where" && query) askWhere(query);
-  else if (["id", "card", "character", "ability", "where"].includes(verb)) {
+  else if (verb === "readers" && query) askReaders(query);
+  else if (["id", "card", "character", "ability", "where", "readers"].includes(verb)) {
     say(`\`ask ${verb}\` needs something to look up.`, "", ...USAGE);
   } else askAnything([verb, query].filter(Boolean).join(" "));
 
