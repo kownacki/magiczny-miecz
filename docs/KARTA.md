@@ -1,0 +1,370 @@
+# Jedna Karta — kierunek dla systemu kart
+
+**Napisane 2026-09-13 przez sesję Fable, w odpowiedzi na
+[SYSTEM-KART.md](SYSTEM-KART.md).** Tamten brief celowo nie wytycza kierunku;
+ten go wytycza. Wszystko poniżej jest propozycją do decyzji Michała — poza
+krokiem 0, który jest zrobiony, bo mierzy, a nie zmienia.
+
+## W jednym akapicie
+
+System kart nie wymaga budowy od nowa. Jego środek — drzewo `Effect`, `walk` z
+kursorem i zawieszeniem, trzy głosy tekstu, `questionOn` — jest dokładnie tym,
+o co Michał pyta („kod karty osobny od silnika interpretującego"), i jest
+najlepszą częścią repo. Boli w trzech miejscach i to one dają całą listę
+objawów z SYSTEM-KART §3:
+
+1. **Słownik nie jest domknięty.** Dwadzieścia trzy Karty mają regułę wpisaną
+   w silnik po *nazwie* (`includes("wampir")`, `"tajemna-sakwa"`), więc nic
+   pochodnego — pokrycie, Księga, kreator — nie może być prawdziwe.
+2. **Słownik nie jest jedną rzeczą.** Co słowo znaczy, jest rozpisane w siedmiu
+   przełącznikach w pięciu plikach; dodanie słowa to siedem miejsc i nic nie
+   pilnuje, że wszystkie. Stąd `zeStosu` bez czytelnika.
+3. **Karta nie jest jednym kształtem.** Pięć rejestrów o czterech kształtach,
+   i „co robi ta Karta" trzeba składać z kilku plików.
+
+Kierunek: **domknąć słownik testem, uczynić słownik tabelą, dać Karcie jeden
+kształt i jeden plik** — w tej kolejności, każdy krok osobno wysyłalny, żaden
+nie przepisuje `walk`.
+
+---
+
+## Odpowiedzi na pięć pytań z briefu
+
+### 1. Czy słownik ma być zamknięty? — Tak. I oto co to znaczy
+
+Definicja, jedno zdanie: **kod reguł nigdy nie zna Karty po nazwie. Karta
+mówi, co robi, słowami ze słownika; silnik czyta słowa.**
+
+To nie znaczy, że reguła WAMPIRA wyprowadza się ze `spoils.ts` — tam jest jej
+miejsce, bo to jest reguła o łupach. Znaczy, że klucz do niej jest słowem na
+Karcie (`{ kind: "wysysa-zycie" }` wśród jej cech), a nie `includes("wampir")`.
+Wtedy pokrycie jest pochodną Karty, Księga mówi prawdę bez `CARRIED_ELSEWHERE`,
+a druga karta o tej samej właściwości (w dodatkach będą) dostaje ją jednym
+słowem.
+
+**Miara i strażnik: `src/lib/engine/namedCards.test.ts`** (krok 0). Skanuje
+`src/lib/engine` i `src/lib/game` poza rejestrami treści i zamraża każde miejsce,
+gdzie kod cytuje `CardId` albo `SpellId`. Lista może maleć i nie może rosnąć.
+Stan na 2026-09-13, pogrupowany według tego, *co* to jest:
+
+| co | gdzie | karty | jak zamknąć |
+|---|---|---|---|
+| **transkrypcja w kodzie** — gdzie Przedmiot się nosi | `slots.ts` `SLOT_OF` | 14 | cecha na Karcie: `nosi-sie: "amulet"`; `SLOT_OF` staje się widokiem |
+| **transkrypcja w kodzie** — skończony zapas | `stock.ts`, `slots.ts` `RELICS` | Magiczny Miecz, Tarcza Tolimana | cecha `zapas: 1` |
+| **reguła na nazwie** — kieszeń, z której nikt nie sięga | `slots.ts` | Tajemna Sakwa | cecha `schowek: 1`, czytana tam, gdzie dziś czytane jest `"tajemna-sakwa"` |
+| reguła na nazwie — łupy | `spoils.ts` | Wampir | cecha `wysysa-zycie` |
+| reguła na nazwie — kształt walki | `cards.ts` | Sobowtór, Trójgłowy Smok, Przybysz z Krainy Cieni | cechy `odbija-miecz`, `glowy: 3`, `bez-broni` |
+| reguła na nazwie — po rozpatrzeniu | `resolving.ts` | Układ Planet | Efekt na Karcie kładzie status na Demony; op już istnieje (`efekt` z `target`) |
+| reguła na nazwie — dobieranie | `draw.ts` | Różdżka Zaklęć | klauzula do `Ability` `zaklecia-ponad-limit` (`natychmiast: true`) |
+| reguła na nazwie — rzucanie | `commands/spells.ts` | Władca Gromu, Władca Zaklęć, Zwierciadło | cechy `paralizuje-istoty`, `rozprasza`, `odbija-zaklecie` — trzy słowa, które model odpowiedzi i tak będzie potrzebował |
+| reguła na nazwie — ucieczka przed Postacią | `fight.ts` | Krąg Płomieni | `Ability` `ucieczka` z `przed: ["postac"]` **już istnieje** — tylko nikt go nie nadał Zaklęciu |
+| czytelnik po nazwie zamiast po słowie | `turnStore.ts` `bridgeRequirements` | Magiczny Miecz, Tarcza | `Ability` `wymagany` **już istnieje** — czytelnik ma pytać o nie |
+| nagroda misji | `friends.ts` | Tarcza Tolimana (Władca) | to jest `otrzymaj` — treść Karty Przyjaciela, nie kod |
+
+Cztery z jedenastu wierszy zamykają się słowem, które słownik już ma. To jest
+ważna wiadomość: **słownik prawie wystarcza; nieszczelny jest nie on, tylko
+nawyk.** Dlatego test przed przebudową — nawyk zmienia się od dnia, w którym
+nowa nazwa w kodzie wywala build.
+
+Koszt zamknięcia jest ten, który brief nazywa: każda nowa mechanika najpierw
+wchodzi do słownika. To jest koszt *jednego dnia* na mechanikę i zysk na każdej
+karcie, która ją potem dostanie. Otwarcie było tańsze cztery razy i cztery razy
+skłamało.
+
+### 2. Embedded czy external DSL? — Embedded, ale jeden plik na Kartę
+
+Zostaje TypeScript i `satisfies Karta`: kompilator jest walidatorem schematu,
+wyczerpujące `Record`y są tym, co brief nazywa „strażnikiem", a repo umie to
+lepiej niż cokolwiek innego (docs/WHERE.md, „The trick the whole repo plays").
+Osobny parser i osobny plik-schemat dałyby dokładnie to, co `tsc` daje za darmo,
+i odebrały komentarze — a komentarze przy kartach są najlepszą dokumentacją
+reguł, jaką to repo ma.
+
+To, o co Michał naprawdę prosi — „oglądać sobie kod w plikach każdej karty" —
+nie wymaga innego *formatu*, tylko innego *podziału*: **jeden plik na Kartę**,
+`src/lib/engine/karty/<klasa>/<id>.ts`, z komentarzem karty w tym samym pliku.
+Literał TS jest JSON-em z komentarzami; kreator, który „tworzy kod karty", pisze
+taki plik jednym `JSON.stringify` i nagłówkiem.
+
+Co trzyma drzwi do external otwarte za darmo: **test, że każda Karta przechodzi
+przez `JSON.parse(JSON.stringify(karta))` bez zmiany** — żadnych funkcji, klas
+ani `undefined` w treści. `WISH()` w `scripts/wish.ts` przechodzi (zwraca dane);
+to jest jedyna „funkcja" w dzisiejszej treści i taką ma zostać: pomocnik, który
+*produkuje* dane, nie dane, które *są* kodem.
+
+Identyfikatory: z nazw plików, przez `generate-ids.mjs`, tak jak dziś. Kreator
+nie tworzy id w locie — **„an id is never a `string`"** obowiązuje kreator tak
+samo jak resztę. Zapisuje plik, uruchamia generator, i od tej chwili Karta jest
+wszędzie: w Księdze, w `deal`, w testach.
+
+### 3. Ile kart nie mieści się w słowniku? — Policzone
+
+- Trzydzieści trzy słowa w `Effect`, **wszystkie trzydzieści trzy używane**
+  w treści (79 skryptów, 23 Zaklęcia ze `stosuje`, 23 Obszary). Nie ma słowa
+  bez karty.
+- Pięć rejestrów pokrywa 225 Kart podstawki (165 Zdarzeń, 30 Wyposażenia,
+  30 Zaklęć) z trzema nakładkami (Łódź, Latarnia, Jabłko — w `USES` i
+  `ABILITIES` naraz, bo mają obie połowy).
+- Poza słownikiem: **23 Karty w 10 plikach** — tabela wyżej. Nie „nie mieszczą
+  się"; nikt ich tam nie wpisał.
+
+Dla dodatków (docs/EXPANSIONS.md): każda z wymienionych tam mechanik — dług,
+banicja, więzienie, maksimum Życia, timery wieloturowe, flagi planszy, wspólna
+pula — to **nowe słowo, nie nowy kształt**. Kształty (drzewo zdarzenia, reguła
+stała, status z zegarem, warunek, cel) trzymają. Przegląd 677 tekstów pod
+stos (docs/STACK.md) jest tego dowodem od innej strony. Dwie rzeczy dodatki
+naprawdę łamią: **`Ability` bez warunku** (Krypta nadpisuje zdolności Postaci
+„tylko w Krypcie"; dziś warunek ma tylko `bezpieczny.natura` i `tylko-natura`) —
+więc `Ability` dostaje opcjonalne `gdy: Condition`, ten sam `Condition` co
+`Effect`; i **id po nazwie** (PRZEWODNIK KRYPTY ×3 na jednym arkuszu), na co
+EXPANSIONS.md ma już odpowiedź. Obie zmiany są tanie teraz i drogie potem, i
+obie robi się dopiero, gdy pudełko się otwiera.
+
+### 4. Co ze `Status`? — Dwie gramatyki, jedna Karta, jedna tabela
+
+Nie składać. `Effect` to *zdarzenie* („dzieje się"), `Ability` to *reguła stała*
+(„póki trzymasz"), `Status` to *wiersz stanu* („jest ci teraz, do kiedy"). MTG
+ma tę samą trójkę (one-shot effect, static ability, continuous effect z
+warstwami) i nie składa jej z tego samego powodu: pytania, które im się zadaje,
+są różne. TASKS.md mówi „do not reopen" o składaniu `Ability` w `Status`, koszt
+został policzony i ten dokument go nie podważa.
+
+Co *się* składa, to nie typy, tylko **miejsce**: Karta ma jeden kształt, w
+którym każda z gramatyk jest polem (niżej), i **słownik ma jedną tabelę na
+gramatykę** — `WORDS` dla `Effect`, `ABILITY_WORDS` dla `Ability` — z których
+kreator, tekst, pytania i pokrycie czytają to samo. `HELD_TWIN` zostaje jako
+most między `Ability` a `Status`, bo jest wyczerpujący i to jest dokładnie ten
+kształt.
+
+### 5. Co znaczy „testować kartę w izolacji"? — Trzy warstwy, przykłady na Karcie
+
+Dziś test karty stawia `Snapshot`, woła `resolveDrawnCard`, `resume`, i czyta
+tabelę. To jest test *tury z tą kartą*. Granularniej, od dołu:
+
+1. **Słowo** — jeden test na wpis w `OPS`: minimalny `Snapshot`, jedno słowo,
+   `writes` i `did`. `effects.test.ts` już to robi dla części; reszta to
+   dopisanie, nie projekt.
+2. **Karta** — **przykłady na Karcie, jeden runner dla wszystkich.**
+   ```ts
+   przyklady: [
+     {
+       nazwa: "z 2 Sz. Z. płaci i bierze Zaklęcie",
+       stan: { gold: 2, magic: 4 },
+       odpowiedzi: [0],
+       oczekuj: { gold: 1, zaklecia: 1 },
+     },
+     { nazwa: "bez złota odmawia", stan: { gold: 0 }, odpowiedzi: [0], oczekuj: { gold: 0, zaklecia: 0, mowi: /Za mało złota/ } },
+   ]
+   ```
+   `karty.przyklady.test.ts` buduje stół z `aTable`, rozdaje Kartę, idzie
+   przez zawieszenia z zaskryptowanymi kostkami i odpowiedziami (`resume`, jak
+   dziś w `strangers.test.ts`), i sprawdza `oczekuj`. Ten sam runner jest
+   **walidatorem kreatora**: `karta try` w konsoli to ten sam kod bez `expect`.
+   Tak testuje się karty w Forge i w każdym silniku, który ma ich tysiąc: karta
+   niesie swoje własne dowody.
+3. **Tura** — transkrypty `.mm`. Zostają jako to, co sprawdza, że *tura* działa,
+   nie że *karta* działa.
+
+Testy per-karta w `commands/*.test.ts` nie znikają hurtem. Każdy przechodzi do
+`przyklady` wtedy, gdy przykład niesie te same asercje; te, które sprawdzają
+coś o *turze* (kolejka, ramki, znak `resolved`), zostają tam, gdzie są.
+
+---
+
+## Kształt: `Karta`
+
+Jeden interfejs. Każda klasa wypełnia pola, które ma na druku, i żadnych innych.
+
+```ts
+/** Wszystko, co mówi jedna karta z pudełka, w jednym miejscu. */
+export interface Karta {
+  id: CardId | CharacterId | FieldId;   // = nazwa pliku
+  klasa: Klasa;                          // spotkanie | wrog | demon | nieznajomy | przyjaciel
+                                         // | przedmiot | miejsce | zaklecie | postac | obszar
+  zestaw: "podstawka";                   // dodatki: "grod" | "jaskinia" | … ; "wlasne" dla kreatora
+
+  // Co robi — według chwili, w której to robi. Dzisiejsze rejestry, jako pola.
+  wyciagnieta?: Effect;      // CardScript.placed — powiedziane temu, kto ją odkrył (15.1)
+  rozpatrzona?: Effect;      // CardScript.effect — Spotkanie, Nieznajomy, Miejsce
+  oferuje?: FieldOffer[];    // FieldScript.offers — Obszar, Miejsce-sklep
+  trzymana?: Ability[];      // ABILITIES — reguły stałe; moce Postaci
+  uzyta?: Use;               // USES — wydawana jednym aktem
+  rzucona?: SpellScript;     // SPELLS — kiedy, na co, co robi
+  przegrana?: Effect;        // CardScript.przegrana — co kosztuje przegrana z nią
+  cechy?: Cecha[];           // nowe słowa dla dzisiejszych ucieczek: glowy: 3, zapas: 1,
+                             // nosi-sie: "amulet", schowek: 1, wysysa-zycie, …
+  potem: Disposition;        // gdzie ląduje
+
+  dobrowolna?: boolean;      // CardScript.optional
+  zuzywana?: boolean;        // CardScript.consumed
+
+  przyklady?: Przyklad[];    // §5
+}
+```
+
+`Cecha` to fakt o *Karcie* (ile ma głów, gdzie się ją nosi, ile jest w
+pudełku), czytany przy jednych drzwiach; `Ability` to, co Karta robi *dla
+posiadacza*. Rozróżnienie jest to samo, które `abilities.ts` już robi między
+`udzwig` a `samaSieNieLiczy`.
+
+**Kto wypełnia co:**
+
+| klasa | pola |
+|---|---|
+| Spotkanie | `rozpatrzona`, `potem` |
+| Wróg, Demon | `cechy`, `przegrana`, `wyciagnieta` (Lewiatan), `potem` |
+| Nieznajomy | `rozpatrzona`, `wyciagnieta` (Eremita), `dobrowolna`, `potem` |
+| Przyjaciel | `trzymana`, `cechy`, `potem: bierzesz` |
+| Przedmiot | `trzymana`, `uzyta`, `cechy`, `zuzywana` |
+| Miejsce | `rozpatrzona` albo `oferuje`, `potem: zostaje` |
+| Zaklęcie | `rzucona`, `cechy` |
+| Postać | `trzymana` (moce), `cechy` (wyprawka, start, Natura, Miecz, Magia) |
+| Obszar | `oferuje`; reszta (tekst, Krąg, sąsiedzi) zostaje w `ring-fields.json` |
+
+**Pliki:** `src/lib/engine/karty/<klasa>/<id>.ts`, `export default { … }
+satisfies Karta`, z komentarzem karty *w tym pliku*. Indeks
+`src/lib/engine/karty/index.ts` generowany przez `scripts/generate-karty.mjs`,
+tak jak `generate-ids.mjs` generuje id, z testem, który wywala build, gdy indeks
+jest nieświeży. **`SCRIPTS`, `ABILITIES`, `USES`, `SPELLS`, `FIELD_SCRIPTS` stają
+się widokami nad `KARTY`** pierwszego dnia — żaden z ich czytelników nie musi się
+ruszyć, żeby przeprowadzka się dokonała.
+
+Ta sama Karta renderuje się do opisu tak jak dziś (`describeEffect`), tylko z
+jednego miejsca dla wszystkich pól — Księga Tolimana czyta `Karta`, nie pięć
+rejestrów.
+
+---
+
+## Słownik jako dane: `WORDS`
+
+Sztuczka, którą repo już zna (`SPECS`/`VERBS` dla konsoli, `HELD_TWIN` dla
+statusów), zastosowana do słownika kart. Dziś, co słowo *znaczy*, mieszka w:
+
+| pytanie | gdzie | wyczerpujące? |
+|---|---|---|
+| jak je wykonać | `commands/ops.ts` `OPS` | tak, kompilator |
+| czy jest rozstrzygnięte | `resolve.ts` `isSettled` | tak |
+| co jest winne graczowi | `resolve.ts` `owedIn` | **nie** — `default` |
+| który węzeł pod kursorem | `resolve.ts` `nodeAt` | **nie** — `default` |
+| jakie pytanie zadać | `question.ts` | częściowo |
+| pełne zdanie | `effectText.ts` `describeEffect` | tak |
+| wiersz przy cyfrze | `effectText.ts` `summariseEffect` | tak (od 2026-09-13) |
+| korzyść czy strata | `cardScript.ts` `valenceOf` | **nie** — `default` |
+| które Obszary nazywa | `cardScript.ts` `fieldsNamedBy` | **nie** — `default` |
+| czy otwiera dobieranie | `cardScript.ts` `reopensTheDrawing` | **`JSON.stringify` po tekście** |
+| które składają | `cardScript.ts` `COMPOSING_OPS` | lista ręczna |
+
+Jedenaście miejsc, cztery z `default`, jedno szukające po tekście. Zamiast tego:
+
+```ts
+export const WORDS: { [K in Effect["op"]]: Word<K> } = {
+  punkty: {
+    params: ["stat", "delta", "target"],
+    dzieci: () => [],
+    rozstrzygniete: () => true,
+    pyta: () => null,
+    opisz: (e) => …, streszczenie: (e) => …,
+    walencja: (e) => (e.delta > 0 ? "korzysc" : "strata"),
+  },
+  wybor: {
+    params: ["options"],
+    dzieci: (e) => e.options.map((o) => o.effect),
+    rozstrzygniete: () => false,
+    pyta: (e) => ({ kind: "wybor", options: e.options.map((o) => o.label) }),
+    …
+  },
+  …
+};
+```
+
+`dzieci` zastępuje `COMPOSING_OPS`, `nodeAt`, `fieldsNamedBy` i
+`reopensTheDrawing` naraz — każde z nich jest przejściem po drzewie, które dziś
+zna kształty na pamięć. `OPS` w `commands/` zostaje jako druga tabela nad tą samą
+unią (wykonanie potrzebuje `Changeset` i innych komend, a silnik ma być czysty):
+**dwa `Record`y, jedna unia, oba wyczerpujące** — jak `SPECS` i `VERBS`.
+
+Co z tego wynika dla kreatora: menu „wybierz funkcję, potem dla każdego efektu
+wybierz efekt" to *przejście po `WORDS.params`*. Nie trzeba go projektować —
+trzeba mieć tabelę. I `ask slowo punkty` w `npm run ask` staje się jedną
+linijką.
+
+Strażnik z kroku 0, `wordsRead.test.ts`, zostaje: sprawdza, że każdy parametr,
+jaki treść daje słowu, jest czytany przez jego wpis w `OPS`. Dziś wie o trzech,
+których nikt nie czyta — `zaklecie.zeStosu` (PÓŁBÓG rozdaje z wierzchu zamiast
+dać wybrać), `zabierz.wybiera` (SZALEŃSTWO: kto wybiera, mówi Karta, walk nie
+pyta), `katastrofa.zasieg` (jedna wartość, nikt nie czyta). Dwa pierwsze to
+karty, które mówią jedno, a robią drugie. **Brief SYSTEM-KART mówi, że błędy z
+przeglądu są naprawione; (b) nie jest.**
+
+---
+
+## Kreator
+
+Trzy postacie, w kolejności wartości, i szczerze o trzeciej:
+
+1. **`karta try <id> [kostki 3 5] [odpowiedzi 0 1]`** w `mm` — rozdaje Kartę
+   (dziś: `deal` w `testmode`), idzie przez zawieszenia zaskryptowanymi
+   kostkami i odpowiedziami, drukuje `did`, pytania i różnicę w stanie. To jest
+   runner z §5 bez `expect`. Dla karty z pliku spoza indeksu: `karta try
+   ./moja.ts`. Wartość: natychmiastowa, dla każdej istniejącej karty.
+2. **`ask slowo <op>`** — parametry, typy, przykład z treści, gdzie wykonywane,
+   gdzie opisywane. Czyta `WORDS`. Wartość: to jest „sklasyfikowane
+   właściwości", o które Michał pyta, jako polecenie zamiast jako dokument.
+3. **Budowniczy w konsoli** — `karta new MOJA klasa=spotkanie`, `karta op rzut`,
+   `karta 1 punkty life -1`, …, `karta zapisz` → plik z §Kształt. Robi się go
+   *po* `WORDS`, bo wtedy jest przejściem po tabeli i kosztuje popołudnie.
+   Szczerze: dla kogoś, kto pisze TypeScript, edytor z podpowiadaniem nad
+   `satisfies Karta` daje osiemdziesiąt procent tego samego — więc budowniczy
+   jest wart zbudowania, jeśli ma go używać ktoś przy stole, nie przy
+   klawiaturze. To jest decyzja Michała, nie tego dokumentu.
+
+Karta z kreatora dostaje `zestaw: "wlasne"` i nie trafia do `freshDecks`, dopóki
+stół nie wybierze zestawu — to ten sam mechanizm, którego dodatki będą
+potrzebowały („load a set", EXPANSIONS.md), więc buduje się go raz.
+
+---
+
+## Kolejność
+
+Każdy krok jest osobnym, zielonym, wysyłalnym stanem repo. Żaden nie zależy od
+zgody na następny.
+
+| # | krok | co dowodzi, że zrobiony |
+|---|---|---|
+| 0 | **Strażnicy** — `namedCards.test.ts`, `wordsRead.test.ts` | **zrobione 2026-09-13**; liczby wyżej |
+| 1 | **`WORDS`** — jedna tabela w silniku, jedenaście przełączników staje się lookupem; `OPS` bez zmian | dodanie słowa dotyka unii, `WORDS` i `OPS` i niczego więcej; WHERE.md dostaje przepis 13 „A word"; `ask slowo` |
+| 2 | **`przyklady` + runner + `karta try`** | siedemnastu Nieznajomych niesie przykłady; `strangers.test.ts` chudnie |
+| 3 | **`Karta` + pliki + generowany indeks**; pięć rejestrów jako widoki | `karty/` istnieje, rejestry są jednolinijkowe, żaden czytelnik się nie ruszył; round-trip przez JSON |
+| 4 | **Zamknięcie ucieczek**, jedna cecha na commit | `FROZEN` w `namedCards.test.ts` pusty; `CARRIED_ELSEWHERE` skasowane; `pelne` wyprowadzone z `Karta` |
+| 5 | **Budowniczy w konsoli** — jeśli Michał go chce | `karta new … zapisz` produkuje plik, który przechodzi 3 i 2 |
+| 6 | **Gotowość na dodatki** — `gdy` na `Ability`, `zestaw`, id z koordynatu | dopiero gdy pudełko się otwiera |
+
+1 przed 3, bo tabela sprawia, że przeprowadzka jest mechaniczna. 2 przed 3, bo
+przykłady na Karcie są tym, co pozwala przenieść kartę z jej testem w jednym
+commicie. 4 może iść równolegle z każdym.
+
+---
+
+## Czego nie robić
+
+- **External DSL, parser, plik-schemat.** Kompilator już jest walidatorem.
+  Round-trip przez JSON trzyma drzwi otwarte; nie trzeba przez nie przechodzić.
+- **Ładowanie kart w czasie działania.** Id z plików, indeks generowany, build
+  — jak dziś. Karta „w locie" to `string` udający id.
+- **Składanie `Ability` w `Status`.** Policzone, porzucone, TASKS.md.
+- **Przepisywanie `walk`.** Kursor, zawieszenie, `follow` — to jest dokładnie
+  ta część, która w MTG Arena i Argentum jest silnikiem. Dostaje `WORDS.dzieci`
+  zamiast siedmiu `if (effect.op === …)`, i tyle.
+- **Budowniczy przed tabelą.** Menu zbudowane ręcznie to dwunasty przełącznik.
+- **Usuwanie testów per-karta, zanim przykład niesie te same asercje.**
+
+## Ryzyka
+
+- **Dwieście pięćdziesiąt plików.** To jest to, o co Michał prosił, i jest to
+  cena za „otwórz plik karty i widzisz wszystko". Komentarze przenoszą się z
+  kartami — bez nich przeprowadzka jest stratą, nie zyskiem.
+- **Drugi agent w repo.** Krok 3 robi się klasą po klasie, jedna klasa na jedno
+  posiedzenie, żeby nie zostawiać rejestru w połowie drogi między tabelą a
+  widokiem.
+- **Nazwy pól.** `wyciagnieta`/`rozpatrzona`/`trzymana`/`uzyta`/`rzucona` są
+  propozycją; jeśli któreś kłóci się z CONTEXT.md, wygrywa CONTEXT.md.

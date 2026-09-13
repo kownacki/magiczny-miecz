@@ -114,6 +114,28 @@ write a transcript for it. The rule is carried; the surface is not.
 writing down what would close it — a note that explains a gap forever is how a
 gap stops looking like one.
 
+### The card system — direction set, waiting on a reading (2026-09-13)
+
+[KARTA.md](KARTA.md) answers the five questions SYSTEM-KART.md left open and
+sets six steps: close the vocabulary with a test, make it one table (`WORDS`),
+examples on the Karta with one runner, one `Karta` shape in one file per card,
+close the escapes, then a builder if wanted. **Step 0 is done**:
+`namedCards.test.ts` freezes every place the engine still knows a Karta by
+name (a list that may shrink and not grow), and `wordsRead.test.ts` holds that
+every parameter a card gives an op is read by the code that runs it. Steps 1–6
+wait on Michał reading the document; none of them is started.
+
+Two cards the second test found saying one thing and doing another, kept in
+its `UNREAD` list until fixed:
+
+- [ ] **PÓŁBÓG** deals off the top of the pile. „Możesz je wybrać ze stosu" is
+      `zeStosu: true`, read by both text renderers and by no op. The CHOCHLIK's
+      chooser (`ask` frame) is the door.
+- [ ] **SZALEŃSTWO** — `wybiera: "rzucajacy"` is rendered under the card and
+      never asked for: the `zabierz` executor takes whatever answer the frame
+      carries. „Obejrzeć Zaklęcia i wybrać jedno z nich" is the caster's look at
+      a hand held under 9.3, which is the part that needs building.
+
 ### What the Nieznajomi review left open (2026-09-13)
 
 All seventeen read against their printed text and played through `mm`. What was

@@ -65,6 +65,10 @@ settled — it is scaffolding, and it costs tokens on every load.
   how a Karta is written down: what Michał wants in his own words, what the five
   registries look like today and where they have lied, and what other games do.
   No direction is set in it on purpose
+- **[docs/KARTA.md](docs/KARTA.md)** — the direction, set 2026-09-13 in answer
+  to that brief: close the vocabulary with a test, make it one table, give a
+  Karta one shape and one file. Six steps; step 0 is done. Read it before
+  touching any of the five registries
 - **[docs/RULES.md](docs/RULES.md)** — the rulebook transcribed
 - **[docs/EXPANSIONS.md](docs/EXPANSIONS.md)** — what is in the five boxes that
   are out of scope, and which parts of the model they would break

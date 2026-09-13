@@ -8,6 +8,10 @@ trzy rzeczy: **czego chce Michał, jego własnymi słowami**, **co dziś jest w
 repo i gdzie boli**, i **co robią inni**. Kierunek jest do wymyślenia, nie do
 odczytania stąd.
 
+**Kierunek jest wytyczony — [KARTA.md](KARTA.md), 2026-09-13.** Ten plik
+zostaje jako materiał, na którym tamten stoi: cytaty Michała, stan rejestrów,
+dowody z §3 i research. Odpowiedzi na pięć pytań z §6 są tam, nie tutaj.
+
 Jedno zastrzeżenie do całości: **nic z tego nie jest pilne i nic nie jest
 zepsute.** Gra działa, 3256 testów przechodzi, a błędy, które ten przegląd
 znalazł, są już naprawione. To jest rozmowa o tym, na czym budować dalej —
@@ -189,7 +193,11 @@ specjalną właściwość"*.
 **b) Właściwość karty bez czytelnika.** PÓŁBÓG ma `zeStosu: true`. To pole
 czyta **wyłącznie** dwa renderery tekstu — żaden op go nie widzi. Efekt: karta
 mówi „Możesz je wybrać ze stosu", a apka daje losowe. Nic tego nie łapało, bo
-nic nie wymaga, żeby pole słownika miało czytelnika w silniku.
+nic nie wymaga, żeby pole słownika miało czytelnika w silniku. *Wbrew zdaniu na
+górze tego pliku, to jedno nie jest naprawione* (stan 2026-09-13):
+`wordsRead.test.ts` wymaga teraz czytelnika dla każdego parametru i trzyma
+`zeStosu` w `UNREAD` jako zaległość — razem z drugim tej samej postaci,
+`zabierz.wybiera` na SZALEŃSTWIE.
 
 **c) Dwa znaczenia jednej flagi.** `optional` znaczyło naraz „wolno minąć" i
 „nie ma go w kolejce 15.2". Rozdzielone dziś, ale pokazuje, jak łatwo w tym
