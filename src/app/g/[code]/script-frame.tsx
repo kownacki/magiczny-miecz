@@ -2,9 +2,10 @@
 
 /** The card the turn is suspended on, and the question it is waiting to have answered. */
 
-import type { Effect } from "@/lib/engine/cardScript";
-import { nodeAt } from "@/lib/engine/resolve";
+import { questionOn } from "@/lib/engine/question";
+import type { TurnPhase } from "@/lib/engine/turn";
 import type { FieldId } from "@/lib/engine/board";
+import { fieldName } from "@/lib/engine/polish";
 import { Overlay } from "./overlay";
 import { ActionButton } from "./action-button";
 
@@ -22,20 +23,29 @@ export function ScriptFramePanel({
   frame,
   who,
   canAct,
-  ring,
+  at,
   busy,
   onAnswer,
 }: {
-  frame: { seatId: string; reason: string; effect: Effect; cursor: number[] };
+  frame: Extract<TurnPhase, { phase: "script" }>;
   /** Whose answer it is — the frame's own seat, named (law 5). */
   who: string;
   canAct: boolean;
-  /** The fields a destination question may point at. */
-  ring: { fieldId: FieldId; name: string }[];
+  /**
+   * Where the Postać stands and who is in the way.
+   *
+   * The two facts a destination needs, handed to `questionOn` rather than
+   * turned into buttons here. This used to be a `ring` prop — the caller worked
+   * out `ringFields(active.field_id)` and this drew one button per entry, which
+   * is an interface keeping 11.2 on its own. It kept it correctly and the
+   * server kept nothing, so the same card answered from the console put a
+   * Postać in the middle of the board.
+   */
+  at: { standingOn: FieldId | null; occupied: readonly FieldId[] };
   busy: boolean;
   onAnswer: (decided: { choices?: number[]; destination?: FieldId }) => void;
 }) {
-  const asking = nodeAt(frame.effect, frame.cursor);
+  const question = questionOn(frame, at);
 
   return (
     // Not dismissable: the turn is stuck on this question and clicking away
@@ -49,9 +59,9 @@ export function ScriptFramePanel({
           Karta w trakcie rozpatrywania — {canAct ? "twoja odpowiedź" : `odpowiada ${who}`}.
         </p>
 
-        {asking?.op === "wybor" && (
+        {question?.kind === "wybor" && (
           <div className="mt-3 flex flex-col gap-2">
-            {asking.options.map((option, index) => (
+            {question.options.map((label, index) => (
               <ActionButton
                 key={index}
                 weight="quiet"
@@ -60,34 +70,43 @@ export function ScriptFramePanel({
                 disabled={busy || !canAct}
                 onClick={() => onAnswer({ choices: [index] })}
               >
-                {option.label}
+                {label}
               </ActionButton>
             ))}
           </div>
         )}
 
-        {asking?.op === "przenies" && asking.to.kind !== "pole" && (
+        {question?.kind === "gdzie" && (
           <div className="mt-3 flex flex-wrap gap-1">
-            {ring.map((field) => (
+            {question.fields.map((fieldId) => (
               <ActionButton
-                key={field.fieldId}
+                key={fieldId}
                 weight="quiet"
                 size="sm"
                 disabled={busy || !canAct}
-                onClick={() => onAnswer({ destination: field.fieldId })}
+                onClick={() => onAnswer({ destination: fieldId })}
               >
-                {field.name}
+                {fieldName(fieldId)}
               </ActionButton>
             ))}
           </div>
         )}
 
-        {asking && asking.op !== "wybor" && !(asking.op === "przenies" && asking.to.kind !== "pole") && (
-          // A question this panel has no controls for yet — named honestly
-          // rather than guessed at. The console's `answer` reaches it.
+        {/* „jeśli nie ma takiego Obszaru, odłóż Kartę" — the Lewiatan's own
+            sentence, and the one state a row of buttons cannot show. */}
+        {question?.kind === "gdzie" && question.fields.length === 0 && (
+          <p className="mt-3 text-sm text-muted">
+            Żaden Obszar tej Karty nie jest wolny.
+          </p>
+        )}
+
+        {question?.kind === "nieobslugiwane" && (
+          // A question no surface can ask yet — named honestly rather than
+          // guessed at, and named the same way at the prompt, which is where
+          // this used to send the table to read a blank line.
           <p className="mt-3 text-sm text-vermilion/90">
-            Ta Karta czeka na odpowiedź, której ten panel jeszcze nie umie zadać
-            ({asking.op}) — odpowiedzcie w konsoli.
+            Ta Karta czeka na odpowiedź, której nikt jeszcze nie umie zadać
+            ({question.op}).
           </p>
         )}
       </div>

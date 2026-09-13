@@ -500,10 +500,15 @@ export function Overlays() {
             "gracz"
           }
           canAct={mine?.id === turnState.seatId}
-          ring={ringFields(active.field_id).map((fieldId) => ({
-            fieldId,
-            name: fieldName(fieldId),
-          }))}
+          /* The two facts a destination needs, not a list of buttons: which
+             Obszary the Karta allows is `questionOn`'s answer and the server's
+             refusal at once — see `question.ts`. */
+          at={{
+            standingOn: active.field_id,
+            occupied: seats
+              .filter((seat) => !seat.eliminated && seat.field_id)
+              .map((seat) => seat.field_id as FieldId),
+          }}
           busy={busy}
           onAnswer={(decided) => post("turn", { action: "answer", ...decided })}
         />

@@ -200,6 +200,17 @@ Three operations, all pure `Snapshot → Changeset`, all under the same CAS on
 card: the server still re-walks what it owns, but from the cursor rather than
 the root.
 
+**A question is a rule, not a widget.** What a suspended Karta is asking —
+which options, or which Obszary may be pointed at — is `questionOn`'s
+(`engine/question.ts`), asked by every surface and decided by none of them. It
+was decided by each of them: the sheet drew buttons for the two shapes it knew,
+`waitingOn` printed nothing at all for any of them, and the sheet, met with a
+shape it could not draw, told the table to answer in the console — which was
+showing a blank line. Worse, the one rule an interface was keeping alone it
+kept *correctly*: the ring buttons obeyed „w tym Kręgu" and the server, trusting
+them, obeyed whatever it was sent. `destinationsFor` is now the offer and the
+refusal at once.
+
 **And one read that is not `top()`.** A write aimed at the *Obszar* — the die
 on it, the kolejka in it — must find the `field` frame wherever it now stands,
 because a Karta suspended over a question has pushed a `script` frame above it

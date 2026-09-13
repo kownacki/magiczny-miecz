@@ -36,6 +36,7 @@ import { describeCondition } from "@/lib/engine/effectText";
 import { hasAttacked } from "@/lib/engine/status";
 import { pointsOf } from "./seat";
 import { asFieldId, ringFields } from "@/lib/engine/board";
+import { destinationsFor } from "@/lib/engine/question";
 import type { SettledKey } from "@/lib/engine/state";
 import {
   liftFromKolejka,
@@ -545,30 +546,40 @@ async function walk(
     if (!where) return owed();
 
     /**
-     * And „w tym Kręgu" is a rule, not a hint to the interface.
+     * And where the Karta allows is a rule, not a hint to the interface.
      *
-     * Four scripts say it — the JEDNOROŻEC, the NIEZNANA ŚWIĄTYNIA's 1, the
-     * Karczma's 5 and the wish — and the browser kept it by only drawing
+     * Four scripts say „w tym Kręgu" — the JEDNOROŻEC, the NIEZNANA ŚWIĄTYNIA's
+     * 1, the Karczma's 5 and the wish — and the browser kept it by only drawing
      * buttons for the ring. Nothing kept it here, so the answer travelled as a
      * bare `FieldId` and was obeyed: the console could ride the Jednorożec from
      * the Osada to the Zamek Bestii. That is the thing `Decisions` exists to
      * prevent (CLAUDE.md: a card cannot be talked into doing something it does
-     * not say), and the refusal beside it, in `przenies-karte`, has checked its
-     * own ring the whole time.
+     * not say).
+     *
+     * Asked of `destinationsFor`, which is the same list the surfaces offer.
+     * The offer and the refusal cannot then drift — and they had drifted, in
+     * the only direction that matters: the buttons were right, and the refusal
+     * did not exist.
      */
-    if (effect.to.kind === "dowolne-w-kregu") {
-      const standing = snapshot.seats.find((one) => one.id === seatId)?.field_id;
-      const from = asFieldId(standing ?? null);
-      if (from === null) throw new Error("Nieznane miejsce.");
-      if (!ringFields(from).includes(where)) {
-        throw new Error(`${fieldName(where)} jest w innym Kręgu (11.2).`);
-      }
-    }
-    // One of a listed set is that set and no other — the same reading
-    // `poloz-karte` gives its own `jedno-z`. No card asks it of a Postać yet;
-    // the guard is here so that the first one to do so cannot arrive unchecked.
-    if (effect.to.kind === "jedno-z" && !effect.to.fieldIds.includes(where)) {
-      throw new Error(`${fieldName(where)} nie jest jednym z Obszarów tej Karty.`);
+    /* Not for the STRAŻ: its destination is named rather than chosen, so there
+       is no list to be on — `destinationsFor` says as much by answering with
+       nothing, and a named destination checked against nothing would refuse
+       every time. */
+    const allowed = back ? [where] : destinationsFor(effect.to, {
+      standingOn: asFieldId(snapshot.seats.find((one) => one.id === seatId)?.field_id ?? null),
+      occupied: snapshot.seats
+        .filter((one) => !one.eliminated)
+        .flatMap((one) => {
+          const on = asFieldId(one.field_id);
+          return on ? [on] : [];
+        }),
+    });
+    if (!allowed.includes(where)) {
+      throw new Error(
+        effect.to.kind === "dowolne-w-kregu"
+          ? `${fieldName(where)} jest w innym Kręgu (11.2).`
+          : `${fieldName(where)} nie jest jednym z Obszarów tej Karty.`,
+      );
     }
 
     // A Karta moving somebody, as 13.1 has it — the same as the settled

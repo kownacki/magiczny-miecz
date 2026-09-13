@@ -21,7 +21,7 @@ import { listed } from "@/lib/engine/state";
 import type { TurnPhase } from "@/lib/engine/turn";
 import type { Effect } from "@/lib/engine/cardScript";
 import { askOnTop } from "@/lib/engine/ask";
-import { nodeAt } from "@/lib/engine/resolve";
+import { questionOn } from "@/lib/engine/question";
 import { overflowOnTop, overflowSaid } from "@/lib/engine/overflow";
 import { overflowOf, waysOut } from "./commands/overflow";
 import type { Snapshot } from "./change";
@@ -246,39 +246,53 @@ export function askLines(snapshot: Snapshot, forSeatId: string | null): string[]
 /**
  * The `script` frame written out: the Karta mid-sentence, and what it is asking.
  *
- * `look` said nothing at all for one of these — „Phase: a Karta
- * mid-resolution" and no more — while two other places sent the player here to
- * read it. `answer`'s own summary is „settle what a Karta or an Obszar asked —
- * `look` shows the question", and the browser's panel, met with a question it
- * has no controls for, says „odpowiedzcie w konsoli". Both were pointing at a
- * blank.
+ * The *question* is `questionOn`'s — one answer for every surface, because what
+ * a Karta asks is a rule and not a matter of layout (see `question.ts`). What
+ * is this file's is the wording: which words settle it at a prompt.
  *
- * Three states and each is worth a different sentence. A **held** frame is a
- * die already thrown and waiting to take effect (`heldAt`) — the face is in
- * `reason`, and what is owed is one press, not a choice. A **`wybor`** is the
- * one question this surface can actually ask, numbered the way `askLines`
- * numbers a Zaklęcie. Anything else is named rather than guessed at, in the
- * same words the browser uses for the mirror case, so the two surfaces admit
- * the same gap instead of sending the player back and forth across it.
+ * `look` said nothing at all for one of these while two other places sent the
+ * player here to read it — `answer`'s own summary promises „`look` shows the
+ * question", and the browser's panel, met with something it cannot draw, says
+ * „odpowiedzcie w konsoli". Both were pointing at a blank line.
  */
-function scriptLines(frame: Extract<TurnPhase, { phase: "script" }>): string[] {
-  if (frame.held) return [`${frame.reason}: kostka padła — \`answer\` puts it into effect.`];
-  const asking = nodeAt(frame.effect, frame.cursor);
-  if (asking?.op === "wybor") {
-    return [
-      `${frame.reason}: pick one — \`answer <n>\``,
-      ...asking.options.map((option, at) => `  ${at} — ${option.label}`),
-    ];
+function scriptLines(
+  frame: Extract<TurnPhase, { phase: "script" }>,
+  at: { standingOn: FieldId | null; occupied: readonly FieldId[] },
+): string[] {
+  const question = questionOn(frame, at);
+  if (!question) return [];
+  switch (question.kind) {
+    case "dalej":
+      return [`${question.reason}: kostka padła — \`answer\` puts it into effect.`];
+    case "wybor":
+      return [
+        `${question.reason}: pick one — \`answer <n>\``,
+        ...question.options.map((label, at) => `  ${at} — ${label}`),
+      ];
+    case "gdzie":
+      return question.fields.length === 0
+        ? [`${question.reason}: nowhere this Karta allows is free.`]
+        : [
+            `${question.reason}: name an Obszar — \`answer [n] to <Obszar>\``,
+            `  ${question.fields.map((fieldId) => fieldName(fieldId)).join(", ")}`,
+          ];
+    case "nieobslugiwane":
+      return [
+        `${question.reason}: waiting on an answer no surface can ask yet (${question.op}).`,
+      ];
   }
-  if (!asking) return [`${frame.reason}: mid-resolution — \`answer\` carries on.`];
-  return [
-    `${frame.reason}: waiting on an answer this console cannot ask yet (${asking.op}).`,
-  ];
 }
 
 /** The question the turn is stuck on, for `look`. */
-export function waitingOn(frame: TurnPhase): string[] {
-  if (frame.phase === "script") return scriptLines(frame);
+export function waitingOn(
+  frame: TurnPhase,
+  /** Where the Postać stands and who is in the way — what a destination needs. */
+  at: { standingOn: FieldId | null; occupied: readonly FieldId[] } = {
+    standingOn: null,
+    occupied: [],
+  },
+): string[] {
+  if (frame.phase === "script") return scriptLines(frame, at);
   if (frame.phase !== "field") return [];
   const state = frame;
   const offer = compulsoryOffer(state.fieldId ?? null, state.resolved ?? []);

@@ -131,10 +131,25 @@ describe("waitingOn, for a Karta the turn is suspended on", () => {
     ]);
   });
 
-  /** Named rather than guessed at, in the words the browser's panel uses. */
-  it("admits a question it cannot ask rather than printing nothing", () => {
-    const owed = frame({ effect: { op: "przenies", to: { kind: "krag" } } as never });
-    expect(waitingOn(owed)[0]).toContain("cannot ask yet (przenies)");
+  /**
+   * An Obszar to point at, listed — the same list the server refuses against
+   * and the same list the browser draws buttons for (`question.ts`).
+   */
+  it("names the Obszary the Karta allows, and the word that settles it", () => {
+    const owed = frame({
+      effect: { op: "poloz-karte", gdzie: { kind: "jedno-z", fieldIds: ["bagna-1", "bagna-2"] } },
+      reason: "LEWIATAN",
+    });
+    expect(waitingOn(owed, { standingOn: "osada", occupied: ["bagna-1"] })).toEqual([
+      "LEWIATAN: name an Obszar — `answer [n] to <Obszar>`",
+      "  Bagna II",
+    ]);
+  });
+
+  /** Named rather than guessed at, and named the same way in the browser. */
+  it("admits a question nobody can ask rather than printing nothing", () => {
+    const owed = frame({ effect: { op: "przenies-karte" } as never });
+    expect(waitingOn(owed)[0]).toContain("no surface can ask yet (przenies-karte)");
   });
 });
 

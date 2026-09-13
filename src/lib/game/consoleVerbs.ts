@@ -1626,7 +1626,18 @@ export const VERBS: { [K in Command["kind"]]: VerbRun<K> } = {
       // and the Envelope was never asked to carry that level of detail — only
       // whether somebody is over their limit and what a field is stuck asking.
       ...overflowLines(snapshot),
-      ...waitingOn(state),
+      /* Where the Postać stands and who is in the way: what a question about a
+         destination needs, and the same two facts the browser hands the panel.
+         The offer is `destinationsFor`'s either way — see `question.ts`. */
+      ...waitingOn(state, {
+        standingOn: asFieldId(active?.field_id ?? null),
+        occupied: envelope.seats
+          .filter((one) => !one.eliminated)
+          .flatMap((one) => {
+            const on = asFieldId(one.field_id);
+            return on ? [on] : [];
+          }),
+      }),
       ...(standing.length > 1
         ? [`Also here: ${standing.map((one) => named(one)).join(", ")}`]
         : []),
