@@ -146,27 +146,31 @@ tabelę. To jest test *tury z tą kartą*. Granularniej, od dołu:
    dopisanie, nie projekt.
 2. **Karta** — **przykłady na Karcie, jeden runner dla wszystkich.**
    ```ts
-   przyklady: [
+   examples: [
      {
-       nazwa: "z 2 Sz. Z. płaci i bierze Zaklęcie",
-       stan: { gold: 2, magic: 4 },
-       odpowiedzi: [0],
-       oczekuj: { gold: 1, zaklecia: 1 },
+       name: "takes the coin and hands over the card",
+       given: { gold: 3, magic: 4 },
+       answers: [0],
+       expect: { gold: 2, spells: 1 },
      },
-     { nazwa: "bez złota odmawia", stan: { gold: 0 }, odpowiedzi: [0], oczekuj: { gold: 0, zaklecia: 0, mowi: /Za mało złota/ } },
+     { name: "refuses an empty purse", given: { gold: 0, magic: 4 }, answers: [0], expect: { gold: 0, spells: 0, says: "Za mało złota" } },
    ]
    ```
-   `karty.przyklady.test.ts` buduje stół z `aTable`, rozdaje Kartę, idzie
-   przez zawieszenia z zaskryptowanymi kostkami i odpowiedziami (`resume`, jak
-   dziś w `strangers.test.ts`), i sprawdza `oczekuj`. Ten sam runner jest
-   **walidatorem kreatora**: `karta try` w konsoli to ten sam kod bez `expect`.
+   `examples.test.ts` buduje stół z `aTable`, rozdaje Kartę, i gra jak gracz:
+   „Dalej" nad rzuconą kostką, jedna odpowiedź na jedno pytanie, Obszar tam,
+   gdzie Karta pyta „gdzie"; potem sprawdza `expect`. Ten sam runner jest
+   **walidatorem kreatora**: `npm run card -- try` to ten sam kod bez `expect`.
+   Granie jedną odpowiedzią naraz od razu znalazło błąd, którego żadna
+   powierzchnia nie widziała, bo każda wysyła odpowiedzi hurtem: gałąź `wybor`
+   w `walk` gubiła zawieszenie z wybranej opcji (kostka pod Godziną Duchów,
+   „gdzie" pod Jednorożcem, strata na Bagnach nie stawiały ramki).
    Tak testuje się karty w Forge i w każdym silniku, który ma ich tysiąc: karta
    niesie swoje własne dowody.
 3. **Tura** — transkrypty `.mm`. Zostają jako to, co sprawdza, że *tura* działa,
    nie że *karta* działa.
 
 Testy per-karta w `commands/*.test.ts` nie znikają hurtem. Każdy przechodzi do
-`przyklady` wtedy, gdy przykład niesie te same asercje; te, które sprawdzają
+`examples` wtedy, gdy przykład niesie te same asercje; te, które sprawdzają
 coś o *turze* (kolejka, ramki, znak `resolved`), zostają tam, gdzie są.
 
 ---
@@ -198,7 +202,7 @@ export interface Karta {
   dobrowolna?: boolean;      // CardScript.optional
   zuzywana?: boolean;        // CardScript.consumed
 
-  przyklady?: Przyklad[];    // §5
+  examples?: Example[];      // §5
 }
 ```
 
@@ -260,24 +264,24 @@ Jedenaście miejsc, cztery z `default`, jedno szukające po tekście. Zamiast te
 export const WORDS: { [K in Effect["op"]]: Word<K> } = {
   punkty: {
     params: ["stat", "delta", "target"],
-    dzieci: () => [],
-    rozstrzygniete: () => true,
-    pyta: () => null,
-    opisz: (e) => …, streszczenie: (e) => …,
-    walencja: (e) => (e.delta > 0 ? "korzysc" : "strata"),
+    children: () => [],
+    settled: () => true,
+    asks: () => null,
+    valence: (e) => (e.delta > 0 ? "korzysc" : "strata"),
+    fieldsNamed: () => [],
   },
   wybor: {
     params: ["options"],
-    dzieci: (e) => e.options.map((o) => o.effect),
-    rozstrzygniete: () => false,
-    pyta: (e) => ({ kind: "wybor", options: e.options.map((o) => o.label) }),
+    children: (e) => e.options.map((o, i) => [i, o.effect]),
+    settled: () => false,
+    asks: (e) => ({ kind: "wybor", options: e.options.map((o) => o.label) }),
     …
   },
   …
 };
 ```
 
-`dzieci` zastępuje `COMPOSING_OPS`, `nodeAt`, `fieldsNamedBy` i
+`children` zastępuje `nodeAt`, `fieldsNamedBy` i
 `reopensTheDrawing` naraz — każde z nich jest przejściem po drzewie, które dziś
 zna kształty na pamięć. `OPS` w `commands/` zostaje jako druga tabela nad tą samą
 unią (wykonanie potrzebuje `Changeset` i innych komend, a silnik ma być czysty):
@@ -285,14 +289,14 @@ unią (wykonanie potrzebuje `Changeset` i innych komend, a silnik ma być czysty
 
 Co z tego wynika dla kreatora: menu „wybierz funkcję, potem dla każdego efektu
 wybierz efekt" to *przejście po `WORDS.params`*. Nie trzeba go projektować —
-trzeba mieć tabelę. I `ask slowo punkty` w `npm run ask` staje się jedną
+trzeba mieć tabelę. I `ask word punkty` w `npm run ask` staje się jedną
 linijką.
 
 **Stan po kroku 1 (2026-09-13).** `src/lib/engine/words.ts` istnieje: `WORDS`
-nad `Effect["op"]`, z `pola` (mapa, więc kompilator wymaga każdego pola i
-odrzuca obce), `sklada` (typowane z `COMPOSING_OPS`, więc lista i tabela nie
-mogą się rozjechać), `dzieci` z indeksem kursora, `rozstrzygniete`, `pyta`,
-`walencja`, `obszary`. `isSettled`, `nodeAt`, `valenceOf`, `fieldsNamedBy`,
+nad `Effect["op"]`, z `params` (mapa, więc kompilator wymaga każdego pola i
+odrzuca obce), `composes` (typowane z `COMPOSING_OPS`, więc lista i tabela nie
+mogą się rozjechać), `children` z indeksem kursora, `settled`, `asks`,
+`valence`, `fieldsNamed`. `isSettled`, `nodeAt`, `valenceOf`, `fieldsNamedBy`,
 `reopensTheDrawing`, `questionOn`, `coverage.test.ts` i `wordsRead.test.ts`
 czytają tabelę zamiast znać kształty na pamięć. Dwa odstępstwa od szkicu
 wyżej, oba celowe:
@@ -306,7 +310,7 @@ wyżej, oba celowe:
 - **Chodzenie po drzewie z pożyczonymi tabelami mieszka w `resolve.ts`.**
   `jak-pole` pożycza tabelę Obszaru z `FIELD_SCRIPTS`, a ten rejestr importuje
   `state.ts`, które importuje słownik; `words.ts` nie może więc sięgnąć po
-  tabelę bez cyklu. Słowo mówi *którą* pożycza (`pozycza`), a `childrenOf` w
+  tabelę bez cyklu. Słowo mówi *którą* pożycza (`borrows`), a `childrenOf` w
   `resolve.ts` ją dokłada. `nodesOf` w `words.ts` chodzi po karcie „jak
   napisana", `everyNode` w `resolve.ts` wchodzi do pożyczonych tabel.
 
@@ -314,6 +318,14 @@ Tabela naprawiła po drodze dwie ciche luki: `nodeAt` znał cztery kształty i
 odpowiadał `null` dla dwóch pozostałych, więc ramka zawieszona w pożyczonej
 modlitwie Kapliczki albo w nagrodzie Mędrca nie miała pytania na ekranie;
 teraz ma (`words.test.ts`).
+
+**Nazwy: po angielsku.** Identyfikatory silnika są angielskie; polskie są
+tylko nazwy własne gry (Karta, Obszar, Zaklęcie, Miecz) i istniejące słowa
+karty (`op: "punkty"`, `cena`). Pierwsza wersja tej tabeli miała `pola`,
+`dzieci`, `pyta` i Michał ją zawrócił: rejestr języka karty przeniósł się na
+API silnika, a to dwie różne rzeczy. Czy same słowa karty mają kiedyś przejść
+na angielski, jest pytaniem do kroku 3, nie decyzją tego dokumentu; sprzątanie
+starszych nazw jest zadaniem w TASKS.md.
 
 Strażnik z kroku 0, `wordsRead.test.ts`, zostaje: sprawdza, że każdy parametr,
 jaki treść daje słowu, jest czytany przez jego wpis w `OPS`. Dziś wie o trzech,
@@ -329,13 +341,14 @@ przeglądu są naprawione; (b) nie jest.**
 
 Trzy postacie, w kolejności wartości, i szczerze o trzeciej:
 
-1. **`karta try <id> [kostki 3 5] [odpowiedzi 0 1]`** w `mm` — rozdaje Kartę
-   (dziś: `deal` w `testmode`), idzie przez zawieszenia zaskryptowanymi
-   kostkami i odpowiedziami, drukuje `did`, pytania i różnicę w stanie. To jest
-   runner z §5 bez `expect`. Dla karty z pliku spoza indeksu: `karta try
-   ./moja.ts`. Wartość: natychmiastowa, dla każdej istniejącej karty.
-2. **`ask slowo <op>`** — parametry, typy, przykład z treści, gdzie wykonywane,
-   gdzie opisywane. Czyta `WORDS`. Wartość: to jest „sklasyfikowane
+1. **`npm run card -- try <id> --dice 3,5 --answers 0,1 --gold 2`** — buduje
+   stół z flag, rozdaje Kartę, gra jedną odpowiedzią na pytanie, drukuje co
+   powiedziała, na czym stanęła i stan przed i po; `-- examples <id>` gra
+   przykłady zapisane na Karcie. To jest runner z §5 bez `expect`
+   (**zrobione 2026-09-13**). Na żywym stole to samo robi `mm`: `testmode on`,
+   `dice`, `deal`, `answer`.
+2. **`ask word <op>`** — parametry, kształt, przykład z treści, gdzie wykonywane,
+   gdzie opisywane, kto mówi. Czyta `WORDS` (**zrobione 2026-09-13**). Wartość: to jest „sklasyfikowane
    właściwości", o które Michał pyta, jako polecenie zamiast jako dokument.
 3. **Budowniczy w konsoli** — `karta new MOJA klasa=spotkanie`, `karta op rzut`,
    `karta 1 punkty life -1`, …, `karta zapisz` → plik z §Kształt. Robi się go
@@ -359,8 +372,8 @@ zgody na następny.
 | # | krok | co dowodzi, że zrobiony |
 |---|---|---|
 | 0 | **Strażnicy** — `namedCards.test.ts`, `wordsRead.test.ts` | **zrobione 2026-09-13**; liczby wyżej |
-| 1 | **`WORDS`** — jedna tabela w silniku, jedenaście przełączników staje się lookupem; `OPS` bez zmian | **zrobione 2026-09-13**: `words.ts`; słowo dotyka unii, `WORDS`, `OPS` i dwóch głosów w `effectText.ts`, wszystkie cztery pilnowane przez kompilator; WHERE.md przepis 13; `ask slowo` |
-| 2 | **`przyklady` + runner + `karta try`** | siedemnastu Nieznajomych niesie przykłady; `strangers.test.ts` chudnie |
+| 1 | **`WORDS`** — jedna tabela w silniku, jedenaście przełączników staje się lookupem; `OPS` bez zmian | **zrobione 2026-09-13**: `words.ts`; słowo dotyka unii, `WORDS`, `OPS` i dwóch głosów w `effectText.ts`, wszystkie cztery pilnowane przez kompilator; WHERE.md przepis 13; `ask word` |
+| 2 | **`examples` + runner + `card try`** | **zrobione 2026-09-13**: `Example` na `CardScript`, `commands/examples.ts` gra jedną odpowiedzią na pytanie, `examples.test.ts` puszcza wszystkie; siedemnastu Nieznajomych niesie 28 przykładów; `npm run card -- try` i `-- examples` |
 | 3 | **`Karta` + pliki + generowany indeks**; pięć rejestrów jako widoki | `karty/` istnieje, rejestry są jednolinijkowe, żaden czytelnik się nie ruszył; round-trip przez JSON |
 | 4 | **Zamknięcie ucieczek**, jedna cecha na commit | `FROZEN` w `namedCards.test.ts` pusty; `CARRIED_ELSEWHERE` skasowane; `pelne` wyprowadzone z `Karta` |
 | 5 | **Budowniczy w konsoli** — jeśli Michał go chce | `karta new … zapisz` produkuje plik, który przechodzi 3 i 2 |
@@ -380,7 +393,7 @@ commicie. 4 może iść równolegle z każdym.
   — jak dziś. Karta „w locie" to `string` udający id.
 - **Składanie `Ability` w `Status`.** Policzone, porzucone, TASKS.md.
 - **Przepisywanie `walk`.** Kursor, zawieszenie, `follow` — to jest dokładnie
-  ta część, która w MTG Arena i Argentum jest silnikiem. Dostaje `WORDS.dzieci`
+  ta część, która w MTG Arena i Argentum jest silnikiem. Dostaje `WORDS.children`
   zamiast siedmiu `if (effect.op === …)`, i tyle.
 - **Budowniczy przed tabelą.** Menu zbudowane ręcznie to dwunasty przełącznik.
 - **Usuwanie testów per-karta, zanim przykład niesie te same asercje.**
@@ -439,7 +452,7 @@ Więc pytanie nie brzmi „JSON czy TypeScript", tylko **„czy karta jest seria
 
 - **Potwierdza §1 i §2** (zamknięty słownik; dane w języku gospodarza). Rozmiar naszego słownika — 33 słowa `Effect`, 33 rodzaje `Ability` — mieści się w tym, co riftbound zmierzył jako właściwe (50–90 pierwotnych) i w tym, co ma Fireplace (~30 akcji).
 - **Kształty Argentum jako lista kontrolna dla `WORDS`**: atomowe, sekwencja, warunek, **iteracja po grupie**, pipeline. Cztery mamy (`po-kolei`, `gdy`, liście, `zabierz`/`przenies-karte`); iterację mamy rozproszoną — `target: wszyscy` na trzech słowach i `rzut-za-kazdego` jako osobny op. Warto rozważyć przy kroku 1, czy `dla-kazdego` nie powinno być ósmym słowem składającym; to jest pytanie do zadania, nie decyzja.
-- **Testy per karta są normą, nie wyjątkiem.** Fireplace, XMage i Argentum robią to samo: minimalny stan, karta, zaskryptowane decyzje, asercje na stanie. Nikt nie testuje tylko słów. `przyklady` na Karcie z §5 to ten wzorzec przeniesiony *na kartę*; nie znalazłem nikogo, kto trzyma je w pliku karty, najbliżej są pliki `.pzl` Forge (stan plus cel w jednym pliku).
+- **Testy per karta są normą, nie wyjątkiem.** Fireplace, XMage i Argentum robią to samo: minimalny stan, karta, zaskryptowane decyzje, asercje na stanie. Nikt nie testuje tylko słów. `examples` na Karcie z §5 to ten wzorzec przeniesiony *na kartę*; nie znalazłem nikogo, kto trzyma je w pliku karty, najbliżej są pliki `.pzl` Forge (stan plus cel w jednym pliku).
 - **Tekst z kodu ma mieć test przeciw drukowi.** XMage porównuje wygenerowany tekst z bazą MTGJSON; Argentum robi round-trip przez gramatykę. My generujemy (`describeEffect`) i nie sprawdzamy niczego. Tani odpowiednik: *touchstone* — każda liczba i każda nazwa własna z drukowanego tekstu Karty musi wystąpić w wygenerowanym opisie. Nie równość, bo polska proza się różni; obecność. Dopisane do kroku 2.
 - **Pokrycie liczone klauzulami, nie kartami.** riftbound oznacza każdą klauzulę tekstu jako implemented / approximate / unsupported; Argentum szereguje luki po liczbie kart, które blokują. Nasze `LIVE_ABILITIES` już jest per klauzula dla Postaci; `coverage.ts` jest per karta. Przy kroku 4 warto to wyrównać.
 - **Kreator: lekcja z LoR.** Bottleneck nie był w braku formularza, tylko w tym, że każdy nowy klocek wymagał inżyniera; rozwiązaniem był *język* dla projektantów, nie edytor. U nas język to `satisfies Karta`; budowniczy w konsoli (krok 5) jest wart zbudowania, jeśli ma go używać ktoś, kto nie pisze TypeScriptu. Wniosek z §Kreator bez zmian, teraz ze źródłem.

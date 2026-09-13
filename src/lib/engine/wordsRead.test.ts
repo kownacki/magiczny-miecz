@@ -14,7 +14,7 @@ import { OPS_IN_ORDER, WORDS } from "./words";
  * a choice and deals the top of the pile. Nothing failed, because nothing
  * requires a field of the vocabulary to have a reader in the engine.
  *
- * So, for every word in `WORDS`, every field its `pola` declares must be
+ * So, for every word in `WORDS`, every field its `params` declares must be
  * named in the code that carries the word out: the executor's entry in
  * `ops.ts` for a leaf, the walk in `effects.ts` for a composing word. Where
  * the reader honestly lives elsewhere, `ELSEWHERE` says which file and the
@@ -85,14 +85,14 @@ describe("every field a word declares is read by the code that runs it", () => {
 
   it("knows an executor for every leaf word", () => {
     for (const op of OPS_IN_ORDER) {
-      if (WORDS[op].sklada) continue;
+      if (WORDS[op].composes) continue;
       expect(bodies[op], `no entry for \`${op}\` in ops.ts`).toBeDefined();
     }
   });
 
   for (const op of OPS_IN_ORDER) {
-    const body = WORDS[op].sklada ? WALK : (bodies[op] ?? "");
-    for (const field of Object.keys(WORDS[op].pola)) {
+    const body = WORDS[op].composes ? WALK : (bodies[op] ?? "");
+    for (const field of Object.keys(WORDS[op].params)) {
       const key = `${op}.${field}`;
       if (UNREAD.includes(key)) {
         it(`${key} — still unread, as UNREAD says`, () => {

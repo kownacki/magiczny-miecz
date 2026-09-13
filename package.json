@@ -16,6 +16,7 @@
     "data": "node scripts/build-data.mjs && node scripts/build-fields.mjs",
     "mm": "tsx src/cli/mm.ts",
     "ask": "tsx scripts/ask.ts",
+    "card": "tsx scripts/card.ts",
     "soak": "tsx scripts/soak.ts",
     "schema:check": "tsx --env-file=.env.local scripts/check-schema.ts"
   },

@@ -27,7 +27,7 @@ import { takesEverything } from "./losses";
  * One thing this table deliberately does not know: where a borrowed table
  * lives. `jak-pole` names an Obszar whose offer is in `FIELD_SCRIPTS`, and
  * that registry imports `state.ts`, which would import this file — so the word
- * says *which* Obszar it borrows (`pozycza`) and `resolve.ts`, which already
+ * says *which* Obszar it borrows (`borrows`) and `resolve.ts`, which already
  * reads the registry, hands the borrowed effect in as a child. Every walker
  * that descends therefore lives in `resolve.ts` and takes its children from
  * `childrenOf` there.
@@ -61,25 +61,25 @@ export interface Word<K extends Op> {
    * Every field a card may write on this word.
    *
    * A map rather than a list so the compiler requires all of them and refuses
-   * any other: this is the builder's menu, `ask slowo`'s answer, and the list
+   * any other: this is the builder's menu, `ask word`'s answer, and the list
    * `wordsRead.test.ts` checks a reader against. The PÓŁBÓG's `zeStosu` was a
    * field with two renderers and no executor, and nothing could ask „who reads
    * this?" until the fields were written down somewhere that is not the type.
    */
-  pola: { readonly [P in Exclude<keyof Of<K>, "op">]-?: true };
+  params: { readonly [P in Exclude<keyof Of<K>, "op">]-?: true };
   /** A shape the walk descends through rather than a thing it does (`COMPOSING_OPS`). */
-  sklada: K extends ComposingOp ? true : false;
+  composes: K extends ComposingOp ? true : false;
   /** The nodes under this one, each with the index a cursor uses to reach it. */
-  dzieci(effect: Of<K>): readonly Child[];
+  children(effect: Of<K>): readonly Child[];
   /** The Obszar whose own table this word borrows, for `resolve.ts` to fetch. */
-  pozycza?(effect: Of<K>): FieldId;
+  borrows?(effect: Of<K>): FieldId;
   /**
-   * The node an index reaches, where that is not a lookup in `dzieci`.
+   * The node an index reaches, where that is not a lookup in `children`.
    *
    * Only `zgadnij`: the walk writes the *guessed face* into the cursor, so any
    * of six indices reaches the one reward.
    */
-  pod?(effect: Of<K>, index: number): Effect | null;
+  childAt?(effect: Of<K>, index: number): Effect | null;
   /**
    * Whether nothing about it is left for a person to say.
    *
@@ -87,43 +87,43 @@ export interface Word<K extends Op> {
    * included, and `settled` is the recursion — a composing word answers from
    * its children and a leaf from its own fields.
    */
-  rozstrzygniete(
+  settled(
     effect: Of<K>,
     children: readonly Effect[],
-    settled: (child: Effect) => boolean,
+    isSettled: (child: Effect) => boolean,
   ): boolean;
   /** The question a cursor standing here asks, or null for none. */
-  pyta(effect: Of<K>): Ask | null;
+  asks(effect: Of<K>): Ask | null;
   /** Gift or loss, or null where the card does not settle it; `of` is the recursion. */
-  walencja(effect: Of<K>, of: (child: Effect) => Valence | null): Valence | null;
+  valence(effect: Of<K>, of: (child: Effect) => Valence | null): Valence | null;
   /** The Obszary this node itself names — not its children's. */
-  obszary(effect: Of<K>): readonly FieldId[];
+  fieldsNamed(effect: Of<K>): readonly FieldId[];
 }
 
 /** What a leaf has to say for itself; everything unsaid is the leaf default. */
 interface LeafSpec<K extends LeafOp> {
-  pola: Word<K>["pola"];
+  params: Word<K>["params"];
   /** True unless the word says otherwise: most leaves are one thing that happens. */
-  rozstrzygniete?: (effect: Of<K>) => boolean;
-  pyta?: (effect: Of<K>) => Ask | null;
-  walencja?: (effect: Of<K>) => Valence | null;
-  obszary?: (effect: Of<K>) => readonly FieldId[];
+  settled?: (effect: Of<K>) => boolean;
+  asks?: (effect: Of<K>) => Ask | null;
+  valence?: (effect: Of<K>) => Valence | null;
+  fieldsNamed?: (effect: Of<K>) => readonly FieldId[];
 }
 
 function leaf<K extends LeafOp>(_op: K, spec: LeafSpec<K>): Word<K> {
   return {
-    pola: spec.pola,
-    sklada: false as Word<K>["sklada"],
-    dzieci: () => [],
-    rozstrzygniete: (effect) => spec.rozstrzygniete?.(effect) ?? true,
-    pyta: (effect) => spec.pyta?.(effect) ?? null,
-    walencja: (effect) => spec.walencja?.(effect) ?? null,
-    obszary: (effect) => spec.obszary?.(effect) ?? [],
+    params: spec.params,
+    composes: false as Word<K>["composes"],
+    children: () => [],
+    settled: (effect) => spec.settled?.(effect) ?? true,
+    asks: (effect) => spec.asks?.(effect) ?? null,
+    valence: (effect) => spec.valence?.(effect) ?? null,
+    fieldsNamed: (effect) => spec.fieldsNamed?.(effect) ?? [],
   };
 }
 
-const settledAll = (children: readonly Effect[], settled: (child: Effect) => boolean) =>
-  children.every(settled);
+const settledAll = (children: readonly Effect[], isSettled: (child: Effect) => boolean) =>
+  children.every(isSettled);
 
 /**
  * Whether a destination is named, or is the player pointing at the board.
@@ -141,27 +141,27 @@ export const WORDS: { [K in Op]: Word<K> } = {
   // ── the shapes the walk descends through ────────────────────────────────
 
   "po-kolei": {
-    pola: { steps: true },
-    sklada: true,
-    dzieci: (effect) => effect.steps.map((step, at) => [at, step] as const),
-    rozstrzygniete: (_effect, children, settled) => settledAll(children, settled),
-    pyta: () => null,
+    params: { steps: true },
+    composes: true,
+    children: (effect) => effect.steps.map((step, at) => [at, step] as const),
+    settled: (_effect, children, isSettled) => settledAll(children, isSettled),
+    asks: () => null,
     /** A sequence costs you if any step does; the gift does not offset it. */
-    walencja: (effect, of) => {
+    valence: (effect, of) => {
       const steps = effect.steps.map(of);
       if (steps.includes("strata")) return "strata";
       return steps.includes("korzysc") ? "korzysc" : null;
     },
-    obszary: () => [],
+    fieldsNamed: () => [],
   },
 
   wybor: {
-    pola: { options: true },
-    sklada: true,
-    dzieci: (effect) => effect.options.map((option, at) => [at, option.effect] as const),
+    params: { options: true },
+    composes: true,
+    children: (effect) => effect.options.map((option, at) => [at, option.effect] as const),
     /** The decision *is* the effect. */
-    rozstrzygniete: () => false,
-    pyta: (effect) => ({ kind: "wybor", options: effect.options.map((option) => option.label) }),
+    settled: () => false,
+    asks: (effect) => ({ kind: "wybor", options: effect.options.map((option) => option.label) }),
     /**
      * A choice you may decline is not a loss, whatever else is on offer.
      *
@@ -169,144 +169,144 @@ export const WORDS: { [K in Op]: Word<K> } = {
      * the whole Karta. Nothing to gain and no way out is the DOBRE BÓSTWO
      * asking a guilty Postać for a coin or a turn: one readable arm is enough.
      */
-    walencja: (effect, of) => {
+    valence: (effect, of) => {
       const arms = effect.options.map((option) => of(option.effect));
       const declinable = effect.options.some((option) => option.effect.op === "nic");
       if (arms.includes("korzysc") || declinable) return "korzysc";
       return arms.includes("strata") ? "strata" : null;
     },
-    obszary: () => [],
+    fieldsNamed: () => [],
   },
 
   rzut: {
-    pola: { faces: true, kostki: true },
-    sklada: true,
+    params: { faces: true, kostki: true },
+    composes: true,
     /** Keyed by face, which is what the walk writes into the cursor. */
-    dzieci: (effect) =>
+    children: (effect) =>
       Object.keys(effect.faces)
         .map(Number)
         .sort((a, b) => a - b)
         .map((face) => [face, effect.faces[face]] as const),
     /** A die table is settled only if every face it can land on is. */
-    rozstrzygniete: (_effect, children, settled) => settledAll(children, settled),
+    settled: (_effect, children, isSettled) => settledAll(children, isSettled),
     /** Not a question: the app rolls it, and what it lands on is asked afterwards. */
-    pyta: () => null,
-    walencja: () => null,
-    obszary: () => [],
+    asks: () => null,
+    valence: () => null,
+    fieldsNamed: () => [],
   },
 
   gdy: {
-    pola: { warunek: true, to: true, inaczej: true },
-    sklada: true,
-    dzieci: (effect) =>
+    params: { warunek: true, to: true, inaczej: true },
+    composes: true,
+    children: (effect) =>
       effect.inaczej
         ? ([[0, effect.to], [1, effect.inaczej]] as const)
         : ([[0, effect.to]] as const),
     /** A condition the app can test, on branches it can carry out. */
-    rozstrzygniete: (_effect, children, settled) => settledAll(children, settled),
-    pyta: () => null,
+    settled: (_effect, children, isSettled) => settledAll(children, isSettled),
+    asks: () => null,
     /** A condition inside a condition is still one card, and its arm decides. */
-    walencja: (effect, of) => of(effect.to),
-    obszary: () => [],
+    valence: (effect, of) => of(effect.to),
+    fieldsNamed: () => [],
   },
 
   /**
    * „Możesz modlić się na takich samych zasadach, jak w Świątyni Bogini Nemed"
    * — the two Kapliczki. The child is the Obszar's own table, which
-   * `resolve.ts` fetches off `pozycza`; here the word only says which one.
+   * `resolve.ts` fetches off `borrows`; here the word only says which one.
    */
   "jak-pole": {
-    pola: { fieldId: true },
-    sklada: true,
-    dzieci: () => [],
-    pozycza: (effect) => effect.fieldId,
+    params: { fieldId: true },
+    composes: true,
+    children: () => [],
+    borrows: (effect) => effect.fieldId,
     /** Exactly as settled as the table it borrows; a table nobody has is not. */
-    rozstrzygniete: (_effect, children, settled) =>
-      children.length > 0 && settledAll(children, settled),
-    pyta: () => null,
-    walencja: () => null,
-    obszary: (effect) => [effect.fieldId],
+    settled: (_effect, children, isSettled) =>
+      children.length > 0 && settledAll(children, isSettled),
+    asks: () => null,
+    valence: () => null,
+    fieldsNamed: (effect) => [effect.fieldId],
   },
 
   /** The Władca Zdarzeń: which Karta and where, and the first is not on the frame. */
   "przenies-karte": {
-    pola: {},
-    sklada: true,
-    dzieci: () => [],
-    rozstrzygniete: () => false,
-    pyta: () => ({ kind: "nieobslugiwane" }),
-    walencja: () => null,
-    obszary: () => [],
+    params: {},
+    composes: true,
+    children: () => [],
+    settled: () => false,
+    asks: () => ({ kind: "nieobslugiwane" }),
+    valence: () => null,
+    fieldsNamed: () => [],
   },
 
   /** The MĘDRZEC's riddle: a face named aloud, then the die. */
   zgadnij: {
-    pola: { nagroda: true },
-    sklada: true,
-    dzieci: (effect) => [[0, effect.nagroda]],
-    pod: (effect, index) => (index >= 1 && index <= 6 ? effect.nagroda : null),
-    rozstrzygniete: () => false,
-    pyta: () => ({ kind: "cyfra", faces: SIX }),
-    walencja: () => null,
-    obszary: () => [],
+    params: { nagroda: true },
+    composes: true,
+    children: (effect) => [[0, effect.nagroda]],
+    childAt: (effect, index) => (index >= 1 && index <= 6 ? effect.nagroda : null),
+    settled: () => false,
+    asks: () => ({ kind: "cyfra", faces: SIX }),
+    valence: () => null,
+    fieldsNamed: () => [],
   },
 
   // ── the things that happen ──────────────────────────────────────────────
 
-  nic: leaf("nic", { pola: {} }),
+  nic: leaf("nic", { params: {} }),
 
   punkty: leaf("punkty", {
-    pola: { stat: true, delta: true, target: true },
+    params: { stat: true, delta: true, target: true },
     // Gold included: a Sztuka Złota is a point like the others here.
-    walencja: (effect) => (effect.delta === 0 ? null : effect.delta > 0 ? "korzysc" : "strata"),
+    valence: (effect) => (effect.delta === 0 ? null : effect.delta > 0 ? "korzysc" : "strata"),
   }),
 
   /** Free healing is capped by 4.7 and has one answer; healing that charges is a purchase, and how much to buy is the buyer's. */
   uzdrow: leaf("uzdrow", {
-    pola: { upTo: true, cena: true },
-    rozstrzygniete: (effect) => !effect.cena,
-    pyta: (effect) => (effect.cena ? { kind: "nieobslugiwane" } : null),
-    walencja: (effect) => (effect.cena === undefined ? "korzysc" : null),
+    params: { upTo: true, cena: true },
+    settled: (effect) => !effect.cena,
+    asks: (effect) => (effect.cena ? { kind: "nieobslugiwane" } : null),
+    valence: (effect) => (effect.cena === undefined ? "korzysc" : null),
   }),
 
-  sprzedaj: leaf("sprzedaj", { pola: { cena: true } }),
+  sprzedaj: leaf("sprzedaj", { params: { cena: true } }),
 
   "tura-stracona": leaf("tura-stracona", {
-    pola: { turns: true, target: true, oprocz: true },
-    walencja: () => "strata",
+    params: { turns: true, target: true, oprocz: true },
+    valence: () => "strata",
   }),
 
-  "ruch-dodatkowy": leaf("ruch-dodatkowy", { pola: {}, walencja: () => "korzysc" }),
+  "ruch-dodatkowy": leaf("ruch-dodatkowy", { params: {}, valence: () => "korzysc" }),
 
   zaklecie: leaf("zaklecie", {
-    pola: { count: true, cena: true, zeStosu: true },
+    params: { count: true, cena: true, zeStosu: true },
     // A Zaklęcie with a price is the Sztukmistrz's shop, a trade rather than a gift.
-    walencja: (effect) => (effect.cena === undefined ? "korzysc" : null),
+    valence: (effect) => (effect.cena === undefined ? "korzysc" : null),
   }),
 
-  "zaklecia-do-limitu": leaf("zaklecia-do-limitu", { pola: {}, walencja: () => "korzysc" }),
+  "zaklecia-do-limitu": leaf("zaklecia-do-limitu", { params: {}, valence: () => "korzysc" }),
 
   przenies: leaf("przenies", {
-    pola: { to: true },
-    rozstrzygniete: (effect) => namedDestination(effect.to),
-    pyta: (effect) => (namedDestination(effect.to) ? null : { kind: "gdzie", to: effect.to }),
-    obszary: (effect) => (effect.to.kind === "pole" ? [effect.to.fieldId] : []),
+    params: { to: true },
+    settled: (effect) => namedDestination(effect.to),
+    asks: (effect) => (namedDestination(effect.to) ? null : { kind: "gdzie", to: effect.to }),
+    fieldsNamed: (effect) => (effect.to.kind === "pole" ? [effect.to.fieldId] : []),
   }),
 
-  wyciagnij: leaf("wyciagnij", { pola: { count: true } }),
+  wyciagnij: leaf("wyciagnij", { params: { count: true } }),
 
-  walka: leaf("walka", { pola: { nazwa: true, miecz: true, magia: true } }),
+  walka: leaf("walka", { params: { nazwa: true, miecz: true, magia: true } }),
 
   /** Whom it is sent at was named as the Zaklęcie was spoken — the only choice it holds. */
-  przyzwij: leaf("przyzwij", { pola: { nazwa: true, miecz: true } }),
+  przyzwij: leaf("przyzwij", { params: { nazwa: true, miecz: true } }),
 
-  podejrzyj: leaf("podejrzyj", { pola: { count: true } }),
+  podejrzyj: leaf("podejrzyj", { params: { count: true } }),
 
   /** The class is on the card and the whole Krąg is swept; nobody picks which Nieznajomi die. */
-  katastrofa: leaf("katastrofa", { pola: { klasa: true, zasieg: true } }),
+  katastrofa: leaf("katastrofa", { params: { klasa: true, zasieg: true } }),
 
   /** 15.2 has already said which Karta is in front of you. */
-  "wymien-karte": leaf("wymien-karte", { pola: {} }),
+  "wymien-karte": leaf("wymien-karte", { params: {} }),
 
   /**
    * „Tracisz 1 z Przedmiotów wedle własnego wyboru" — which one is yours (5.6),
@@ -316,24 +316,24 @@ export const WORDS: { [K in Op]: Word<K> } = {
    * list once and disagreed about one value.
    */
   strata: leaf("strata", {
-    pola: { co: true, oprocz: true, count: true, wybor: true, target: true },
-    rozstrzygniete: (effect) => takesEverything(effect.co) || effect.wybor === "losowo",
-    pyta: (effect) =>
+    params: { co: true, oprocz: true, count: true, wybor: true, target: true },
+    settled: (effect) => takesEverything(effect.co) || effect.wybor === "losowo",
+    asks: (effect) =>
       takesEverything(effect.co) || effect.wybor === "losowo"
         ? null
         : { kind: "ktora", co: effect.co, count: effect.count ?? 1 },
-    walencja: () => "strata",
+    valence: () => "strata",
   }),
 
-  kamien: leaf("kamien", { pola: {}, walencja: () => "strata" }),
+  kamien: leaf("kamien", { params: {}, valence: () => "strata" }),
 
   /** The Kuglarz: the two offers are the question, and answering one leaves nothing to decide. */
-  "zamien-punkty": leaf("zamien-punkty", { pola: { z: true } }),
+  "zamien-punkty": leaf("zamien-punkty", { params: { z: true } }),
 
-  natura: leaf("natura", { pola: { na: true } }),
+  natura: leaf("natura", { params: { na: true } }),
 
   /** A shop is a standing offer, not a question; the buying is `buy` afterwards. */
-  kup: leaf("kup", { pola: { towar: true } }),
+  kup: leaf("kup", { params: { towar: true } }),
 
   /**
    * Two of the three cards that put a Karta down name one Obszar and ask
@@ -341,15 +341,15 @@ export const WORDS: { [K in Op]: Word<K> } = {
    * the player pointing at the board.
    */
   "poloz-karte": leaf("poloz-karte", {
-    pola: { gdzie: true },
-    rozstrzygniete: (effect) => effect.gdzie.kind === "pole",
-    pyta: (effect) =>
+    params: { gdzie: true },
+    settled: (effect) => effect.gdzie.kind === "pole",
+    asks: (effect) =>
       effect.gdzie.kind === "pole"
         ? null
         : effect.gdzie.kind === "jedno-z"
           ? { kind: "gdzie", to: effect.gdzie }
           : { kind: "nieobslugiwane" },
-    obszary: (effect) =>
+    fieldsNamed: (effect) =>
       effect.gdzie.kind === "pole"
         ? [effect.gdzie.fieldId]
         : effect.gdzie.kind === "jedno-z"
@@ -358,23 +358,23 @@ export const WORDS: { [K in Op]: Word<K> } = {
   }),
 
   /** The card is named and the stock is the app's to count. */
-  otrzymaj: leaf("otrzymaj", { pola: { co: true }, walencja: () => "korzysc" }),
+  otrzymaj: leaf("otrzymaj", { params: { co: true }, valence: () => "korzysc" }),
 
-  efekt: leaf("efekt", { pola: { label: true, modifier: true, ends: true, target: true } }),
+  efekt: leaf("efekt", { params: { label: true, modifier: true, ends: true, target: true } }),
 
   /** A die per card, and nobody picks which — 5.6 is not engaged. */
   "rzut-za-kazdego": leaf("rzut-za-kazdego", {
-    pola: { co: true, gubiPrzy: true },
-    walencja: () => "strata",
+    params: { co: true, gubiPrzy: true },
+    valence: () => "strata",
   }),
 
-  uwolnij: leaf("uwolnij", { pola: { od: true } }),
+  uwolnij: leaf("uwolnij", { params: { od: true } }),
 
   /** Somebody has to say which card changes hands (5.6, or Szaleństwo's own text). */
   zabierz: leaf("zabierz", {
-    pola: { co: true, wybiera: true },
-    rozstrzygniete: () => false,
-    pyta: () => ({ kind: "nieobslugiwane" }),
+    params: { co: true, wybiera: true },
+    settled: () => false,
+    asks: () => ({ kind: "nieobslugiwane" }),
   }),
 };
 
@@ -402,7 +402,7 @@ export const OPS_IN_ORDER = Object.keys(WORDS) as Op[];
  * for callers that cannot reach `FIELD_SCRIPTS` without an import cycle.
  */
 export function nodesOf(effect: Effect): Effect[] {
-  return [effect, ...wordOf(effect).dzieci(effect).flatMap(([, child]) => nodesOf(child))];
+  return [effect, ...wordOf(effect).children(effect).flatMap(([, child]) => nodesOf(child))];
 }
 
 /**
@@ -417,5 +417,5 @@ export function nodesOf(effect: Effect): Effect[] {
  * colour on those would be a claim the card never made.
  */
 export function valenceOf(effect: Effect): Valence | null {
-  return wordOf(effect).walencja(effect, valenceOf);
+  return wordOf(effect).valence(effect, valenceOf);
 }

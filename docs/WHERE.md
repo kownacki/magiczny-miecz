@@ -202,6 +202,11 @@ line, silently. Write the test that asserts your sentence.
    `coverageOf` reports `pelne` off the tables. A card the script only half
    carries gets a `MANUAL` entry saying which clause a table still applies by
    hand, which downgrades it to `czesciowe`.
+5. `examples` on the script — a few plays written down: the seat before,
+   dice, answers, and what must be true after. `commands/examples.test.ts`
+   plays every one; `npm run card -- try <id> --dice … --answers …` plays a
+   Karta out loud first, so the example is copied from a play rather than
+   guessed. A card is not finished without them.
 
 **Do not run `npm run data` to add a card.** It rebuilds the generated JSON from
 `src/data/raw/` and drops hand-patches made to the generated files. Patch the
@@ -365,9 +370,9 @@ the compiler:
    would do. If the walk *descends* through it rather than running it, add it
    to `COMPOSING_OPS` too.
 2. `src/lib/engine/words.ts` — its entry in `WORDS`: every field in `pola`,
-   `sklada`, its children with the index a cursor uses to reach them, whether
+   `composes`, its children with the index a cursor uses to reach them, whether
    it is settled, what it asks, its valence, the Obszary it names. A missing
-   entry, a missing field, or a `sklada` that disagrees with `COMPOSING_OPS`
+   entry, a missing field, or a `composes` that disagrees with `COMPOSING_OPS`
    is a compile error at the table.
 3. `src/lib/game/commands/ops.ts` — for a leaf, its entry in `OPS` (compile
    error if missing). For a composing word, a branch in `walk` in
@@ -382,7 +387,7 @@ the compiler:
 `wordsRead.test.ts` fails on a field in `pola` the executor never mentions —
 the PÓŁBÓG's `zeStosu` shape, a word rendered under the card and ignored by
 the walk. `coverage.test.ts` fails on a node of a `pelne` card that is
-unsettled and no surface can ask. `ask slowo <op>` prints the entry back:
+unsettled and no surface can ask. `ask word <op>` prints the entry back:
 fields, where it runs, where it is said, who speaks it.
 
 Do not add a reader of the vocabulary that switches on `op` by hand. Six of

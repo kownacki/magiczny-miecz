@@ -19,8 +19,8 @@ import { wordOf, type Child } from "./words";
  */
 export function childrenOf(effect: Effect): readonly Child[] {
   const word = wordOf(effect);
-  const own = word.dzieci(effect);
-  const borrowed = word.pozycza?.(effect);
+  const own = word.children(effect);
+  const borrowed = word.borrows?.(effect);
   if (borrowed === undefined) return own;
   const table = FIELD_SCRIPTS[borrowed]?.offers[0];
   return table ? [...own, [0, table.effect]] : own;
@@ -44,7 +44,7 @@ export function everyNode(effect: Effect): Effect[] {
  * not a decision**. What is left on screen after a roll is exactly the set of
  * choices the rules actually give you.
  *
- * Each word answers for itself in `words.ts` (`rozstrzygniete`); this only
+ * Each word answers for itself in `words.ts` (`settled`); this only
  * hands it its children and the recursion. The history worth keeping from
  * when the answers were a switch here: four times a word sat among the
  * unsettled ones only because it had no implementation yet — `otrzymaj`,
@@ -55,7 +55,7 @@ export function everyNode(effect: Effect): Effect[] {
  * will fail a build instead of a table.
  */
 export function isSettled(effect: Effect): boolean {
-  return wordOf(effect).rozstrzygniete(
+  return wordOf(effect).settled(
     effect,
     childrenOf(effect).map(([, child]) => child),
     isSettled,
@@ -149,7 +149,7 @@ export function nodeAt(effect: Effect, cursor: readonly number[]): Effect | null
   let at: Effect = effect;
   for (const index of cursor) {
     const next =
-      wordOf(at).pod?.(at, index) ??
+      wordOf(at).childAt?.(at, index) ??
       childrenOf(at).find(([reached]) => reached === index)?.[1] ??
       null;
     if (!next) return null;

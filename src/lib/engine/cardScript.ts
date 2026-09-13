@@ -94,6 +94,69 @@ export interface CardScript {
    * button under it. The script is what knows.
    */
   consumed?: boolean;
+  /**
+   * The card's own proofs: a table, some dice and answers, and what must be
+   * true afterwards. `commands/examples.ts` plays every one of them, and
+   * `npm run card -- try` plays one out loud.
+   *
+   * On the Karta rather than in a test file beside it, because a card that
+   * carries its own examples can be moved, read and doubted as one thing —
+   * Fireplace, XMage and Argentum all test a card this way, a minimal state
+   * and a scripted game, and none of them keeps the proof away from the card
+   * (docs/KARTA.md §5).
+   */
+  examples?: readonly Example[];
+}
+
+/**
+ * One play of a Karta, written down: the table before, what is thrown and
+ * answered, and what is true after.
+ *
+ * Plain data, no functions and no regular expressions, so a card file is
+ * still JSON with comments (docs/KARTA.md §2). Everything left out is the
+ * harness's default: a Goblin with Miecz 2, Magia 1, four Życie and one Sztuka
+ * Złota, standing on the Wrzosowiska, holding nothing.
+ */
+export interface Example {
+  name: string;
+  /** The seat before the Karta, where it differs from the default. */
+  given?: {
+    gold?: number;
+    life?: number;
+    /** Own points — the tracked ones, 1.2 and 2.2 — and the floor under them. */
+    sword?: number;
+    magic?: number;
+    nature?: Nature;
+    items?: readonly CardId[];
+    friends?: readonly CardId[];
+    /** How many Zaklęcia are already in the hand. */
+    spells?: number;
+  };
+  /** The Karta is found lying on the Obszar rather than turned over (15.1). */
+  lying?: true;
+  /** Dice, in the order the Karta throws them. */
+  dice?: readonly number[];
+  /** Answers, one per question the Karta asks, in the order it asks. */
+  answers?: readonly number[];
+  /** The Obszar pointed at, when the Karta asks „gdzie". */
+  destination?: FieldId;
+  expect: {
+    gold?: number;
+    life?: number;
+    sword?: number;
+    magic?: number;
+    items?: number;
+    friends?: number;
+    spells?: number;
+    /** Where the Postać stands afterwards. */
+    standingOn?: FieldId;
+    /** Where the Karta itself lies afterwards. */
+    lyingOn?: FieldId;
+    /** A phrase the play reports, in the journal's own words. */
+    says?: string;
+    /** The question still open at the end, or null for none. */
+    waitingOn?: Effect["op"] | null;
+  };
 }
 
 /**
@@ -713,7 +776,7 @@ export function scriptFor(cardId: CardId): CardScript | null {
 
 /** Every field id a script names, for checking against the board. */
 export function fieldsNamedBy(effect: Effect): FieldId[] {
-  return nodesOf(effect).flatMap((node) => wordOf(node).obszary(node));
+  return nodesOf(effect).flatMap((node) => wordOf(node).fieldsNamed(node));
 }
 
 /**

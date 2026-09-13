@@ -161,12 +161,12 @@ export function questionOn(
   const reason = frame.reason;
   const cannot: TurnQuestion = { kind: "nieobslugiwane", reason, op: asking.op };
   /**
-   * What the word asks is the word's own (`words.ts`, `pyta`); what the table
+   * What the word asks is the word's own (`words.ts`, `asks`); what the table
    * can add to it — free Obszary, the hand — is added here. A node that asks
    * nothing should never be under an unheld cursor, and if one is, saying no
    * surface can ask it is the honest answer rather than a guessed widget.
    */
-  const ask = wordOf(asking).pyta(asking);
+  const ask = wordOf(asking).asks(asking);
   if (!ask) return cannot;
 
   switch (ask.kind) {

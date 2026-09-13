@@ -183,7 +183,7 @@ describe("what `pelne` promises a player", () => {
            `COMPOSING_OPS`. `isSettled` calls a `gdy` unsettled while either
            branch holds a question, which is true of the branch and not of the
            `gdy`. */
-        if (wordOf(node).sklada) continue;
+        if (wordOf(node).composes) continue;
         if (isSettled(node)) continue;
         if (asked(node)?.kind === "nieobslugiwane") stalls.push(`${cardId}: ${node.op}`);
       }

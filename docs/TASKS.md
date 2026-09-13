@@ -119,13 +119,31 @@ gap stops looking like one.
 [KARTA.md](KARTA.md) answers the five questions SYSTEM-KART.md left open and
 sets six steps: close the vocabulary with a test, make it one table (`WORDS`),
 examples on the Karta with one runner, one `Karta` shape in one file per card,
-close the escapes, then a builder if wanted. **Steps 0 and 1 are done**:
+close the escapes, then a builder if wanted. **Steps 0, 1 and 2 are done**:
 `namedCards.test.ts` freezes every place the engine still knows a Karta by
 name (a list that may shrink and not grow), `wordsRead.test.ts` holds that
-every field a word declares is read by the code that runs it, and `words.ts`
-is the one table over `Effect["op"]` that `isSettled`, `nodeAt`, `questionOn`,
-`valenceOf` and the tree walkers now read (WHERE.md recipe 13, `ask slowo`).
-Next is step 2: examples on the Karta, one runner, `karta try` in the console.
+every field a word declares is read by the code that runs it, `words.ts` is
+the one table over `Effect["op"]` that `isSettled`, `nodeAt`, `questionOn`,
+`valenceOf` and the tree walkers read (WHERE.md recipe 13, `ask word`), and a
+Karta carries its own `examples`, played by `examples.test.ts` and by
+`npm run card -- try` (the seventeen Nieznajomi have theirs). Next is step 3:
+one `Karta` shape, one file per card, the five registries as views.
+
+- [ ] **Move the per-card tests onto the cards.** `strangers.test.ts` and its
+      siblings keep what they assert about the *turn*; what they assert about
+      the *card* becomes an `examples` entry and the test goes. One file per
+      commit, examples first, so nothing is uncovered in between.
+
+- [ ] **English identifiers, everywhere in the engine — a sweep.** Michał,
+      2026-09-13: engine and command code is named in English; Polish is only
+      for the game's own nouns (Karta, Obszar, Zaklęcie, Miecz) and for the
+      card vocabulary that already exists (`op: "punkty"`, `cena`). The new
+      `words.ts` and `Example` were renamed the same day; what is left is a
+      sweep of what came before — fields on `TurnPhase`, `Status`, `Ability`
+      and the console `Command` union, function names, test-fixture keys —
+      one file per commit, `tsc` as the guide, no behaviour change. Whether
+      the card words themselves (`punkty`, `wybor`, `rzut`…) go English is a
+      separate decision for step 3, not part of this sweep.
 
 Two cards the second test found saying one thing and doing another, kept in
 its `UNREAD` list until fixed:

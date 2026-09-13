@@ -733,7 +733,7 @@ function askAnything(query: string): void {
   );
 }
 
-// ── ask slowo ────────────────────────────────────────────────────────────────
+// ── ask word ─────────────────────────────────────────────────────────────────
 
 const OPS_FILE = "src/lib/game/commands/ops.ts";
 const WALK_FILE = "src/lib/game/commands/effects.ts";
@@ -781,16 +781,16 @@ function askWord(query: string): void {
     OPS_IN_ORDER.find((one) => fold(one).startsWith(needle));
   if (!op) {
     say(`no word \`${query}\` in the vocabulary. The words are:`, "");
-    say(...OPS_IN_ORDER.map((one) => `  ${one}${WORDS[one].sklada ? "  (składa)" : ""}`));
+    say(...OPS_IN_ORDER.map((one) => `  ${one}${WORDS[one].composes ? "  (składa)" : ""}`));
     return;
   }
   const word = WORDS[op as Op];
-  const fields = Object.keys(word.pola);
-  say(`${op} — ${word.sklada ? "a shape the walk descends through" : "a thing that happens"}`, "");
+  const fields = Object.keys(word.params);
+  say(`${op} — ${word.composes ? "a shape the walk descends through" : "a thing that happens"}`, "");
   say(`fields      ${fields.length > 0 ? fields.join(", ") : "(none)"}`);
   say(
     `runs in     ${
-      word.sklada
+      word.composes
         ? `${WALK_FILE} (the walk)`
         : (lineOf(OPS_FILE, new RegExp(`^  "?${op}"?: `)) ?? `${OPS_FILE} — not found`)
     }`,
@@ -821,7 +821,7 @@ const USAGE = [
   "  ask card <id|name>       class, printed text, ABILITIES, SCRIPTS/USES/SPELLS, coverage, parked",
   "  ask character <id|name>  parameters, MGR, kit, printed clauses numbered, CHARACTER_ABILITIES",
   "  ask ability <kind>       every card and Postać that prints it, and what reads it",
-  "  ask slowo <op>           one word of the card vocabulary: fields, shape, where it runs, who speaks it",
+  "  ask word <op>            one word of the card vocabulary: fields, shape, where it runs, who speaks it",
   "  ask where <thing>        which files own a concept: console verb, engine, commands, tests, recipe",
   "  ask readers <name>       every line that uses an identifier — the question `where` cannot answer",
   "  ask <string>             id, plus which of the above would answer",
@@ -840,10 +840,10 @@ function main(): void {
   else if (verb === "card" && query) askCard(query);
   else if (verb === "character" && query) askCharacter(query);
   else if (verb === "ability" && query) askAbility(query);
-  else if (verb === "slowo" && query) askWord(query);
+  else if (verb === "word" && query) askWord(query);
   else if (verb === "where" && query) askWhere(query);
   else if (verb === "readers" && query) askReaders(query);
-  else if (["id", "card", "character", "ability", "slowo", "where", "readers"].includes(verb)) {
+  else if (["id", "card", "character", "ability", "word", "where", "readers"].includes(verb)) {
     say(`\`ask ${verb}\` needs something to look up.`, "", ...USAGE);
   } else askAnything([verb, query].filter(Boolean).join(" "));
 

@@ -37,6 +37,10 @@ export const NIEZNAJOMI: Readonly<Record<string, CardScript>> = {
       ],
     },
     disposition: { kind: "odloz" },
+    examples: [
+      { name: "carries you anywhere in your own Krąg", answers: [0], destination: "pustelnia", expect: { standingOn: "pustelnia" } },
+      { name: "leaves whether or not you ride", answers: [1], expect: { standingOn: "wrzosowiska" } },
+    ],
   },
   "dziki-rumak": {
     effect: {
@@ -47,11 +51,13 @@ export const NIEZNAJOMI: Readonly<Record<string, CardScript>> = {
       ],
     },
     disposition: { kind: "odloz" },
+    examples: [{ name: "offers an extra move", answers: [0], expect: { says: "dodatkowy ruch" } }],
   },
   // „Półbóg ofiaruje ci 1 Zaklęcie. Możesz je wybrać ze stosu."
   polbog: {
     effect: { op: "zaklecie", count: 1, zeStosu: true },
     disposition: { kind: "odloz" },
+    examples: [{ name: "hands over one Zaklęcie", given: { magic: 4 }, expect: { spells: 1 } }],
   },
   /**
    * Three cards word the same wish differently and mean the same six things.
@@ -64,6 +70,10 @@ export const NIEZNAJOMI: Readonly<Record<string, CardScript>> = {
   "krol-lasu": {
     effect: WISH(),
     disposition: { kind: "do-pierwszej" },
+    examples: [
+      { name: "a point of Miecz on the first wish", answers: [0], expect: { sword: 3 } },
+      { name: "a Sztuka Złota on the fifth", answers: [4], expect: { gold: 2 } },
+    ],
   },
   wrozka: {
     effect: {
@@ -72,6 +82,10 @@ export const NIEZNAJOMI: Readonly<Record<string, CardScript>> = {
       to: WISH(),
     },
     disposition: { kind: "do-pierwszej" },
+    examples: [
+      { name: "grants a Dobra Postać her wish", given: { nature: "good" }, answers: [0], expect: { sword: 3 } },
+      { name: "has nothing for a Zła Postać", given: { nature: "evil" }, expect: { sword: 2, says: "nic" } },
+    ],
   },
   koszmar: {
     effect: {
@@ -80,6 +94,7 @@ export const NIEZNAJOMI: Readonly<Record<string, CardScript>> = {
       to: WISH(),
     },
     disposition: { kind: "do-pierwszej" },
+    examples: [{ name: "grants a Zła Postać its wish", given: { nature: "evil" }, answers: [1], expect: { magic: 2 } }],
   },
   "zlodziej-dobroczynca": {
     effect: {
@@ -89,6 +104,10 @@ export const NIEZNAJOMI: Readonly<Record<string, CardScript>> = {
       inaczej: { op: "punkty", stat: "gold", delta: 1 },
     },
     disposition: { kind: "odloz" },
+    examples: [
+      { name: "takes a coin from whoever has one", given: { gold: 1 }, expect: { gold: 0 } },
+      { name: "gives a coin to whoever has none", given: { gold: 0 }, expect: { gold: 1 } },
+    ],
   },
   wielkolud: {
     effect: {
@@ -103,6 +122,10 @@ export const NIEZNAJOMI: Readonly<Record<string, CardScript>> = {
       },
     },
     disposition: { kind: "odloz" },
+    examples: [
+      { name: "ignores you on a low throw", given: { items: ["miecz"] }, dice: [1], expect: { items: 1 } },
+      { name: "takes a Przedmiot on a 3", given: { items: ["miecz"] }, dice: [3], expect: { items: 0 } },
+    ],
   },
   "urocza-diablica": {
     effect: {
@@ -117,6 +140,11 @@ export const NIEZNAJOMI: Readonly<Record<string, CardScript>> = {
       },
     },
     disposition: { kind: "zostaje" },
+    examples: [
+      { name: "a point of Magia on a 2", dice: [2], expect: { magic: 2 } },
+      { name: "a point of Życie on a 5", dice: [5], expect: { life: 3 } },
+      { name: "stone on a 6", dice: [6], expect: { says: "Kamie" } },
+    ],
   },
   /**
    * "Każdej Postaci przywróci 2 punkty Życia, podczas każdych **odwiedzin**."
@@ -165,6 +193,7 @@ export const NIEZNAJOMI: Readonly<Record<string, CardScript>> = {
       ],
     },
     disposition: { kind: "zostaje" },
+    examples: [{ name: "heals two, and no higher than four", given: { life: 2 }, answers: [0], expect: { life: 4 } }],
   },
   /** "Każda Dobra Postać, która tu **zawita**, otrzyma 1 Zaklęcie." */
   czarodziej: {
@@ -178,6 +207,7 @@ export const NIEZNAJOMI: Readonly<Record<string, CardScript>> = {
       },
     },
     disposition: { kind: "zostaje" },
+    examples: [{ name: "a Zaklęcie for a Dobra Postać", given: { nature: "good", magic: 4 }, answers: [0], expect: { spells: 1 } }],
   },
   // A standing shop rather than a one-off gift, which is why he stays.
   /**
@@ -204,6 +234,11 @@ export const NIEZNAJOMI: Readonly<Record<string, CardScript>> = {
       ],
     },
     disposition: { kind: "zostaje" },
+    examples: [
+      { name: "takes the coin and hands over the card", given: { gold: 3, magic: 4 }, answers: [0], expect: { gold: 2, spells: 1 } },
+      { name: "refuses an empty purse before touching the pile", given: { gold: 0, magic: 4 }, answers: [0], expect: { gold: 0, spells: 0, says: "Za mało złota" } },
+      { name: "charges nothing when the Magia allows no Zaklęcia (2.6)", given: { gold: 3, magic: 0 }, answers: [0], expect: { gold: 3, says: "2.6" } },
+    ],
   },
   // Two rolls' worth of card in one: where he settles, and what he hands the
   // first Postać to find him. Both named items are finite ("jeśli jeszcze są").
@@ -241,6 +276,10 @@ export const NIEZNAJOMI: Readonly<Record<string, CardScript>> = {
       ],
     },
     disposition: { kind: "do-pierwszej" },
+    examples: [
+      { name: "rolls for his Obszar when turned over", dice: [3], expect: { lyingOn: "pustelnia" } },
+      { name: "offers the first visitor a Magiczny Miecz", lying: true, answers: [0], expect: { items: 1 } },
+    ],
   },
 
   /**
@@ -288,6 +327,11 @@ export const NIEZNAJOMI: Readonly<Record<string, CardScript>> = {
       ],
     },
     disposition: { kind: "odloz" },
+    examples: [
+      { name: "sets the base Miecz to the base Magia", given: { sword: 2, magic: 4 }, answers: [0], expect: { sword: 4 } },
+      { name: "sets the base Magia to the base Miecz", given: { sword: 4, magic: 1 }, answers: [1], expect: { magic: 4 } },
+      { name: "may be declined", answers: [2], expect: { sword: 2, magic: 1 } },
+    ],
   },
 
   /**
@@ -300,6 +344,10 @@ export const NIEZNAJOMI: Readonly<Record<string, CardScript>> = {
   medrzec: {
     effect: { op: "zgadnij", nagroda: { op: "zaklecie", count: 1 } },
     disposition: { kind: "odloz" },
+    examples: [
+      { name: "a Zaklęcie when the die matches the guess", given: { magic: 4 }, answers: [2], dice: [2], expect: { spells: 1 } },
+      { name: "nothing when it does not", given: { magic: 4 }, answers: [2], dice: [5], expect: { spells: 0 } },
+    ],
   },
 
   /**

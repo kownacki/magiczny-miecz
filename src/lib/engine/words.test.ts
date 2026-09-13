@@ -9,7 +9,7 @@ import { OPS_IN_ORDER, WORDS, wordOf } from "./words";
  * The vocabulary table against the corpus and against the walk.
  *
  * Most of what `WORDS` promises is held by the compiler — an op without an
- * entry, an entry without an op, a field missing from `pola`, a `sklada` that
+ * entry, an entry without an op, a field missing from `params`, a `composes` that
  * disagrees with `COMPOSING_OPS` — so what is left to test is what the table
  * *says* about the cards, and that the readers built on it agree with the
  * walk that writes cursors.
@@ -33,7 +33,7 @@ function corpus(): Effect[] {
 
 describe("the vocabulary table", () => {
   it("marks exactly the composing ops as shapes", () => {
-    const shapes = OPS_IN_ORDER.filter((op) => WORDS[op].sklada).sort();
+    const shapes = OPS_IN_ORDER.filter((op) => WORDS[op].composes).sort();
     expect(shapes).toEqual([...COMPOSING_OPS].sort());
   });
 
@@ -45,7 +45,7 @@ describe("the vocabulary table", () => {
 
   it("asks a question only of a node that is not settled", () => {
     for (const node of corpus()) {
-      const ask = wordOf(node).pyta(node);
+      const ask = wordOf(node).asks(node);
       if (ask && ask.kind !== "nieobslugiwane") {
         expect(isSettled(node), `${node.op} asks ${ask.kind} yet is settled`).toBe(false);
       }
@@ -54,8 +54,8 @@ describe("the vocabulary table", () => {
 
   it("leaves no unsettled leaf without a question of some kind", () => {
     for (const node of corpus()) {
-      if (wordOf(node).sklada || isSettled(node)) continue;
-      expect(wordOf(node).pyta(node), `${node.op} is unsettled and asks nothing`).not.toBeNull();
+      if (wordOf(node).composes || isSettled(node)) continue;
+      expect(wordOf(node).asks(node), `${node.op} is unsettled and asks nothing`).not.toBeNull();
     }
   });
 });

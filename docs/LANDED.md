@@ -1551,7 +1551,7 @@ recommending it.
 
 `src/lib/engine/words.ts`: `WORDS`, a `Record` over `Effect["op"]` saying for
 each word which fields a card may write (`pola`, a map the compiler keeps
-complete), whether the walk descends through it (`sklada`, typed off
+complete), whether the walk descends through it (`composes`, typed off
 `COMPOSING_OPS`), its children with the index a cursor uses, whether it is
 settled, what it asks, its valence and the Obszary it names. `isSettled`,
 `nodeAt`, `questionOn`, `valenceOf`, `fieldsNamedBy` and `reopensTheDrawing`
@@ -1561,6 +1561,28 @@ text, and the newest did not know `jak-pole` had a child — which is how a
 frame suspended inside a Kapliczka's borrowed prayer, or in the MĘDRZEC's
 reward, had no question on screen. Step 1 of docs/KARTA.md; the reasoning,
 and the two deliberate deviations from its sketch, are there under „Stan po
-kroku 1". `ask slowo <op>` prints an entry back. The measurements that came
+kroku 1". `ask word <op>` prints an entry back. The measurements that came
 first — `namedCards.test.ts` (23 Karty the engine still knows by name) and
 `wordsRead.test.ts` (three fields nothing reads) — are step 0.
+
+## A Karta carries its own examples (2026-09-13)
+
+`Example` on `CardScript`: the seat before, dice, answers, an Obszar to point
+at, and what must be true after — plain data, so a card file stays JSON with
+comments. `commands/examples.ts` builds the table with `aTable`, resolves the
+Karta with no decisions in hand and then does what a player does: „Dalej"
+over a held die, one answer per question, the named Obszar for „gdzie".
+`examples.test.ts` plays every example on every card; `npm run card -- try`
+plays one from flags and `-- examples` plays a card's own. The seventeen
+Nieznajomi carry twenty-eight between them. Step 2 of docs/KARTA.md.
+
+Playing one answer at a time found what every surface had hidden by sending
+its answers together: the `wybor` branch of `walk` dropped the `suspended`
+of the option it took, so a die under a choice (GODZINA DUCHÓW), an Obszar
+asked for under one (the JEDNOROŻEC) or a Przedmiot to give up under one
+(the Bagna) never put a `script` frame on the stack. One spread fixes it and
+the whole suite holds.
+
+Same day, Michał's rule for names: engine identifiers are English, Polish is
+for the game's own nouns and the card vocabulary. `words.ts` and `Example`
+were renamed on the spot; the sweep of what came before is on TASKS.md.
