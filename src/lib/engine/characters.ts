@@ -1,5 +1,7 @@
 /** What each of the 27 characters brings to the table, and what its own Charakterystyka does (8.1, 8.2). */
 
+import { KARTY } from "./content/index";
+import { characterAbilitiesOf, characterNotesOf, kitsOf } from "./karta";
 import type { Ability } from "./abilities";
 import { CHARACTER_POWERS_PARKED } from "./disabled";
 import { isCharacterId, type CardId, type CharacterId } from "@/data/ids";
@@ -85,6 +87,8 @@ export const CHARACTER_ABILITIES: Readonly<Partial<Record<CharacterId, readonly 
       delta: 1,
     },
   ],
+  // The Karty that have moved to one file each — see `karta.ts`.
+  ...characterAbilitiesOf(KARTY),
 };
 
 /**
@@ -124,6 +128,8 @@ export const STARTING_KIT: Readonly<Partial<Record<CharacterId, StartingKit>>> =
   "rycerz-ciemnosci": { spells: 1, items: ["miecz"] },
   wiedzma: { spells: 1 },
   zdobywca: { items: ["miecz", "tarcza"] },
+  // The Karty that have moved to one file each — see `karta.ts`.
+  ...kitsOf(KARTY),
 };
 
 /**
@@ -282,6 +288,8 @@ export const CHARACTER_NOTES: Readonly<Partial<Record<CharacterId, readonly stri
     "Kartę Przyjaciela możesz zawsze wymienić na 1 punkt Życia.",
     "Po wygranej zwykłej walce możesz odebrać 2 punkty Życia.",
   ],
+  // The Karty that have moved to one file each — see `karta.ts`.
+  ...characterNotesOf(KARTY),
 };
 
 /**

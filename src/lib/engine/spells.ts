@@ -1,4 +1,6 @@
 /** When a Zaklęcie may be cast, at what, and what casting it does (9.1, 9.6). */
+import { KARTY } from "./content/index";
+import { spellsOf } from "./karta";
 import { isSpellId, type CardId, type SpellId } from "@/data/ids";
 import type { Effect } from "./cardScript";
 import { isFoeClass } from "@/data/types";
@@ -659,6 +661,8 @@ export const SPELLS: Readonly<Partial<Record<SpellId, SpellScript>>> = {
       "Homunculus (Miecz 5) atakuje cel w tym Kręgu. Przegrana ofiara traci 1 Życie; Wróg znika z planszy.",
     script: { op: "summon", name: "HOMUNCULUS", sword: 5 },
   },
+  // The Karty that have moved to one file each — see `karta.ts`.
+  ...spellsOf(KARTY),
 };
 
 /**

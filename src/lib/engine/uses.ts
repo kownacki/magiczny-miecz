@@ -1,5 +1,7 @@
 /** The cards you spend by using them, and what spending one buys. */
 
+import { KARTY } from "./content/index";
+import { usesOf } from "./karta";
 import type { CardId } from "@/data/ids";
 import type { Ends, Modifier } from "./status";
 
@@ -141,6 +143,8 @@ export const USES: Readonly<Partial<Record<CardId, Use>>> = {
     when: "w turze po znalezieniu",
     resolvedBy: "table",
   },
+  // The Karty that have moved to one file each — see `karta.ts`.
+  ...usesOf(KARTY),
 };
 
 /**

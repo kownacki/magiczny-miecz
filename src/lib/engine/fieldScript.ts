@@ -1,5 +1,7 @@
 /** What the fields that offer something actually offer, in the same language the cards use. */
 
+import { KARTY } from "./content/index";
+import { fieldScriptsOf } from "./karta";
 import { scriptFor, type Effect } from "./cardScript";
 import type { SettledKey } from "./state";
 import { cardName } from "./polish";
@@ -813,6 +815,8 @@ export const FIELD_SCRIPTS: Readonly<Partial<Record<FieldId, FieldScript>>> = {
     ],
   },
 
+  // The Karty that have moved to one file each — see `karta.ts`.
+  ...fieldScriptsOf(KARTY),
 };
 
 export function fieldScriptFor(fieldId: FieldId): FieldScript | null {

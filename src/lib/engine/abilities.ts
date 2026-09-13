@@ -3,6 +3,8 @@
 import type { Nature } from "@/data/types";
 import type { FieldId } from "./board";
 import type { CardId, SpellId } from "@/data/ids";
+import { KARTY } from "./content/index";
+import { heldOf, notesOf } from "./karta";
 
 /**
  * Why this exists, and why it is not one big "effect" type.
@@ -436,6 +438,8 @@ export const CARD_NOTES: Readonly<Partial<Record<CardId, readonly string[]>>> = 
   "zwierciadlo-zniszczenia": [
     "innej Postaci −2 Miecza lub Magii, albo −1 i −1 — tylko z jej własnych punktów; raz",
   ],
+  // The Karty that have moved to one file each — see `karta.ts`.
+  ...notesOf(KARTY),
 };
 
 /**
@@ -714,6 +718,8 @@ export const ABILITIES: Readonly<Partial<Record<CardId, readonly Ability[]>>> = 
     { kind: "healing", field: "twierdza-strzegaca-drog", upTo: 2 },
     { kind: "returned-at", field: "twierdza-strzegaca-drog", price: 3 },
   ],
+  // The Karty that have moved to one file each — see `karta.ts`.
+  ...heldOf(KARTY),
 };
 
 export function abilitiesOf(cardId: CardId): readonly Ability[] {

@@ -42,6 +42,8 @@ import { CARD_CLASS_LABEL } from "@/data/types";
 const CONTENT = [
   /\.test\.tsx?$/,
   /\/engine\/scripts\//,
+  /\/engine\/content\//,
+  /\/engine\/karta\.ts$/,
   /\/engine\/abilities\.ts$/,
   /\/engine\/uses\.ts$/,
   /\/engine\/spells\.ts$/,

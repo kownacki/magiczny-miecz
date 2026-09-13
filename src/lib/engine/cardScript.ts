@@ -10,6 +10,8 @@ import { WROGOWIE } from "./scripts/wrogowie";
 import type { FieldId } from "./board";
 import type { CardId } from "@/data/ids";
 import { nodesOf, wordOf } from "./words";
+import { KARTY } from "./content/index";
+import { scriptsOf } from "./karta";
 
 /**
  * The second of the three card shapes.
@@ -657,6 +659,10 @@ export const SCRIPTS: Readonly<Partial<Record<CardId, CardScript>>> = {
   ...SPOTKANIA,
   ...WROGOWIE,
   ...PRZEDMIOTY,
+  // One file per Karta, under `content/` (docs/KARTA.md step 3). Last, so a
+  // Karta that has moved is read from its file while the per-class tables
+  // above empty out one class at a time.
+  ...scriptsOf(KARTY),
 };
 
 /**
