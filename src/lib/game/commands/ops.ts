@@ -35,7 +35,7 @@ import { nameOfSeat } from "./lobby";
 import { healSeat } from "./life";
 import { asReturnable, putOnPile } from "./piles";
 import { beneath, only, replaceAt, replaceTop, requireTop, top } from "@/lib/engine/stack";
-import { keyOf } from "@/lib/engine/state";
+import { keyOf, listed } from "@/lib/engine/state";
 import { keepOnly, storedStatuses, addEffect } from "./turn";
 import { turnToStone } from "./stone";
 import { seatView } from "./seat";
@@ -1213,8 +1213,11 @@ const OPS: { [K in LeafOp]: OpRun<K> } = {
       "field",
       "Nie ma wyciągniętej Karty do wymiany.",
     );
-    const settled = new Set([...(state.resolved ?? []), ...(state.fought ?? [])]);
-    const facing = state.drawn.find((entry) => !settled.has(entry.cardId));
+    /* Both lists, so the question is `listed`: `resolved` names a copy and
+       `fought` names a card, and asking either one by bare id is how the
+       Eremita came back for a second roll. */
+    const settled = [...(state.resolved ?? []), ...(state.fought ?? [])];
+    const facing = state.drawn.find((entry) => !listed(settled, entry));
     if (!facing) throw new Error("Nie ma wyciągniętej Karty do wymiany.");
 
     const taken: Changeset = {

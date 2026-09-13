@@ -14,7 +14,7 @@ import { drawsFromPool, poolRemains, startingPool } from "@/lib/engine/pools";
 import { leavesWhenResolved, mayWalkPast } from "@/lib/engine/kolejka";
 import { whyQueuedHere } from "@/lib/engine/holdings";
 import { abilitiesOf, entryPrice } from "@/lib/engine/abilities";
-import { listed, type TurnCard } from "@/lib/engine/state";
+import { listed, named, type SettledKey, type TurnCard } from "@/lib/engine/state";
 import { only, top, topIf } from "@/lib/engine/stack";
 import {
   apply,
@@ -257,7 +257,7 @@ export function leaveCardsBehind(
     /** The round to file the lines under — see CONTEXT.md, "tura". */
     round: number;
     /** Wrogowie who died here — kept by their killer, not left behind (16.2). */
-    beaten?: readonly string[];
+    beaten?: readonly SettledKey[];
     /**
      * What this turn actually settled — the frame's own `resolved`.
      *
@@ -265,7 +265,7 @@ export function leaveCardsBehind(
      * discarded for *being that card*, resolved or not, which is right for
      * every compulsory one and wrong for the four that ask first.
      */
-    settled?: readonly string[];
+    settled?: readonly SettledKey[];
   },
 ): Changeset {
   // `leavesWhenResolved` is the same question the Obszar's window and the
@@ -304,7 +304,7 @@ export function leaveCardsBehind(
    * beaten *or* fled, and a Wróg you ran from is exactly the one 16.8 leaves
    * lying there for the next character.
    */
-  const died = new Set(input.beaten ?? []);
+  const died = input.beaten ?? [];
   /**
    * Read *and* discarded — the two halves of „a następnie ją odłóż".
    *
@@ -327,7 +327,7 @@ export function leaveCardsBehind(
   const readAndSpent = (card: TurnCard) =>
     spentByReading(card) && listed(input.settled ?? [], card);
   const goes = (card: TurnCard) => readAndSpent(card) || walksOff(card) || ranDry(card);
-  const stays = input.remaining.filter((card) => !goes(card) && !died.has(card.cardId));
+  const stays = input.remaining.filter((card) => !goes(card) && !named(died, card.cardId));
 
   // The other half of the same sentence: a Karta whose own text says "odłóż" is
   // not left on the Obszar (16.8) and is not destroyed either — it joins the

@@ -1,6 +1,7 @@
 /** What the fields that offer something actually offer, in the same language the cards use. */
 
 import { scriptFor, type Effect } from "./cardScript";
+import type { SettledKey } from "./state";
 import { cardName } from "./polish";
 import type { FieldId } from "./board";
 import type { CardId } from "@/data/ids";
@@ -830,8 +831,8 @@ export function fieldScriptFor(fieldId: FieldId): FieldScript | null {
  * handle: one import of that from a client component would put the key's client
  * in the browser bundle.
  */
-export function offerKey(offerName: string): string {
-  return `pole:${offerName}`;
+export function offerKey(offerName: string): SettledKey {
+  return `pole:${offerName}` as SettledKey;
 }
 
 /**

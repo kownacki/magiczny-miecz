@@ -23,6 +23,7 @@ import { asFieldId } from "@/lib/engine/board";
 import { asSeatCharacter } from "@/lib/engine/characters";
 import type { CardId } from "@/data/ids";
 import type { FieldId } from "@/lib/engine/board";
+import type { SettledKey } from "@/lib/engine/state";
 
 /** Piles are not shuffled in these; the order in is the order out. */
 const asIs = <T,>(items: readonly T[]): T[] => [...items];
@@ -1159,7 +1160,7 @@ describe("settling one of two copies", () => {
   const settledEach = (table: ReturnType<typeof twice>, writes: Parameters<typeof apply>[1]) => {
     const field = top(apply(table, writes).game.turn_state) as {
       drawn: { cardId: CardId; nth?: number }[];
-      resolved?: string[];
+      resolved?: SettledKey[];
     };
     return field.drawn.map((one) => listed(field.resolved ?? [], one));
   };

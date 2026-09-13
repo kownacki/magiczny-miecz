@@ -61,6 +61,7 @@ import { refuseAgainstStone } from "./stone";
 import { slotsFor } from "@/lib/engine/slots";
 import { floorOf } from "./spellFloor";
 import { addEffect, refuseAgainst13_2, refuseWhileUndrawn, storedStatuses } from "./turn";
+import { keyNamed, named } from "@/lib/engine/state";
 import {
   bonusFrom,
   cardStatuses,
@@ -260,7 +261,7 @@ export function beginFight(snapshot: Snapshot, command: BeginFight): Outcome<voi
   // taken, or standing and to be walked away from — and rolling again would let
   // a character grind the same Smok until it got a six.
   const settled = state.fought ?? [];
-  const again = command.cardIds.find((cardId) => settled.includes(cardId));
+  const again = command.cardIds.find((cardId) => named(settled, cardId));
   if (again) {
     const card = EVENTS.find((c) => c.id === again);
     throw new Error(`Walka z ${card?.name ?? again} już się w tej turze odbyła (17.4).`);
@@ -1244,7 +1245,7 @@ export function escape(
     if (sweep.length > 0 && revealed.phase === "field") {
       shut = replaceTop(shut, {
         ...revealed,
-        fought: [...new Set([...(revealed.fought ?? []), ...sweep])],
+        fought: [...new Set([...(revealed.fought ?? []), ...sweep.map(keyNamed)])],
       });
     }
     left = { game: { turn_state: shut } };
@@ -1264,7 +1265,7 @@ export function escape(
         game: {
           turn_state: replaceTop(beforeState, {
             ...before,
-            fought: [...new Set([...(before.fought ?? []), ...fled])],
+            fought: [...new Set([...(before.fought ?? []), ...fled.map(keyNamed)])],
           }),
         },
       };

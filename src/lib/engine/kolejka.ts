@@ -2,7 +2,7 @@
 
 import { CARD_CLASS, type CardClass } from "@/data/types";
 import { scriptFor } from "./cardScript";
-import { keyOf, listed, placedFirst, type TurnCard } from "./state";
+import { keyOf, listed, placedFirst, type SettledKey, type TurnCard } from "./state";
 import type { CardId } from "@/data/ids";
 
 /**
@@ -143,8 +143,8 @@ export function leavesWhenResolved(card: TurnCard): boolean {
  */
 export function isSpent(
   card: TurnCard,
-  settled: readonly string[],
-  beaten: readonly string[] = [],
+  settled: readonly SettledKey[],
+  beaten: readonly SettledKey[] = [],
 ): boolean {
   if (listed(beaten, card)) return true;
   return leavesWhenResolved(card) && listed(settled, card);
@@ -215,7 +215,7 @@ const SUMMED = new Set<FrameKind>(["wrogowie-miecz", "wrogowie-magia"]);
  */
 export function kolejkaFor(
   cards: readonly TurnCard[],
-  resolved: readonly string[] = [],
+  resolved: readonly SettledKey[] = [],
 ): KolejkaFrame[] {
   const frames: KolejkaFrame[] = [];
   const summed = new Map<FrameKind, KolejkaFrame>();
@@ -253,7 +253,7 @@ export function kolejkaFor(
 /** The frame the turn is stopped at, or null when the kolejka is worked through. */
 export function nextFrame(
   cards: readonly TurnCard[],
-  resolved: readonly string[] = [],
+  resolved: readonly SettledKey[] = [],
 ): KolejkaFrame | null {
   return kolejkaFor(cards, resolved).find((frame) => !frame.done) ?? null;
 }
@@ -276,7 +276,7 @@ export function nextFrame(
  */
 export function cardInFront<Card extends TurnCard>(
   cards: readonly Card[],
-  settled: readonly string[] = [],
+  settled: readonly SettledKey[] = [],
 ): Card | null {
   const frame = nextFrame(cards, settled);
   if (frame) return cards.find((card) => keyOf(card) === keyOf(frame.cards[0])) ?? null;

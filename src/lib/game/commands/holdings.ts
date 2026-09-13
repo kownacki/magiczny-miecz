@@ -24,7 +24,7 @@ import {
   whyPackIsFull,
 } from "@/lib/engine/holdings";
 import { type Slot } from "@/lib/engine/slots";
-import { keyOf, type TurnCard } from "@/lib/engine/state";
+import { keyOf, type SettledKey, type TurnCard } from "@/lib/engine/state";
 import { fromTheShop, stockLeft } from "@/lib/engine/stock";
 import { EVENTS, SPELLS, SPELL_BY_REF, decksOf, shuffleFor } from "../decks";
 import { apply, merge, mergeAll, type Changeset, type Outcome, type Snapshot } from "../change";
@@ -1320,7 +1320,7 @@ export function clearField(
    * and `fought` names a card (17.5 sums a pack), and a sweep has to be able to
    * strike either. A name is kept while any copy of it is still lying here.
    */
-  const without = (keys: readonly string[] | undefined) =>
+  const without = (keys: readonly SettledKey[] | undefined) =>
     keys === undefined
       ? undefined
       : keys.filter((key) => left.has(key) || leftByName.has(key));

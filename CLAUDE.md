@@ -86,6 +86,16 @@ settled — it is scaffolding, and it costs tokens on every load.
   Steps are `step-1` and `step-2`. Nothing could tell it was nonsense, because
   every real id was a string too.
 
+  **And a key is never a `CardId`.** The same rule one level up, learnt the same
+  way. A `field` frame's `resolved`, `fought` and `beaten` are lists of
+  `SettledKey` — `resolved` names a *copy* (`eremita#5`), the other two name a
+  card (17.5 fights a pack as one), and `offerKey` puts an Obszar's own offer in
+  the same list. Five readers asked `resolved.includes(cardId)`, which is a
+  question whose answer is always `false`, and the Eremita settled on his Obszar
+  and came straight back asking to roll. Two mints, `keyOf` and `keyNamed`; two
+  readers, `listed` and `named`; a bare `.includes` no longer compiles, and
+  `kolejka.test.ts` holds that with a `@ts-expect-error`.
+
 - **The engine in `src/lib/engine/` is pure.** No React, no Supabase, no I/O, no
   `Math.random`. Nothing about how the game *looks* either — asset paths, SVG
   geometry and which żeton to draw are `src/lib/view/`'s, because a directory

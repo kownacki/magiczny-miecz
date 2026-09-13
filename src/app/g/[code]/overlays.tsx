@@ -23,6 +23,7 @@ import { compulsoryOffer, offerNamed } from "@/lib/engine/fieldScript";
 import { isSpellId, type SpellId } from "@/data/ids";
 import { ringFields, type FieldId } from "@/lib/engine/board";
 import { characterName, fieldName } from "@/lib/engine/polish";
+import { keyNamed } from "@/lib/engine/state";
 
 export function Overlays() {
   const {
@@ -289,7 +290,7 @@ export function Overlays() {
                the Karty are still on the square, and the row is the account of
                them. `beneath` is that frame wherever it is. */
             cards={beneath?.drawn ?? []}
-            resolved={[...(beneath?.resolved ?? []), ...waved]}
+            resolved={[...(beneath?.resolved ?? []), ...waved.map(keyNamed)]}
             fought={beneath?.fought ?? []}
             beaten={beneath?.beaten ?? []}
             fight={turnState.phase === "fight" ? turnState.fight : null}

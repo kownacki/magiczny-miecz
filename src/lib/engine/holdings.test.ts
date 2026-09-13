@@ -12,6 +12,7 @@ import {
 import type { Holding } from "./state";
 import type { Slot } from "./slots";
 import type { CardId } from "@/data/ids";
+import { keyNamed, keyOf } from "@/lib/engine/state";
 
 const held = (cardId: CardId, kind: Holding["kind"], face: Holding["face"] = "open"): Holding => ({
   cardId,
@@ -282,7 +283,7 @@ describe("whyNotCollectHere", () => {
   });
 
   it("lets a settled Wróg go — 17.4 ends him when the dice are compared", () => {
-    expect(whyNotCollectHere([{ cardId: "wilk" }], ["wilk"], 0)).toBeNull();
+    expect(whyNotCollectHere([{ cardId: "wilk" }], [keyNamed("wilk")], 0)).toBeNull();
   });
 
   it("refuses while the Obszar still owes Karty (12.1b)", () => {
@@ -308,7 +309,7 @@ describe("whyNotCollectHere", () => {
   });
 
   it("opens the Obszar once it has been resolved", () => {
-    expect(whyNotCollectHere([{ cardId: "labirynt" }, ...item], ["labirynt"], 0)).toBeNull();
+    expect(whyNotCollectHere([{ cardId: "labirynt" }, ...item], [keyNamed("labirynt")], 0)).toBeNull();
   });
 
   /**
@@ -322,7 +323,7 @@ describe("whyNotCollectHere", () => {
    */
   it("opens it for a Karta settled under its copy's key", () => {
     const lying = [{ cardId: "labirynt" as const, nth: 1 }, ...item];
-    expect(whyNotCollectHere(lying, ["labirynt#1"], 0)).toBeNull();
+    expect(whyNotCollectHere(lying, [keyOf({ cardId: "labirynt", nth: 1 })], 0)).toBeNull();
   });
 
   /** Two of one Karta are two Karty: one settled leaves the other in the way. */
@@ -331,7 +332,7 @@ describe("whyNotCollectHere", () => {
       { cardId: "labirynt" as const, nth: 1 },
       { cardId: "labirynt" as const, nth: 2 },
     ];
-    expect(whyNotCollectHere(twice, ["labirynt#1"], 0)).toBe(
+    expect(whyNotCollectHere(twice, [keyOf({ cardId: "labirynt", nth: 1 })], 0)).toBe(
       "Najpierw LABIRYNT — dopiero potem reszta Obszaru (12.1).",
     );
   });

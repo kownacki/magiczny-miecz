@@ -28,6 +28,7 @@ import { MAX_SEATS } from "@/lib/game/modes";
 import { Toasts } from "./toast";
 import { OpenRule } from "./rule-ref";
 import { usePreferences } from "./preferences";
+import type { CardId } from "@/data/ids";
 
 
 /**
@@ -248,7 +249,7 @@ export default function Table({ params }: { params: Promise<{ code: string }> })
    * is this device's business rather than the table's. Cleared when the turn
    * moves on, since the next character meets the same cards fresh.
    */
-  const [waved, setWaved] = useState<string[]>([]);
+  const [waved, setWaved] = useState<CardId[]>([]);
   /**
    * The die that was just thrown, held until the player who threw it says go on.
    *

@@ -38,6 +38,7 @@ import type { SeatRow } from "../store";
 import { settleBridge, settleCrossing } from "./bridge";
 import { spendLife } from "./life";
 import { againstThese, closeFightFrame, friendDiesInstead, shieldSaves } from "./fight";
+import { keyNamed, type SettledKey } from "@/lib/engine/state";
 
 /**
  * Settles a fight whose dice have been compared (17.4).
@@ -501,9 +502,15 @@ export async function resolveFight(
     if (ocalony) return closed.state;
     const state = top(closed.state);
     if (state.phase !== "field") return closed.state;
-    const dead = fight.fought ?? [fight.cardId];
+    /* `fight.cardId` is a `string` on purpose — a pack runs its members' ids
+       together and a doorway is `pole:<oferta>` — but the three guards above
+       have already sent every one of those home, so what is left is one Karta.
+       `fought` is keyed when it is written; this is the single-card fallback,
+       and it is minted here rather than trusted. */
+    const dead: SettledKey[] =
+      fight.fought ?? (isCardId(fight.cardId) ? [keyNamed(fight.cardId)] : []);
     const already = state.beaten ?? [];
-    const fresh = dead.filter((cardId) => !already.includes(cardId));
+    const fresh = dead.filter((key) => !already.includes(key));
     if (fresh.length === 0) return closed.state;
     return replaceTop(closed.state, { ...state, beaten: [...already, ...fresh] });
   })();

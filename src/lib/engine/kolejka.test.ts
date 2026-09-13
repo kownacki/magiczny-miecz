@@ -12,6 +12,7 @@ import { resolutionOrder, type TurnCard } from "./state";
 import events from "@/data/events.json";
 import type { EventCard } from "@/data/types";
 import type { CardId } from "@/data/ids";
+import { keyNamed, keyOf, type SettledKey } from "@/lib/engine/state";
 
 const classOf = (cardId: CardId) =>
   (events as EventCard[]).find((card) => card.id === cardId)!.cardClass;
@@ -20,7 +21,7 @@ const classOf = (cardId: CardId) =>
 const onField = (...cardIds: CardId[]): TurnCard[] =>
   resolutionOrder(cardIds.map((cardId) => ({ cardId, cardClass: classOf(cardId) })));
 
-const shape = (cards: TurnCard[], resolved: string[] = []) =>
+const shape = (cards: TurnCard[], resolved: SettledKey[] = []) =>
   kolejkaFor(cards, resolved).map(
     (frame) => [frame.kind, frame.cards.map((c) => c.cardId), frame.done] as const,
   );
@@ -139,7 +140,7 @@ describe("kolejkaFor", () => {
   });
 
   it("marks a frame done once its Karta has been settled", () => {
-    expect(shape(onField("wilk", "labirynt"), ["wilk"])).toEqual([
+    expect(shape(onField("wilk", "labirynt"), [keyNamed("wilk")])).toEqual([
       ["wrogowie-miecz", ["wilk"], true],
       ["miejsce", ["labirynt"], false],
     ]);
@@ -147,8 +148,8 @@ describe("kolejkaFor", () => {
 
   /** A pack is settled together, so half of one is not done. */
   it("calls a Wrogowie frame done only when all of it is", () => {
-    expect(shape(onField("wilk", "wilkolak"), ["wilk"])[0][2]).toBe(false);
-    expect(shape(onField("wilk", "wilkolak"), ["wilk", "wilkolak"])[0][2]).toBe(true);
+    expect(shape(onField("wilk", "wilkolak"), [keyNamed("wilk")])[0][2]).toBe(false);
+    expect(shape(onField("wilk", "wilkolak"), [keyNamed("wilk"), keyNamed("wilkolak")])[0][2]).toBe(true);
   });
 
   /** The whole sequence, in the order a turn walks it. */
@@ -178,8 +179,8 @@ describe("nextFrame", () => {
   it("is where the turn is stopped", () => {
     const cards = onField("wilk", "labirynt");
     expect(nextFrame(cards)?.kind).toBe("wrogowie-miecz");
-    expect(nextFrame(cards, ["wilk"])?.kind).toBe("miejsce");
-    expect(nextFrame(cards, ["wilk", "labirynt"])).toBeNull();
+    expect(nextFrame(cards, [keyNamed("wilk")])?.kind).toBe("miejsce");
+    expect(nextFrame(cards, [keyNamed("wilk"), keyNamed("labirynt")])).toBeNull();
   });
 });
 
@@ -199,8 +200,8 @@ describe("cardInFront — the one Karta the sheet holds up", () => {
     // there — so what is left is 15.2's order: IV before V.
     const cards = onField("helm", "cudotworca");
     expect(cardInFront(cards)?.cardId).toBe("cudotworca");
-    expect(cardInFront(cards, ["cudotworca"])?.cardId).toBe("helm");
-    expect(cardInFront(cards, ["cudotworca", "helm"])).toBeNull();
+    expect(cardInFront(cards, [keyNamed("cudotworca")])?.cardId).toBe("helm");
+    expect(cardInFront(cards, [keyNamed("cudotworca"), keyNamed("helm")])).toBeNull();
   });
 
   /**
@@ -214,9 +215,9 @@ describe("cardInFront — the one Karta the sheet holds up", () => {
   it("lets go of a Karta settled under its copy's own key", () => {
     const cards = numbered("eremita", "dobre-bostwo");
     expect(cardInFront(cards)?.cardId).toBe("eremita");
-    expect(cardInFront(cards, ["eremita#1"])?.cardId).toBe("dobre-bostwo");
+    expect(cardInFront(cards, [keyOf({ cardId: "eremita", nth: 1 })])?.cardId).toBe("dobre-bostwo");
     // And a frame written before `nth` existed still answers to a bare name.
-    expect(cardInFront(onField("eremita", "dobre-bostwo"), ["eremita"])?.cardId).toBe(
+    expect(cardInFront(onField("eremita", "dobre-bostwo"), [keyNamed("eremita")])?.cardId).toBe(
       "dobre-bostwo",
     );
   });
@@ -224,7 +225,26 @@ describe("cardInFront — the one Karta the sheet holds up", () => {
   /** Two of one Karta are two Karty: settling one must not settle the other. */
   it("holds the second copy up after the first is settled", () => {
     const cards = numbered("upior", "upior");
-    expect(cardInFront(cards, ["upior#1"])?.nth).toBe(2);
+    expect(cardInFront(cards, [keyOf({ cardId: "upior", nth: 1 })])?.nth).toBe(2);
+  });
+});
+
+/**
+ * The guard itself, pinned — so that widening the type again fails the build.
+ *
+ * `@ts-expect-error` is the assertion: if `SettledKey` ever stops being a brand,
+ * this line stops erroring and *that* is what breaks. It is the only kind of
+ * test that can hold a compile-time rule, and this rule has been broken twice
+ * at runtime by readers that looked exactly right.
+ */
+describe("the keyspace refuses a bare card id", () => {
+  it("will not let a reader ask `resolved` by name", () => {
+    const cards = onField("wilk");
+    // @ts-expect-error `resolved` names a key (`keyOf`/`keyNamed`), not a CardId.
+    nextFrame(cards, ["wilk"]);
+    // And the two ways that do compile say which question they are asking.
+    expect(nextFrame(cards, [keyNamed("wilk")])).toBeNull();
+    expect(nextFrame(cards, [keyOf({ cardId: "wilk", nth: 1 })])).not.toBeNull();
   });
 });
 
@@ -282,8 +302,8 @@ describe("what is spent by being read (16.1, 16.5, 16.7)", () => {
    */
   it("needs both halves", () => {
     expect(isSpent(one("dobre-bostwo"), [])).toBe(false);
-    expect(isSpent(one("dobre-bostwo"), ["dobre-bostwo"])).toBe(true);
-    expect(isSpent(one("czarodziej"), ["czarodziej"])).toBe(false);
+    expect(isSpent(one("dobre-bostwo"), [keyNamed("dobre-bostwo")])).toBe(true);
+    expect(isSpent(one("czarodziej"), [keyNamed("czarodziej")])).toBe(false);
   });
 });
 
@@ -291,7 +311,7 @@ describe("a Wróg who died here (16.2)", () => {
   const wilk = onField("wilk")[0];
 
   it("is spent, so the row strikes him rather than dropping him", () => {
-    expect(isSpent(wilk, [], ["wilk"])).toBe(true);
+    expect(isSpent(wilk, [], [keyNamed("wilk")])).toBe(true);
   });
 
   /**
@@ -300,6 +320,6 @@ describe("a Wróg who died here (16.2)", () => {
    * there for whoever stops here next.
    */
   it("is not one that was merely fought", () => {
-    expect(isSpent(wilk, ["wilk"], [])).toBe(false);
+    expect(isSpent(wilk, [keyNamed("wilk")], [])).toBe(false);
   });
 });

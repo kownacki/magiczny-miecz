@@ -13,14 +13,14 @@ import {
   ringOf,
   type FieldId,
 } from "./board";
-import { nextNth, resolutionOrder, type TurnCard } from "./state";
+import { keyNamed, nextNth, resolutionOrder, type SettledKey, type TurnCard } from "./state";
 import { only, replaceTop, top, type TurnState } from "./stack";
 import type { Crossing } from "./rings";
 import { compareCombat, type CombatKind, type CombatResult } from "./combat";
 import type { Effect } from "./cardScript";
 import type { CardRef } from "./deck";
 import { stillStone } from "./status";
-import type { CardId } from "@/data/ids";
+import { isCardId, type CardId } from "@/data/ids";
 
 /**
  * A turn is rule 10.1's two steps — move, then deal with where you landed —
@@ -48,7 +48,7 @@ export type TurnPhase =
        * lying here" cannot mean "still to be dealt with". Without this the
        * draw modal would offer the same card again the moment it closed.
        */
-      resolved?: string[];
+      resolved?: SettledKey[];
       /**
        * Cards already fought this turn, by id.
        *
@@ -63,7 +63,7 @@ export type TurnPhase =
        * attack as one: their Miecze are summed into a single fight, so settling
        * that fight settles all of them.
        */
-      fought?: string[];
+      fought?: SettledKey[];
       /**
        * Which of them died, as against merely being fought (17.4).
        *
@@ -80,7 +80,7 @@ export type TurnPhase =
        * not show a beaten Wróg struck through. What is on the Obszar and what
        * was dealt with on it are two questions, and the frame can answer both.
        */
-      beaten?: string[];
+      beaten?: SettledKey[];
       /**
        * This turn was spent meeting somebody rather than exploring (13.2).
        *
@@ -159,7 +159,7 @@ export type TurnPhase =
        * ("musisz ją zabrać"). Carried on the frame because completion may be
        * commits away from the resolve that started it.
        */
-      mark?: string;
+      mark?: SettledKey;
       keep?: boolean;
       /**
        * The cursor names a node that has not run yet.
@@ -222,7 +222,7 @@ export type TurnPhase =
        * happened only when the whole attempt is over, and it learns it whether
        * the Smok was beaten or walked away from.
        */
-      settles: string[];
+      settles: CardId[];
     }
   /**
    * A question owed to a seat that no card script is asking (docs/STACK.md,
@@ -372,7 +372,7 @@ export interface Fight {
    * already settled, plus the creature or creatures in this fight. Carried
    * through the fight so that ending it cannot lose the list.
    */
-  fought?: string[];
+  fought?: SettledKey[];
   /** 13.2's mark, carried through the fight so the field phase gets it back. */
   met?: true;
   /**
@@ -904,7 +904,12 @@ export function startFight(
         ...(phase.fought ?? []),
         // A duel settles no card: the other character is still there, and 17.9
         // ends the turn anyway.
-        ...(card.opponentSeat !== undefined ? [] : (card.settles ?? [card.cardId])),
+        // `settles` is the list of real Karty; `cardId` beside it is display
+        // text that may be a pack run together or a `pole:` doorway, so it is
+        // minted only when it is actually a Karta.
+        ...(card.opponentSeat !== undefined
+          ? []
+          : (card.settles ?? (isCardId(card.cardId) ? [card.cardId] : [])).map(keyNamed)),
       ],
     },
   };

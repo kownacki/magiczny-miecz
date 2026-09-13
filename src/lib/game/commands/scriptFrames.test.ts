@@ -8,6 +8,7 @@ import { apply, type Snapshot } from "../change";
 import { applyEffect, continueTopScript } from "./effects";
 import { resolveFight } from "./spoils";
 import { passTurn } from "./turn";
+import { keyNamed, type SettledKey } from "@/lib/engine/state";
 
 /**
  * The suspension lifecycle — docs/STACK.md step 2, mechanism by mechanism.
@@ -35,7 +36,7 @@ const onField = (): Snapshot =>
 const runOn = (
   table: Snapshot,
   effect: Effect,
-  over: { decided?: { choices?: number[] }; random?: ReturnType<typeof scriptedRandom>; mark?: string; keep?: boolean } = {},
+  over: { decided?: { choices?: number[] }; random?: ReturnType<typeof scriptedRandom>; mark?: SettledKey; keep?: boolean } = {},
 ) =>
   applyEffect(
     table,
@@ -117,7 +118,7 @@ describe("a walka mid-sequence: the whole life", () => {
 
   it("pays the frame's debts on completion: mark and keep", async () => {
     const table = onField();
-    const first = await runOn(table, card, { mark: "poludnica", keep: true });
+    const first = await runOn(table, card, { mark: keyNamed("poludnica"), keep: true });
     const mid = apply(table, { ...first.writes, game: { turn_state: wonAbove(first.writes.game!.turn_state!) } });
     const settled = await resolveFight(mid, undefined as never, ports({ random: scriptedRandom([1, 1]) }));
     const afterFight = apply(mid, settled.writes);

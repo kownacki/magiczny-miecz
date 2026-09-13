@@ -10,6 +10,7 @@ import { clearField, placeGold, takeCard, takeFieldGold } from "./holdings";
 import { RULE_FOR } from "@/lib/engine/journalRules";
 import type { CardId } from "@/data/ids";
 import type { TurnCard } from "@/lib/engine/state";
+import { keyNamed } from "@/lib/engine/state";
 
 const HERE = asFieldId("mroczna-polana")!;
 
@@ -156,7 +157,7 @@ describe("taking gold off an Obszar (12.1)", () => {
       game: {
         active_seat: 0,
         turn_state: only(
-          arrived({ drawn: [wilkDrawn], fought: ["wilk"] }),
+          arrived({ drawn: [wilkDrawn], fought: [keyNamed("wilk")] }),
         ),
       },
     });

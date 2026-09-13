@@ -31,7 +31,7 @@ import { mayWalkPast } from "@/lib/engine/kolejka";
 import { dieGroups } from "@/lib/engine/effectText";
 import { inertFor, pendingIn } from "@/lib/engine/resolve";
 import type { FieldId } from "@/lib/engine/board";
-import type { TurnCard } from "@/lib/engine/state";
+import type { SettledKey, TurnCard } from "@/lib/engine/state";
 import type { Held } from "../table";
 import type { Rolled } from "./roll-result";
 
@@ -42,9 +42,9 @@ export interface DrawnDecisionsInput {
   who: string;
   card: TurnCard;
   cards: TurnCard[];
-  resolved: string[];
-  fought: string[];
-  beaten?: string[];
+  resolved: SettledKey[];
+  fought: SettledKey[];
+  beaten?: SettledKey[];
   mySword: number;
   nature: Nature | null;
   aggression?: string | null;

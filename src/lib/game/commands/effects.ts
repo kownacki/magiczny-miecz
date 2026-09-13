@@ -36,6 +36,7 @@ import { describeCondition } from "@/lib/engine/effectText";
 import { hasAttacked } from "@/lib/engine/status";
 import { pointsOf } from "./seat";
 import { asFieldId, ringFields } from "@/lib/engine/board";
+import type { SettledKey } from "@/lib/engine/state";
 import {
   liftFromKolejka,
   nothing,
@@ -59,7 +60,7 @@ export interface ApplyEffect {
    * a card id or an offer key. Travels on the frame across suspensions, so a
    * card finished three commits later is still crossed off (15.2).
    */
-  mark?: string;
+  mark?: SettledKey;
   /** "Musisz ją zabrać jako Przyjaciela" — taken only once the card completes. */
   keep?: boolean;
   /**
@@ -939,7 +940,7 @@ async function walk(
  * lying there face up until the turn ends, so "still on the field" cannot mean
  * "still to be resolved". The same distinction `fought` makes for a Wróg.
  */
-export function markResolved(snapshot: Snapshot, key: string): Changeset {
+export function markResolved(snapshot: Snapshot, key: SettledKey): Changeset {
   const state = topIf(snapshot.game.turn_state, "field");
   if (!state) return {};
   const already = state.resolved ?? [];

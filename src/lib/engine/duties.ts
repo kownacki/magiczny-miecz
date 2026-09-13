@@ -4,7 +4,7 @@ import type { FieldId } from "./board";
 import { compulsoryOffer } from "./fieldScript";
 import { nextFrame } from "./kolejka";
 import { cardName } from "./polish";
-import type { TurnCard } from "./state";
+import type { SettledKey, TurnCard } from "./state";
 import type { TurnPhase } from "./turn";
 
 /**
@@ -47,7 +47,7 @@ export function dutiesBeforeEnding(input: {
    */
   phase?: TurnPhase["phase"];
   /** What is on the Obszar, and what of it has been settled — see `kolejka.ts`. */
-  onField?: { drawn: readonly TurnCard[]; settled: readonly string[] } | null;
+  onField?: { drawn: readonly TurnCard[]; settled: readonly SettledKey[] } | null;
 }): Duty[] {
   const duties: Duty[] = [];
 
@@ -149,7 +149,7 @@ export function mayEndTurn(input: {
   fieldId: FieldId | null;
   done: readonly DutyKind[];
   phase?: TurnPhase["phase"];
-  onField?: { drawn: readonly TurnCard[]; settled: readonly string[] } | null;
+  onField?: { drawn: readonly TurnCard[]; settled: readonly SettledKey[] } | null;
 }): boolean {
   return dutiesBeforeEnding(input).length === 0;
 }

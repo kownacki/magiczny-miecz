@@ -16,6 +16,7 @@ import { resolveFight } from "./spoils";
 import { castSpell, settleSpell } from "./spells";
 import type { CardId } from "@/data/ids";
 import type { TurnCard } from "@/lib/engine/state";
+import { keyNamed } from "@/lib/engine/state";
 
 /** A character standing where its move ended, with cards turned over in front of it. */
 const pole = (over: Partial<Extract<TurnPhase, { phase: "field" }>> = {}): TurnPhase => ({
@@ -54,7 +55,7 @@ const walka = (over: Partial<Fight> = {}): TurnPhase => ({
     fieldId: "mroczna-polana",
     draw: 0,
     drawn: [{ cardId: "cyklop", cardClass: "foe" }],
-    fought: ["cyklop"],
+    fought: [keyNamed("cyklop")],
     ...over,
   } as Fight,
 });
@@ -187,7 +188,7 @@ describe("otwarcie walki (17.4, 17.5)", () => {
   });
 
   it("will not fight the same creature twice in one turn (17.4)", async () => {
-    const done = table({ fought: ["cyklop"] });
+    const done = table({ fought: [keyNamed("cyklop")] });
     expect(() => beginFight(done, { cardIds: ["cyklop"] })).toThrow(/CYKLOP już się/);
   });
 
@@ -389,7 +390,7 @@ describe("closing a fight leaves the Obszar as it found it", () => {
     const closed = top(
       closeFightFrame(opened.game.turn_state, {
         ...fight,
-        fight: { ...fight.fight, fought: ["wilk"] },
+        fight: { ...fight.fight, fought: [keyNamed("wilk")] },
       }),
     ) as Extract<TurnPhase, { phase: "field" }>;
     expect(closed.fought).toEqual(["wilk"]);
@@ -1272,7 +1273,7 @@ describe("kostki w walce (17.3, 17.4)", () => {
             enemyTotal: 4,
             playerTotal: 1,
             fieldId: "wrzosowiska",
-            fought: ["wampir"],
+            fought: [keyNamed("wampir")],
             result: { outcome: "przegrana", winner: "WAMPIR", loser: "Michał", kind: "magical" },
           }),
         },
@@ -1316,7 +1317,7 @@ describe("kostki w walce (17.3, 17.4)", () => {
             enemyTotal: 4,
             playerTotal: 1,
             fieldId: "wrzosowiska",
-            fought: ["wampir"],
+            fought: [keyNamed("wampir")],
             result: { outcome: "przegrana", winner: "WAMPIR", loser: "Michał", kind: "magical" },
           }),
         },
@@ -1337,7 +1338,7 @@ describe("kostki w walce (17.3, 17.4)", () => {
             enemyTotal: 5,
             playerTotal: 6,
             fieldId: "wrzosowiska",
-            fought: ["wampir"],
+            fought: [keyNamed("wampir")],
             result: { outcome: "wygrana", winner: "Michał", loser: "WAMPIR", kind: "magical" },
           }),
         },
@@ -1379,7 +1380,7 @@ describe("kostki w walce (17.3, 17.4)", () => {
             enemyTotal: 4,
             playerTotal: 6,
             fieldId: "wrzosowiska",
-            fought: ["wilk"],
+            fought: [keyNamed("wilk")],
             result: { outcome: "wygrana", winner: "Michał", loser: "WILK", kind: "ordinary" },
           }),
         },
@@ -1624,7 +1625,7 @@ describe("ucieczka (17.6, 19)", () => {
     const table = aTable({
       game: {
         active_seat: 0,
-        turn_state: walka({ fieldId: "step-1", drawn: twoWrogowie, fought: ["cyklop"] }),
+        turn_state: walka({ fieldId: "step-1", drawn: twoWrogowie, fought: [keyNamed("cyklop")] }),
       },
       seats: [hobgoblin()],
     });

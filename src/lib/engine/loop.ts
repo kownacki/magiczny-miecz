@@ -3,6 +3,7 @@
 import type { CombatResult } from "./combat";
 import { pop, push, replaceTop, type TurnState } from "./stack";
 import type { TurnPhase } from "./turn";
+import { keyNamed } from "./state";
 
 export type LoopFrame = Extract<TurnPhase, { phase: "loop" }>;
 export type FightFrame = Extract<TurnPhase, { phase: "fight" }>;
@@ -31,7 +32,7 @@ export function roundOf(loop: LoopFrame): FightFrame {
       enemyRoll: null,
       result: null,
       caster: null,
-      fought: last ? [...loop.settles] : [],
+      fought: last ? loop.settles.map(keyNamed) : [],
     },
   };
 }
@@ -82,7 +83,7 @@ export function closeLoopFrame(state: TurnState, loop: LoopFrame): TurnState {
   if (below.phase !== "field") return pop(state);
   return replaceTop(pop(state), {
     ...below,
-    fought: [...new Set([...(below.fought ?? []), ...loop.settles])],
+    fought: [...new Set([...(below.fought ?? []), ...loop.settles.map(keyNamed)])],
   });
 }
 

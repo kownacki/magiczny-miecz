@@ -35,6 +35,7 @@ import type { TurnView } from "./turn-view";
 import type { Asks } from "./use-asks";
 import type { writeTestMode } from "@/lib/game/testMode";
 import type { Reply } from "@/lib/game/requests";
+import type { CardId } from "@/data/ids";
 
 /** What is open over the table — the return of `useSurfaces`. */
 export type Surfaces = ReturnType<typeof useSurfaces>;
@@ -73,8 +74,8 @@ export interface Device {
   setPickerWavedOff: Dispatch<SetStateAction<boolean>>;
   folded: boolean;
   setFolded: Dispatch<SetStateAction<boolean>>;
-  waved: string[];
-  setWaved: Dispatch<SetStateAction<string[]>>;
+  waved: CardId[];
+  setWaved: Dispatch<SetStateAction<CardId[]>>;
   testing: boolean;
   testMode: boolean;
   setTestMode: typeof writeTestMode;

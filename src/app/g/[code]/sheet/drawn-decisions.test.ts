@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { asFieldId } from "@/lib/engine/board";
 import type { TurnCard } from "@/lib/engine/state";
 import { drawnDecisionsFor, type DrawnDecisionsInput } from "./drawn-decisions";
+import { keyNamed } from "@/lib/engine/state";
 
 const card = (cardId: string, over: Partial<TurnCard> = {}): TurnCard =>
   ({ cardId, ...over }) as TurnCard;
@@ -31,7 +32,7 @@ describe("a Wróg", () => {
     const together = drawnDecisionsFor(input({ cards }))!;
     expect(together.standing.map((c) => c.id)).toEqual(["cyklop", "fomoraig"]);
     expect(together.asOne?.total).toBe(9);
-    const after = drawnDecisionsFor(input({ cards, fought: ["fomoraig"] }))!;
+    const after = drawnDecisionsFor(input({ cards, fought: [keyNamed("fomoraig")] }))!;
     expect(after.standing.map((c) => c.id)).toEqual(["cyklop"]);
     expect(after.asOne).toBeNull();
   });
@@ -117,7 +118,7 @@ describe("who is deciding", () => {
 
   it("says what leaving would forfeit, counting only the Karty not yet dealt with", () => {
     const d = drawnDecisionsFor(
-      input({ cards: [card("cyklop"), card("wilk"), card("grota")], resolved: ["grota"] }),
+      input({ cards: [card("cyklop"), card("wilk"), card("grota")], resolved: [keyNamed("grota")] }),
     )!;
     const said = d.leavingHere(asFieldId("karczma")!);
     expect(said).toContain("Obszar: Karczma");

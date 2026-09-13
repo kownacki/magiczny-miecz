@@ -33,7 +33,7 @@ import type { Nature } from "@/data/types";
 import { CardTile } from "./card-tile";
 import { tileFor } from "./table";
 import { isSpent, kolejkaFor, type KolejkaFrame } from "@/lib/engine/kolejka";
-import { keyOf, listed, type TurnCard } from "@/lib/engine/state";
+import { keyOf, listed, type SettledKey, type TurnCard } from "@/lib/engine/state";
 import { WithRules } from "./rule-ref";
 
 /**
@@ -95,7 +95,7 @@ export function KolejkaStrip({
   /** The turn's own `drawn`, in `resolutionOrder`'s order. */
   cards: readonly TurnCard[];
   /** Resolved and fought together: 17.4 settles a Wróg whether he was beaten or fled. */
-  settled: readonly string[];
+  settled: readonly SettledKey[];
   /**
    * The Karta being dealt with, as the sheet around this decides it.
    *
@@ -110,7 +110,7 @@ export function KolejkaStrip({
    */
   current?: string | null;
   /** Wrogowie who died here, struck through rather than dropped (16.2). */
-  beaten?: readonly string[];
+  beaten?: readonly SettledKey[];
   onInspect?: (cardId: CardId) => void;
   /** Passed through to the tiles, whose hover says where a Przedmiot must go. */
   eqMode?: EqMode;

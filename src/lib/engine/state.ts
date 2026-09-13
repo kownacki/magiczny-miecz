@@ -213,9 +213,33 @@ export function placedFirst(card: TurnCard): boolean {
  * holding has no numbers on it, so it goes on behaving exactly as it did, one
  * name for however many copies. New frames get the numbers and the fix.
  */
-export function keyOf(card: Pick<TurnCard, "cardId" | "nth">): string {
-  return card.nth === undefined ? card.cardId : `${card.cardId}#${card.nth}`;
+export function keyOf(card: Pick<TurnCard, "cardId" | "nth">): SettledKey {
+  return (card.nth === undefined ? card.cardId : `${card.cardId}#${card.nth}`) as SettledKey;
 }
+
+/**
+ * A key in `resolved`, `fought` or `beaten` — and never a bare `CardId`.
+ *
+ * Branded for the same reason an id is never a `string` (CLAUDE.md): both
+ * spellings are strings, both typecheck against each other, and the difference
+ * between them is invisible until a table goes wrong. `resolved` holds
+ * `eremita#5` and a reader that asked `resolved.includes(cardId)` asked a
+ * question whose answer is always `false` — and that reader was written five
+ * times, in five files, by people who each had good reason to believe a list of
+ * cards holds card ids.
+ *
+ * It cost the same bug twice. The first time, `resolved` stopped meaning "a
+ * card" and started meaning "a copy" (0219476) and three readers were missed.
+ * The second time, those three were found because a player watched the Eremita
+ * roll for his Obszar, settle on it, and come straight back asking to roll.
+ *
+ * So the compiler asks now. The only ways in are `keyOf` and `offerKey`, and
+ * the only ways to ask are `listed` — which is the whole question, "is this
+ * Karta in here under either name" — and `named`, for the two lists that
+ * deliberately key by name. A bare `.includes` no longer compiles, which is the
+ * point: the third reader of this keyspace cannot be written wrong.
+ */
+export type SettledKey = string & { readonly settled: unique symbol };
 
 /**
  * Whether one of these keys names this Karta.
@@ -237,10 +261,46 @@ export function keyOf(card: Pick<TurnCard, "cardId" | "nth">): string {
  * caller: is it in here under either name?
  */
 export function listed(
-  keys: readonly string[],
+  keys: readonly SettledKey[],
   card: Pick<TurnCard, "cardId" | "nth">,
 ): boolean {
-  return keys.includes(card.cardId) || keys.includes(keyOf(card));
+  return named(keys, card.cardId) || keys.includes(keyOf(card));
+}
+
+/**
+ * A key that names the card rather than the copy — for `fought` and `beaten`.
+ *
+ * The second and last mint. 17.5 sums the Miecze of creatures attacking
+ * together, so two WILKI on one Obszar are one fight and settling it settles
+ * both: those two lists are keyed by name on purpose, and this is that purpose
+ * written down at the moment the key is made rather than inferred later from
+ * the fact that it happens to have no `#`.
+ *
+ * `keyOf` for `resolved`, this for the other two, `named`/`listed` to read them
+ * back. Between them there is no way to put a string in one of these lists
+ * without having said which of the two things you meant.
+ */
+export function keyNamed(cardId: CardId): SettledKey {
+  return cardId as SettledKey;
+}
+
+/**
+ * Whether one of these keys names this *card*, whatever copy.
+ *
+ * `listed` is the question to ask of a Karta in front of you; this is the
+ * question to ask when all you have is a name, and it is the right question
+ * for exactly two callers. 17.5 sums the Miecze of creatures attacking
+ * together, so two WILKI on one Obszar are one fight and settling it settles
+ * both — `fought` and `beaten` are keyed by name on purpose, and a `fight`
+ * command that has been handed a list of `CardId`s has nothing else to ask
+ * with.
+ *
+ * Its own door rather than a bare `.includes`, so that the call site says which
+ * of the two questions it is asking. That was the whole fault: they looked
+ * identical, so the wrong one was silent.
+ */
+export function named(keys: readonly SettledKey[], cardId: CardId): boolean {
+  return (keys as readonly string[]).includes(cardId);
 }
 
 /** The number the next Karta to join this frame should carry. See `nth`. */

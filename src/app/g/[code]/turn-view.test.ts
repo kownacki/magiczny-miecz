@@ -4,6 +4,7 @@ import type { TurnPhase } from "@/lib/engine/turn";
 import { turnViewOf, type TurnViewInput } from "./turn-view";
 import type { Seat } from "./table";
 import type { Game } from "./use-table";
+import { keyNamed } from "@/lib/engine/state";
 
 const FIELD = asFieldId("mroczna-polana")!;
 
@@ -125,7 +126,7 @@ describe("what the Obszar still owes", () => {
   it("counts fought beside resolved as settled (17.4)", () => {
     const view = turnViewOf(
       input({
-        game: game(field({ drawn: [card("wilk"), card("grota")], resolved: ["grota"], fought: ["wilk"] })),
+        game: game(field({ drawn: [card("wilk"), card("grota")], resolved: [keyNamed("grota")], fought: [keyNamed("wilk")] })),
       }),
     );
     expect(view.owedHere?.settled).toEqual(["grota", "wilk"]);

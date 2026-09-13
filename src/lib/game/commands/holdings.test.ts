@@ -16,6 +16,7 @@ import {
 } from "./holdings";
 import { requireCardId, type CardId } from "@/data/ids";
 import type { FieldCardRow } from "../store";
+import { keyNamed } from "@/lib/engine/state";
 import {
   equipCard,
   reorderPack,
@@ -367,7 +368,7 @@ describe("taking a card", () => {
       game: {
         turn_state: onField({
           drawn: [{ cardId: "cyklop", cardClass: "foe" }],
-          fought: ["cyklop"],
+          fought: [keyNamed("cyklop")],
         }),
       },
     });
@@ -833,7 +834,7 @@ describe("picking something up off the Obszar (12.1)", () => {
 
   it("lets it through once that Wróg has been fought", () => {
     const beaten = table({
-      game: { turn_state: onField({ fought: ["cyklop"] }) },
+      game: { turn_state: onField({ fought: [keyNamed("cyklop")] }) },
       fieldCards: [lying, { id: "fc2", field_id: HERE, card_id: "cyklop", granted: false, pool: null }],
     });
     expect(takeFromField(beaten, { seatId: "seat-a", fieldCardId: "fc1" }).result.kind).toBe(

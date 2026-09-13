@@ -52,6 +52,8 @@ import type { Confirmation } from "../confirm";
 import type { Nature } from "@/data/types";
 import type { EqMode } from "@/lib/engine/slots";
 import type { TurnCard } from "@/lib/engine/state";
+import type { SettledKey } from "@/lib/engine/state";
+import type { CardId } from "@/data/ids";
 
 /**
  * Everything this needs, which is also everything the sheet above it needs
@@ -65,10 +67,10 @@ export interface DrawnActionsProps {
   card: TurnCard;
   /** In 15.2 order, which is the order they are dealt with. */
   cards: TurnCard[];
-  resolved: string[];
-  fought: string[];
+  resolved: SettledKey[];
+  fought: SettledKey[];
   /** Wrogowie who died here (16.2) — struck in the kolejka, gone from the Obszar. */
-  beaten?: string[];
+  beaten?: SettledKey[];
   /** Fields the character could be sent to, for the cards that let it choose. */
   ring: FieldId[];
   /**
@@ -161,7 +163,7 @@ export interface DrawnActionsProps {
   onEscape: () => void;
   onTake: (cardId: string) => void;
   /** Nothing to do with this one — it stays on the field (16.8). */
-  onLeave: (cardId: string) => void;
+  onLeave: (cardId: CardId) => void;
   /** Raises the table's one „are you sure?" — see `ConfirmDialog`. */
   onAsk: (question: Omit<Confirmation, "tone">) => void;
 }

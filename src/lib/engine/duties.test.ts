@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { dutiesBeforeEnding, mayEndTurn, whyCannotEnd } from "./duties";
+import { offerKey } from "@/lib/engine/fieldScript";
+import { keyNamed, type SettledKey } from "@/lib/engine/state";
 
 describe("duties before ending a turn", () => {
   it("owes the Bestia fight while standing in the Zamek", () => {
@@ -80,7 +82,7 @@ describe("the move, which is not optional (10.1-10.2)", () => {
  * ======================================================================= */
 
 describe("what the Obszar still owes (16.4, 13.5)", () => {
-  const onField = (drawn: { cardId: string; cardClass: string }[], settled: string[] = []) => ({
+  const onField = (drawn: { cardId: string; cardClass: string }[], settled: SettledKey[] = []) => ({
     drawn: drawn as never,
     settled,
   });
@@ -122,7 +124,7 @@ describe("what the Obszar still owes (16.4, 13.5)", () => {
         fieldId: "bezdroza",
         done: [],
         phase: "field",
-        onField: onField([{ cardId: "wilk", cardClass: "foe" }], ["wilk"]),
+        onField: onField([{ cardId: "wilk", cardClass: "foe" }], [keyNamed("wilk")]),
       }),
     ).toBe(true);
   });
@@ -160,7 +162,7 @@ describe("what the Obszar still owes (16.4, 13.5)", () => {
         fieldId: "karczma",
         done: [],
         phase: "field",
-        onField: onField([], ["pole:Karczma"]),
+        onField: onField([], [offerKey("Karczma")]),
       }),
     ).toBe(true);
   });

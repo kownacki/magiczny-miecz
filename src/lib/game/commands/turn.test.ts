@@ -6,6 +6,7 @@ import { aHolding, aSeat, aTable } from "../fixture";
 import { apply } from "../change";
 import { finishTurn, leaveCardsBehind, passTurn, resetTurn, tickEffects } from "./turn";
 import type { CardId } from "@/data/ids";
+import { keyNamed, type SettledKey } from "@/lib/engine/state";
 
 const two = (over: Partial<Parameters<typeof aTable>[0]> = {}) =>
   aTable({
@@ -327,7 +328,7 @@ describe("what is left on the Obszar at the end of a turn", () => {
    * Wrota będą czekać na tym Obszarze na kogoś odważniejszego." They did not.
    */
   describe("a Karta that is discarded by being read", () => {
-    const ending = (cardId: CardId, settled: string[]) =>
+    const ending = (cardId: CardId, settled: SettledKey[]) =>
       leaveCardsBehind(aTable({ seats: [aSeat({ id: "seat-a" })] }), {
         fieldId: "przelecz-wichrow",
         seatId: "seat-a",
@@ -336,7 +337,7 @@ describe("what is left on the Obszar at the end of a turn", () => {
         settled,
       });
 
-    const lyingAfter = (cardId: CardId, settled: string[]) =>
+    const lyingAfter = (cardId: CardId, settled: SettledKey[]) =>
       (ending(cardId, settled).fieldCards?.insert ?? []).map((row) => row.card_id);
 
     it("waits on the Obszar when nobody went through it", () => {
@@ -344,7 +345,7 @@ describe("what is left on the Obszar at the end of a turn", () => {
     });
 
     it("is odłożona once somebody has", () => {
-      expect(lyingAfter("skalne-wrota", ["skalne-wrota"])).toEqual([]);
+      expect(lyingAfter("skalne-wrota", [keyNamed("skalne-wrota")])).toEqual([]);
     });
 
     /**
@@ -354,7 +355,7 @@ describe("what is left on the Obszar at the end of a turn", () => {
      */
     it("leaves a Kapliczka open until somebody prays at it", () => {
       expect(lyingAfter("kapliczka-nemed", [])).toEqual(["kapliczka-nemed"]);
-      expect(lyingAfter("kapliczka-tolimana", ["kapliczka-tolimana"])).toEqual([]);
+      expect(lyingAfter("kapliczka-tolimana", [keyNamed("kapliczka-tolimana")])).toEqual([]);
     });
 
     /**
@@ -363,7 +364,7 @@ describe("what is left on the Obszar at the end of a turn", () => {
      * by the time this runs it has always been read.
      */
     it("still discards a compulsory Karta that was read", () => {
-      expect(lyingAfter("zaraza", ["zaraza"])).toEqual([]);
+      expect(lyingAfter("zaraza", [keyNamed("zaraza")])).toEqual([]);
     });
   });
 
@@ -565,7 +566,7 @@ describe("starting this turn over (the test console's `turn reset`)", () => {
     }) as TurnPhase;
 
   it("puts the frame back to the rzut", () => {
-    const { writes } = resetTurn(mid(field({ met: true, resolved: ["mgla"] })));
+    const { writes } = resetTurn(mid(field({ met: true, resolved: [keyNamed("mgla")] })));
     expect(writes.game?.turn_state).toEqual(only({ phase: "roll" }));
   });
 
@@ -596,7 +597,7 @@ describe("starting this turn over (the test console's `turn reset`)", () => {
   /** A Wróg who died here has an owner (16.2) and is not left behind. */
   it("does not put a beaten Wróg back on the board", () => {
     const { writes } = resetTurn(
-      mid(field({ drawn: [{ cardId: "cyklop", cardClass: "foe" }], beaten: ["cyklop"] })),
+      mid(field({ drawn: [{ cardId: "cyklop", cardClass: "foe" }], beaten: [keyNamed("cyklop")] })),
     );
     expect(writes.fieldCards?.insert ?? []).toEqual([]);
   });

@@ -9,7 +9,7 @@ import { isUsable } from "./uses";
 import type { EqMode } from "./slots";
 import { STORAGE, inPlayAt, isWearable, slotsFor, type Slot } from "./slots";
 import { nextFrame } from "./kolejka";
-import { listed, resolutionOrder, type Holding, type TurnCard } from "./state";
+import { listed, resolutionOrder, type Holding, type SettledKey, type TurnCard } from "./state";
 import type { FieldId } from "./board";
 import type { Nature } from "@/data/types";
 import type { CardId } from "@/data/ids";
@@ -51,7 +51,7 @@ export function whyNotCollectHere(
   /** Everything lying on the Obszar, both lists together. */
   lying: readonly { cardId: CardId; nth?: number; unattackable?: true }[],
   /** Karty already settled this turn — fought, fled from, or worked through. */
-  settled: readonly string[],
+  settled: readonly SettledKey[],
   /** Karty the Obszar still owes (13.4). */
   owed: number,
 ): string | null {
@@ -72,7 +72,7 @@ export function whyNotCollectHere(
  */
 export function whyFoeStandsHere(
   lying: readonly { cardId: CardId; nth?: number }[],
-  settled: readonly string[],
+  settled: readonly SettledKey[],
 ): string | null {
   const found = lying.find((one) => {
     if (listed(settled, one)) return false;
@@ -109,7 +109,7 @@ const nameOf = (cardId: CardId) => EVENTS.find((card) => card.id === cardId)?.na
  */
 export function whyQueuedHere(
   lying: readonly { cardId: CardId; nth?: number; unattackable?: true }[],
-  settled: readonly string[],
+  settled: readonly SettledKey[],
 ): string | null {
   const cards: TurnCard[] = [];
   for (const one of lying) {

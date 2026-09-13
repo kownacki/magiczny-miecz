@@ -112,7 +112,7 @@ import {
 import { activeStore } from "./gameStore";
 import { compulsoryOffer } from "@/lib/engine/fieldScript";
 import { copiesRanked } from "./commands/holdings";
-import { listed, type TurnCard } from "@/lib/engine/state";
+import { listed, type SettledKey, type TurnCard } from "@/lib/engine/state";
 import { requireTop, top, topIf } from "@/lib/engine/stack";
 import { askOnTop } from "@/lib/engine/ask";
 import { eqModeOf, seatView, trophyModeOf } from "./commands/seat";
@@ -963,7 +963,7 @@ export const VERBS: { [K in Command["kind"]]: VerbRun<K> } = {
 
     const state = top(snapshot.game.turn_state) as {
       drawn?: { cardId: CardId }[];
-      resolved?: string[];
+      resolved?: SettledKey[];
     };
 
     const drawn = (state.drawn ?? []).filter(

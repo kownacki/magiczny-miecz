@@ -6,6 +6,7 @@ import { resolveFight } from "./spoils";
 import { leaveCardsBehind } from "./turn";
 import { asSeatCharacter } from "@/lib/engine/characters";
 import type { TurnPhase } from "@/lib/engine/turn";
+import { keyNamed } from "@/lib/engine/state";
 
 /**
  * 17.9 — "Zwycięzca ma prawo zmusić pokonanego do utraty jednego punktu Życia
@@ -300,7 +301,7 @@ describe("a beaten Wróg leaves the Obszar (16.2)", () => {
         { cardId: "wilk", cardClass: "foe" },
         { cardId: "helm", cardClass: "item" },
       ] as never,
-      beaten: ["wilk"],
+      beaten: [keyNamed("wilk")],
     });
     expect(writes.fieldCards?.insert?.map((row) => row.card_id)).toEqual(["helm"]);
   });

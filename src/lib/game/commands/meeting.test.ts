@@ -7,6 +7,7 @@ import { attackSeat } from "./fight";
 import { drawCard } from "./draw";
 import { endFight, startFight } from "@/lib/engine/turn";
 import type { TurnPhase } from "@/lib/engine/turn";
+import { offerKey } from "@/lib/engine/fieldScript";
 
 /**
  * 13.2 — "Postać musi dokonać wyboru między spotkaniem z inną Postacią
@@ -45,7 +46,7 @@ describe("meeting or exploring, not both (13.2)", () => {
 
   /** The Obszar's own offer counts too — 13.5 lists both as exploring. */
   it("counts a resolved offer as having explored", () => {
-    expect(hasExplored(onField({ resolved: ["karczma"] }))).toBe(true);
+    expect(hasExplored(onField({ resolved: [offerKey("Karczma")] }))).toBe(true);
   });
 
   /**
@@ -97,7 +98,7 @@ describe("meeting or exploring, not both (13.2)", () => {
   it("says which way round it was asked", () => {
     expect(() => refuseAgainst13_2(onField({ met: true }), "explore")).toThrow(/spotkanie/);
     expect(() =>
-      refuseAgainst13_2(onField({ resolved: ["x"] }), "meet"),
+      refuseAgainst13_2(onField({ resolved: [offerKey("cokolwiek")] }), "meet"),
     ).toThrow(/zbadany/);
   });
 });
