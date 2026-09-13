@@ -1418,7 +1418,7 @@ export const VERBS: { [K in Command["kind"]]: VerbRun<K> } = {
     const offer = compulsoryOffer(state.fieldId ?? null, state.resolved ?? []);
     if (offer && !command.card) {
       const done = await resolveFieldOffer(gameId, offer.name, decided);
-      return said(done.did, done.pending !== null);
+      return said(done.did, done.pending !== null, done.face);
     }
 
     const waiting = (state.drawn ?? []).filter(
@@ -1439,7 +1439,7 @@ export const VERBS: { [K in Command["kind"]]: VerbRun<K> } = {
       );
     }
     const done = await resolveDrawnCard(gameId, card.cardId, decided);
-    return said(done.did, done.pending !== null);
+    return said(done.did, done.pending !== null, done.face);
   },
 
   /**

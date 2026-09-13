@@ -20,6 +20,7 @@ import { kolejkaFor, offeredNotQueued } from "@/lib/engine/kolejka";
 import { listed } from "@/lib/engine/state";
 import type { TurnPhase } from "@/lib/engine/turn";
 import { askOnTop } from "@/lib/engine/ask";
+import { nodeAt } from "@/lib/engine/resolve";
 import { overflowOnTop, overflowSaid } from "@/lib/engine/overflow";
 import { overflowOf, waysOut } from "./commands/overflow";
 import type { Snapshot } from "./change";
@@ -88,9 +89,22 @@ export function fieldName(fieldId: FieldId | null): string {
   return FIELDS.get(fieldId)?.name ?? fieldId;
 }
 
-/** What a resolution did, and whether the card is still asking. */
-export function said(did: readonly string[], pending: boolean): string {
-  const lines = did.length > 0 ? did.join("\n") : "Nic się nie stało.";
+/**
+ * What a resolution did, the die it threw, and whether the card is still asking.
+ *
+ * The face is named for the same reason the browser puts „Wypadło" over the
+ * Karta rather than only writing it down: the one act in the game the player
+ * has no part in is the throw, and a throw nobody is shown is a throw nobody
+ * can check. Without it the Eremita's own answer was „Nic się nie stało", said
+ * in the same breath as a die that had just chosen his Obszar — the app
+ * reporting nothing about the only thing it had done by itself.
+ *
+ * The Dziennik still keeps its silence about faces on purpose (`UNSPOKEN`);
+ * this is the reply to the press, which is where the browser shows one too.
+ */
+export function said(did: readonly string[], pending: boolean, face?: number): string {
+  const body = [...(face !== undefined ? [`Wypadło ${face}.`] : []), ...did];
+  const lines = body.length > 0 ? body.join("\n") : "Nic się nie stało.";
   return pending ? `${lines}\nWciąż czeka — odpowiedz jeszcze raz (\`look\`).` : lines;
 }
 
@@ -208,8 +222,42 @@ export function askLines(snapshot: Snapshot, forSeatId: string | null): string[]
   ];
 }
 
+/**
+ * The `script` frame written out: the Karta mid-sentence, and what it is asking.
+ *
+ * `look` said nothing at all for one of these — „Phase: a Karta
+ * mid-resolution" and no more — while two other places sent the player here to
+ * read it. `answer`'s own summary is „settle what a Karta or an Obszar asked —
+ * `look` shows the question", and the browser's panel, met with a question it
+ * has no controls for, says „odpowiedzcie w konsoli". Both were pointing at a
+ * blank.
+ *
+ * Three states and each is worth a different sentence. A **held** frame is a
+ * die already thrown and waiting to take effect (`heldAt`) — the face is in
+ * `reason`, and what is owed is one press, not a choice. A **`wybor`** is the
+ * one question this surface can actually ask, numbered the way `askLines`
+ * numbers a Zaklęcie. Anything else is named rather than guessed at, in the
+ * same words the browser uses for the mirror case, so the two surfaces admit
+ * the same gap instead of sending the player back and forth across it.
+ */
+function scriptLines(frame: Extract<TurnPhase, { phase: "script" }>): string[] {
+  if (frame.held) return [`${frame.reason}: kostka padła — \`answer\` puts it into effect.`];
+  const asking = nodeAt(frame.effect, frame.cursor);
+  if (asking?.op === "wybor") {
+    return [
+      `${frame.reason}: pick one — \`answer <n>\``,
+      ...asking.options.map((option, at) => `  ${at} — ${option.label}`),
+    ];
+  }
+  if (!asking) return [`${frame.reason}: mid-resolution — \`answer\` carries on.`];
+  return [
+    `${frame.reason}: waiting on an answer this console cannot ask yet (${asking.op}).`,
+  ];
+}
+
 /** The question the turn is stuck on, for `look`. */
 export function waitingOn(frame: TurnPhase): string[] {
+  if (frame.phase === "script") return scriptLines(frame);
   if (frame.phase !== "field") return [];
   const state = frame;
   const offer = compulsoryOffer(state.fieldId ?? null, state.resolved ?? []);

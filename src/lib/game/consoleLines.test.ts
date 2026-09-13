@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { overflowLines } from "./consoleLines";
+import { overflowLines, said, waitingOn } from "./consoleLines";
+import type { TurnPhase } from "@/lib/engine/turn";
 import { aTable, aSeat, aUser, aHolding } from "./fixture";
 import { openOverflow } from "@/lib/engine/overflow";
 import { asTurnState } from "@/lib/engine/stack";
@@ -81,5 +82,75 @@ describe("overflowLines", () => {
 
   it("says nothing at all when nobody is over", () => {
     expect(overflowLines(aTable({ seats: [aSeat({ id: "seat-a", seat_index: 0 })] }))).toEqual([]);
+  });
+});
+
+/**
+ * A Karta mid-sentence, as `look` prints it.
+ *
+ * `look` printed nothing at all for a `script` frame while two other places
+ * sent the player here to read it: `answer`'s own summary promises „`look`
+ * shows the question", and the browser's panel, met with a question it has no
+ * controls for, says „odpowiedzcie w konsoli". Both were pointing at a blank
+ * line, which is how the Eremita's die came to be thrown in silence.
+ */
+describe("waitingOn, for a Karta the turn is suspended on", () => {
+  const frame = (over: Partial<Extract<TurnPhase, { phase: "script" }>>) =>
+    ({
+      phase: "script",
+      seatId: "seat-a",
+      cardId: "cudotworca",
+      reason: "CUDOTWÓRCA",
+      cursor: [],
+      effect: {
+        op: "wybor",
+        options: [
+          { label: "odzyskujesz 2 punkty Życia", effect: { op: "nic" } },
+          { label: "Pomiń", effect: { op: "nic" } },
+        ],
+      },
+      ...over,
+    }) as Extract<TurnPhase, { phase: "script" }>;
+
+  it("numbers the options the way `answer <n>` takes them", () => {
+    expect(waitingOn(frame({}))).toEqual([
+      "CUDOTWÓRCA: pick one — `answer <n>`",
+      "  0 — odzyskujesz 2 punkty Życia",
+      "  1 — Pomiń",
+    ]);
+  });
+
+  /**
+   * A thrown die is not a question: the face is chosen and what waits is the
+   * one press that lets it take effect (`heldAt`). The face is in `reason`.
+   */
+  it("says a held die is waiting to take effect, not that a choice is owed", () => {
+    const held = frame({ reason: "EREMITA (3)", held: true, cardId: "eremita" });
+    expect(waitingOn(held)).toEqual([
+      "EREMITA (3): kostka padła — `answer` puts it into effect.",
+    ]);
+  });
+
+  /** Named rather than guessed at, in the words the browser's panel uses. */
+  it("admits a question it cannot ask rather than printing nothing", () => {
+    const owed = frame({ effect: { op: "przenies", to: { kind: "krag" } } as never });
+    expect(waitingOn(owed)[0]).toContain("cannot ask yet (przenies)");
+  });
+});
+
+describe("said", () => {
+  /**
+   * The throw is the one act the player has no part in, so it is reported. It
+   * was not: the Eremita's answer read „Nic się nie stało" in the same breath
+   * as a die that had just chosen his Obszar.
+   */
+  it("names the face, even when nothing has happened yet", () => {
+    expect(said([], true, 3)).toBe(
+      "Wypadło 3.\nWciąż czeka — odpowiedz jeszcze raz (`look`).",
+    );
+  });
+
+  it("still shrugs when there was no die and nothing happened", () => {
+    expect(said([], false)).toBe("Nic się nie stało.");
   });
 });
