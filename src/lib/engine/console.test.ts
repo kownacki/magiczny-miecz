@@ -974,6 +974,18 @@ suite("playing the game, and overruling it", () => {
    * the JEDNOROŻEC's „do dowolnego Obszaru w tym Kręgu" came back owed however
    * many times it was answered. `to` is `cast`'s word, for the same job.
    */
+  /**
+   * A die has six faces, and a transcript that says `dice 7` would be
+   * reproducible by accident rather than on purpose.
+   */
+  it("reads a scripted throw, and refuses a face no die has", () => {
+    expect(ok("dice 3 5 2")).toEqual({ kind: "dice", faces: [3, 5, 2], off: false });
+    expect(ok("dice")).toEqual({ kind: "dice", faces: [], off: false });
+    expect(ok("dice off")).toEqual({ kind: "dice", faces: [], off: true });
+    expect(err("dice 7")).toContain("six faces");
+    expect(err("dice zero")).toContain("six faces");
+  });
+
   it("reads a destination past `to`", () => {
     expect(ok("answer 0 to Karczma")).toEqual({
       kind: "answer",
@@ -1534,6 +1546,7 @@ const USAGE: Record<string, { line: string; becomes: unknown }> = {
   start: { line: "start", becomes: { kind: "start" } },
   roll: { line: "roll", becomes: { kind: "roll" } },
   answer: { line: "answer 2", becomes: { kind: "answer", card: null, choices: [2], to: null } },
+  dice: { line: "dice 3 5", becomes: { kind: "dice", faces: [3, 5], off: false } },
   card: { line: "card MAGOG", becomes: { kind: "card", name: "MAGOG" } },
   fight: { line: "fight", becomes: { kind: "fight", cardId: null } },
   take: { line: "take MAGICZNY MIECZ", becomes: { kind: "take", name: "MAGICZNY MIECZ" } },

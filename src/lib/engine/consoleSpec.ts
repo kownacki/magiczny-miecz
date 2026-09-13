@@ -295,6 +295,15 @@ export type Command =
    */
   | { kind: "place"; cardId: null; fieldId: FieldId | null; gold: number }
   | { kind: "teleport"; fieldId: FieldId }
+  /**
+   * The next throws, named — the second binding `RandomPort` has always had.
+   *
+   * Not a typed die *result* (CLAUDE.md: nothing is entered by hand). The dice
+   * still fall where the app throws them in a real game; this binds the port to
+   * a script the way a test does, which is the whole reason it is a port. It
+   * needs testmode and it is the console's, never a player's.
+   */
+  | { kind: "dice"; faces: number[]; off: boolean }
   | { kind: "settle"; outcome: "wygrana" | "przegrana" | "remis" }
   | { kind: "endgame"; won: boolean }
   | { kind: "endfight" }
@@ -1840,6 +1849,24 @@ export const SPECS: { [K in Command["kind"]]: Spec<K> } = {
     parse: (tail, { usage }) =>
       named(PLACES, (field) => field.name, tail, "Obszar", (field) => ({ kind: "teleport" as const, fieldId: field.id }), usage),
     complete: board,
+  }),
+  dice: spec({
+    name: "dice",
+    aliases: [],
+    usage: "dice [n n n|off]",
+    summary: "make the next throws fall as you say — for a transcript that has to be reproducible",
+    needs: "testmode",
+    group: "override",
+    parse: (tail, { usage }) => {
+      const said = tail.trim();
+      if (!said) return { ok: { kind: "dice", faces: [], off: false } };
+      if (/^off$/i.test(said)) return { ok: { kind: "dice", faces: [], off: true } };
+      const faces = said.split(/[\s,]+/).filter(Boolean).map(Number);
+      if (faces.some((one) => !Number.isInteger(one) || one < 1 || one > 6)) {
+        return missing(usage, "A die has six faces — `dice 3 5 2`.");
+      }
+      return { ok: { kind: "dice", faces, off: false } };
+    },
   }),
   settle: spec({
     name: "settle",

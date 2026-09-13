@@ -113,6 +113,7 @@ import { activeStore } from "./gameStore";
 import { compulsoryOffer } from "@/lib/engine/fieldScript";
 import { copiesRanked } from "./commands/holdings";
 import { listed, type SettledKey, type TurnCard } from "@/lib/engine/state";
+import { scriptRolls, scriptedLeft, stopScripting } from "./record";
 import { requireTop, top, topIf } from "@/lib/engine/stack";
 import { askOnTop } from "@/lib/engine/ask";
 import { eqModeOf, seatView, trophyModeOf } from "./commands/seat";
@@ -1250,6 +1251,41 @@ export const VERBS: { [K in Command["kind"]]: VerbRun<K> } = {
     if (command.pile === "events") return one("events", "Karty Zdarzeń").join("\n");
     if (command.pile === "spells") return one("spells", "Zaklęcia").join("\n");
     return [...one("events", "Karty Zdarzeń"), "", ...one("spells", "Zaklęcia")].join("\n");
+  },
+
+  /**
+   * The next throws, said out loud — the port bound to a script, as in a test.
+   *
+   * A transcript is the cheapest test this repo can write, and until now it
+   * could not be written for anything that rolls: the STRAŻ sends you back to
+   * where the move began, so playing it means rolling a move you can predict,
+   * and three attempts at `roll` gave three different squares. What got written
+   * instead was a unit test with a hand-built frame — which is the fixture the
+   * transcripts exist to avoid.
+   *
+   * This is not „type in what you rolled". CLAUDE.md is flat about that and it
+   * stands: in a game, the app throws. `RandomPort` has always had a second
+   * binding for a test's script, and this is the console reaching it — behind
+   * testmode, like every other command that overrules the rules.
+   *
+   * The same door `replay` feeds its recorded dice through, so there is one
+   * queue and one place that can get the ordering wrong (`record.ts`). Running
+   * dry is not an error: the app simply throws again, which is what a replay
+   * that has diverged does too.
+   */
+  dice: async (_ctx, command) => {
+    if (command.off) {
+      stopScripting();
+      return "Dice back to the app.";
+    }
+    if (command.faces.length === 0) {
+      const left = scriptedLeft();
+      return left === null
+        ? "The app is throwing."
+        : `${left} ${left === 1 ? "throw" : "throws"} still scripted.`;
+    }
+    scriptRolls(command.faces);
+    return `Next ${command.faces.length === 1 ? "throw" : "throws"}: ${command.faces.join(", ")}.`;
   },
 
   settle: async (ctx, command) => {

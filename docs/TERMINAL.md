@@ -181,11 +181,25 @@ Four pieces make it work:
   table with a fresh join code, so a reconstruction cannot overwrite what it was
   reconstructing. A bare filename lands beside the saves.
 
-`expect` can only name what is the same on every run, which is the one thing to
-know before writing a transcript: the dice differ, so assert what the dice do
-not decide. The mount transcript works because a plain roll offers two Obszary
-from anywhere on an unbranched stretch of ring and a WIERZCHOWIEC's 1..3 offers
-eight, whatever the die said.
+- **`dice 3 5 2` / `dice off` / bare `dice`** binds the port to a script, the
+  way a test does, and feeds through the same queue `replay` uses — one place
+  that can get the ordering wrong rather than two. Behind testmode. Not "type in
+  what you rolled": in a game the app throws, and CLAUDE.md is flat about that.
+
+`expect` can only name what is the same on every run. That used to mean *assert
+what the dice do not decide* — and it is still the better instinct, because a
+transcript that leans on one exact face is a transcript that a rules change
+breaks for the wrong reason. The mount transcript works because a plain roll
+offers two Obszary from anywhere on an unbranched stretch of ring and a
+WIERZCHOWIEC's 1..3 offers eight, whatever the die said.
+
+But some rules cannot be reached that way at all. The STRAŻ sends a Postać back
+to the Obszar the move began from, so playing it means rolling a move whose end
+you already know — three attempts, three different squares, and what got written
+instead was a unit test with a hand-built frame. That is the fixture transcripts
+exist to avoid: it asserts that the code does what the code does, and nobody
+reading it can see a turn. `dice` is for exactly that case, and the transcript
+that uses it says why in its header.
 
 ## One vocabulary, two capability sets
 

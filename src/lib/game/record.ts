@@ -100,6 +100,17 @@ export function stopScripting(): void {
  * threw — and the honest thing is to let it roll and let the comparison say so,
  * rather than to fail here with a stack trace about dice.
  */
+/**
+ * How many fed dice are still queued — for a console that has to say so.
+ *
+ * `dice 3 5 2` is a queue with a tail, and a tail nobody can see is a trap: the
+ * next transcript to run in the same session would take a leftover 2 for a real
+ * throw and be reproducible for the wrong reason.
+ */
+export function scriptedLeft(): number | null {
+  return scripted === null ? null : scripted.length;
+}
+
 export function nextScripted(): number | null {
   if (scripted === null || scripted.length === 0) return null;
   return scripted.shift() ?? null;
