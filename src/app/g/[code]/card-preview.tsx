@@ -29,6 +29,7 @@ import type { Nature } from "@/data/types";
 import { CardMark, Corner, MARK_SIZE, ParkedWord } from "./card-mark";
 import { CloseButton } from "./chrome";
 import { LAYER } from "./layers";
+import { alsoInside, useEscape } from "./overlay";
 import type { EqMode } from "@/lib/engine/slots";
 import { parkedAbility, parkedCard } from "@/lib/engine/disabled";
 import { CardBack, CardTile, cardIdOf, type TileCard } from "./card-tile";
@@ -258,7 +259,9 @@ export function useCardPreview(
        * dismissed by moving the pointer off the name that opened it.
        */
       if (isHold(event) && !mine && !nested && anchor !== null) setPinnedPreview(me);
-      if (event.key === "Escape" && mine) setPinnedPreview(null);
+      // Escape is not answered here. It goes on the stack in `overlay.tsx`
+      // instead — see `useEscape` in `CardPreview` — where a pinned panel is
+      // the newest thing on screen and takes the key from the drawer under it.
     };
     const onUp = (event: KeyboardEvent) => {
       if (!isHold(event) || !mine) return;
@@ -758,6 +761,37 @@ export function CardPreview({
     },
     [anchor],
   );
+
+  /**
+   * Pinned, it is part of the furniture — not a hole in it.
+   *
+   * This panel lives in `document.body`, so a drawer cannot tell a click in it
+   * from a click on the board: dragging across a line of a card's text closed
+   * the Księga the card was opened from, which is the one thing pinning exists
+   * to let you do. `alsoInside` says where it is without giving it a dismissal
+   * of its own — see the note there.
+   *
+   * Only while pinned. Unpinned it is `pointer-events-none`, so no click can
+   * land in it to be counted, and registering it would be a claim about a
+   * panel the pointer goes straight through.
+   */
+  useEffect(() => {
+    const element = held.current;
+    if (!pinned || !element) return;
+    return alsoInside(element);
+  }, [pinned]);
+
+  /**
+   * And Escape lets go of the panel, not of the shelf behind it.
+   *
+   * The same gesture from the other side. This used to answer the key with a
+   * `keydown` of its own while the drawer answered it through the stack, so one
+   * press closed the card *and* the Księga it was opened from — the thing
+   * `overlay.tsx` says at length that Escape must never do. Queued instead, and
+   * a pinned panel is always the newest thing on screen, so it goes first and
+   * alone.
+   */
+  useEscape(pinned && onUnpin ? onUnpin : null);
 
   /**
    * A press anywhere else lets a pinned panel go.

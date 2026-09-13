@@ -179,6 +179,37 @@ function newestDismissable(): HTMLElement | null {
 }
 
 /**
+ * Somewhere a click lands *inside*, without being a surface of its own.
+ *
+ * A pinned lookup panel is drawn into `document.body` — it has to be, because
+ * the first scrolling container above it would crop it — so nothing about the
+ * DOM says it belongs to the Księga it was opened from. Dragging across a line
+ * of a card's text was then a click outside every surface registered here, and
+ * the drawer underneath answered it: one gesture, and the card you were
+ * reading went with the shelf you opened it from.
+ *
+ * Registered, not owned. A click away is not its way out — that is the press
+ * elsewhere it listens for itself, and letting the key go — so it goes into
+ * `pinned` as well and `newestDismissable` steps over it. That is the same
+ * shape as an undismissable sheet: on screen, therefore somewhere a click is
+ * *in*, and silent when a click away is being answered. Escape it does take,
+ * through `useEscape` and in its own right, because that queue is about what
+ * is on top rather than about what a click landed in.
+ *
+ * A function rather than a hook because the caller holds its node in a ref
+ * callback, not in state, and hands it over from an effect of its own.
+ */
+export function alsoInside(element: HTMLElement): () => void {
+  open.push(element);
+  pinned.add(element);
+  return () => {
+    const at = open.lastIndexOf(element);
+    if (at !== -1) open.splice(at, 1);
+    pinned.delete(element);
+  };
+}
+
+/**
  * The two ways out, for anything laid over the table.
  *
  * Extracted because the console is one of these and was not built as one. It
