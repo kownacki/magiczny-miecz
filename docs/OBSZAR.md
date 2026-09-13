@@ -181,6 +181,29 @@ by hand: our sentence says „wszystkich", and each card's own
 text decides what resolving it costs (16.5/16.7 „konieczne jest wykonanie"
 against 13.5 „do innych może, jeśli ma ochotę").
 
+**Built, 2026-09-13, after nine days of the code saying otherwise.** Both
+sentences above were written here and neither was true in the app. `owesAFrame`
+asked each Karta's own verb and kept every offer *out of the row*, so a square
+with a CUDOTWÓRCA, a CZARODZIEJ and a DOBRE BÓSTWO opened on the Bóstwo and the
+other two were not in the kolejka at all — which from a player's chair reads as
+two cards skipped. And the reason it was done that way is the second sentence:
+declining wrote `resolved`, which spent the Karta for the turn, so keeping it
+out of the row was the only way it stayed reachable.
+
+`declined` is its own list now (`TurnPhase`'s field frame), `skipCard` is the
+one press that writes it, and the two questions are finally separate:
+
+| | asks | reads |
+| --- | --- | --- |
+| **the row** (15.2) | what is next, every Karta in it | `cardInFront`, `owesAFrame` |
+| **the gate** (12.1, 16.4) | what must be *done* first | `blockingFrame` |
+
+The gate is the narrower of the two on purpose: 12.1 names its own exceptions —
+„a) Na Obszarze leżą Karty Wrogów lub b) Jest to Obszar, na który ciągnięte są
+Karty" — and „instant and unblockable" above is exactly what does not need
+gating. Otherwise a TARGOWISKO lying beside a HEŁM would have to be pressed past
+before the HEŁM could be picked up, which is a rule the box does not have.
+
 **A resident you declined in the pass is still open afterwards.** Read off the
 cards' own words — „podczas każdych odwiedzin", „Każdy, kto tu zawędruje",
 „która tu zawita" — none of which spends the card, against „Bez względu na to,

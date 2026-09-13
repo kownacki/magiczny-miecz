@@ -82,6 +82,7 @@ import {
   resetTurn,
   moveTo,
   resolveDrawnCard,
+  skipDrawnCard,
   startGame,
   resolveFieldOffer,
   rollForMove,
@@ -114,6 +115,7 @@ import { compulsoryOffer } from "@/lib/engine/fieldScript";
 import { copiesRanked } from "./commands/holdings";
 import { listed, type SettledKey, type TurnCard } from "@/lib/engine/state";
 import { scriptRolls, scriptedLeft, stopScripting } from "./record";
+import { cardInFront, settledOn } from "@/lib/engine/kolejka";
 import { requireTop, top, topIf } from "@/lib/engine/stack";
 import { askOnTop } from "@/lib/engine/ask";
 import { eqModeOf, seatView, trophyModeOf } from "./commands/seat";
@@ -1487,6 +1489,39 @@ export const VERBS: { [K in Command["kind"]]: VerbRun<K> } = {
     }
     const done = await resolveDrawnCard(gameId, card.cardId, decided);
     return said(done.did, done.pending, done.face);
+  },
+
+  /**
+   * „Pomiń" the Karta in front of you.
+   *
+   * Names one when more than one is waiting, exactly as `answer` does — and
+   * bare it means the one the kolejka is stopped at, which is the one on
+   * screen. A Karta that happens to whoever arrives has no past it, and
+   * `skipCard` says so in the card's own terms rather than this listing
+   * classes.
+   */
+  skip: async (ctx, command) => {
+    const { gameId } = ctx;
+    const snapshot = await activeStore().load(gameId);
+    const state = requireTop(
+      snapshot.game.turn_state,
+      "field",
+      "Nie ma Karty do pominięcia.",
+    );
+    const settled = settledOn(state);
+    const waiting = state.drawn.filter((one) => !listed(settled, one));
+    if (waiting.length === 0) throw new Error("Nie ma Karty do pominięcia.");
+
+    let card = cardInFront(waiting, settled) ?? waiting[0];
+    if (command.card) {
+      const hit = waiting.find(
+        (one) => cardName(one.cardId).toLowerCase() === command.card!.toLowerCase(),
+      );
+      if (!hit) throw new Error(`Not waiting: ${command.card}.`);
+      card = hit;
+    }
+    const done = await skipDrawnCard(gameId, card.cardId);
+    return `${done.card} — pominięta (możesz wrócić do końca tury).`;
   },
 
   /**

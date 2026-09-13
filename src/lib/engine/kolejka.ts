@@ -179,11 +179,27 @@ export function owesAFrame(card: TurnCard): boolean {
     case "item":
     case "friend":
       return false;
-    // 16.5 and 16.7 make the instruction binding — but most of those
-    // instructions are themselves "możesz", and those are the Obszar's window's.
+    /**
+     * 16.5 and 16.7 make the instruction binding, and 15.2 puts every Karta on
+     * the Obszar in one sequence — „konieczne jest przy tym zachowanie
+     * kolejności". So a Nieznajomy earns a frame whatever his own verb is.
+     *
+     * This asked `mayWalkPast` and so kept fifteen Karty out of the kolejka
+     * altogether: a square holding a CUDOTWÓRCA, a CZARODZIEJ and a DOBRE
+     * BÓSTWO opened on the Bóstwo and the other two were simply not in the row.
+     * The argument for it was the Cudotwórca „who has lived on this Obszar for
+     * twenty turns" — which is a fair description of a resident and still does
+     * not exempt him, because 15.2's sentence is „znajdujące się **lub**
+     * wyciągnięte".
+     *
+     * What „możesz" actually buys is a way *past*: `mayWalkPast` now says the
+     * Karta may be declined where it stands (`skipCard`), which settles it for
+     * the pass and leaves it open for 12.1. That is the distinction the box
+     * draws — what resolving costs — rather than one about being in the row.
+     */
     case "stranger":
     case "place":
-      return !mayWalkPast(card.cardId);
+      return true;
   }
 }
 
@@ -250,12 +266,71 @@ export function kolejkaFor(
   return frames;
 }
 
+/**
+ * Everything this turn has settled on the Obszar, as one list.
+ *
+ * Four lists, four different questions — `resolved` carried it out, `declined`
+ * read it and said no, `fought` settled a fight either way (17.4), `beaten`
+ * killed it (16.2) — and exactly one question wants all four at once: *is the
+ * pass over this Karta?* That question was being answered by hand in nine
+ * places, each merging whichever lists it happened to know about, which is how
+ * a fourth list would have been missed in six of them.
+ *
+ * The individual lists stay, and the readers that need one still ask for one:
+ * `leaveCardsBehind` wants `resolved` alone, because declining spends nothing.
+ */
+export function settledOn(frame: {
+  resolved?: readonly SettledKey[];
+  declined?: readonly SettledKey[];
+  fought?: readonly SettledKey[];
+  beaten?: readonly SettledKey[];
+}): SettledKey[] {
+  return [
+    ...(frame.resolved ?? []),
+    ...(frame.declined ?? []),
+    ...(frame.fought ?? []),
+    ...(frame.beaten ?? []),
+  ];
+}
+
 /** The frame the turn is stopped at, or null when the kolejka is worked through. */
 export function nextFrame(
   cards: readonly TurnCard[],
   resolved: readonly SettledKey[] = [],
 ): KolejkaFrame | null {
   return kolejkaFor(cards, resolved).find((frame) => !frame.done) ?? null;
+}
+
+/**
+ * The frame that shuts 12.1's window, as against the one the row is stopped at.
+ *
+ * Two questions, and one function was answering both until every Karta joined
+ * the row. **The row** is 15.2's sequence — every Karta „znajdująca się lub
+ * wyciągnięta na danym Obszarze", worked through in order. **The gate** is
+ * 12.1's, and 12.1 names its exceptions itself: „z wyjątkiem sytuacji, w
+ * której: a) Na Obszarze leżą Karty Wrogów lub b) Jest to Obszar, na który
+ * ciągnięte są Karty." Not „any Karta you have not read".
+ *
+ * docs/OBSZAR.md's addendum closes the 12.1/15.2 contradiction by making the
+ * free phase wait for the pass — and says in the same breath why that is cheap:
+ * „Skipping a staying Karta in the pass is resolving it — **instant and
+ * unblockable** — so the free phase in practice begins once every *compulsory*
+ * Karta is done." Instant and unblockable is exactly what does not need a gate.
+ * Gating on it too would mean pressing „Pomiń" on a TARGOWISKO before you may
+ * pick up a HEŁM lying beside it, which is a rule the box does not have.
+ *
+ * So: a frame you can walk past does not shut the window; it is still in the
+ * row, and 15.2's order still holds within it.
+ */
+export function blockingFrame(
+  cards: readonly TurnCard[],
+  settled: readonly SettledKey[] = [],
+): KolejkaFrame | null {
+  return (
+    kolejkaFor(cards, settled).find(
+      (frame) => !frame.done && !frame.cards.every((card) => mayWalkPast(card.cardId)),
+    ) ?? null
+  );
 }
 
 /**

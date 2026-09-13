@@ -58,21 +58,31 @@ describe("owesAFrame — what the turn must stop for", () => {
   });
 
   /**
-   * The verb the card itself uses. "Jeżeli do niej trafisz, będziesz musiał
-   * rzucić kostką" against "podczas każdej wizyty kupić".
+   * Every Nieznajomy and every Miejsce, whatever verb it prints.
+   *
+   * 15.2: „rozpatrywane są **pozostałe Karty Zdarzeń** … znajdujące się lub
+   * wyciągnięte na danym Obszarze. **Konieczne** jest przy tym zachowanie
+   * kolejności". 16.5: „konieczne jest wykonanie zawartej w Karcie instrukcji".
+   * Nothing in the box takes a Karta out of the sequence for being an offer.
+   *
+   * This asked `mayWalkPast` and so left fifteen Karty out of the row
+   * altogether: a square with a CUDOTWÓRCA, a CZARODZIEJ and a DOBRE BÓSTWO
+   * opened on the Bóstwo and the other two were simply not there. What „możesz"
+   * buys is a way *past* — `skipCard` — not an exemption from the row.
    */
-  it("stops for a Nieznajomy who happens to you, not one you visit", () => {
+  it("stops for every Nieznajomy, the ones you visit included", () => {
     expect(owesAFrame(onField("urocza-diablica")[0])).toBe(true);
-    expect(owesAFrame(onField("sztukmistrz")[0])).toBe(false);
+    expect(owesAFrame(onField("sztukmistrz")[0])).toBe(true);
   });
 
-  it("stops for a Miejsce that catches you, not one you may enter", () => {
+  it("stops for every Miejsce, the ones you may enter included", () => {
     // "Każdy, kto tu trafi o Magii mniejszej niż 5, gubi się w nim."
     expect(owesAFrame(onField("labirynt")[0])).toBe(true);
     expect(owesAFrame(onField("spalona-ziemia")[0])).toBe(true);
-    // "Jeżeli chcesz do niej wejść, rzuć kostką."
-    expect(owesAFrame(onField("grota")[0])).toBe(false);
-    expect(owesAFrame(onField("targowisko")[0])).toBe(false);
+    // „Jeżeli chcesz do niej wejść, rzuć kostką" — a visit, and still in the
+    // row: 15.2 sequences it, `skipCard` is the one press that gets past it.
+    expect(owesAFrame(onField("grota")[0])).toBe(true);
+    expect(owesAFrame(onField("targowisko")[0])).toBe(true);
   });
 
   /** 15.1 sits above the numerals; a Karta that relocates cannot be left lying. */
@@ -124,7 +134,7 @@ describe("kolejkaFor", () => {
     ]);
   });
 
-  it("gives each compulsory Nieznajomy and Miejsce a frame of its own", () => {
+  it("gives each Nieznajomy and Miejsce a frame of its own", () => {
     expect(shape(onField("urocza-diablica", "labirynt"))).toEqual([
       ["nieznajomy", ["urocza-diablica"], false],
       ["miejsce", ["labirynt"], false],
@@ -132,11 +142,18 @@ describe("kolejkaFor", () => {
   });
 
   /**
-   * The case that prompted the design: everything on the Obszar is optional, so
-   * the turn stops for none of it and it is all offered together instead.
+   * An Obszar of nothing but offers is still a row to be walked.
+   *
+   * This used to expect `[]` — „the turn stops for none of it" — which is the
+   * reading 15.2 does not support. The Karty are in the sequence; getting past
+   * one is one press (`skipCard`) and costs nothing. Only the loot is outside
+   * it, because 16.6 is the one class whose *rule* says „może".
    */
-  it("stops for nothing when every Karta here is one you may walk past", () => {
-    expect(shape(onField("cudotworca", "grota", "helm", "rycerz"))).toEqual([]);
+  it("still rows up an Obszar of nothing but offers, loot excepted", () => {
+    expect(shape(onField("cudotworca", "grota", "helm", "rycerz"))).toEqual([
+      ["nieznajomy", ["cudotworca"], false],
+      ["miejsce", ["grota"], false],
+    ]);
   });
 
   it("marks a frame done once its Karta has been settled", () => {
@@ -164,12 +181,16 @@ describe("kolejkaFor", () => {
       "mgla",
       "upior",
     );
+    /* Two Miejsca and two frames: the LABIRYNT catches you and the TARGOWISKO
+       is a shop you may walk past, and 15.2 sequences both. Only the HEŁM is
+       outside the row (16.6). */
     expect(shape(cards).map(([kind]) => kind)).toEqual([
       "placed",
       "spotkanie",
       "wrogowie-miecz",
       "wrogowie-magia",
       "nieznajomy",
+      "miejsce",
       "miejsce",
     ]);
   });
@@ -189,10 +210,16 @@ describe("cardInFront — the one Karta the sheet holds up", () => {
   const numbered = (...cardIds: CardId[]): TurnCard[] =>
     onField(...cardIds).map((card, at) => ({ ...card, nth: at + 1 }));
 
-  it("is whatever stops the turn, not whatever was drawn first", () => {
-    // Both Nieznajomi IV; 16.4 puts the compulsory one first whichever arrived.
+  /**
+   * 15.2 orders by numeral and, within one numeral, by arrival. Both of these
+   * are Nieznajomi IV, so the one drawn first is the one in front — and both
+   * are in the row now, which is the change: the Cudotwórca used to be absent
+   * from it and the sheet opened on the Bóstwo behind him.
+   */
+  it("is whatever the row is stopped at, offers included", () => {
     const cards = onField("cudotworca", "dobre-bostwo");
-    expect(cardInFront(cards)?.cardId).toBe("dobre-bostwo");
+    expect(cardInFront(cards)?.cardId).toBe("cudotworca");
+    expect(cardInFront(cards, [keyNamed("cudotworca")])?.cardId).toBe("dobre-bostwo");
   });
 
   it("falls back to the first unsettled Karta once nothing is in the way", () => {
@@ -252,13 +279,17 @@ describe("offeredNotQueued", () => {
   /**
    * The other half of `owesAFrame`, so the two cannot drift into either
    * queueing a Karta twice or losing it between them.
+   *
+   * What is left outside the row is now only the loot. 16.6 is the one class
+   * whose *rule* says „może" and 12.1 gives the taking the run of the turn;
+   * every Nieznajomy and Miejsce is sequenced by 15.2 whatever it prints.
    */
-  it("is exactly what the kolejka did not take", () => {
+  it("is exactly what the kolejka did not take — which is the loot", () => {
     const cards = onField("wilk", "helm", "cudotworca", "labirynt", "rycerz", "grota");
     const queued = kolejkaFor(cards).flatMap((frame) => frame.cards.map((c) => c.cardId));
     const offered = offeredNotQueued(cards).map((c) => c.cardId);
     expect([...queued, ...offered].sort()).toEqual(cards.map((c) => c.cardId).sort());
-    expect(offered).toEqual(["cudotworca", "helm", "rycerz", "grota"]);
+    expect(offered).toEqual(["helm", "rycerz"]);
   });
 });
 

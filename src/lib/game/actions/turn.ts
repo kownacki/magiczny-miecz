@@ -30,6 +30,7 @@ import {
   rollForMove,
   resolveBridgeOrdeal,
   resolveDrawnCard,
+  skipDrawnCard,
   resolveFieldOffer,
   claimSpellFloor,
   releaseSpellFloor,
@@ -207,6 +208,14 @@ export const TURN = {
   "karta-efekt": turn({
     from: (body) => ({ cardId: requireCardId(body.cardId as string), decided: decisionsFrom(body) }),
     run: (gameId, { cardId, decided }) => resolveDrawnCard(gameId, cardId, decided),
+  }),
+  /**
+   * „Pomiń" — reading a Karta and declining it, which 15.2 counts as resolving
+   * it and 12.1 does not count as spending it. See `skipCard`.
+   */
+  "karta-pomin": turn({
+    from: (body) => requireCardId(body.cardId as string),
+    run: (gameId, cardId) => skipDrawnCard(gameId, cardId),
   }),
   /**
    * Two frames can be waiting, and the body says which by what it names.

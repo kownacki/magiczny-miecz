@@ -11,11 +11,13 @@ import {
   type Status,
 } from "@/lib/engine/status";
 import { drawsFromPool, poolRemains, startingPool } from "@/lib/engine/pools";
-import { leavesWhenResolved, mayWalkPast } from "@/lib/engine/kolejka";
+import { blockingFrame, cardInFront, leavesWhenResolved, mayWalkPast, settledOn } from "@/lib/engine/kolejka";
+import { keyOf } from "@/lib/engine/state";
+import { cardName } from "@/lib/engine/polish";
 import { whyQueuedHere } from "@/lib/engine/holdings";
 import { abilitiesOf, entryPrice } from "@/lib/engine/abilities";
 import { listed, named, type SettledKey, type TurnCard } from "@/lib/engine/state";
-import { only, top, topIf } from "@/lib/engine/stack";
+import { only, replaceTop, requireTop, top, topIf } from "@/lib/engine/stack";
 import {
   apply,
   merge,
@@ -129,7 +131,7 @@ export function refuseWhileQueued(snapshot: Snapshot, seatId: string): void {
             : {}),
         })),
     ],
-    [...(state.resolved ?? []), ...(state.fought ?? []), ...(state.beaten ?? [])],
+    settledOn(state),
   );
   if (why) throw new Error(why);
 }
@@ -139,33 +141,116 @@ export function refuseWhileQueued(snapshot: Snapshot, seatId: string): void {
  *
  * # Why resolving needs it at all
  *
- * `owesAFrame` splits the Karty on an Obszar in two: what stops the turn, which
- * is the kolejka, and what merely offers itself, which is 12.1's window. Taking
- * out of that window already waits for the kolejka — `takeCard` has called
- * `refuseWhileQueued` since the window was built — but *resolving* a Karta in
- * it did not, so a Targowisko could be shopped at with a Wilkołak standing
- * over it. 16.4 is plain that it cannot: „każde Spotkanie i każdy Wróg … muszą
- * zostać rozpatrzone zanim pozostałe zostaną obejrzane."
+ * 16.4 is plain: „każde Spotkanie i każdy Wróg … muszą zostać rozpatrzone zanim
+ * pozostałe zostaną obejrzane." Taking already waits for the kolejka — `takeCard`
+ * has called `refuseWhileQueued` since the window was built — but *resolving* a
+ * Karta did not, so a Targowisko could be shopped at with a Wilkołak standing
+ * over it.
  *
- * # Only the optional ones
+ * # Not "only the optional ones"
  *
- * A Karta that *is* the kolejka must not be gated on the kolejka, or resolving
- * the Wilkołak would be refused with „Najpierw WILKOŁAK". So the question is
- * asked of exactly the cards the window holds, which is `mayWalkPast` — the
- * card's own verb, „jeżeli chcesz" against „każdy, kto tu trafi", not a list
- * written out here.
+ * It asked `mayWalkPast` and let every compulsory Karta through, on the reading
+ * that „a Karta that *is* the kolejka must not be gated on the kolejka" — true,
+ * and the wrong test for it. Now that 15.2 puts every Karta in the row
+ * (`owesAFrame`), the optional ones are the kolejka too, and that test would
+ * refuse the CUDOTWÓRCA with „Najpierw CUDOTWÓRCA".
  *
- * # What it settles
- *
- * The SKALNE WROTA, whose three Karty join the kolejka they were drawn into.
- * That is only the fresh badanie the community reads the card as if the Wrota
- * is resolved last, and `reopensTheDrawing` orders it last without being able
- * to *hold* it there. This is what holds it: the Wrota is optional, so it lives
- * in the window, and the window opens when the Obszar is worked through.
+ * So the question is asked directly: **is the kolejka stopped on something that
+ * is not this Karta?** One reading, no classes, and the SKALNE WROTA still
+ * holds — `reopensTheDrawing` sorts it last, so anything it drew is in front of
+ * it and the frame in the way is not the Wrota.
  */
 export function refuseWhileQueuedFor(snapshot: Snapshot, seatId: string, cardId: CardId): void {
+  /**
+   * Only the Karty the window holds, exactly as before.
+   *
+   * Widening this to every Karta would enforce 16.4 properly — „Dopiero po
+   * rozpatrzeniu … wszystkich Wrogów … może przystąpić do rozpatrzenia
+   * pozostałych Kart Zdarzeń" — and the acceptance scenario in docs/STACK.md
+   * resolves the KOSZMAR with the TRÓGGŁOWY SMOK still standing, so it would
+   * fail. That is a hole worth its own look and it is not this change's: the
+   * row is what moved here, not the gate.
+   */
   if (!mayWalkPast(cardId)) return;
+  const state = topIf(snapshot.game.turn_state, "field");
+  if (!state) return;
+  /* `blockingFrame` and not `nextFrame`: the question is what *shuts* 12.1's
+     window, not what is next in 15.2's row. Deciding with one and explaining
+     with the other is how this came to refuse the CYKLOP with „Najpierw
+     CYKLOP" — the decision saw a TARGOWISKO in front of him and the sentence
+     saw the Wróg behind it. */
+  const stopped = blockingFrame(state.drawn, settledOn(state));
+  if (!stopped || stopped.cards.some((one) => one.cardId === cardId)) return;
   refuseWhileQueued(snapshot, seatId);
+}
+
+/**
+ * „Pomiń": the Karta is read and walked past, and stays where it is.
+ *
+ * 15.2 puts every Karta on the Obszar in one pass and 16.5 makes a Nieznajomy's
+ * instruction binding — but a great many of those instructions are themselves
+ * offers, and „rozpatrzenie" of an offer is reading it and saying no. That is
+ * what this writes down. docs/OBSZAR.md: „Skipping a staying Karta in the pass
+ * is resolving it … instant and unblockable."
+ *
+ * **Not `resolved`.** A declined Karta took nothing from the square, so 12.1's
+ * „w każdej chwili, aż do końca swojej tury" still reaches it — you may walk
+ * past the CUDOTWÓRCA to get at the DOBRE BÓSTWO behind him and come back for
+ * your two punkty Życia afterwards. Marking it resolved is what the app did,
+ * and it spent the card for the rest of the turn.
+ *
+ * **Only where the Karta's own verb allows it.** „Każdy, kto tu trafi" happens
+ * to you and there is no past it; „jeżeli chcesz", „która tu zawita", „podczas
+ * każdych odwiedzin" are visits. `mayWalkPast` reads that off the card, which
+ * is where the box put it.
+ */
+export function skipCard(
+  snapshot: Snapshot,
+  command: { cardId: CardId },
+): Outcome<{ card: string }> {
+  const state = requireTop(snapshot.game.turn_state, "field");
+  refuseWhileUndrawn(snapshot);
+
+  if (!mayWalkPast(command.cardId)) {
+    throw new Error(`${cardName(command.cardId)} dzieje się każdemu, kto tu trafi — nie da się jej pominąć.`);
+  }
+  const settled = settledOn(state);
+  /**
+   * And only the Karta the row is stopped at.
+   *
+   * 15.2: „Konieczne jest przy tym zachowanie kolejności zgodnej z numeracją
+   * Kart." Walking past is how you get through the row, so it goes in the row's
+   * order — not the window's. `refuseWhileQueuedFor` is the wrong gate here and
+   * said so out loud: it asks what is *compulsory*, so with a CUDOTWÓRCA in
+   * front of a DOBRE BÓSTWO it refused „Najpierw DOBRE BÓSTWO" about a Karta
+   * standing behind the one being skipped. 16.4 orders Spotkania and Wrogowie
+   * ahead of the rest and says nothing about order *within* a numeral; 15.2
+   * does, and this is 15.2's.
+   */
+  const being = cardInFront(state.drawn, settled);
+  if (!being || being.cardId !== command.cardId) {
+    throw new Error(
+      being
+        ? `Najpierw ${cardName(being.cardId)} — Karty rozpatruje się po kolei (15.2).`
+        : "Tej Karty tu nie ma.",
+    );
+  }
+
+  return {
+    writes: {
+      game: {
+        turn_state: replaceTop(snapshot.game.turn_state, {
+          ...state,
+          declined: [...(state.declined ?? []), keyOf(being)],
+        }),
+      },
+      /* No line in the Dziennik. Walking past an offer takes nothing and gives
+         nothing, which is the same test `UNSPOKEN` applies to a die roll: every
+         entry that is true but not worth a line buries the ones that are. What
+         the turn needs to remember is on the frame. */
+    },
+    result: { card: cardName(command.cardId) },
+  };
 }
 
 export function refuseWhileUndrawn(snapshot: Snapshot): void {

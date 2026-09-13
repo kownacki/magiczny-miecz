@@ -18,6 +18,7 @@ import type { EventCard } from "@/data/types";
 import events from "@/data/events.json";
 import type { SpellTiming } from "@/lib/engine/spells";
 import type { Fight, TurnMoveOption } from "@/lib/engine/turn";
+import { settledOn } from "@/lib/engine/kolejka";
 
 const EVENTS = events as EventCard[];
 
@@ -57,6 +58,7 @@ export function DrawModal({
   onInspect,
   cards,
   resolved,
+  declined,
   fought,
   beaten,
   fight,
@@ -86,6 +88,7 @@ export function DrawModal({
   onEscape,
   onTake,
   onLeave,
+  onSkip,
   onAsk,
 }: SheetChrome &
   Omit<DrawnActionsProps, "card"> & {
@@ -203,6 +206,8 @@ export function DrawModal({
           card={held}
           cards={cards}
           resolved={resolved}
+          declined={declined}
+          onSkip={onSkip}
           fought={fought}
           beaten={beaten}
           ring={ring}
@@ -299,7 +304,7 @@ export function DrawModal({
    * 17.4 finishes a Wróg whether he was beaten or fled — or the sheet would
    * keep opening on a creature the turn is done with.
    */
-  const done = [...resolved, ...fought, ...(beaten ?? [])];
+  const done = settledOn({ resolved, declined, fought, beaten });
   const card = cardInFront(cards, done) ?? undefined;
 
   // Nothing drawn to deal with, but the Obszar itself demands something.
@@ -324,6 +329,8 @@ export function DrawModal({
       card={card}
       cards={cards}
       resolved={resolved}
+      declined={declined}
+      onSkip={onSkip}
       fought={fought}
       beaten={beaten}
       ring={ring}

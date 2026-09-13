@@ -2,7 +2,7 @@
 
 import type { FieldId } from "./board";
 import { compulsoryOffer } from "./fieldScript";
-import { nextFrame } from "./kolejka";
+import { blockingFrame } from "./kolejka";
 import { cardName } from "./polish";
 import type { SettledKey, TurnCard } from "./state";
 import type { TurnPhase } from "./turn";
@@ -104,7 +104,11 @@ export function dutiesBeforeEnding(input: {
    * pozostałych Kart Zdarzeń."
    */
   if (input.onField && !input.done.includes("kolejka")) {
-    const owed = nextFrame(input.onField.drawn, input.onField.settled);
+    /* What is *owed*, not what is next in the row. A Karta you may walk past
+       is no debt at the end of a turn: 12.1 gave you the whole turn to use it
+       and 16.8 leaves it lying there for whoever comes next. `blockingFrame`
+       draws that line once, for the gate and for this. */
+    const owed = blockingFrame(input.onField.drawn, input.onField.settled);
     if (owed) {
       duties.push({
         kind: "kolejka",

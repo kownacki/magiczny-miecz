@@ -30,7 +30,7 @@ import {
 import { apply, change, effectRowsFor, merge, type EffectRow, type Handler } from "./change";
 import { holdOverflow, refuseWhileOverflow, releaseOverflow } from "./commands/overflow";
 import { closeFight, resume } from "./commands/frames";
-import { finishTurn as finishTurnOn, resetTurn as resetTurnOn } from "./commands/turn";
+import { finishTurn as finishTurnOn, resetTurn as resetTurnOn, skipCard as skipCardOn } from "./commands/turn";
 import { appRandom } from "./random";
 import {
   addEffect as addEffectTo,
@@ -1489,6 +1489,15 @@ export async function resolveFieldOffer(
  * Only cards actually drawn this turn: the id comes from the browser, and the
  * turn state is what says which cards are on the field in front of you.
  */
+/**
+ * „Pomiń": the Karta in front of you is read and walked past (15.2, 12.1).
+ *
+ * One press, and the pass moves on — see `skipCard`, which has the argument.
+ */
+export async function skipDrawnCard(gameId: string, cardId: CardId) {
+  return change(gameId, skipCardOn, { cardId });
+}
+
 export async function resolveDrawnCard(
   gameId: string,
   cardId: CardId,

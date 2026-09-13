@@ -16,7 +16,7 @@ import { type StatusRow } from "@/lib/engine/statusRows";
 import { nameOfSeat } from "./commands/lobby";
 import { activeStore } from "./gameStore";
 import { compulsoryOffer } from "@/lib/engine/fieldScript";
-import { kolejkaFor, offeredNotQueued } from "@/lib/engine/kolejka";
+import { kolejkaFor, offeredNotQueued, settledOn } from "@/lib/engine/kolejka";
 import { listed } from "@/lib/engine/state";
 import type { TurnPhase } from "@/lib/engine/turn";
 import type { Effect } from "@/lib/engine/cardScript";
@@ -306,7 +306,7 @@ export function waitingOn(
    * after he had been killed and picked up as a trophy, which is the referee
    * telling the table to deal with something it has already dealt with.
    */
-  const settled = [...new Set([...(state.resolved ?? []), ...(state.fought ?? [])])];
+  const settled = [...new Set(settledOn(state))];
 
   /**
    * Two lists, because the Obszar holds two kinds of thing.

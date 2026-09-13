@@ -440,6 +440,15 @@ export type Command =
    * one there is.
    */
   | { kind: "answer"; card: string | null; choices: number[]; to: string | null }
+  /**
+   * „Pomiń" — the Karta in front of you, read and walked past.
+   *
+   * A real answer, not a way out: 15.2 puts every Karta on the Obszar in one
+   * pass, and „rozpatrzenie" of an offer is reading it and declining. 12.1
+   * keeps it reachable for the rest of the turn, which is why this is its own
+   * word rather than an option inside each card.
+   */
+  | { kind: "skip"; card: string | null }
   /* The poczekalnia, which is playing the game too — somebody has to say the
      waiting is over (docs/LOBBY.md). */
   | { kind: "ready"; who: string | null; ready: boolean }
@@ -833,6 +842,16 @@ export const SPECS: { [K in Command["kind"]]: Spec<K> } = {
       const to = keywordAt(parts, "to");
       return to !== -1 ? shelved(FIELD_KINDS, to + 1) : { pool: [], at: 1 };
     },
+  }),
+  skip: spec({
+    name: "skip",
+    when: ["field"],
+    aliases: ["pomin"],
+    usage: "skip [card]",
+    summary: "walk past the Karta in front of you — it stays, and you may come back (12.1)",
+    needs: "play",
+    group: "turn",
+    parse: (tail) => ({ ok: { kind: "skip", card: tail.trim() || null } }),
   }),
   buy: spec({
     name: "buy",

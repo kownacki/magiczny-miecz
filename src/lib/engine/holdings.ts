@@ -8,7 +8,7 @@ import { forbiddenNatures } from "./abilityText";
 import { isUsable } from "./uses";
 import type { EqMode } from "./slots";
 import { STORAGE, inPlayAt, isWearable, slotsFor, type Slot } from "./slots";
-import { nextFrame } from "./kolejka";
+import { blockingFrame } from "./kolejka";
 import { listed, resolutionOrder, type Holding, type SettledKey, type TurnCard } from "./state";
 import type { FieldId } from "./board";
 import type { Nature } from "@/data/types";
@@ -127,7 +127,10 @@ export function whyQueuedHere(
       });
     }
   }
-  const frame = nextFrame(resolutionOrder(cards), settled);
+  /* The gate, not the row: a Karta you can walk past is in the sequence and
+     does not shut 12.1's window — see `blockingFrame`, which has the argument
+     and the two exceptions 12.1 names for itself. */
+  const frame = blockingFrame(resolutionOrder(cards), settled);
   if (!frame) return null;
   // A pack of Wrogowie is one frame and fought as one (17.5), so it is named as
   // one thing here too.

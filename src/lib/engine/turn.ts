@@ -82,6 +82,29 @@ export type TurnPhase =
        */
       beaten?: SettledKey[];
       /**
+       * Read in the pass and walked past — settled for 15.2, open for 12.1.
+       *
+       * The fourth list, and the one that lets the other three stop lying. 15.2
+       * puts **every** Karta „znajdującą się lub wyciągniętą na danym Obszarze"
+       * into one sequence and calls keeping the order „konieczne"; 16.5 says a
+       * Nieznajomy's instruction must be carried out. Nothing in the box takes
+       * a Karta out of that sequence for being an offer — and docs/OBSZAR.md
+       * says so in its own words: „No addendum draws the compulsory/optional
+       * line by hand: our sentence says «wszystkich»."
+       *
+       * The app drew that line anyway, in `owesAFrame`, and it was not a
+       * reading of the rules but a workaround for this list not existing.
+       * Declining a CUDOTWÓRDCA marked him `resolved`, which spent him for the
+       * turn — and 12.1 gives a Nieznajomy „w każdej chwili, aż do końca swojej
+       * tury". Keeping him out of the kolejka was how that was hidden.
+       *
+       * So: `resolved` means the instruction was carried out. This means it was
+       * read and declined. The kolejka counts both as done, because the pass is
+       * over him either way; the Obszar's window counts only the first, because
+       * „rozpatrzenie" of an offer you refused took nothing from the square.
+       */
+      declined?: SettledKey[];
+      /**
        * This turn was spent meeting somebody rather than exploring (13.2).
        *
        * "Postać musi dokonać wyboru między spotkaniem z inną Postacią

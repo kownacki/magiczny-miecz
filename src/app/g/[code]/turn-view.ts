@@ -37,6 +37,7 @@ import type { OwnPoints, Reader } from "@/lib/engine/abilityText";
 import { asNature, type Seat } from "./table";
 import { boardCards as allBoardCards, otherSeats } from "./table-view";
 import type { FieldCard, Game, Person } from "./use-table";
+import { settledOn } from "@/lib/engine/kolejka";
 
 /** The table as the server said it, and what this device holds over it. */
 export interface TurnViewInput {
@@ -270,7 +271,7 @@ export function turnViewOf({
   const owedHere = onField
     ? {
         drawn: onField.drawn,
-        settled: [...(onField.resolved ?? []), ...(onField.fought ?? [])],
+        settled: settledOn(onField),
       }
     : null;
 
@@ -367,7 +368,7 @@ export function turnViewOf({
                bare name and stays queued forever — see `whyQueuedHere`. */
             ...onField.drawn,
           ],
-          [...(onField.resolved ?? []), ...(onField.fought ?? []), ...(onField.beaten ?? [])],
+          settledOn(onField),
           onField.draw,
         )
       : null;

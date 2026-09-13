@@ -469,6 +469,11 @@ export function Overlays() {
               post("holdings", { action: "take", seatId: active.id, cardId })
             }
             onLeave={(cardId) => setWaved((current) => [...current, cardId])}
+            /* „Pomiń" — the pass walked past this Karta, said to the server so
+               the whole table's row moves rather than this one device's. The
+               Karta stays and 12.1 keeps it reachable; see `skipCard`. */
+            declined={beneath?.declined ?? []}
+            onSkip={(cardId) => post("turn", { action: "karta-pomin", cardId })}
             /* The same door the Obszar drawer uses, and it clears itself here
                so no caller can leave an answered question on screen. */
             onAsk={(question) =>

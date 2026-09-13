@@ -7,6 +7,10 @@ import { apply } from "../change";
 import { finishTurn, leaveCardsBehind, passTurn, resetTurn, tickEffects } from "./turn";
 import type { CardId } from "@/data/ids";
 import { keyNamed, type SettledKey } from "@/lib/engine/state";
+import { skipCard } from "./turn";
+import { cardInFront, settledOn } from "@/lib/engine/kolejka";
+import { keyOf, resolutionOrder } from "@/lib/engine/state";
+import { EVENTS } from "../decks";
 
 const two = (over: Partial<Parameters<typeof aTable>[0]> = {}) =>
   aTable({
@@ -631,5 +635,73 @@ describe("starting this turn over (the test console's `turn reset`)", () => {
       manual: true,
       payload: { what: "reset-turn" },
     });
+  });
+});
+
+/**
+ * „Pomiń": read in the pass, and still there afterwards.
+ *
+ * The two halves of one rule. 15.2 puts every Karta on the Obszar in one
+ * sequence — „konieczne jest przy tym zachowanie kolejności" — so a Nieznajomy
+ * you do not want still has to be got past; 12.1 gives „w każdej chwili, aż do
+ * końca swojej tury", so getting past him must not spend him.
+ *
+ * The app had neither: an offer was kept out of the row altogether, because
+ * declining it wrote `resolved` and that is what spent it.
+ */
+describe("walking past a Karta in the pass (15.2, 12.1)", () => {
+  const onObszar = (...cardIds: CardId[]) =>
+    aTable({
+      game: {
+        active_seat: 0,
+        turn_state: only({
+          phase: "field",
+          fieldId: "wrzosowiska",
+          from: null,
+          draw: 0,
+          drawn: resolutionOrder(
+            cardIds.map((cardId, at) => ({
+              cardId,
+              cardClass: (EVENTS.find((one) => one.id === cardId)?.cardClass ?? "stranger") as never,
+              nth: at + 1,
+            })),
+          ),
+          resolved: [],
+        } as never),
+      },
+      seats: [aSeat({ id: "seat-a", seat_index: 0, field_id: asFieldId("wrzosowiska") })],
+    });
+
+  const field = (table: ReturnType<typeof onObszar>) => {
+    const frame = top(table.game.turn_state);
+    if (frame.phase !== "field") throw new Error("not a field frame");
+    return frame;
+  };
+
+  it("settles the Karta for the pass without resolving it", () => {
+    const table = onObszar("cudotworca", "dobre-bostwo");
+    const after = apply(table, skipCard(table, { cardId: "cudotworca" }).writes);
+
+    // Settled for 15.2 …
+    expect(field(after).declined).toEqual([keyOf({ cardId: "cudotworca", nth: 1 })]);
+    // … and not for 12.1, which is the whole point of the second list.
+    expect(field(after).resolved ?? []).toEqual([]);
+    // The row has moved on.
+    expect(cardInFront(field(after).drawn, settledOn(field(after)))?.cardId).toBe("dobre-bostwo");
+  });
+
+  /** 15.2's order is „konieczne", so you walk past them in it. */
+  it("refuses a Karta standing behind the one the row is stopped at", () => {
+    const table = onObszar("cudotworca", "czarodziej");
+    expect(() => skipCard(table, { cardId: "czarodziej" })).toThrow(/Najpierw CUDOTWÓRCA/);
+  });
+
+  /**
+   * „Każdy, kto tu trafi" happens to you and there is no past it. The refusal
+   * is in the card's own terms rather than a list of classes written out here.
+   */
+  it("refuses a Karta that happens to whoever arrives", () => {
+    const table = onObszar("urocza-diablica");
+    expect(() => skipCard(table, { cardId: "urocza-diablica" })).toThrow(/nie da się jej pominąć/);
   });
 });

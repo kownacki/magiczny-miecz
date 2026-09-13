@@ -1547,6 +1547,7 @@ const USAGE: Record<string, { line: string; becomes: unknown }> = {
   roll: { line: "roll", becomes: { kind: "roll" } },
   answer: { line: "answer 2", becomes: { kind: "answer", card: null, choices: [2], to: null } },
   dice: { line: "dice 3 5", becomes: { kind: "dice", faces: [3, 5], off: false } },
+  skip: { line: "skip", becomes: { kind: "skip", card: null } },
   card: { line: "card MAGOG", becomes: { kind: "card", name: "MAGOG" } },
   fight: { line: "fight", becomes: { kind: "fight", cardId: null } },
   take: { line: "take MAGICZNY MIECZ", becomes: { kind: "take", name: "MAGICZNY MIECZ" } },

@@ -71,6 +71,7 @@ export const TURN_ACTIONS = [
   "fight-done",
   "pole-tabela",
   "karta-efekt",
+  "karta-pomin",
   "answer",
   "end",
 ] as const;

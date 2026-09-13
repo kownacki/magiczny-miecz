@@ -141,13 +141,27 @@ export const NIEZNAJOMI: Readonly<Record<string, CardScript>> = {
    * Jednorożec and the Kuglarz, which is what they are — „Pomiń" is one of the
    * answers, not a way out of the Karta.
    */
+  /**
+   * No „Pomiń" among his options, and that is the rule rather than a trim.
+   *
+   * Declining a Karta that stays is not one of the things the Karta offers —
+   * it is 15.2's pass being walked („rozpatrzenie" of an offer is reading it
+   * and saying no) and 12.1 keeping it open afterwards. It has its own door,
+   * `skipCard`, which writes `declined` rather than `resolved`; as an option
+   * here it wrote `resolved` and spent the Cudotwórca for the rest of the turn,
+   * which is exactly what „w każdej chwili, aż do końca swojej tury" forbids.
+   *
+   * The JEDNOROŻEC and the KUGLARZ keep theirs, and the line between them is
+   * the cards' own text: „Bez względu na to, czy skorzystasz z propozycji,
+   * Jednorożec oddala się" — that Karta goes either way, so refusing it is
+   * something the Karta does, not something the pass does.
+   */
   cudotworca: {
     optional: true,
     effect: {
       op: "wybor",
       options: [
         { label: "odzyskujesz 2 punkty Życia (najwyżej do 4)", effect: { op: "uzdrow", upTo: 2 } },
-        { label: "Pomiń", effect: { op: "nic" } },
       ],
     },
     disposition: { kind: "zostaje" },
@@ -160,10 +174,7 @@ export const NIEZNAJOMI: Readonly<Record<string, CardScript>> = {
       warunek: { is: "natura", jedna_z: ["good"] },
       to: {
         op: "wybor",
-        options: [
-          { label: "zyskujesz 1 Zaklęcie", effect: { op: "zaklecie", count: 1 } },
-          { label: "Pomiń", effect: { op: "nic" } },
-        ],
+        options: [{ label: "zyskujesz 1 Zaklęcie", effect: { op: "zaklecie", count: 1 } }],
       },
     },
     disposition: { kind: "zostaje" },
@@ -190,7 +201,6 @@ export const NIEZNAJOMI: Readonly<Record<string, CardScript>> = {
           label: "kupujesz 1 Zaklęcie za 1 Sztukę Złota",
           effect: { op: "zaklecie", count: 1, cena: 1 },
         },
-        { label: "Pomiń", effect: { op: "nic" } },
       ],
     },
     disposition: { kind: "zostaje" },

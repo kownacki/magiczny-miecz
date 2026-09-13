@@ -54,6 +54,7 @@ import type { EqMode } from "@/lib/engine/slots";
 import type { TurnCard } from "@/lib/engine/state";
 import type { SettledKey } from "@/lib/engine/state";
 import type { CardId } from "@/data/ids";
+import { mayWalkPast } from "@/lib/engine/kolejka";
 
 /**
  * Everything this needs, which is also everything the sheet above it needs
@@ -68,6 +69,8 @@ export interface DrawnActionsProps {
   /** In 15.2 order, which is the order they are dealt with. */
   cards: TurnCard[];
   resolved: SettledKey[];
+  /** Read in the pass and walked past — settled for 15.2, open for 12.1. */
+  declined?: SettledKey[];
   fought: SettledKey[];
   /** Wrogowie who died here (16.2) — struck in the kolejka, gone from the Obszar. */
   beaten?: SettledKey[];
@@ -164,6 +167,17 @@ export interface DrawnActionsProps {
   onTake: (cardId: string) => void;
   /** Nothing to do with this one — it stays on the field (16.8). */
   onLeave: (cardId: CardId) => void;
+  /**
+   * „Pomiń" — the Karta is read and walked past, and stays where it is.
+   *
+   * Not `onLeave`, which is this device saying „not that Przedmiot, not now".
+   * This is the pass: 15.2 puts every Karta on the Obszar in one sequence, so
+   * a Nieznajomy you do not want still has to be got past, and getting past him
+   * is the whole of „rozpatrzenie" for an offer. The server writes it down
+   * (`declined`) so the rest of the table sees the row move, and 12.1 keeps him
+   * reachable until the turn ends.
+   */
+  onSkip: (cardId: CardId) => void;
   /** Raises the table's one „are you sure?" — see `ConfirmDialog`. */
   onAsk: (question: Omit<Confirmation, "tone">) => void;
 }
@@ -194,6 +208,7 @@ export function DrawnActions({
   onEscape,
   onTake,
   onLeave,
+  onSkip,
   onAsk,
 }: DrawnActionsProps) {
   /**
@@ -534,6 +549,21 @@ export function DrawnActions({
             Zostaw
           </ActionButton>
         </div>
+      )}
+
+      {/* „Jeżeli chcesz", „która tu zawita", „podczas każdych odwiedzin" — the
+          verbs that mean a visit. The Karta is in the row either way (15.2) and
+          this is the way past it; the Karta stays, and 12.1 gives until the end
+          of the turn to change your mind. */}
+      {mayWalkPast(card.cardId) && (
+        <ActionButton
+          weight="decline"
+          size="lg"
+          disabled={busy}
+          onClick={() => onSkip(card.cardId)}
+        >
+          Pomiń
+        </ActionButton>
       )}
 
       {/* A choice the rules give the player: "wedle własnego wyboru". */}

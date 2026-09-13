@@ -25,6 +25,7 @@ import { mayEndTurn } from "@/lib/engine/duties";
 import { stillStone } from "@/lib/engine/status";
 import { carriedCount, carryLimit } from "@/lib/engine/derive";
 import type { CardId } from "@/data/ids";
+import { settledOn } from "@/lib/engine/kolejka";
 
 export function FieldDrawer() {
   const {
@@ -121,7 +122,7 @@ export function FieldDrawer() {
                 (card) =>
                   !isSpent(
                     card,
-                    [...(onField.resolved ?? []), ...(onField.fought ?? [])],
+                    settledOn(onField),
                     onField.beaten ?? [],
                   ) && card.fieldCardId === undefined,
               )
