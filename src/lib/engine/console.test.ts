@@ -957,15 +957,37 @@ suite("playing the game, and overruling it", () => {
   it("reads an answer as a path, not a single pick", () => {
     // An effect can ask twice, and the server re-walks the card against the
     // whole list — so the numbers are in the order they were decided.
-    expect(ok("answer 2 1")).toEqual({ kind: "answer", card: null, choices: [2, 1] });
+    expect(ok("answer 2 1")).toEqual({ kind: "answer", card: null, choices: [2, 1], to: null });
     // Named when more than one card is waiting.
     expect(ok("answer 1 WILKOŁAK")).toEqual({
       kind: "answer",
       card: "WILKOŁAK",
       choices: [1],
+      to: null,
     });
     // Nothing to choose is a real answer: the Karczma rolls and does not ask.
-    expect(ok("answer")).toEqual({ kind: "answer", card: null, choices: [] });
+    expect(ok("answer")).toEqual({ kind: "answer", card: null, choices: [], to: null });
+  });
+
+  /**
+   * And an answer that is a place, which the console had no word for at all:
+   * the JEDNOROŻEC's „do dowolnego Obszaru w tym Kręgu" came back owed however
+   * many times it was answered. `to` is `cast`'s word, for the same job.
+   */
+  it("reads a destination past `to`", () => {
+    expect(ok("answer 0 to Karczma")).toEqual({
+      kind: "answer",
+      card: null,
+      choices: [0],
+      to: "Karczma",
+    });
+    // The Obszar alone, for a card that asks only where.
+    expect(ok("answer to Osada")).toEqual({
+      kind: "answer",
+      card: null,
+      choices: [],
+      to: "Osada",
+    });
   });
 
   /**
@@ -1511,7 +1533,7 @@ const USAGE: Record<string, { line: string; becomes: unknown }> = {
   ready: { line: "ready", becomes: { kind: "ready", who: null, ready: true } },
   start: { line: "start", becomes: { kind: "start" } },
   roll: { line: "roll", becomes: { kind: "roll" } },
-  answer: { line: "answer 2", becomes: { kind: "answer", card: null, choices: [2] } },
+  answer: { line: "answer 2", becomes: { kind: "answer", card: null, choices: [2], to: null } },
   card: { line: "card MAGOG", becomes: { kind: "card", name: "MAGOG" } },
   fight: { line: "fight", becomes: { kind: "fight", cardId: null } },
   take: { line: "take MAGICZNY MIECZ", becomes: { kind: "take", name: "MAGICZNY MIECZ" } },

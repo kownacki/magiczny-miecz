@@ -430,7 +430,7 @@ export type Command =
    * `card` names which one when more than one is waiting; null takes the only
    * one there is.
    */
-  | { kind: "answer"; card: string | null; choices: number[] }
+  | { kind: "answer"; card: string | null; choices: number[]; to: string | null }
   /* The poczekalnia, which is playing the game too — somebody has to say the
      waiting is over (docs/LOBBY.md). */
   | { kind: "ready"; who: string | null; ready: boolean }
@@ -782,19 +782,47 @@ export const SPECS: { [K in Command["kind"]]: Spec<K> } = {
     // l, i, x — and a letter that saves nothing costs a word somebody else
     // wanted.
     aliases: [],
-    usage: "answer [n] [card]",
+    usage: "answer [n] [card] [to <field>]",
     summary: "settle what a Karta or an Obszar asked — `look` shows the question",
     needs: "play",
     group: "turn",
     parse: (tail) => {
-      const parts = tail.split(/\s+/).filter(Boolean);
+      /**
+       * `to <Obszar>`, for the questions whose answer is a place.
+       *
+       * The same word `cast` uses, for the same reason — „to" is where a thing
+       * ends up — and without it the JEDNOROŻEC could not be played here at
+       * all: „przenosisz się na dowolny Obszar w tym Kręgu" is a `przenies`
+       * with no destination, so the card came back owed rather than resolved,
+       * and `answer 0` re-asked it for ever. Four scripts ask a place, and the
+       * browser had buttons for all of them while the console had no word.
+       */
+      // Padded, because `TO` wants whitespace in front of the word and this is
+      // the one verb whose tail can *begin* with it: `cast` always names a
+      // Zaklęcie first, so „answer to Osada" was the first line to arrive with
+      // nothing before the `to` — and read the whole of it as a card's name.
+      const [before, where] = ` ${tail}`.split(TO);
+      const parts = (before ?? "").split(/\s+/).filter(Boolean);
       const numbers = parts.filter((one) => /^\d+$/.test(one)).map(Number);
       const named = parts.filter((one) => !/^\d+$/.test(one)).join(" ");
       // No number is a real answer. A compulsory Obszar comes in two shapes —
       // one that asks (`wybor`) and one that only rolls (`rzut`, the Karczma)
       // — and the second has nothing to choose. `answer` alone means "get on
       // with it"; `answer 2` means "and I pick the second".
-      return { ok: { kind: "answer", card: named || null, choices: numbers } };
+      return {
+        ok: {
+          kind: "answer",
+          card: named || null,
+          choices: numbers,
+          to: where?.trim() || null,
+        },
+      };
+    },
+    /** Past `to`, an Obszar — the same shelf `cast ... to` offers, and before
+        it nothing: the numbers are the card's own and no catalogue has them. */
+    complete: (parts) => {
+      const to = keywordAt(parts, "to");
+      return to !== -1 ? shelved(FIELD_KINDS, to + 1) : { pool: [], at: 1 };
     },
   }),
   buy: spec({

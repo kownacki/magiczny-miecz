@@ -523,8 +523,53 @@ async function walk(
   }
 
   if (effect.op === "przenies" && effect.to.kind !== "pole") {
-    const where = decided.destination;
+    /**
+     * „na Obszar, z którego rozpocząłeś wędrówkę" is not a question.
+     *
+     * The STRAŻ names its destination as exactly as any `pole` does — it is
+     * simply named in terms of the turn rather than of the board — so it is
+     * read off the `field` frame's `from` and nobody is asked. It was asked,
+     * and whatever was answered was obeyed: „zawracają cię" became „go
+     * wherever you like".
+     *
+     * Where the move began is unknown only when the turn did not move —
+     * a Karta conjured onto a square, a frame from before `from` existed —
+     * and then the guards are already standing where they found you.
+     */
+    const back = effect.to.kind === "poczatek-ruchu";
+    const started = beneath(snapshot.game.turn_state, "field")?.frame.from ?? null;
+    if (back && !started) return nothing(["Straż zawraca cię tam, gdzie stoisz"]);
+
+    const where = back ? started : decided.destination;
     if (!where) return owed();
+
+    /**
+     * And „w tym Kręgu" is a rule, not a hint to the interface.
+     *
+     * Four scripts say it — the JEDNOROŻEC, the NIEZNANA ŚWIĄTYNIA's 1, the
+     * Karczma's 5 and the wish — and the browser kept it by only drawing
+     * buttons for the ring. Nothing kept it here, so the answer travelled as a
+     * bare `FieldId` and was obeyed: the console could ride the Jednorożec from
+     * the Osada to the Zamek Bestii. That is the thing `Decisions` exists to
+     * prevent (CLAUDE.md: a card cannot be talked into doing something it does
+     * not say), and the refusal beside it, in `przenies-karte`, has checked its
+     * own ring the whole time.
+     */
+    if (effect.to.kind === "dowolne-w-kregu") {
+      const standing = snapshot.seats.find((one) => one.id === seatId)?.field_id;
+      const from = asFieldId(standing ?? null);
+      if (from === null) throw new Error("Nieznane miejsce.");
+      if (!ringFields(from).includes(where)) {
+        throw new Error(`${fieldName(where)} jest w innym Kręgu (11.2).`);
+      }
+    }
+    // One of a listed set is that set and no other — the same reading
+    // `poloz-karte` gives its own `jedno-z`. No card asks it of a Postać yet;
+    // the guard is here so that the first one to do so cannot arrive unchecked.
+    if (effect.to.kind === "jedno-z" && !effect.to.fieldIds.includes(where)) {
+      throw new Error(`${fieldName(where)} nie jest jednym z Obszarów tej Karty.`);
+    }
+
     // A Karta moving somebody, as 13.1 has it — the same as the settled
     // destination above, and read the same way in the journal.
     // `byCard` here as well as on the op below: a destination the card leaves

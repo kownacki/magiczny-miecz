@@ -22,6 +22,7 @@ import { EVENT_COPIES } from "../decks";
 import { asFieldId } from "@/lib/engine/board";
 import { asSeatCharacter } from "@/lib/engine/characters";
 import type { CardId } from "@/data/ids";
+import type { FieldId } from "@/lib/engine/board";
 
 /** Piles are not shuffled in these; the order in is the order out. */
 const asIs = <T,>(items: readonly T[]): T[] => [...items];
@@ -1338,3 +1339,68 @@ describe("a shop on a Karta (16.7, 21.1)", () => {
   });
 });
 
+/**
+ * Where a Karta may send a Postać, and where it may not.
+ *
+ * `Decisions` is a list of numbers the server re-walks the card against, so
+ * that a card cannot be talked into doing something it does not say
+ * (CLAUDE.md). A destination is the one answer that is not a number — it is a
+ * `FieldId` — and it was obeyed on sight. The browser kept both of these rules
+ * by only drawing the buttons that obey them, which is the interface enforcing
+ * a rule and the server trusting the interface.
+ */
+describe("przenies, when the Karta does not name one Obszar", () => {
+  const standing = (fieldId: FieldId, from: FieldId | null = null) =>
+    aTable({
+      seats: [aSeat({ id: "seat-a", seat_index: 0, field_id: fieldId })],
+      game: {
+        active_seat: 0,
+        turn_state: { phase: "field", fieldId, from, draw: 0, drawn: [], resolved: [] } as TurnPhase,
+      },
+    });
+
+  const ring = { op: "przenies", to: { kind: "dowolne-w-kregu" } } as const;
+
+  /** „Jednorożec może natychmiast przewieźć cię do dowolnego Obszaru w tym Kręgu." */
+  it("carries you anywhere on your own Krąg", async () => {
+    const { writes } = await run(ring, standing("osada"), {
+      decided: { destination: "karczma" },
+    });
+    expect(writes.seats).toMatchObject([{ patch: { field_id: "karczma" } }]);
+  });
+
+  /**
+   * And nowhere off it. The Osada is on the Dolny Krąg and the Zamek is the
+   * middle of the board; the console could ride the Jednorożec between them.
+   */
+  it("refuses an Obszar in another Krąg (11.2)", async () => {
+    await expect(
+      run(ring, standing("osada"), { decided: { destination: "zamek-bestii" } }),
+    ).rejects.toThrow(/innym Kręgu/);
+  });
+
+  /**
+   * „Strażnicy natychmiast zawracają cię na Obszar, z którego rozpocząłeś
+   * wędrówkę." The destination is named as exactly as any `pole` — in terms of
+   * the turn rather than of the board — so nobody is asked, and an answer sent
+   * anyway changes nothing.
+   */
+  it("sends the STRAŻ's victim back where the move began, unasked", async () => {
+    const { writes } = await run(
+      { op: "przenies", to: { kind: "poczatek-ruchu" } },
+      standing("karczma", "osada"),
+      { decided: { destination: "zamek-bestii" } },
+    );
+    expect(writes.seats).toMatchObject([{ patch: { field_id: "osada" } }]);
+  });
+
+  /** A turn that never moved has nowhere to be sent back to, and says so. */
+  it("leaves a character the turn never moved where they stand", async () => {
+    const { writes, result } = await run(
+      { op: "przenies", to: { kind: "poczatek-ruchu" } },
+      standing("karczma"),
+    );
+    expect(writes.seats).toBeUndefined();
+    expect(result.did).toEqual(["Straż zawraca cię tam, gdzie stoisz"]);
+  });
+});

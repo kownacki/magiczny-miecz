@@ -19,6 +19,7 @@ import { compulsoryOffer } from "@/lib/engine/fieldScript";
 import { kolejkaFor, offeredNotQueued } from "@/lib/engine/kolejka";
 import { listed } from "@/lib/engine/state";
 import type { TurnPhase } from "@/lib/engine/turn";
+import type { Effect } from "@/lib/engine/cardScript";
 import { askOnTop } from "@/lib/engine/ask";
 import { nodeAt } from "@/lib/engine/resolve";
 import { overflowOnTop, overflowSaid } from "@/lib/engine/overflow";
@@ -102,10 +103,30 @@ export function fieldName(fieldId: FieldId | null): string {
  * The Dziennik still keeps its silence about faces on purpose (`UNSPOKEN`);
  * this is the reply to the press, which is where the browser shows one too.
  */
-export function said(did: readonly string[], pending: boolean, face?: number): string {
+export function said(did: readonly string[], pending: Effect | null, face?: number): string {
   const body = [...(face !== undefined ? [`Wypadło ${face}.`] : []), ...did];
   const lines = body.length > 0 ? body.join("\n") : "Nic się nie stało.";
-  return pending ? `${lines}\nWciąż czeka — odpowiedz jeszcze raz (\`look\`).` : lines;
+  if (!pending) return lines;
+  return `${lines}\n${owes(pending)}`;
+}
+
+/**
+ * What is still owed, in the words that would settle it.
+ *
+ * „odpowiedz jeszcze raz (`look`)" is right for a choice and useless for a
+ * place: a card owed an Obszar does not suspend into a frame, so `look` has
+ * nothing to show and every `answer 0` re-asks the same question. The pending
+ * effect comes back on the reply, which is the one place this is knowable
+ * without re-walking the card, so the reply is where it is said.
+ */
+function owes(pending: Effect): string {
+  const place =
+    (pending.op === "przenies" && pending.to.kind !== "pole") ||
+    (pending.op === "poloz-karte" && pending.gdzie.kind !== "pole") ||
+    pending.op === "przenies-karte";
+  return place
+    ? "Wskaż Obszar — `answer [n] to <Obszar>`."
+    : "Wciąż czeka — odpowiedz jeszcze raz (`look`).";
 }
 
 /**

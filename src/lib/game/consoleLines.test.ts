@@ -145,12 +145,24 @@ describe("said", () => {
    * as a die that had just chosen his Obszar.
    */
   it("names the face, even when nothing has happened yet", () => {
-    expect(said([], true, 3)).toBe(
+    expect(said([], { op: "wybor", options: [] }, 3)).toBe(
       "Wypadło 3.\nWciąż czeka — odpowiedz jeszcze raz (`look`).",
     );
   });
 
   it("still shrugs when there was no die and nothing happened", () => {
-    expect(said([], false)).toBe("Nic się nie stało.");
+    expect(said([], null)).toBe("Nic się nie stało.");
+  });
+
+  /**
+   * A card owed an Obszar says which word settles it. „odpowiedz jeszcze raz
+   * (`look`)" is useless there: the card does not suspend into a frame, so
+   * `look` has nothing to show and every `answer 0` re-asks the same question.
+   */
+  it("names the word for a question whose answer is a place", () => {
+    const owed = { op: "przenies", to: { kind: "dowolne-w-kregu" } } as const;
+    expect(said(["przenosisz się"], owed)).toBe(
+      "przenosisz się\nWskaż Obszar — `answer [n] to <Obszar>`.",
+    );
   });
 });

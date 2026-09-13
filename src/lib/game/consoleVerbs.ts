@@ -1400,11 +1400,22 @@ export const VERBS: { [K in Command["kind"]]: VerbRun<K> } = {
       const took = await answerAsk(gameId, asked.seatId, pick);
       return `${cardName(took)} taken.`;
     }
+    /**
+     * Where a question's answer is a place — `answer 0 to Osada`.
+     *
+     * Resolved here and not in the grammar, because the grammar has no board:
+     * `fieldNamed` is the same door `cast … to` and `teleport` go through, so
+     * an abbreviation, an ambiguity and a typo are answered in one voice.
+     */
+    const destination = command.to
+      ? { destination: requireFieldId(fieldNamed(command.to)) }
+      : {};
+
     // A suspended card outranks everything else: the frame is what the turn
     // is stuck on, and the answer goes to it.
     if (top(snapshot.game.turn_state).phase === "script") {
-      const done = await answerScript(gameId, { choices: command.choices });
-      return said(done.did, done.pending !== null);
+      const done = await answerScript(gameId, { choices: command.choices, ...destination });
+      return said(done.did, done.pending);
     }
     const state = requireTop(
       snapshot.game.turn_state,
@@ -1412,13 +1423,13 @@ export const VERBS: { [K in Command["kind"]]: VerbRun<K> } = {
       "Nothing is waiting for an answer.",
     );
 
-    const decided = { choices: command.choices };
+    const decided = { choices: command.choices, ...destination };
     // The Obszar's own table first: 13.4 makes it compulsory, so it is what
     // the turn is actually stuck on.
     const offer = compulsoryOffer(state.fieldId ?? null, state.resolved ?? []);
     if (offer && !command.card) {
       const done = await resolveFieldOffer(gameId, offer.name, decided);
-      return said(done.did, done.pending !== null, done.face);
+      return said(done.did, done.pending, done.face);
     }
 
     const waiting = (state.drawn ?? []).filter(
@@ -1439,7 +1450,7 @@ export const VERBS: { [K in Command["kind"]]: VerbRun<K> } = {
       );
     }
     const done = await resolveDrawnCard(gameId, card.cardId, decided);
-    return said(done.did, done.pending !== null, done.face);
+    return said(done.did, done.pending, done.face);
   },
 
   /**
